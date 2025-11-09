@@ -49,7 +49,7 @@ class SecretManager:
 
             # 访问密钥
             response = self.gcp_client.access_secret_version(request={"name": name})
-            secret_value = response.payload.data.decode("UTF-8")
+            secret_value = response.payload.data.decode("UTF-8").strip()
 
             logger.info(f"Retrieved secret {secret_name} from GCP Secret Manager")
             return secret_value

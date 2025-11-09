@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../common/utils/error.utils';
 
 /**
  * 脚本：将现有arXiv论文的HTTP URL改为HTTPS
@@ -40,7 +41,7 @@ async function fixArxivUrls() {
         console.log(`✅ ${paper.title.substring(0, 60)}...`);
         successCount++;
       } catch (error) {
-        console.error(`❌ 修复失败 ${paper.id}:`, error.message);
+        console.error(`❌ 修复失败 ${paper.id}:`, getErrorMessage(error));
       }
     }
 

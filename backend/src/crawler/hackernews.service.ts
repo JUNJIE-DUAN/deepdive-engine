@@ -3,6 +3,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { MongoDBService } from '../common/mongodb/mongodb.service';
 import { DeduplicationService } from './deduplication.service';
 import { AIEnrichmentService } from '../resources/ai-enrichment.service';
+import { getErrorStack, getErrorMessage } from '../common/utils/error.utils';
 import axios from 'axios';
 
 /**
@@ -49,14 +50,14 @@ export class HackernewsService {
           await this.processStory(id);
           successCount++;
         } catch (error) {
-          this.logger.error(`Failed to process story ${id}`, error.stack);
+          this.logger.error(`Failed to process story ${id}`, getErrorStack(error));
         }
       }
 
       this.logger.log(`Successfully processed ${successCount}/${selectedIds.length} stories`);
       return successCount;
     } catch (error) {
-      this.logger.error('Failed to fetch HackerNews stories', error.stack);
+      this.logger.error('Failed to fetch HackerNews stories', getErrorStack(error));
       throw error;
     }
   }
@@ -79,13 +80,13 @@ export class HackernewsService {
           await this.processStory(id);
           successCount++;
         } catch (error) {
-          this.logger.error(`Failed to process story ${id}`, error.stack);
+          this.logger.error(`Failed to process story ${id}`, getErrorStack(error));
         }
       }
 
       return successCount;
     } catch (error) {
-      this.logger.error('Failed to fetch new stories', error.stack);
+      this.logger.error('Failed to fetch new stories', getErrorStack(error));
       throw error;
     }
   }
@@ -108,13 +109,13 @@ export class HackernewsService {
           await this.processStory(id);
           successCount++;
         } catch (error) {
-          this.logger.error(`Failed to process story ${id}`, error.stack);
+          this.logger.error(`Failed to process story ${id}`, getErrorStack(error));
         }
       }
 
       return successCount;
     } catch (error) {
-      this.logger.error('Failed to fetch best stories', error.stack);
+      this.logger.error('Failed to fetch best stories', getErrorStack(error));
       throw error;
     }
   }
@@ -175,7 +176,7 @@ export class HackernewsService {
       const response = await axios.get(`${this.HN_API_URL}/item/${id}.json`);
       return response.data;
     } catch (error) {
-      this.logger.error(`Failed to fetch item ${id}`, error.stack);
+      this.logger.error(`Failed to fetch item ${id}`, getErrorStack(error));
       return null;
     }
   }
@@ -402,7 +403,7 @@ export class HackernewsService {
       );
     } catch (error) {
       // 失败不影响主流程，只记录日志
-      this.logger.warn(`AI enrichment failed for resource ${resourceId}: ${error.message}`);
+      this.logger.warn(`AI enrichment failed for resource ${resourceId}: ${getErrorMessage(error)}`);
     }
   }
 }

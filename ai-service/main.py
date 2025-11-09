@@ -36,7 +36,16 @@ app = FastAPI(
 # 配置 CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3003", "http://localhost:4000"],  # 前端和后端
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:3004",
+        "http://localhost:3005",
+        "http://localhost:3006",
+        "http://localhost:4000"
+    ],  # 前端和后端
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -2,6 +2,7 @@
 AI API 路由
 """
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from loguru import logger
 from models.schemas import (
     SummaryRequest, SummaryResponse,
@@ -10,9 +11,27 @@ from models.schemas import (
     HealthResponse
 )
 from services.ai_orchestrator import AIOrchestrator
+from pydantic import BaseModel
+from typing import Optional, Literal
+import json
 
 
 router = APIRouter(prefix="/ai", tags=["AI"])
+
+
+class ChatRequest(BaseModel):
+    """聊天请求"""
+    message: str
+    context: Optional[str] = None
+    model: Literal["grok", "openai"] = "grok"
+    stream: bool = False
+
+
+class QuickActionRequest(BaseModel):
+    """快捷操作请求"""
+    content: str
+    action: Literal["methodology", "summary", "insights"]
+    model: Literal["grok", "openai"] = "grok"
 
 
 def get_orchestrator() -> AIOrchestrator:
@@ -215,3 +234,138 @@ async def health_check(orch: AIOrchestrator = Depends(get_orchestrator)):
         openai_available=health_status["openai_available"],
         active_model=health_status["active_model"]
     )
+
+
+@router.post("/chat")
+async def chat(
+    request: ChatRequest,
+    orch: AIOrchestrator = Depends(get_orchestrator)
+):
+    """
+    聊天接口（支持流式响应）
+
+    Args:
+        request: 聊天请求
+
+    Returns:
+        聊天响应（流式或常规）
+    """
+    logger.info(f"Chat request: model={request.model}, stream={request.stream}, message_len={len(request.message)}")
+
+    # 构建完整的提示
+    prompt = request.message
+    if request.context:
+        prompt = f"Context:\n{request.context}\n\nUser Question:\n{request.message}"
+
+    # 根据指定的模型选择客户端
+    if request.model == "grok":
+        client = orch.grok_client
+    else:
+        client = orch.openai_client
+
+    if not client.available:
+        raise HTTPException(status_code=503, detail=f"{request.model.upper()} service unavailable")
+
+    if request.stream:
+        # 流式响应
+        async def generate():
+            try:
+                async for chunk in client.stream_completion(prompt, max_tokens=2000, temperature=0.7):
+                    # 以 SSE 格式发送
+                    yield f"data: {json.dumps({'content': chunk, 'model': request.model})}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                logger.error(f"Streaming error: {str(e)}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            }
+        )
+    else:
+        # 常规响应
+        result = await client.generate_completion(prompt, max_tokens=2000, temperature=0.7)
+
+        if result is None:
+            raise HTTPException(status_code=503, detail="Failed to generate response")
+
+        return {
+            "content": result,
+            "model": request.model
+        }
+
+
+@router.post("/quick-action")
+async def quick_action(
+    request: QuickActionRequest,
+    orch: AIOrchestrator = Depends(get_orchestrator)
+):
+    """
+    快捷操作（摘要、洞察、方法论）
+
+    Args:
+        request: 快捷操作请求
+
+    Returns:
+        操作结果
+    """
+    logger.info(f"Quick action: {request.action}, model={request.model}")
+
+    # 根据不同的 action 构建不同的 prompt
+    if request.action == "methodology":
+        prompt = f"""请分析以下内容的研究方法论或技术方法：
+
+{request.content}
+
+要求：
+- 识别主要的方法论或技术手段
+- 说明方法的创新点和优势
+- 指出可能的局限性
+- 以清晰的结构化方式呈现（使用标题和列表）
+"""
+    elif request.action == "summary":
+        prompt = f"""请为以下内容生成一个结构化的摘要：
+
+{request.content}
+
+要求：
+- 核心观点（2-3个要点）
+- 主要发现或结论
+- 实际应用价值
+- 使用清晰的标题和列表格式
+"""
+    else:  # insights
+        prompt = f"""请从以下内容中提取关键洞察：
+
+{request.content}
+
+要求：
+- 识别3-5个关键洞察
+- 每个洞察包含标题和详细说明
+- 标注重要性（高/中/低）
+- 说明对读者的启发
+"""
+
+    # 选择模型
+    if request.model == "grok":
+        client = orch.grok_client
+    else:
+        client = orch.openai_client
+
+    if not client.available:
+        raise HTTPException(status_code=503, detail=f"{request.model.upper()} service unavailable")
+
+    result = await client.generate_completion(prompt, max_tokens=1500, temperature=0.7)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Failed to generate response")
+
+    return {
+        "content": result,
+        "action": request.action,
+        "model": request.model
+    }

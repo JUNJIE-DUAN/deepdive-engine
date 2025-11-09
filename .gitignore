@@ -76,6 +76,12 @@ Thumbs.db
 *secret*.json
 service-account*.json
 
+# 调试文件
+debug/
+
+# TypeScript 构建信息
+*.tsbuildinfo
+
 # 其他
 *.seed
 .cache

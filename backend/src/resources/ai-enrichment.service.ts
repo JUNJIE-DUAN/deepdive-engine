@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getErrorMessage } from '../common/utils/error.utils';
 import axios, { AxiosInstance } from 'axios';
 
 /**
@@ -41,7 +42,7 @@ export class AIEnrichmentService {
 
       return summary;
     } catch (error) {
-      this.logger.error(`Failed to generate summary: ${error.message}`);
+      this.logger.error(`Failed to generate summary: ${getErrorMessage(error)}`);
       return null;
     }
   }
@@ -63,7 +64,7 @@ export class AIEnrichmentService {
 
       return insights;
     } catch (error) {
-      this.logger.error(`Failed to extract insights: ${error.message}`);
+      this.logger.error(`Failed to extract insights: ${getErrorMessage(error)}`);
       return null;
     }
   }
@@ -95,7 +96,7 @@ export class AIEnrichmentService {
 
       return classification;
     } catch (error) {
-      this.logger.error(`Failed to classify content: ${error.message}`);
+      this.logger.error(`Failed to classify content: ${getErrorMessage(error)}`);
       return null;
     }
   }
@@ -210,7 +211,7 @@ export class AIEnrichmentService {
 
       return isHealthy;
     } catch (error) {
-      this.logger.error(`AI service health check failed: ${error.message}`);
+      this.logger.error(`AI service health check failed: ${getErrorMessage(error)}`);
       return false;
     }
   }

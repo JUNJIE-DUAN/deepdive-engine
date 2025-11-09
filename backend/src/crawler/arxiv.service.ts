@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { MongoDBService } from '../common/mongodb/mongodb.service';
 import { DeduplicationService } from './deduplication.service';
+import { getErrorStack } from '../common/utils/error.utils';
 import axios from 'axios';
 import * as xml2js from 'xml2js';
 
@@ -73,14 +74,14 @@ export class ArxivService {
           await this.processPaper(entry);
           successCount++;
         } catch (error) {
-          this.logger.error(`Failed to process paper: ${entry.title}`, error.stack);
+          this.logger.error(`Failed to process paper: ${entry.title}`, getErrorStack(error));
         }
       }
 
       this.logger.log(`Successfully processed ${successCount}/${entries.length} papers`);
       return successCount;
     } catch (error) {
-      this.logger.error('Failed to fetch arXiv papers', error.stack);
+      this.logger.error('Failed to fetch arXiv papers', getErrorStack(error));
       throw error;
     }
   }
@@ -315,13 +316,13 @@ export class ArxivService {
           await this.processPaper(entry);
           successCount++;
         } catch (error) {
-          this.logger.error(`Failed to process paper`, error.stack);
+          this.logger.error(`Failed to process paper`, getErrorStack(error));
         }
       }
 
       return successCount;
     } catch (error) {
-      this.logger.error('Search failed', error.stack);
+      this.logger.error('Search failed', getErrorStack(error));
       throw error;
     }
   }

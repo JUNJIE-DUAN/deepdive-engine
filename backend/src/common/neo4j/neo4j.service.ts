@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getErrorMessage } from '../utils/error.utils';
 import neo4j, { Driver, Session } from 'neo4j-driver';
 
 /**
@@ -22,7 +23,7 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
       await this.driver.verifyConnectivity();
       this.logger.log('✅ Neo4j connected successfully');
     } catch (error) {
-      this.logger.error('❌ Neo4j connection failed:', error.message);
+      this.logger.error('❌ Neo4j connection failed:', getErrorMessage(error));
       throw error;
     }
   }

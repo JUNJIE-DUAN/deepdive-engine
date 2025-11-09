@@ -62,6 +62,45 @@ class OpenAIClient:
             logger.error(f"OpenAI API exception: {str(e)}")
             return None
 
+    async def stream_completion(
+        self,
+        prompt: str,
+        max_tokens: int = 500,
+        temperature: float = 0.7
+    ):
+        """
+        流式生成文本补全
+
+        Args:
+            prompt: 提示词
+            max_tokens: 最大 token 数
+            temperature: 温度参数
+
+        Yields:
+            生成的文本片段
+        """
+        if not self.available:
+            logger.error("OpenAI client not available")
+            return
+
+        try:
+            stream = await self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=True,
+            )
+
+            async for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+        except Exception as e:
+            logger.error(f"OpenAI streaming exception: {str(e)}")
+
     async def health_check(self) -> bool:
         """
         健康检查

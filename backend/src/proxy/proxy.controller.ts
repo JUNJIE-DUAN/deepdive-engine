@@ -32,6 +32,10 @@ export class ProxyController {
       'openreview.net',
       'papers.nips.cc',
       'proceedings.mlr.press',
+      'github.com',
+      'raw.githubusercontent.com',
+      'reddit.com',
+      'old.reddit.com',
     ];
 
     try {
@@ -51,8 +55,15 @@ export class ProxyController {
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
         timeout: 30000, // 30 seconds timeout
+        maxRedirects: 5, // 跟随重定向
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
         },
       });
 
@@ -109,6 +120,10 @@ export class ProxyController {
       'openreview.net',
       'papers.nips.cc',
       'proceedings.mlr.press',
+      'github.com',
+      'raw.githubusercontent.com',
+      'reddit.com',
+      'old.reddit.com',
     ];
 
     try {
@@ -128,8 +143,16 @@ export class ProxyController {
       const response = await axios.get(url, {
         responseType: 'text',
         timeout: 30000,
+        maxRedirects: 5, // 跟随重定向
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Referer': 'https://www.reddit.com/',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
         },
       });
 

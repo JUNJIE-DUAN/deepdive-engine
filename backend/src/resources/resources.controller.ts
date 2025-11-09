@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { ResourcesService } from './resources.service';
 import { AIEnrichmentService } from './ai-enrichment.service';
+import { PdfThumbnailService } from './pdf-thumbnail.service';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -27,6 +28,7 @@ export class ResourcesController {
   constructor(
     private resourcesService: ResourcesService,
     private aiEnrichmentService: AIEnrichmentService,
+    private pdfThumbnailService: PdfThumbnailService,
   ) {}
 
   /**
@@ -57,8 +59,63 @@ export class ResourcesController {
   }
 
   /**
+   * 搜索建议（实时）
+   * GET /api/v1/resources/search/suggestions?q=AI&limit=5
+   *
+   * 注意：此路由必须在 @Get(':id') 之前，否则会被 :id 捕获
+   */
+  @Get('search/suggestions')
+  async searchSuggestions(
+    @Query('q') query: string,
+    @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+  ) {
+    if (!query || query.trim().length < 2) {
+      return { suggestions: [] };
+    }
+
+    this.logger.log(`Searching suggestions for: ${query}`);
+
+    const suggestions = await this.resourcesService.searchSuggestions(query, limit);
+
+    return { suggestions };
+  }
+
+  /**
+   * 获取资源统计
+   * GET /api/v1/resources/stats/summary
+   *
+   * 注意：此路由必须在 @Get(':id') 之前，否则会被 :id 捕获
+   */
+  @Get('stats/summary')
+  async getStats() {
+    this.logger.log('Fetching resource statistics');
+
+    return this.resourcesService.getStats();
+  }
+
+  /**
+   * 检查 AI 服务健康状态
+   * GET /api/v1/resources/ai/health
+   *
+   * 注意：此路由必须在 @Get(':id') 之前，否则会被 :id 捕获
+   */
+  @Get('ai/health')
+  async checkAIHealth() {
+    this.logger.log('Checking AI service health');
+
+    const isHealthy = await this.aiEnrichmentService.checkHealth();
+
+    return {
+      status: isHealthy ? 'ok' : 'error',
+      aiServiceAvailable: isHealthy,
+    };
+  }
+
+  /**
    * 获取资源详情
    * GET /api/v1/resources/:id
+   *
+   * 注意：动态路由必须放在所有具体路由之后，以免捕获其他路径
    */
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -104,17 +161,6 @@ export class ResourcesController {
   }
 
   /**
-   * 获取资源统计
-   * GET /api/v1/resources/stats/summary
-   */
-  @Get('stats/summary')
-  async getStats() {
-    this.logger.log('Fetching resource statistics');
-
-    return this.resourcesService.getStats();
-  }
-
-  /**
    * AI 增强资源（生成摘要、洞察、分类）
    * POST /api/v1/resources/:id/enrich
    */
@@ -151,18 +197,50 @@ export class ResourcesController {
   }
 
   /**
-   * 检查 AI 服务健康状态
-   * GET /api/v1/resources/ai/health
+   * 生成PDF缩略图
+   * POST /api/v1/resources/:id/thumbnail
    */
-  @Get('ai/health')
-  async checkAIHealth() {
-    this.logger.log('Checking AI service health');
+  @Post(':id/thumbnail')
+  async generateThumbnail(@Param('id') id: string) {
+    this.logger.log(`Generating thumbnail for resource ${id}`);
 
-    const isHealthy = await this.aiEnrichmentService.checkHealth();
+    // 获取资源
+    const resource = await this.resourcesService.findOne(id);
+    if (!resource) {
+      throw new HttpException(`Resource ${id} not found`, HttpStatus.NOT_FOUND);
+    }
+
+    // 检查是否有PDF URL
+    if (!resource.pdfUrl) {
+      throw new HttpException(
+        `Resource ${id} does not have a PDF URL`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    // 生成缩略图
+    const thumbnailUrl = await this.pdfThumbnailService.generateThumbnail(
+      resource.pdfUrl,
+      resource.id
+    );
+
+    if (!thumbnailUrl) {
+      throw new HttpException(
+        `Failed to generate thumbnail for resource ${id}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    // 更新资源
+    const updated = await this.resourcesService.update(id, {
+      thumbnailUrl,
+    });
+
+    this.logger.log(`Thumbnail generated successfully for resource ${id}`);
 
     return {
-      status: isHealthy ? 'ok' : 'error',
-      aiServiceAvailable: isHealthy,
+      id: updated.id,
+      thumbnailUrl: updated.thumbnailUrl,
     };
   }
 }

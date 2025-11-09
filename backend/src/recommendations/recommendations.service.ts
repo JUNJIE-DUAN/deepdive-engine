@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Neo4jService } from '../common/neo4j/neo4j.service';
+import { getErrorMessage } from '../common/utils/error.utils';
 
 /**
  * 推荐系统服务
@@ -165,7 +166,7 @@ export class RecommendationsService {
       // 按照 Neo4j 返回的顺序排序
       return resourceIds.map((id) => resources.find((r) => r.id === id)).filter(Boolean);
     } catch (error) {
-      this.logger.warn(`Graph-based recommendation failed: ${error.message}`);
+      this.logger.warn(`Graph-based recommendation failed: ${getErrorMessage(error)}`);
       return this.getContentBasedRecommendations(resourceId, limit);
     }
   }

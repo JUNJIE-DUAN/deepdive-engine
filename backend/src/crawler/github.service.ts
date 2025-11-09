@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { MongoDBService } from '../common/mongodb/mongodb.service';
 import { DeduplicationService } from './deduplication.service';
+import { getErrorStack, getErrorMessage } from '../common/utils/error.utils';
 import axios from 'axios';
 
 /**
@@ -71,14 +72,14 @@ export class GithubService {
           await this.processRepository(repo);
           successCount++;
         } catch (error) {
-          this.logger.error(`Failed to process repo: ${repo.full_name}`, error.stack);
+          this.logger.error(`Failed to process repo: ${repo.full_name}`, getErrorStack(error));
         }
       }
 
       this.logger.log(`Successfully processed ${successCount}/${repos.length} repos`);
       return successCount;
     } catch (error) {
-      this.logger.error('Failed to fetch GitHub trending repos', error.stack);
+      this.logger.error('Failed to fetch GitHub trending repos', getErrorStack(error));
       throw error;
     }
   }
@@ -110,13 +111,13 @@ export class GithubService {
           await this.processRepository(repo);
           successCount++;
         } catch (error) {
-          this.logger.error(`Failed to process repo`, error.stack);
+          this.logger.error(`Failed to process repo`, getErrorStack(error));
         }
       }
 
       return successCount;
     } catch (error) {
-      this.logger.error('Search failed', error.stack);
+      this.logger.error('Search failed', getErrorStack(error));
       throw error;
     }
   }
@@ -186,7 +187,7 @@ export class GithubService {
 
       return data;
     } catch (error) {
-      this.logger.error(`Failed to fetch full repo data for ${owner}/${repo}`, error.stack);
+      this.logger.error(`Failed to fetch full repo data for ${owner}/${repo}`, getErrorStack(error));
       throw error;
     }
   }

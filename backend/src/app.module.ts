@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -10,7 +12,7 @@ import { ResourcesModule } from './resources/resources.module';
 import { FeedModule } from './feed/feed.module';
 import { KnowledgeGraphModule } from './knowledge-graph/knowledge-graph.module';
 import { ProxyModule } from './proxy/proxy.module';
-// import { RecommendationsModule } from './recommendations/recommendations.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 // import { AuthModule } from './auth/auth.module';
 // import { CollectionsModule } from './collections/collections.module';
 // import { LearningPathsModule } from './learning-paths/learning-paths.module';
@@ -21,6 +23,12 @@ import { ProxyModule } from './proxy/proxy.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+
+    // 静态文件服务
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/',
     }),
 
     // 数据库模块
@@ -34,7 +42,7 @@ import { ProxyModule } from './proxy/proxy.module';
     FeedModule,
     KnowledgeGraphModule,
     ProxyModule,
-    // RecommendationsModule, // TODO: Fix schema mismatch
+    RecommendationsModule,
     // AuthModule,          // TODO: Fix schema mismatch
     // CollectionsModule,   // TODO: Fix schema mismatch
     // LearningPathsModule, // TODO: Fix schema mismatch

@@ -75,6 +75,66 @@ class GrokClient:
             logger.error(f"Grok API exception: {str(e)}")
             return None
 
+    async def stream_completion(
+        self,
+        prompt: str,
+        max_tokens: int = 500,
+        temperature: float = 0.7
+    ):
+        """
+        流式生成文本补全
+
+        Args:
+            prompt: 提示词
+            max_tokens: 最大 token 数
+            temperature: 温度参数
+
+        Yields:
+            生成的文本片段
+        """
+        if not self.available:
+            logger.error("Grok client not available")
+            return
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{self.base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "grok-3",
+                        "messages": [
+                            {"role": "user", "content": prompt}
+                        ],
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                        "stream": True,
+                    }
+                ) as response:
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]  # Remove "data: " prefix
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                import json
+                                data = json.loads(data_str)
+                                if "choices" in data and len(data["choices"]) > 0:
+                                    delta = data["choices"][0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        yield content
+                            except Exception as e:
+                                logger.debug(f"Failed to parse SSE line: {e}")
+                                continue
+
+        except Exception as e:
+            logger.error(f"Grok streaming exception: {str(e)}")
+
     async def health_check(self) -> bool:
         """
         健康检查

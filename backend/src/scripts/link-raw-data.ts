@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { MongoClient } from 'mongodb';
+import { getErrorMessage } from '../common/utils/error.utils';
 
 /**
  * 脚本：为现有的 MongoDB raw_data 添加 resourceId 反向引用
@@ -10,7 +11,7 @@ import { MongoClient } from 'mongodb';
  */
 async function linkRawDataToResources() {
   const prisma = new PrismaClient();
-  const mongoClient = new MongoClient('mongodb://deepdive:mongo_dev_password@localhost:27017/deepdive');
+  const mongoClient = new MongoClient('mongodb://deepdive:mongo_dev_password@localhost:27017/deepdive?authSource=admin');
 
   try {
     await mongoClient.connect();
@@ -59,7 +60,7 @@ async function linkRawDataToResources() {
           failCount++;
         }
       } catch (error) {
-        console.error(`❌ 链接失败 ${resource.id}:`, error.message);
+        console.error(`❌ 链接失败 ${resource.id}:`, getErrorMessage(error));
         failCount++;
       }
     }

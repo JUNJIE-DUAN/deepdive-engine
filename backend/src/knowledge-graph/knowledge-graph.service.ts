@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Neo4jService } from '../common/neo4j/neo4j.service';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { getErrorMessage } from '../common/utils/error.utils';
 
 /**
  * 知识图谱服务
@@ -134,7 +135,7 @@ export class KnowledgeGraphService {
         { resourceId, authorUsername },
       );
     } catch (error) {
-      this.logger.warn(`Failed to link resource to author: ${error.message}`);
+      this.logger.warn(`Failed to link resource to author: ${getErrorMessage(error)}`);
     }
   }
 
@@ -152,7 +153,7 @@ export class KnowledgeGraphService {
         { resourceId, topicName },
       );
     } catch (error) {
-      this.logger.warn(`Failed to link resource to topic: ${error.message}`);
+      this.logger.warn(`Failed to link resource to topic: ${getErrorMessage(error)}`);
     }
   }
 
@@ -170,7 +171,7 @@ export class KnowledgeGraphService {
         { resourceId, tagName },
       );
     } catch (error) {
-      this.logger.warn(`Failed to link resource to tag: ${error.message}`);
+      this.logger.warn(`Failed to link resource to tag: ${getErrorMessage(error)}`);
     }
   }
 
@@ -331,7 +332,7 @@ export class KnowledgeGraphService {
         await this.buildGraphFromResource(resource.id);
         success++;
       } catch (error) {
-        this.logger.error(`Failed to build graph for ${resource.id}: ${error.message}`);
+        this.logger.error(`Failed to build graph for ${resource.id}: ${getErrorMessage(error)}`);
         failed++;
       }
     }

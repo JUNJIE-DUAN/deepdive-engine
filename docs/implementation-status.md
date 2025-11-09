@@ -285,10 +285,10 @@ curl -X POST "http://localhost:4000/api/v1/crawler/arxiv/latest" \
 
 ## 📚 文档参考
 
-- **产品需求**: PRD.md
-- **系统架构**: ARCHITECTURE.md
-- **数据采集修复**: DATA_COLLECTION_FIXES.md
-- **API 端点**: API_ENDPOINTS.md
+- **产品需求**: prd.md
+- **系统架构**: architecture.md
+- **数据采集修复**: data-collection-fixes.md
+- **API 端点**: api-endpoints.md
 - **待办事项**: .claude/TODO.md
 
 ---

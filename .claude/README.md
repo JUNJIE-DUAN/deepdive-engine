@@ -100,9 +100,9 @@ D:\projects\deepdive-engine\
 │   ├── RESUME.md                # 快速恢复指南
 │   ├── PROJECT_STATUS.md        # 完整状态文档
 │   └── TODO.md                  # 任务清单
-├── PRD.md                       # 产品需求文档
-├── PROJECT_RULES.md             # 开发规范
-├── ARCHITECTURE.md              # 技术架构
+├── prd.md                       # 产品需求文档
+├── project-rules.md             # 开发规范
+├── architecture.md              # 技术架构
 ├── README.md                    # 项目说明
 ├── .env                         # 环境变量
 └── docker-compose.yml           # 数据库编排

@@ -3,8 +3,8 @@
 > AI驱动的知识发现引擎 - 从信息到洞察，重构你的知识探索之旅
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![PRD](https://img.shields.io/badge/docs-PRD-green.svg)](PRD.md)
-[![Architecture](https://img.shields.io/badge/docs-Architecture-orange.svg)](ARCHITECTURE.md)
+[![PRD](https://img.shields.io/badge/docs-PRD-green.svg)](prd.md)
+[![Architecture](https://img.shields.io/badge/docs-Architecture-orange.svg)](architecture.md)
 
 ## 📖 项目简介
 
@@ -151,9 +151,9 @@ npm run dev
 \`\`\`
 deepdive-engine/
 ├── docs/                    # 文档
-│   ├── PRD.md              # 产品需求文档
-│   ├── ARCHITECTURE.md     # 技术架构
-│   └── API.md              # API文档
+│   ├── prd.md              # 产品需求文档
+│   ├── architecture.md     # 技术架构
+│   └── api.md              # API文档
 │
 ├── frontend/               # Next.js前端
 │   ├── app/               # App Router
@@ -174,7 +174,7 @@ deepdive-engine/
 │   └── src/crawlers/      # 各数据源爬虫
 │
 ├── docker-compose.yml      # 本地开发环境
-├── PROJECT_RULES.md        # 开发规范
+├── project-rules.md        # 开发规范
 └── README.md               # 本文件
 \`\`\`
 
@@ -250,11 +250,11 @@ npm run test:cov
 
 ## 📖 文档
 
-- [产品需求文档 (PRD)](PRD.md)
-- [技术架构设计](ARCHITECTURE.md)
-- [项目开发规范](PROJECT_RULES.md)
-- [API文档](docs/API.md) _(待创建)_
-- [部署指南](docs/DEPLOYMENT.md) _(待创建)_
+- [产品需求文档 (PRD)](prd.md)
+- [技术架构设计](architecture.md)
+- [项目开发规范](project-rules.md)
+- [API文档](docs/api.md) _(待创建)_
+- [部署指南](docs/deployment.md) _(待创建)_
 
 ---
 
@@ -266,7 +266,7 @@ npm run test:cov
 4. 推送到分支 (\`git push origin feature/amazing feature\`)
 5. 打开 Pull Request
 
-**注意**: 请遵循 [项目开发规范](PROJECT_RULES.md)
+**注意**: 请遵循 [项目开发规范](project-rules.md)
 
 ---
 
@@ -278,7 +278,7 @@ npm run test:cov
 - **AI使用**: Grok优先，OpenAI备用
 - **密钥管理**: 使用secretManager，禁止硬编码
 
-详见: [PROJECT_RULES.md](PROJECT_RULES.md)
+详见: [project-rules.md](project-rules.md)
 
 ---
 

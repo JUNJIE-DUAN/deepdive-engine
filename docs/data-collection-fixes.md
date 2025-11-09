@@ -391,8 +391,8 @@ curl "http://localhost:4000/api/v1/resources/{id}" | jq '.rawDataId'
 
 - 爬虫实现: `backend/src/crawler/`
 - MongoDB 服务: `backend/src/common/mongodb/mongodb.service.ts`
-- API 文档: `API_ENDPOINTS.md`
-- 架构设计: `ARCHITECTURE.md`
+- API 文档: `api-endpoints.md`
+- 架构设计: `architecture.md`
 
 ---
 

@@ -66,6 +66,16 @@ temp/
 .DS_Store
 Thumbs.db
 
+# 安全敏感文件
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*credentials*.json
+*secret*.json
+service-account*.json
+
 # 其他
 *.seed
 .cache

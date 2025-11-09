@@ -123,9 +123,9 @@ curl http://localhost:5000/api/v1/ai/health
 |------|------|------|
 | `TODO.md` | **最重要** - 完整任务清单（11/25完成） | ✅ 最新 |
 | `PROJECT_STATUS.md` | 完整项目状态和交接文档 | ⚠️ 需更新 |
-| `PRD.md` | 产品定位和功能需求 | ✅ 完成 |
-| `PROJECT_RULES.md` | 开发规范 | ✅ 完成 |
-| `ARCHITECTURE.md` | 技术架构和数据库设计 | ✅ 完成 |
+| `prd.md` | 产品定位和功能需求 | ✅ 完成 |
+| `project-rules.md` | 开发规范 | ✅ 完成 |
+| `architecture.md` | 技术架构和数据库设计 | ✅ 完成 |
 
 ---
 

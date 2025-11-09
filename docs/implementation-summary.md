@@ -315,9 +315,9 @@ deepdive-engine/
 │       └── page.tsx        # 首页
 │
 └── docs/
-    ├── API_ENDPOINTS.md
-    ├── ARCHITECTURE.md
-    └── PROJECT_RULES.md
+    ├── api-endpoints.md
+    ├── architecture.md
+    └── project-rules.md
 ```
 
 ---
@@ -395,9 +395,9 @@ deepdive-engine/
 ## 📞 联系和支持
 
 如有问题，请参考：
-- `API_ENDPOINTS.md` - 完整的API文档
-- `ARCHITECTURE.md` - 架构设计文档
-- `PROJECT_RULES.md` - 开发规范
+- `api-endpoints.md` - 完整的API文档
+- `architecture.md` - 架构设计文档
+- `project-rules.md` - 开发规范
 - `.claude/TODO.md` - 任务进度
 
 ---

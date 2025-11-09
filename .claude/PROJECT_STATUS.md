@@ -26,8 +26,8 @@ Databases: PostgreSQL 16, Neo4j 5, Redis 7, Qdrant 1.7, MongoDB 7
 ## 二、当前进度总览
 
 ### ✅ 已完成 (5/17)
-1. ✅ 定义项目规则和开发规范 → `PROJECT_RULES.md`
-2. ✅ 创建技术架构设计文档 → `ARCHITECTURE.md`
+1. ✅ 定义项目规则和开发规范 → `project-rules.md`
+2. ✅ 创建技术架构设计文档 → `architecture.md`
 3. ✅ 创建根目录配置文件 → `package.json`, `docker-compose.yml`, `.env`
 4. ✅ 初始化前端项目 → `frontend/` 完整结构，476个依赖包已安装
 5. ✅ 初始化后端项目 → `backend/` 完整结构，647个依赖包已安装
@@ -85,9 +85,9 @@ Error:  PrismaClientInitializationError: Can't reach database server at localhos
 ### 📄 文档文件
 ```
 D:\projects\deepdive-engine\
-├── PRD.md                    # 产品需求文档 v2.0（AI驱动定位）
-├── PROJECT_RULES.md          # 开发规范（代码标准、Git流程、AI使用规则）
-├── ARCHITECTURE.md           # 技术架构设计（系统架构、数据库设计、API规范）
+├── prd.md                    # 产品需求文档 v2.0（AI驱动定位）
+├── project-rules.md          # 开发规范（代码标准、Git流程、AI使用规则）
+├── architecture.md           # 技术架构设计（系统架构、数据库设计、API规范）
 ├── README.md                 # 项目说明文档
 └── .claude/
     └── PROJECT_STATUS.md     # 本文件 - 项目状态交接文档
@@ -335,9 +335,9 @@ JWT_SECRET=deepdive_dev_secret_key_change_in_production
 
 当新会话接手项目时，请按以下清单验证：
 
-- [ ] 阅读 `PRD.md` 了解产品定位
-- [ ] 阅读 `PROJECT_RULES.md` 了解开发规范
-- [ ] 阅读 `ARCHITECTURE.md` 了解技术架构
+- [ ] 阅读 `prd.md` 了解产品定位
+- [ ] 阅读 `project-rules.md` 了解开发规范
+- [ ] 阅读 `architecture.md` 了解技术架构
 - [ ] 阅读本文件 `PROJECT_STATUS.md` 了解当前状态
 - [ ] 检查 Docker 是否已安装: `docker --version`
 - [ ] 检查数据库容器是否运行: `docker-compose ps`

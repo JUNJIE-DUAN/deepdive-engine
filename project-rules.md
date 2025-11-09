@@ -1,8 +1,50 @@
 # DeepDive Engine - 项目规则与开发规范
 
-> **版本**: v1.0
-> **创建日期**: 2025-11-07
+> **版本**: v2.0
+> **更新日期**: 2025-11-08
 > **适用范围**: 所有开发人员和AI助手
+
+---
+
+## ⚠️ 重要：规范体系升级
+
+本项目已采用系统化的开发规范体系，详细规范文档位于 `.claude/standards/` 目录。
+
+### 📚 快速导航
+
+| 文档 | 描述 | 链接 |
+|------|------|------|
+| **总览** | 规范体系架构和使用指南 | [.claude/standards/00-overview.md](.claude/standards/00-overview.md) |
+| **目录结构** | Monorepo 项目组织规范 | [.claude/standards/02-directory-structure.md](.claude/standards/02-directory-structure.md) |
+| **Git工作流** | 分支策略、提交规范、PR流程 | [.claude/standards/08-git-workflow.md](.claude/standards/08-git-workflow.md) |
+| **快速参考** | 常用命令和检查清单 | [.claude/standards/99-quick-reference.md](.claude/standards/99-quick-reference.md) |
+
+### 🚀 新开发者快速上手
+
+```bash
+# 1. 阅读规范总览
+cat .claude/standards/00-overview.md
+
+# 2. 查看快速参考
+cat .claude/standards/99-quick-reference.md
+
+# 3. 开始开发
+git checkout -b feature/001-your-feature
+```
+
+**推荐阅读顺序：**
+1. [00-overview.md](.claude/standards/00-overview.md) - 了解整体规范体系
+2. [99-quick-reference.md](.claude/standards/99-quick-reference.md) - 快速参考手册
+3. [08-git-workflow.md](.claude/standards/08-git-workflow.md) - Git工作流
+4. [02-directory-structure.md](.claude/standards/02-directory-structure.md) - 项目结构
+
+---
+
+## 📖 本文档说明
+
+本文档（project-rules.md）包含项目的详细开发规范和最佳实践。
+
+对于日常开发，建议优先查阅 `.claude/standards/` 目录下的规范文档，它们更加系统化和易于查找。本文档作为补充参考和历史记录保留。
 
 ---
 
@@ -13,8 +55,8 @@
 ```
 deepdive-engine/
 ├── docs/                    # 文档目录
-│   ├── PRD.md              # 产品需求文档
-│   ├── ARCHITECTURE.md     # 技术架构文档
+│   ├── prd.md              # 产品需求文档
+│   ├── architecture.md     # 技术架构文档
 │   └── API.md              # API文档
 │
 ├── frontend/               # 前端应用
@@ -64,7 +106,7 @@ deepdive-engine/
 ├── .gitignore
 ├── docker-compose.yml      # 本地开发环境
 ├── README.md
-├── PROJECT_RULES.md        # 本文档
+├── project-rules.md        # 本文档
 └── package.json            # Monorepo配置
 ```
 
@@ -926,7 +968,7 @@ npm run dev
 
 ## 相关文档
 - [API文档](../docs/API.md)
-- [架构文档](../docs/ARCHITECTURE.md)
+- [架构文档](../docs/architecture.md)
 ```
 
 ---

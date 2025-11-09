@@ -53,4 +53,4 @@ async function fixArxivUrls() {
   }
 }
 
-fixArxivUrls();
+void fixArxivUrls();

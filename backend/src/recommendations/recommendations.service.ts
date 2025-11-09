@@ -39,7 +39,6 @@ export class RecommendationsService {
       take: 20,
       select: {
         resourceId: true,
-        action: true,
       },
     });
 
@@ -156,7 +155,7 @@ export class RecommendationsService {
       }
 
       // 从 PostgreSQL 获取完整资源信息
-      const resourceIds = result.map((r) => r.id);
+      const resourceIds = result.map((r: { id: string }) => r.id);
       const resources = await this.prisma.resource.findMany({
         where: {
           id: { in: resourceIds },
@@ -164,7 +163,7 @@ export class RecommendationsService {
       });
 
       // 按照 Neo4j 返回的顺序排序
-      return resourceIds.map((id) => resources.find((r) => r.id === id)).filter(Boolean);
+      return resourceIds.map((id: string) => resources.find((r) => r.id === id)).filter(Boolean);
     } catch (error) {
       this.logger.warn(`Graph-based recommendation failed: ${getErrorMessage(error)}`);
       return this.getContentBasedRecommendations(resourceId, limit);
@@ -176,7 +175,7 @@ export class RecommendationsService {
    */
   async getHybridRecommendations(
     resourceId: string,
-    userId?: string,
+    _userId?: string,
     limit: number = 10,
   ): Promise<any[]> {
     // 1. 基于内容的推荐（权重40%）

@@ -41,7 +41,7 @@ export class AuthController {
    */
   @Post('refresh')
   @UseGuards(AuthGuard('jwt'))
-  async refresh(@Request() req) {
+  async refresh(@Request() req: { user: { id: string } }) {
     return this.authService.refreshToken(req.user.id);
   }
 
@@ -51,7 +51,7 @@ export class AuthController {
    */
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
-  async getProfile(@Request() req) {
+  getProfile(@Request() req: { user: unknown }) {
     return req.user;
   }
 }

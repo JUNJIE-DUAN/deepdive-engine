@@ -259,7 +259,7 @@ export class KnowledgeGraphService {
       { resourceId, limit },
     );
 
-    return result.map((record) => ({
+    return result.map((record: { r2: { properties: unknown }, commonCount: number }) => ({
       resource: record.r2.properties,
       commonCount: record.commonCount,
     }));

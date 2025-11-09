@@ -243,7 +243,7 @@ export class ResourcesService {
       }
 
       // 质量分数加权
-      score += (resource.qualityScore || 0) * 0.1;
+      score += (Number(resource.qualityScore) || 0) * 0.1;
 
       // 新鲜度加权（最近发布的加分）
       if (resource.publishedAt) {

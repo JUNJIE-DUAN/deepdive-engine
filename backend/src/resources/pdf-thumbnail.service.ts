@@ -3,7 +3,8 @@ import { getErrorMessage } from '../common/utils/error.utils';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import axios from 'axios';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+// @ts-expect-error - pdfjs-dist types may not be available
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import { createCanvas } from 'canvas';
 import sharp from 'sharp';
 
@@ -19,7 +20,7 @@ export class PdfThumbnailService {
   private readonly thumbnailHeight = 566; // 缩略图高度 (A4比例)
 
   constructor() {
-    this.ensureThumbnailDirExists();
+    void this.ensureThumbnailDirExists();
   }
 
   /**

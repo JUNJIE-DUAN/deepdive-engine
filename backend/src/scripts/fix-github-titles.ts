@@ -50,8 +50,9 @@ async function fixGitHubTitles() {
 
       try {
         // 从MongoDB获取raw_data
+        const { ObjectId } = await import('mongodb');
         const rawData = await rawDataCollection.findOne({
-          _id: new (require('mongodb').ObjectId)(resource.rawDataId)
+          _id: new ObjectId(resource.rawDataId)
         });
 
         if (!rawData) {
@@ -95,4 +96,4 @@ async function fixGitHubTitles() {
   }
 }
 
-fixGitHubTitles();
+void fixGitHubTitles();

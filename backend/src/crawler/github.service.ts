@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { MongoDBService } from '../common/mongodb/mongodb.service';
 import { DeduplicationService } from './deduplication.service';
-import { getErrorStack, getErrorMessage } from '../common/utils/error.utils';
+import { getErrorStack } from '../common/utils/error.utils';
 import axios from 'axios';
 
 /**
@@ -24,7 +24,7 @@ export class GithubService {
   constructor(
     private prisma: PrismaService,
     private mongodb: MongoDBService,
-    private dedup: DeduplicationService,
+    _dedup: DeduplicationService,
     private config: ConfigService,
   ) {
     this.githubToken = this.config.get<string>('GITHUB_TOKEN') || '';

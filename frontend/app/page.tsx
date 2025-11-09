@@ -418,7 +418,7 @@ export default function Home() {
     setAiLoading(true);
 
     try {
-      const content = `Title: ${selectedResource.title}\n\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || ''}\n\nContent: ${selectedResource.content?.substring(0, 2000) || ''}`;
+      const content = `Title: ${selectedResource.title}\n\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || ''}`;
 
       const res = await fetch('http://localhost:5000/api/v1/ai/quick-action', {
         method: 'POST',

@@ -56,7 +56,7 @@ export default function Library() {
 
         // Fetch resources by IDs
         const promises = bookmarkIds.map(id =>
-          fetch(`http://localhost:3000/api/v1/resources/${id}`)
+          fetch(`http://localhost:4000/api/v1/resources/${id}`)
             .then(res => res.ok ? res.json() : null)
             .catch(() => null)
         );
@@ -293,7 +293,7 @@ export default function Library() {
                   {resource.thumbnailUrl ? (
                     <div className="h-48 bg-gray-100">
                       <img
-                        src={`http://localhost:3000${resource.thumbnailUrl}`}
+                        src={`http://localhost:4000${resource.thumbnailUrl}`}
                         alt={resource.title}
                         className="w-full h-full object-cover"
                       />

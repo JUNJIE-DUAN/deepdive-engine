@@ -49,7 +49,7 @@ export class AuthService {
     });
 
     // 生成 tokens
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = this.generateTokens(user.id, user.email);
 
     this.logger.log(`New user registered: ${user.username}`);
 
@@ -73,13 +73,13 @@ export class AuthService {
     }
 
     // 验证密码
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash ?? '');
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // 生成 tokens
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = this.generateTokens(user.id, user.email);
 
     this.logger.log(`User logged in: ${user.username}`);
 
@@ -110,13 +110,17 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    if (!user.email) {
+      throw new UnauthorizedException('User email is required');
+    }
+
     return this.generateTokens(user.id, user.email);
   }
 
   /**
    * 生成 access token 和 refresh token
    */
-  private async generateTokens(userId: string, email: string) {
+  private generateTokens(userId: string, email: string) {
     const payload = { sub: userId, email };
 
     const accessToken = this.jwtService.sign(payload);

@@ -8,14 +8,18 @@ import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
  */
 @Injectable()
 export class MongoDBService implements OnModuleInit, OnModuleDestroy {
-  private client: MongoClient;
-  private db: Db;
+  private client!: MongoClient;
+  private db!: Db;
   private readonly logger = new Logger(MongoDBService.name);
 
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
     const mongoUrl = this.configService.get<string>('MONGO_URL');
+
+    if (!mongoUrl) {
+      throw new Error('MONGO_URL is not configured');
+    }
 
     try {
       this.client = new MongoClient(mongoUrl);
@@ -55,7 +59,7 @@ export class MongoDBService implements OnModuleInit, OnModuleDestroy {
     const document = {
       source, // 数据源
       data, // 完整原始数据（JSON 格式）
-      resourceId: resourceId || null, // ⚠️ 关键：反向引用到PostgreSQL resource
+      resourceId: resourceId ?? null, // ⚠️ 关键：反向引用到PostgreSQL resource
       createdAt: new Date(),
       updatedAt: new Date(),
     };

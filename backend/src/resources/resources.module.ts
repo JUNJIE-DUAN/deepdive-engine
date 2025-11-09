@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ResourcesController } from './resources.controller';
 import { ResourcesService } from './resources.service';
 import { AIEnrichmentService } from './ai-enrichment.service';
-import { PdfThumbnailService } from './pdf-thumbnail.service';
+// import { PdfThumbnailService } from './pdf-thumbnail.service';
 import { PrismaModule } from '../common/prisma/prisma.module';
 import { MongoDBModule } from '../common/mongodb/mongodb.module';
 
@@ -12,7 +12,7 @@ import { MongoDBModule } from '../common/mongodb/mongodb.module';
 @Module({
   imports: [PrismaModule, MongoDBModule],
   controllers: [ResourcesController],
-  providers: [ResourcesService, AIEnrichmentService, PdfThumbnailService],
-  exports: [ResourcesService, AIEnrichmentService, PdfThumbnailService],
+  providers: [ResourcesService, AIEnrichmentService], // PdfThumbnailService requires complex native deps
+  exports: [ResourcesService, AIEnrichmentService],
 })
 export class ResourcesModule {}

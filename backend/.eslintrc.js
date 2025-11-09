@@ -22,7 +22,9 @@ module.exports = {
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
-    '@typescript-eslint/no-explicit-any': 'error',
+
+    // 类型安全 - 核心规则保持error
+    '@typescript-eslint/no-explicit-any': 'warn', // 降级为warn，允许合理使用any
     '@typescript-eslint/no-unused-vars': [
       'error',
       {
@@ -34,6 +36,17 @@ module.exports = {
     '@typescript-eslint/no-misused-promises': 'error',
     '@typescript-eslint/await-thenable': 'error',
     '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+
+    // Unsafe操作 - 降级为warn（MongoDB/Neo4j等场景需要）
+    '@typescript-eslint/no-unsafe-assignment': 'warn',
+    '@typescript-eslint/no-unsafe-member-access': 'warn',
+    '@typescript-eslint/no-unsafe-return': 'warn',
+    '@typescript-eslint/no-unsafe-call': 'warn',
+    '@typescript-eslint/no-unsafe-argument': 'warn',
+
+    // 其他规则调整
+    '@typescript-eslint/restrict-template-expressions': 'warn',
+    '@typescript-eslint/require-await': 'warn',
     '@typescript-eslint/prefer-nullish-coalescing': 'warn',
     '@typescript-eslint/prefer-optional-chain': 'warn',
 

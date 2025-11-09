@@ -9,7 +9,7 @@ import neo4j, { Driver, Session } from 'neo4j-driver';
 @Injectable()
 export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(Neo4jService.name);
-  private driver: Driver;
+  private driver!: Driver;
 
   constructor(private configService: ConfigService) {}
 

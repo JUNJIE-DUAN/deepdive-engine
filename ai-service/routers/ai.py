@@ -259,9 +259,9 @@ async def chat(
 
     # 根据指定的模型选择客户端
     if request.model == "grok":
-        client = orch.grok_client
+        client = orch.grok
     else:
-        client = orch.openai_client
+        client = orch.openai
 
     if not client.available:
         raise HTTPException(status_code=503, detail=f"{request.model.upper()} service unavailable")
@@ -352,9 +352,9 @@ async def quick_action(
 
     # 选择模型
     if request.model == "grok":
-        client = orch.grok_client
+        client = orch.grok
     else:
-        client = orch.openai_client
+        client = orch.openai
 
     if not client.available:
         raise HTTPException(status_code=503, detail=f"{request.model.upper()} service unavailable")

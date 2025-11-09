@@ -39,10 +39,18 @@ async function linkRawDataToResources() {
     let successCount = 0;
     let failCount = 0;
 
+    const { ObjectId } = await import('mongodb');
+
     for (const resource of resources) {
+      if (!resource.rawDataId) {
+        console.log(`❌ 资源 ${resource.id} 没有 rawDataId，跳过`);
+        failCount++;
+        continue;
+      }
+
       try {
         const result = await rawDataCollection.updateOne(
-          { _id: new (require('mongodb').ObjectId)(resource.rawDataId) },
+          { _id: new ObjectId(resource.rawDataId as string) },
           {
             $set: {
               resourceId: resource.id,
@@ -76,4 +84,4 @@ async function linkRawDataToResources() {
   }
 }
 
-linkRawDataToResources();
+void linkRawDataToResources();

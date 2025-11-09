@@ -12,10 +12,16 @@ import {
   DefaultValuePipe,
   HttpException,
   HttpStatus,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 import { ResourcesService } from './resources.service';
 import { AIEnrichmentService } from './ai-enrichment.service';
-import { PdfThumbnailService } from './pdf-thumbnail.service';
+// import { PdfThumbnailService } from './pdf-thumbnail.service';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -28,7 +34,7 @@ export class ResourcesController {
   constructor(
     private resourcesService: ResourcesService,
     private aiEnrichmentService: AIEnrichmentService,
-    private pdfThumbnailService: PdfThumbnailService,
+    // private pdfThumbnailService: PdfThumbnailService,
   ) {}
 
   /**
@@ -177,8 +183,8 @@ export class ResourcesController {
     // 调用 AI 增强服务
     const enrichment = await this.aiEnrichmentService.enrichResource({
       title: resource.title,
-      abstract: resource.abstract,
-      content: resource.content,
+      abstract: resource.abstract ?? undefined,
+      content: resource.content ?? undefined,
       sourceUrl: resource.sourceUrl,
     });
 
@@ -197,50 +203,70 @@ export class ResourcesController {
   }
 
   /**
-   * 生成PDF缩略图
+   * 上传并保存资源缩略图
    * POST /api/v1/resources/:id/thumbnail
+   *
+   * 前端使用 PDF.js 客户端生成缩略图，然后上传到服务器
    */
   @Post(':id/thumbnail')
-  async generateThumbnail(@Param('id') id: string) {
-    this.logger.log(`Generating thumbnail for resource ${id}`);
+  @UseInterceptors(
+    FileInterceptor('thumbnail', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const uploadPath = path.join(process.cwd(), 'public', 'thumbnails');
+          fs.mkdir(uploadPath, { recursive: true })
+            .then(() => cb(null, uploadPath))
+            .catch((error) => cb(error as Error, uploadPath));
+        },
+        filename: (req, file, cb) => {
+          const resourceId = req.params.id;
+          const ext = path.extname(file.originalname) || '.jpg';
+          cb(null, `${resourceId}${ext}`);
+        },
+      }),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB max
+      },
+      fileFilter: (_req, file, cb) => {
+        // 只接受图片文件
+        if (file.mimetype.startsWith('image/')) {
+          cb(null, true);
+        } else {
+          cb(new Error('Only image files are allowed'), false);
+        }
+      },
+    })
+  )
+  async uploadThumbnail(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    this.logger.log(`Uploading thumbnail for resource ${id}`);
 
-    // 获取资源
+    if (!file) {
+      throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+    }
+
+    // 检查资源是否存在
     const resource = await this.resourcesService.findOne(id);
     if (!resource) {
       throw new HttpException(`Resource ${id} not found`, HttpStatus.NOT_FOUND);
     }
 
-    // 检查是否有PDF URL
-    if (!resource.pdfUrl) {
-      throw new HttpException(
-        `Resource ${id} does not have a PDF URL`,
-        HttpStatus.BAD_REQUEST
-      );
-    }
+    // 构建缩略图 URL
+    const thumbnailUrl = `/thumbnails/${file.filename}`;
 
-    // 生成缩略图
-    const thumbnailUrl = await this.pdfThumbnailService.generateThumbnail(
-      resource.pdfUrl,
-      resource.id
-    );
-
-    if (!thumbnailUrl) {
-      throw new HttpException(
-        `Failed to generate thumbnail for resource ${id}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-
-    // 更新资源
+    // 更新资源的缩略图 URL
     const updated = await this.resourcesService.update(id, {
       thumbnailUrl,
     });
 
-    this.logger.log(`Thumbnail generated successfully for resource ${id}`);
+    this.logger.log(`Thumbnail uploaded successfully for resource ${id}`);
 
     return {
-      id: updated.id,
-      thumbnailUrl: updated.thumbnailUrl,
+      message: 'Thumbnail uploaded successfully',
+      thumbnailUrl,
+      resource: updated,
     };
   }
 }

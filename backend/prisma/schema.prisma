@@ -1,0 +1,269 @@
+// This is your Prisma schema file
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ 用户相关 ============
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  username        String?   @unique
+  passwordHash    String?   @map("password_hash")
+
+  // OAuth
+  oauthProvider   String?   @map("oauth_provider")
+  oauthId         String?   @map("oauth_id")
+
+  // 订阅
+  subscriptionTier String   @default("free") @map("subscription_tier")
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+
+  // 个人信息
+  fullName        String?   @map("full_name")
+  avatarUrl       String?   @map("avatar_url")
+  bio             String?   @db.Text
+
+  // 偏好设置
+  preferences     Json      @default("{}")
+
+  // 状态
+  isActive        Boolean   @default(true) @map("is_active")
+  isVerified      Boolean   @default(false) @map("is_verified")
+
+  // 时间戳
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lastLoginAt     DateTime? @map("last_login_at")
+
+  // 关系
+  interests       UserInterest[]
+  collections     Collection[]
+  activities      UserActivity[]
+  learningPaths   LearningPath[]
+
+  @@map("users")
+}
+
+model UserInterest {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tag       String
+  category  String?
+  weight    Decimal  @default(1.0) @db.Decimal(5, 4)
+  source    String   @default("manual")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tag])
+  @@index([userId])
+  @@index([tag])
+  @@map("user_interests")
+}
+
+// ============ 资源相关 ============
+
+enum ResourceType {
+  PAPER
+  PROJECT
+  NEWS
+  EVENT
+  RSS
+}
+
+model Resource {
+  id              String       @id @default(uuid())
+  type            ResourceType
+
+  // 基础信息
+  title           String       @db.VarChar(1000)
+  abstract        String?      @db.Text
+  content         String?      @db.Text
+  sourceUrl       String       @map("source_url") @db.Text
+  pdfUrl          String?      @map("pdf_url") @db.Text
+  codeUrl         String?      @map("code_url") @db.Text
+
+  // 作者/机构
+  authors         Json?
+  organizations   Json?
+
+  // 时间
+  publishedAt     DateTime?    @map("published_at")
+
+  // AI生成字段
+  aiSummary       String?      @map("ai_summary") @db.Text
+  keyInsights     Json?        @map("key_insights")
+  difficultyLevel Int?         @map("difficulty_level")
+  prerequisites   Json?
+
+  // 分类
+  primaryCategory String?      @map("primary_category")
+  categories      Json?        @default("[]")
+  tags            Json?        @default("[]")
+  autoTags        Json?        @map("auto_tags") @default("[]")
+
+  // 质量评分
+  qualityScore    Decimal?     @map("quality_score") @db.Decimal(5, 2)
+  trendingScore   Decimal?     @map("trending_score") @db.Decimal(10, 2)
+
+  // 统计
+  viewCount       Int          @default(0) @map("view_count")
+  saveCount       Int          @default(0) @map("save_count")
+  upvoteCount     Int          @default(0) @map("upvote_count")
+  commentCount    Int          @default(0) @map("comment_count")
+
+  // 元数据
+  metadata        Json?        @default("{}")
+
+  // MongoDB 原始数据引用（关键！）
+  rawDataId       String?      @map("raw_data_id")
+
+  // 向量引用
+  embeddingId     String?      @map("embedding_id")
+
+  // 时间戳
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // 关系
+  collectionItems CollectionItem[]
+  activities      UserActivity[]
+
+  @@index([type, publishedAt(sort: Desc)])
+  @@index([qualityScore(sort: Desc)])
+  @@index([trendingScore(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("resources")
+}
+
+// ============ 收藏相关 ============
+
+model Collection {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  isPublic    Boolean  @default(false) @map("is_public")
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CollectionItem[]
+
+  @@index([userId])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id           String    @id @default(uuid())
+  collectionId String    @map("collection_id")
+  resourceId   String    @map("resource_id")
+  note         String?   @db.Text
+  position     Int       @default(0)
+
+  addedAt      DateTime  @default(now()) @map("added_at")
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  resource   Resource   @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, resourceId])
+  @@index([collectionId])
+  @@index([resourceId])
+  @@map("collection_items")
+}
+
+// ============ 用户行为 ============
+
+enum ActivityType {
+  VIEW
+  CLICK
+  SAVE
+  UNSAVE
+  UPVOTE
+  COMMENT
+  SHARE
+}
+
+model UserActivity {
+  id              String       @id @default(uuid())
+  userId          String       @map("user_id")
+  resourceId      String       @map("resource_id")
+  activityType    ActivityType @map("activity_type")
+
+  durationSeconds Int?         @map("duration_seconds")
+  scrollDepth     Decimal?     @map("scroll_depth") @db.Decimal(5, 2)
+  metadata        Json?
+
+  deviceType      String?      @map("device_type")
+  userAgent       String?      @map("user_agent") @db.Text
+
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([resourceId])
+  @@index([activityType])
+  @@map("user_activities")
+}
+
+// ============ 学习路径 ============
+
+enum LearningPathStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model LearningPath {
+  id        String              @id @default(uuid())
+  userId    String              @map("user_id")
+  title     String              @db.VarChar(200)
+  goal      String?             @db.Text
+  status    LearningPathStatus  @default(ACTIVE)
+  progress  Decimal             @default(0) @db.Decimal(5, 2)
+
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps LearningPathStep[]
+
+  @@index([userId])
+  @@map("learning_paths")
+}
+
+enum StepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model LearningPathStep {
+  id          String     @id @default(uuid())
+  pathId      String     @map("path_id")
+  stepOrder   Int        @map("step_order")
+  conceptId   String     @map("concept_id")
+  resources   Json?
+  status      StepStatus @default(PENDING)
+
+  completedAt DateTime?  @map("completed_at")
+
+  path LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+
+  @@unique([pathId, stepOrder])
+  @@index([pathId])
+  @@map("learning_path_steps")
+}

@@ -1,0 +1,408 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { MongoDBService } from '../common/mongodb/mongodb.service';
+import { DeduplicationService } from './deduplication.service';
+import { AIEnrichmentService } from '../resources/ai-enrichment.service';
+import axios from 'axios';
+
+/**
+ * HackerNews 采集器
+ *
+ * 关键功能：
+ * 1. 存储完整信息到 MongoDB raw_data 集合
+ * 2. 建立 raw_data ↔ resource 的引用关系
+ * 3. 实现去重逻辑（基于 HN item ID）
+ * 4. 解析所有字段（标题、作者、评论、URL等）
+ */
+@Injectable()
+export class HackernewsService {
+  private readonly logger = new Logger(HackernewsService.name);
+  private readonly HN_API_URL = 'https://hacker-news.firebaseio.com/v0';
+
+  constructor(
+    private prisma: PrismaService,
+    private mongodb: MongoDBService,
+    private dedup: DeduplicationService,
+    private aiEnrichment: AIEnrichmentService,
+  ) {}
+
+  /**
+   * 采集首页热门新闻
+   * @param maxResults 最大结果数
+   */
+  async fetchTopStories(maxResults = 30): Promise<number> {
+    this.logger.log(`Fetching HackerNews top stories (max: ${maxResults})`);
+
+    try {
+      // 获取热门故事 ID 列表
+      const response = await axios.get(`${this.HN_API_URL}/topstories.json`);
+      const storyIds: number[] = response.data || [];
+
+      // 限制数量
+      const selectedIds = storyIds.slice(0, maxResults);
+      this.logger.log(`Found ${selectedIds.length} top stories`);
+
+      // 处理每个故事
+      let successCount = 0;
+      for (const id of selectedIds) {
+        try {
+          await this.processStory(id);
+          successCount++;
+        } catch (error) {
+          this.logger.error(`Failed to process story ${id}`, error.stack);
+        }
+      }
+
+      this.logger.log(`Successfully processed ${successCount}/${selectedIds.length} stories`);
+      return successCount;
+    } catch (error) {
+      this.logger.error('Failed to fetch HackerNews stories', error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 采集最新故事
+   */
+  async fetchNewStories(maxResults = 30): Promise<number> {
+    this.logger.log(`Fetching HackerNews new stories (max: ${maxResults})`);
+
+    try {
+      const response = await axios.get(`${this.HN_API_URL}/newstories.json`);
+      const storyIds: number[] = response.data || [];
+
+      const selectedIds = storyIds.slice(0, maxResults);
+
+      let successCount = 0;
+      for (const id of selectedIds) {
+        try {
+          await this.processStory(id);
+          successCount++;
+        } catch (error) {
+          this.logger.error(`Failed to process story ${id}`, error.stack);
+        }
+      }
+
+      return successCount;
+    } catch (error) {
+      this.logger.error('Failed to fetch new stories', error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 采集最佳故事
+   */
+  async fetchBestStories(maxResults = 30): Promise<number> {
+    this.logger.log(`Fetching HackerNews best stories (max: ${maxResults})`);
+
+    try {
+      const response = await axios.get(`${this.HN_API_URL}/beststories.json`);
+      const storyIds: number[] = response.data || [];
+
+      const selectedIds = storyIds.slice(0, maxResults);
+
+      let successCount = 0;
+      for (const id of selectedIds) {
+        try {
+          await this.processStory(id);
+          successCount++;
+        } catch (error) {
+          this.logger.error(`Failed to process story ${id}`, error.stack);
+        }
+      }
+
+      return successCount;
+    } catch (error) {
+      this.logger.error('Failed to fetch best stories', error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 处理单个故事
+   */
+  private async processStory(itemId: number): Promise<void> {
+    const externalId = itemId.toString();
+
+    // 检查是否已存在（去重）
+    const existingRawData = await this.mongodb.findRawDataByExternalId('hackernews', externalId);
+
+    if (existingRawData) {
+      this.logger.debug(`Story already exists: ${itemId}`);
+      return;
+    }
+
+    // 获取故事详情
+    const storyData = await this.fetchItem(itemId);
+
+    if (!storyData || storyData.type !== 'story') {
+      this.logger.debug(`Item ${itemId} is not a story`);
+      return;
+    }
+
+    // 解析完整的原始数据
+    const rawData = this.parseRawData(storyData, externalId);
+
+    // 1. 存储完整原始数据到 MongoDB
+    const rawDataId = await this.mongodb.insertRawData('hackernews', rawData);
+
+    this.logger.log(`Stored raw data in MongoDB: HN-${itemId} -> ${rawDataId}`);
+
+    // 2. 提取结构化数据并存储到 PostgreSQL
+    const resourceData = this.extractResourceData(rawData, rawDataId);
+
+    const resource = await this.prisma.resource.create({
+      data: resourceData,
+    });
+
+    this.logger.log(`Created resource in PostgreSQL with rawDataId: ${rawDataId}`);
+
+    // 3. ⚠️ 关键：建立反向引用（MongoDB → PostgreSQL）
+    await this.mongodb.linkResourceToRawData(rawDataId, resource.id);
+
+    // 4. AI 增强处理（异步，不阻塞主流程）
+    this.enrichResourceWithAI(resource.id, resource.title, resource.sourceUrl).catch((error) => {
+      this.logger.error(`Failed to enrich resource ${resource.id} with AI:`, error.message);
+    });
+  }
+
+  /**
+   * 获取单个 item 详情
+   */
+  private async fetchItem(id: number): Promise<any> {
+    try {
+      const response = await axios.get(`${this.HN_API_URL}/item/${id}.json`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to fetch item ${id}`, error.stack);
+      return null;
+    }
+  }
+
+  /**
+   * 解析完整的原始数据（存储到 MongoDB）
+   *
+   * ⚠️ 关键：存储所有字段！
+   */
+  private parseRawData(storyData: any, externalId: string): any {
+    return {
+      // 外部 ID（用于去重）
+      externalId: externalId,
+
+      // 基础信息
+      id: storyData.id,
+      type: storyData.type,
+      title: this.dedup.cleanText(storyData.title),
+      text: storyData.text ? this.dedup.cleanText(storyData.text) : null,
+      url: storyData.url || null,
+
+      // 作者信息
+      by: storyData.by,
+
+      // 时间信息（Unix timestamp）
+      time: storyData.time,
+      timeFormatted: new Date(storyData.time * 1000).toISOString(),
+
+      // 统计数据
+      score: storyData.score || 0,
+      descendants: storyData.descendants || 0, // 评论总数
+
+      // 评论 ID 列表（完整）
+      kids: storyData.kids || [],
+
+      // HackerNews URL
+      hnUrl: `https://news.ycombinator.com/item?id=${storyData.id}`,
+
+      // 是否已删除
+      deleted: storyData.deleted || false,
+      dead: storyData.dead || false,
+
+      // 原始数据（完整保存）
+      _raw: storyData,
+
+      // 采集时间
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * 从原始数据提取结构化数据（存储到 PostgreSQL）
+   *
+   * ⚠️ 关键：建立 rawDataId 引用关系！
+   */
+  private extractResourceData(rawData: any, rawDataId: string): any {
+    // 确定资源 URL
+    const sourceUrl = rawData.url || rawData.hnUrl;
+
+    // 提取域名作为分类
+    const domain = rawData.url ? this.dedup.extractDomain(rawData.url) : 'news.ycombinator.com';
+
+    return {
+      type: 'NEWS',
+
+      // 基础信息
+      title: rawData.title,
+      abstract: rawData.text || '',
+      content: rawData.text || '',
+      sourceUrl: sourceUrl,
+
+      // 作者
+      authors: [
+        {
+          username: rawData.by,
+          platform: 'hackernews',
+        },
+      ],
+
+      // 发布时间
+      publishedAt: new Date(rawData.timeFormatted),
+
+      // 分类
+      primaryCategory: 'Tech News',
+      categories: domain ? [domain] : ['Tech News'],
+      tags: this.extractTags(rawData.title),
+
+      // 统计数据
+      upvoteCount: rawData.score,
+      commentCount: rawData.descendants,
+
+      // 评分
+      qualityScore: this.calculateQualityScore(rawData),
+      trendingScore: this.calculateTrendingScore(rawData),
+
+      // 元数据
+      metadata: {
+        hnId: rawData.id,
+        hnUrl: rawData.hnUrl,
+        domain: domain,
+        author: rawData.by,
+        commentsCount: rawData.descendants,
+        kidIds: rawData.kids.slice(0, 10), // 保存前10个评论ID
+        timestamp: rawData.time,
+      },
+
+      // ⚠️ 关键！MongoDB 原始数据引用
+      rawDataId: rawDataId,
+    };
+  }
+
+  /**
+   * 从标题提取标签
+   */
+  private extractTags(title: string): string[] {
+    const tags: string[] = [];
+
+    // 常见技术关键词
+    const keywords = [
+      'AI',
+      'ML',
+      'Python',
+      'JavaScript',
+      'TypeScript',
+      'React',
+      'Vue',
+      'Node',
+      'Docker',
+      'Kubernetes',
+      'AWS',
+      'Google',
+      'Microsoft',
+      'Apple',
+      'Security',
+      'Privacy',
+      'Crypto',
+      'Blockchain',
+      'Web3',
+      'API',
+      'Database',
+      'Cloud',
+    ];
+
+    const titleLower = title.toLowerCase();
+    for (const keyword of keywords) {
+      if (titleLower.includes(keyword.toLowerCase())) {
+        tags.push(keyword);
+      }
+    }
+
+    // 检查是否是 Show HN 或 Ask HN
+    if (title.startsWith('Show HN:')) {
+      tags.push('Show HN');
+    }
+    if (title.startsWith('Ask HN:')) {
+      tags.push('Ask HN');
+    }
+
+    return tags;
+  }
+
+  /**
+   * 计算质量评分（0-100）
+   */
+  private calculateQualityScore(rawData: any): number {
+    const score = rawData.score || 0;
+    const comments = rawData.descendants || 0;
+
+    // 加权计算
+    let quality = 0;
+    quality += Math.min(score / 10, 70); // 最多70分
+    quality += Math.min(comments / 5, 30); // 最多30分
+
+    return Math.min(Math.round(quality), 100);
+  }
+
+  /**
+   * 计算趋势评分
+   */
+  private calculateTrendingScore(rawData: any): number {
+    const score = rawData.score || 0;
+    const ageInHours = (Date.now() - rawData.time * 1000) / (1000 * 60 * 60);
+
+    // HackerNews 算法：分数 / (年龄 + 2)^1.8
+    const gravity = 1.8;
+    const trendingScore = score / Math.pow(ageInHours + 2, gravity);
+
+    return trendingScore * 100;
+  }
+
+  /**
+   * AI 增强资源
+   * 异步调用，不阻塞主流程
+   */
+  private async enrichResourceWithAI(
+    resourceId: string,
+    title: string,
+    sourceUrl: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(`Starting AI enrichment for resource ${resourceId}`);
+
+      // 调用 AI 增强服务
+      const enrichment = await this.aiEnrichment.enrichResource({
+        title,
+        sourceUrl,
+      });
+
+      // 更新资源
+      await this.prisma.resource.update({
+        where: { id: resourceId },
+        data: {
+          aiSummary: enrichment.aiSummary,
+          keyInsights: enrichment.keyInsights as any,
+          primaryCategory: enrichment.primaryCategory || 'Tech News',
+          autoTags: enrichment.autoTags,
+          difficultyLevel: enrichment.difficultyLevel,
+        },
+      });
+
+      this.logger.log(
+        `AI enrichment completed for resource ${resourceId}: ` +
+        `summary=${!!enrichment.aiSummary}, insights=${enrichment.keyInsights.length}, tags=${enrichment.autoTags.length}`,
+      );
+    } catch (error) {
+      // 失败不影响主流程，只记录日志
+      this.logger.warn(`AI enrichment failed for resource ${resourceId}: ${error.message}`);
+    }
+  }
+}

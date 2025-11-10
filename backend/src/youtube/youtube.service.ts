@@ -63,15 +63,13 @@ export class YoutubeService {
         throw new NotFoundException('Invalid transcript data structure');
       }
 
-      const transcript: TranscriptSegment[] = transcriptData.transcript.content.body.initial_segments.map((segment: {
-        snippet: { text: string };
-        start_ms: number;
-        end_ms: number;
-      }) => ({
-        text: segment.snippet.text,
-        start: segment.start_ms / 1000, // Convert milliseconds to seconds
-        duration: segment.end_ms / 1000 - segment.start_ms / 1000,
-      }));
+      const transcript: TranscriptSegment[] = transcriptData.transcript.content.body.initial_segments
+        .filter((segment: any) => segment.snippet?.text) // Filter out segments without text
+        .map((segment: any) => ({
+          text: segment.snippet.text,
+          start: segment.start_ms / 1000, // Convert milliseconds to seconds
+          duration: segment.end_ms / 1000 - segment.start_ms / 1000,
+        }));
 
       if (transcript.length === 0) {
         throw new NotFoundException('No transcript segments found for this video');

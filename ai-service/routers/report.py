@@ -443,3 +443,145 @@ async def get_report_templates():
             },
         ]
     }
+
+
+# YouTube报告相关模型
+class YoutubeReportRequest(BaseModel):
+    """YouTube报告生成请求"""
+    title: str
+    transcript: str
+    model: str = Field(default="gpt-4", pattern="^(grok|gpt-4)$")
+
+
+class TranscriptLine(BaseModel):
+    """字幕行"""
+    english: str
+    chinese: str
+
+
+class YoutubeReportResponse(BaseModel):
+    """YouTube报告响应"""
+    title: str
+    summary: str
+    translations: List[TranscriptLine]
+
+
+@router.post("/youtube-report", response_model=YoutubeReportResponse)
+async def generate_youtube_report(request: YoutubeReportRequest):
+    """
+    生成YouTube视频字幕报告（含逐句中英翻译）
+    """
+    try:
+        logger.info(f"Generating YouTube report for: {request.title}")
+
+        # 选择AI客户端
+        ai_client = openai_client if request.model == "gpt-4" else grok_client
+
+        # 第一步：生成概要
+        summary_prompt = f"""
+请为以下YouTube视频生成一个简洁的概要（200-300字），包括：
+1. 视频主要内容
+2. 核心观点
+3. 关键信息
+
+视频标题：{request.title}
+视频字幕：
+{request.transcript}
+
+请直接返回概要文本，不需要其他格式。
+"""
+
+        logger.info("Step 1: Generating summary...")
+        summary_response = await ai_client.chat_completion(
+            messages=[
+                {"role": "system", "content": "你是一个专业的视频内容分析师。"},
+                {"role": "user", "content": summary_prompt}
+            ]
+        )
+
+        summary = summary_response.get("content", "")
+        logger.info(f"Summary generated: {len(summary)} characters")
+
+        # 第二步：将字幕分句并翻译
+        # 简化：一次性处理所有文本，但限制最大长度
+        transcript_text = request.transcript[:6000]  # 限制最大长度避免token超限
+
+        translation_prompt = f"""
+请将以下英文字幕按句翻译成中文。
+
+要求：
+1. 按语义完整性分句（每句2-3行左右）
+2. 每句英文对应一句中文翻译
+3. 翻译要准确、流畅、地道
+4. 确保ALL句子都有翻译，不要遗漏
+5. 返回JSON格式
+
+格式：
+{{
+  "translations": [
+    {{"english": "First sentence here.", "chinese": "第一句的中文翻译。"}},
+    {{"english": "Second sentence here.", "chinese": "第二句的中文翻译。"}}
+  ]
+}}
+
+英文字幕：
+{transcript_text}
+
+请严格按照JSON格式返回，不要添加markdown标记。
+"""
+
+        logger.info("Step 2: Generating translations...")
+        translation_response = await ai_client.chat_completion(
+            messages=[
+                {"role": "system", "content": "你是专业的英中翻译专家。请严格按照JSON格式返回完整的翻译结果。"},
+                {"role": "user", "content": translation_prompt}
+            ]
+        )
+
+        # 解析翻译结果
+        translation_content = translation_response.get("content", "")
+        logger.info(f"Translation response: {len(translation_content)} characters")
+
+        # 清理并解析JSON
+        try:
+            # 移除可能的markdown代码块标记
+            clean_content = translation_content.strip()
+            if clean_content.startswith("```"):
+                lines = clean_content.split("\n")
+                clean_content = "\n".join(lines[1:-1]) if len(lines) > 2 else clean_content
+                clean_content = clean_content.replace("```json", "").replace("```", "").strip()
+
+            translation_data = json.loads(clean_content)
+            translations = translation_data.get("translations", [])
+
+            if not translations:
+                raise ValueError("No translations found in response")
+
+            logger.info(f"Successfully parsed {len(translations)} translation pairs")
+
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to parse translations: {e}")
+            logger.error(f"Raw content: {translation_content[:1000]}")
+
+            # 降级处理：简单分段
+            sentences = [s.strip() + '.' for s in request.transcript.split('.') if s.strip()]
+            translations = []
+
+            for i, sentence in enumerate(sentences[:30]):  # 限制最多30句
+                if sentence:
+                    translations.append({
+                        "english": sentence,
+                        "chinese": f"[翻译失败] 句子 {i+1}"
+                    })
+
+        logger.info(f"Generated {len(translations)} translation pairs")
+
+        return YoutubeReportResponse(
+            title=request.title,
+            summary=summary,
+            translations=[TranscriptLine(**t) for t in translations]
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating YouTube report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

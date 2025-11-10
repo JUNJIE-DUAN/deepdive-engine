@@ -47,6 +47,8 @@ model User {
   collections     Collection[]
   activities      UserActivity[]
   learningPaths   LearningPath[]
+  notes           Note[]
+  comments        Comment[]
 
   @@map("users")
 }
@@ -138,6 +140,8 @@ model Resource {
   // 关系
   collectionItems CollectionItem[]
   activities      UserActivity[]
+  notes           Note[]
+  comments        Comment[]
 
   @@index([type, publishedAt(sort: Desc)])
   @@index([qualityScore(sort: Desc)])
@@ -267,4 +271,78 @@ model LearningPathStep {
   @@unique([pathId, stepOrder])
   @@index([pathId])
   @@map("learning_path_steps")
+}
+
+// ============ 笔记系统 ============
+
+model Note {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  resourceId  String   @map("resource_id")
+
+  // 笔记内容
+  content     String   @db.Text
+
+  // 高亮标注数据 (JSON)
+  highlights  Json?    @default("[]")
+
+  // AI解释和洞察
+  aiInsights  Json?    @map("ai_insights")
+
+  // 关联的知识图谱节点
+  graphNodes  Json?    @map("graph_nodes") @default("[]")
+
+  // 标签
+  tags        Json?    @default("[]")
+
+  // 是否公开
+  isPublic    Boolean  @default(false) @map("is_public")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([resourceId])
+  @@index([createdAt(sort: Desc)])
+  @@map("notes")
+}
+
+// ============ 评论系统 ============
+
+model Comment {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  resourceId  String    @map("resource_id")
+
+  // 评论内容
+  content     String    @db.Text
+
+  // 嵌套回复支持
+  parentId    String?   @map("parent_id")
+
+  // 统计
+  upvoteCount Int       @default(0) @map("upvote_count")
+  replyCount  Int       @default(0) @map("reply_count")
+
+  // 状态
+  isEdited    Boolean   @default(false) @map("is_edited")
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // 关系
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource    Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+
+  @@index([userId])
+  @@index([resourceId])
+  @@index([parentId])
+  @@index([createdAt(sort: Desc)])
+  @@map("comments")
 }

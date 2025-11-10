@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { config } from '@/lib/config';
+import NoteEditor from '@/components/NoteEditor';
+import NotesList from '@/components/NotesList';
+import CommentsList from '@/components/CommentsList';
 
 interface Resource {
   id: string;
@@ -42,6 +45,48 @@ interface AIInsight {
   importance: 'high' | 'medium' | 'low';
 }
 
+// Helper function to parse markdown format to insights array
+function parseMarkdownToInsights(markdown: string): AIInsight[] {
+  const insights: AIInsight[] = [];
+
+  // Split by #### headings (numbered items)
+  const sections = markdown.split(/####\s+\d+\.\s+/);
+
+  for (let i = 1; i < sections.length; i++) {
+    const section = sections[i].trim();
+    if (!section) continue;
+
+    // Extract title (first line before newline or **)
+    const titleMatch = section.match(/^([^\n*]+)/);
+    const title = titleMatch ? titleMatch[1].trim() : '未命名';
+
+    // Extract importance if present
+    let importance: 'high' | 'medium' | 'low' = 'medium';
+    if (section.includes('重要性：高') || section.includes('importance: high') || section.includes('**重要性：高**')) {
+      importance = 'high';
+    } else if (section.includes('重要性：低') || section.includes('importance: low') || section.includes('**重要性：低**')) {
+      importance = 'low';
+    }
+
+    // Extract description (text after the importance line or after first newline)
+    let description = section;
+    // Remove title from description
+    description = description.replace(/^([^\n*]+)/, '');
+    // Remove importance markers
+    description = description.replace(/\*\*重要性：[^*]+\*\*/g, '').trim();
+    description = description.replace(/重要性：[^\n]+/g, '').trim();
+    // Take first few lines as description
+    const lines = description.split('\n').filter(line => line.trim());
+    description = lines.slice(0, 3).join(' ').substring(0, 200);
+
+    if (title && description) {
+      insights.push({ title, description, importance });
+    }
+  }
+
+  return insights.length > 0 ? insights : [];
+}
+
 export default function Home() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +103,13 @@ export default function Home() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [aiMethodology, setAiMethodology] = useState<AIInsight[]>([]);
   const [aiRightTab, setAiRightTab] = useState<'assistant' | 'notes' | 'comments' | 'similar'>('assistant');
+
+  // Context menu for adding to notes
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
+  const [notesRefreshKey, setNotesRefreshKey] = useState(0);
   const [aiModel, setAiModel] = useState<'grok' | 'openai'>('grok');
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -75,22 +126,59 @@ export default function Home() {
 
   // Bookmark states
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
+  const [defaultCollectionId, setDefaultCollectionId] = useState<string | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Load bookmarks from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('deepdive-bookmarks');
-    if (saved) {
-      try {
-        setBookmarks(new Set(JSON.parse(saved)));
-      } catch (e) {
-        console.error('Failed to load bookmarks:', e);
+  // Load bookmarks function
+  const loadBookmarks = useCallback(async () => {
+    try {
+      // Get all collections
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/collections`);
+      if (response.ok) {
+        const collections = await response.json();
+
+        // Find or create default collection
+        let defaultCollection = collections.find((c: any) => c.name === '我的收藏');
+
+        if (!defaultCollection) {
+          // Create default collection
+          const createResponse = await fetch(`${config.apiBaseUrl}/api/v1/collections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: '我的收藏',
+              description: '默认收藏集',
+              isPublic: false,
+            }),
+          });
+
+          if (createResponse.ok) {
+            defaultCollection = await createResponse.json();
+          }
+        }
+
+        if (defaultCollection) {
+          setDefaultCollectionId(defaultCollection.id);
+
+          // Load bookmarked resource IDs
+          const bookmarkedIds = new Set<string>(
+            (defaultCollection.items || []).map((item: any) => item.resourceId as string)
+          );
+          setBookmarks(bookmarkedIds);
+        }
       }
+    } catch (err) {
+      console.error('Failed to load bookmarks:', err);
     }
   }, []);
+
+  // Load bookmarks from backend API on mount
+  useEffect(() => {
+    loadBookmarks();
+  }, [loadBookmarks]);
 
   useEffect(() => {
     fetchResources();
@@ -325,6 +413,88 @@ export default function Home() {
     }
   };
 
+  // Handle context menu for adding to notes
+  const handleContextMenu = (e: React.MouseEvent, text: string) => {
+    e.preventDefault();
+    const selection = window.getSelection();
+    const selectedText = selection?.toString().trim();
+
+    if (selectedText) {
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        text: selectedText,
+      });
+    } else if (text) {
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        text: text,
+      });
+    }
+  };
+
+  // Save selected text to notes
+  const saveToNotes = async () => {
+    if (!contextMenu || !selectedResource) return;
+
+    try {
+      setSavingNote(true);
+      console.log('Saving note to resource:', selectedResource.id, 'content:', contextMenu.text.substring(0, 50) + '...');
+
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resourceId: selectedResource.id,
+          content: contextMenu.text,
+          tags: ['AI生成'],
+          isPublic: false,
+        }),
+      });
+
+      if (response.ok) {
+        const savedNote = await response.json();
+        console.log('Note saved successfully:', savedNote);
+
+        // Close context menu first
+        setContextMenu(null);
+
+        // Switch to notes tab
+        setAiRightTab('notes');
+
+        // Trigger notes list refresh after a small delay
+        setTimeout(() => {
+          setNotesRefreshKey(prev => prev + 1);
+          console.log('Notes list refreshed');
+        }, 100);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to save note:', response.status, errorData);
+      }
+    } catch (error) {
+      console.error('Failed to save note:', error);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't close if clicking on the context menu itself
+      if (target.closest('.context-menu')) {
+        return;
+      }
+      setContextMenu(null);
+    };
+    if (contextMenu) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
+
   const sendAIMessage = async () => {
     if (!aiInput.trim() || !selectedResource) return;
 
@@ -432,13 +602,51 @@ export default function Home() {
 
       const data = await res.json();
 
-      const assistantMessage: AIMessage = {
-        role: 'assistant',
-        content: data.content,
-        timestamp: new Date(),
-      };
+      // Parse and set the appropriate state based on action type
+      if (action === 'summary') {
+        setAiSummary(data.content);
+      } else if (action === 'insights') {
+        // Try to parse JSON response for insights
+        try {
+          const insights = JSON.parse(data.content);
+          if (Array.isArray(insights)) {
+            setAiInsights(insights);
+          } else {
+            setAiInsights([]);
+          }
+        } catch {
+          // If not valid JSON, try to parse markdown format
+          console.log('JSON parsing failed, trying markdown parsing for insights');
+          const parsedInsights = parseMarkdownToInsights(data.content);
+          setAiInsights(parsedInsights);
+        }
+      } else if (action === 'methodology') {
+        // Try to parse JSON response for methodology
+        try {
+          const methodology = JSON.parse(data.content);
+          if (Array.isArray(methodology)) {
+            setAiMethodology(methodology);
+          } else {
+            setAiMethodology([]);
+          }
+        } catch {
+          // If not valid JSON, try to parse markdown format
+          console.log('JSON parsing failed, trying markdown parsing for methodology');
+          const parsedMethodology = parseMarkdownToInsights(data.content);
+          setAiMethodology(parsedMethodology);
+        }
+      }
 
-      setAiMessages(prev => [...prev, assistantMessage]);
+      // Only add summary to chat messages, not insights/methodology
+      // (insights/methodology are displayed as structured blocks)
+      if (action === 'summary') {
+        const assistantMessage: AIMessage = {
+          role: 'assistant',
+          content: data.content,
+          timestamp: new Date(),
+        };
+        setAiMessages(prev => [...prev, assistantMessage]);
+      }
     } catch (error) {
       console.error(`Failed to execute ${action}:`, error);
       const errorMessage: AIMessage = {
@@ -453,20 +661,51 @@ export default function Home() {
   };
 
   // Bookmark functions
-  const toggleBookmark = (resourceId: string, e?: React.MouseEvent) => {
+  const toggleBookmark = async (resourceId: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
 
-    const newBookmarks = new Set(bookmarks);
-    if (newBookmarks.has(resourceId)) {
-      newBookmarks.delete(resourceId);
-    } else {
-      newBookmarks.add(resourceId);
+    if (!defaultCollectionId) {
+      console.error('Default collection not found');
+      return;
     }
 
-    setBookmarks(newBookmarks);
-    localStorage.setItem('deepdive-bookmarks', JSON.stringify(Array.from(newBookmarks)));
+    try {
+      const isCurrentlyBookmarked = bookmarks.has(resourceId);
+
+      if (isCurrentlyBookmarked) {
+        // Remove from collection
+        const response = await fetch(
+          `${config.apiBaseUrl}/api/v1/collections/${defaultCollectionId}/items/${resourceId}`,
+          { method: 'DELETE' }
+        );
+
+        if (response.ok) {
+          const newBookmarks = new Set(bookmarks);
+          newBookmarks.delete(resourceId);
+          setBookmarks(newBookmarks);
+        }
+      } else {
+        // Add to collection
+        const response = await fetch(
+          `${config.apiBaseUrl}/api/v1/collections/${defaultCollectionId}/items`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resourceId }),
+          }
+        );
+
+        if (response.ok) {
+          const newBookmarks = new Set(bookmarks);
+          newBookmarks.add(resourceId);
+          setBookmarks(newBookmarks);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to toggle bookmark:', err);
+    }
   };
 
   const isBookmarked = (resourceId: string) => {
@@ -1179,12 +1418,16 @@ export default function Home() {
 
                 {/* AI Summary Section */}
                 {aiSummary && (
-                  <div className="bg-gradient-to-br from-pink-50 to-red-50 rounded-lg p-4 border border-pink-200">
+                  <div
+                    className="bg-gradient-to-br from-pink-50 to-red-50 rounded-lg p-4 border border-pink-200 cursor-text select-text"
+                    onContextMenu={(e) => handleContextMenu(e, aiSummary)}
+                  >
                     <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
                       <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       AI摘要
+                      <span className="ml-auto text-xs text-gray-500">右键添加到笔记</span>
                     </h3>
                     <p className="text-sm text-gray-700 leading-relaxed">{aiSummary}</p>
                   </div>
@@ -1208,20 +1451,51 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                       </svg>
                       关键洞察
+                      <span className="ml-auto text-xs text-gray-500">右键添加到笔记</span>
                     </h3>
                     {aiInsights.map((insight, i) => (
                       <div
                         key={i}
-                        className={`p-3 rounded-lg border ${
+                        className={`p-3 rounded-lg border cursor-text select-text ${
                           insight.importance === 'high'
                             ? 'bg-red-50 border-red-200'
                             : insight.importance === 'medium'
                             ? 'bg-orange-50 border-orange-200'
                             : 'bg-gray-50 border-gray-200'
                         }`}
+                        onContextMenu={(e) => handleContextMenu(e, `**${insight.title}**\n\n${insight.description}`)}
                       >
                         <h4 className="text-sm font-semibold text-gray-900 mb-1">{insight.title}</h4>
                         <p className="text-xs text-gray-600">{insight.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* AI Methodology Section */}
+                {aiMethodology.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                      研究方法论
+                      <span className="ml-auto text-xs text-gray-500">右键添加到笔记</span>
+                    </h3>
+                    {aiMethodology.map((method, i) => (
+                      <div
+                        key={i}
+                        className={`p-3 rounded-lg border cursor-text select-text ${
+                          method.importance === 'high'
+                            ? 'bg-blue-50 border-blue-200'
+                            : method.importance === 'medium'
+                            ? 'bg-cyan-50 border-cyan-200'
+                            : 'bg-teal-50 border-teal-200'
+                        }`}
+                        onContextMenu={(e) => handleContextMenu(e, `**${method.title}**\n\n${method.description}`)}
+                      >
+                        <h4 className="text-sm font-semibold text-gray-900 mb-1">{method.title}</h4>
+                        <p className="text-xs text-gray-600">{method.description}</p>
                       </div>
                     ))}
                   </div>
@@ -1287,12 +1561,12 @@ export default function Home() {
                 )}
               </div>
             ) : aiRightTab === 'notes' ? (
-              <div className="text-center text-gray-500 py-8">
-                <p className="text-sm">笔记功能开发中...</p>
+              <div className="p-6">
+                <NotesList key={notesRefreshKey} resourceId={selectedResource.id} />
               </div>
             ) : aiRightTab === 'comments' ? (
-              <div className="text-center text-gray-500 py-8">
-                <p className="text-sm">评论功能开发中...</p>
+              <div className="p-6">
+                <CommentsList resourceId={selectedResource.id} />
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
@@ -1359,6 +1633,30 @@ export default function Home() {
           </div>
         </div>
       </aside>
+
+      {/* Context Menu for Adding to Notes */}
+      {contextMenu && (
+        <div
+          className="context-menu fixed bg-white border-2 border-blue-500 rounded-lg shadow-xl py-2 z-50"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('Button clicked!');
+              saveToNotes();
+            }}
+            disabled={savingNote}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-blue-100 disabled:opacity-50 flex items-center gap-2 font-medium"
+          >
+            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            {savingNote ? '保存中...' : '添加到笔记'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { config } from '@/lib/config';
-import { useThumbnailGenerator } from '@/lib/useThumbnailGenerator';
+import { useThumbnailGenerator } from '@/lib/use-thumbnail-generator';
 
 // Disable static generation for this page (requires browser APIs)
 export const dynamic = 'force-dynamic';
@@ -25,10 +25,9 @@ export default function ThumbnailsAdminPage() {
   const [statusMessage, setStatusMessage] = useState<string>('');
 
   const {
-    generateThumbnail,
-    generateBatchThumbnails,
-    getStatus,
-    progress,
+    generateAndUploadThumbnail,
+    batchGenerateThumbnails,
+    isGenerating,
   } = useThumbnailGenerator();
 
   useEffect(() => {
@@ -69,9 +68,9 @@ export default function ThumbnailsAdminPage() {
     );
 
     if (confirmed) {
-      const results = await generateBatchThumbnails(resourcesToGenerate);
+      const results = await batchGenerateThumbnails(resourcesToGenerate);
       setStatusMessage(
-        `Generation complete!\nSuccess: ${results.success}\nFailed: ${results.failed}`
+        `Generation complete!\nSuccess: ${results.success}\nFailed: ${results.failed}\n${results.errors.length > 0 ? `Errors:\n${results.errors.join('\n')}` : ''}`
       );
       void fetchResources(); // Refresh the list
     }
@@ -88,15 +87,16 @@ export default function ThumbnailsAdminPage() {
       return;
     }
 
-    const results = await generateBatchThumbnails(resourcesToGenerate);
+    const results = await batchGenerateThumbnails(resourcesToGenerate);
     setStatusMessage(
-      `Generation complete!\nSuccess: ${results.success}\nFailed: ${results.failed}`
+      `Generation complete!\nSuccess: ${results.success}\nFailed: ${results.failed}\n${results.errors.length > 0 ? `Errors:\n${results.errors.join('\n')}` : ''}`
     );
     void fetchResources();
   };
 
   const handleGenerateSingle = async (id: string, pdfUrl: string) => {
-    await generateThumbnail(id, pdfUrl);
+    const success = await generateAndUploadThumbnail(id, pdfUrl);
+    setStatusMessage(success ? 'Thumbnail generated successfully!' : 'Failed to generate thumbnail');
     void fetchResources();
   };
 
@@ -162,18 +162,13 @@ export default function ThumbnailsAdminPage() {
               </div>
 
               {/* Progress */}
-              {progress && (
+              {isGenerating && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                   <p className="text-sm text-gray-700 mb-2">
-                    Generating thumbnails... ({progress.current} / {progress.total})
+                    Generating thumbnails...
                   </p>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${(progress.current / progress.total) * 100}%`,
-                      }}
-                    ></div>
+                    <div className="bg-blue-600 h-2 rounded-full animate-pulse w-full"></div>
                   </div>
                 </div>
               )}
@@ -182,7 +177,7 @@ export default function ThumbnailsAdminPage() {
               <div className="flex gap-4 mb-6">
                 <button
                   onClick={() => void handleGenerateAll()}
-                  disabled={resourcesNeedingThumbnails.length === 0 || !!progress}
+                  disabled={resourcesNeedingThumbnails.length === 0 || isGenerating}
                   className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   Generate All ({resourcesNeedingThumbnails.length})
@@ -199,7 +194,7 @@ export default function ThumbnailsAdminPage() {
                 {selectedResources.length > 0 && (
                   <button
                     onClick={() => void handleGenerateSelected()}
-                    disabled={!!progress}
+                    disabled={isGenerating}
                     className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
                     Generate Selected ({selectedResources.length})
@@ -228,7 +223,6 @@ export default function ThumbnailsAdminPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {resources.map((resource) => {
-                      const status = getStatus(resource.id);
                       const hasThumbnail = !!resource.thumbnailUrl;
                       const hasPdf = !!resource.pdfUrl;
 
@@ -248,27 +242,12 @@ export default function ThumbnailsAdminPage() {
                             <div className="max-w-md truncate">{resource.title}</div>
                           </td>
                           <td className="px-4 py-3">
-                            {status === 'generating' && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Generating...
-                              </span>
-                            )}
-                            {status === 'success' && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Success
-                              </span>
-                            )}
-                            {status === 'error' && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                Error
-                              </span>
-                            )}
-                            {status === 'idle' && hasThumbnail && (
+                            {hasThumbnail && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 Has Thumbnail
                               </span>
                             )}
-                            {status === 'idle' && !hasThumbnail && hasPdf && (
+                            {!hasThumbnail && hasPdf && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                 Needs Thumbnail
                               </span>
@@ -280,10 +259,11 @@ export default function ThumbnailsAdminPage() {
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            {hasPdf && !hasThumbnail && status === 'idle' && resource.pdfUrl && (
+                            {hasPdf && !hasThumbnail && resource.pdfUrl && (
                               <button
                                 onClick={() => void handleGenerateSingle(resource.id, resource.pdfUrl as string)}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                disabled={isGenerating}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:text-gray-400"
                               >
                                 Generate
                               </button>

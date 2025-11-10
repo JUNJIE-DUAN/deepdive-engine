@@ -13,9 +13,11 @@ import { FeedModule } from './feed/feed.module';
 import { KnowledgeGraphModule } from './knowledge-graph/knowledge-graph.module';
 import { ProxyModule } from './proxy/proxy.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
-// import { AuthModule } from './auth/auth.module';
-// import { CollectionsModule } from './collections/collections.module';
-// import { LearningPathsModule } from './learning-paths/learning-paths.module';
+import { AuthModule } from './auth/auth.module';
+import { CollectionsModule } from './collections/collections.module';
+import { NotesModule } from './notes/notes.module';
+import { CommentsModule } from './comments/comments.module';
+// import { LearningPathsModule } from './learning-paths/learning-paths.module'; // TODO: Enable later
 
 @Module({
   imports: [
@@ -43,9 +45,11 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
     KnowledgeGraphModule,
     ProxyModule,
     RecommendationsModule,
-    // AuthModule,          // TODO: Fix schema mismatch
-    // CollectionsModule,   // TODO: Fix schema mismatch
-    // LearningPathsModule, // TODO: Fix schema mismatch
+    AuthModule,
+    CollectionsModule,
+    NotesModule,
+    CommentsModule,
+    // LearningPathsModule, // TODO: Enable later
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -317,16 +317,23 @@ async def quick_action(
 
     # 根据不同的 action 构建不同的 prompt
     if request.action == "methodology":
-        prompt = f"""请分析以下内容的研究方法论或技术方法：
+        prompt = f"""You are a JSON-only API. Analyze the research methodology or technical methods in the following content.
 
+Content:
 {request.content}
 
-要求：
-- 识别主要的方法论或技术手段
-- 说明方法的创新点和优势
-- 指出可能的局限性
-- 以清晰的结构化方式呈现（使用标题和列表）
-"""
+Requirements:
+1. Extract 3-5 main methods or techniques
+2. Each method must have exactly these fields: title, description, importance
+3. importance must be one of: high, medium, low
+4. Output ONLY a valid JSON array, nothing else
+5. No explanations, no markdown, no code blocks, just the JSON array
+
+Output format (follow exactly):
+[{{"title":"Method Name","description":"Method description and features","importance":"high"}},{{"title":"Method Name 2","description":"Method description 2","importance":"medium"}}]
+
+JSON output:
+["""
     elif request.action == "summary":
         prompt = f"""请为以下内容生成一个结构化的摘要：
 
@@ -339,16 +346,23 @@ async def quick_action(
 - 使用清晰的标题和列表格式
 """
     else:  # insights
-        prompt = f"""请从以下内容中提取关键洞察：
+        prompt = f"""You are a JSON-only API. Extract key insights from the following content.
 
+Content:
 {request.content}
 
-要求：
-- 识别3-5个关键洞察
-- 每个洞察包含标题和详细说明
-- 标注重要性（高/中/低）
-- 说明对读者的启发
-"""
+Requirements:
+1. Extract 3-5 key insights
+2. Each insight must have exactly these fields: title, description, importance
+3. importance must be one of: high, medium, low
+4. Output ONLY a valid JSON array, nothing else
+5. No explanations, no markdown, no code blocks, just the JSON array
+
+Output format (follow exactly):
+[{{"title":"Core Finding","description":"Research reveals significant breakthrough","importance":"high"}},{{"title":"Application Value","description":"Can be applied to production","importance":"medium"}}]
+
+JSON output:
+["""
 
     # 选择模型
     if request.model == "grok":
@@ -363,6 +377,56 @@ async def quick_action(
 
     if result is None:
         raise HTTPException(status_code=503, detail="Failed to generate response")
+
+    # 对于需要JSON格式的action，尝试提取JSON
+    if request.action in ["methodology", "insights"]:
+        try:
+            # 提取JSON部分（可能被markdown代码块包裹）
+            json_content = result.strip()
+
+            # 如果prompt以"["结尾，响应可能不包含开头的"["，需要补上
+            # 检查响应是否以某个对象开始
+            if json_content.startswith('{"') or json_content.startswith('{'):
+                # 可能缺少开头的"["，补上
+                if not json_content.startswith('['):
+                    json_content = '[' + json_content
+                    # 检查结尾是否缺少"]"
+                    if not json_content.endswith(']'):
+                        # 尝试找到最后一个完整的}
+                        last_brace = json_content.rfind('}')
+                        if last_brace != -1:
+                            json_content = json_content[:last_brace + 1] + ']'
+
+            # 移除markdown代码块标记
+            if "```json" in json_content:
+                json_content = json_content.split("```json")[1].split("```")[0].strip()
+            elif "```" in json_content:
+                json_content = json_content.split("```")[1].split("```")[0].strip()
+
+            # 移除可能的前后文本，只保留JSON数组部分
+            # 尝试找到第一个 [ 和最后一个 ]
+            start_idx = json_content.find('[')
+            end_idx = json_content.rfind(']')
+
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                json_content = json_content[start_idx:end_idx + 1]
+
+            # 尝试解析JSON
+            import json as json_lib
+            parsed_json = json_lib.loads(json_content)
+
+            # 验证是否为数组
+            if isinstance(parsed_json, list):
+                # 如果解析成功，返回JSON字符串
+                result = json_lib.dumps(parsed_json, ensure_ascii=False)
+                logger.info(f"Successfully parsed JSON for {request.action}: {len(parsed_json)} items")
+            else:
+                logger.warning(f"Parsed JSON is not an array for {request.action}, returning original content")
+
+        except Exception as e:
+            logger.error(f"Failed to parse JSON for {request.action}: {str(e)}")
+            logger.debug(f"Original content: {result[:500]}...")
+            # 如果解析失败，返回原始内容，前端会尝试使用markdown解析
 
     return {
         "content": result,

@@ -2,152 +2,79 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { config } from '@/lib/config';
+import NotesList from '@/components/NotesList';
 
-interface Resource {
+export const dynamic = 'force-dynamic';
+
+interface Collection {
   id: string;
-  type: string;
-  title: string;
-  abstract?: string;
-  aiSummary?: string;
-  publishedAt: string;
-  sourceUrl: string;
-  pdfUrl?: string;
-  thumbnailUrl?: string;
-  authors?: Array<{ username: string; platform: string }>;
-  categories?: string[];
-  qualityScore?: string;
-  upvoteCount?: number;
-  viewCount?: number;
-  commentCount?: number;
+  name: string;
+  description?: string;
+  isPublic: boolean;
+  createdAt: string;
+  items: any[];
 }
 
-export default function Library() {
-  const [resources, setResources] = useState<Resource[]>([]);
+export default function LibraryPage() {
+  const [activeTab, setActiveTab] = useState<'notes' | 'collections'>('notes');
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
-  const [filterType, setFilterType] = useState<'all' | 'papers' | 'projects' | 'news'>('all');
-  const [sortBy, setSortBy] = useState<'publishedAt' | 'title'>('publishedAt');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
-  // Load bookmarks from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('deepdive-bookmarks');
-    if (saved) {
-      try {
-        setBookmarks(new Set(JSON.parse(saved)));
-      } catch (e) {
-        console.error('Failed to load bookmarks:', e);
-      }
+    if (activeTab === 'collections') {
+      void loadCollections();
     }
-  }, []);
+  }, [activeTab]);
 
-  // Fetch bookmarked resources
-  useEffect(() => {
-    const fetchBookmarkedResources = async () => {
-      if (bookmarks.size === 0) {
-        setResources([]);
-        setLoading(false);
-        return;
+  const loadCollections = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/collections`);
+      if (response.ok) {
+        const data = await response.json();
+        setCollections(data);
       }
-
-      try {
-        setLoading(true);
-        const bookmarkIds = Array.from(bookmarks);
-
-        // Fetch resources by IDs
-        const promises = bookmarkIds.map(id =>
-          fetch(`http://localhost:4000/api/v1/resources/${id}`)
-            .then(res => res.ok ? res.json() : null)
-            .catch(() => null)
-        );
-
-        const results = await Promise.all(promises);
-        const validResources = results.filter(r => r !== null);
-
-        // Apply filters
-        let filtered = validResources;
-        if (filterType !== 'all') {
-          filtered = filtered.filter(r => r.type === filterType);
-        }
-
-        // Apply sorting
-        filtered.sort((a, b) => {
-          if (sortBy === 'publishedAt') {
-            return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-          } else {
-            return a.title.localeCompare(b.title);
-          }
-        });
-
-        setResources(filtered);
-      } catch (error) {
-        console.error('Failed to fetch bookmarked resources:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBookmarkedResources();
-  }, [bookmarks, filterType, sortBy]);
-
-  const removeBookmark = (resourceId: string) => {
-    const newBookmarks = new Set(bookmarks);
-    newBookmarks.delete(resourceId);
-    setBookmarks(newBookmarks);
-    localStorage.setItem('deepdive-bookmarks', JSON.stringify(Array.from(newBookmarks)));
-  };
-
-  const getResourceIcon = (type: string) => {
-    switch (type) {
-      case 'papers':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        );
-      case 'projects':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-          </svg>
-        );
-      case 'news':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-          </svg>
-        );
-      default:
-        return null;
+    } catch (err) {
+      console.error('Failed to load collections:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}>
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-3 border-b border-gray-200">
-          {!isSidebarCollapsed && (
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-orange-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">DD</span>
-              </div>
-              <span className="font-bold text-lg">DeepDive</span>
-            </Link>
-          )}
+      {/* Left Sidebar */}
+      <aside className={`${isSidebarCollapsed ? 'w-16' : 'w-52'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}>
+        <div className={`p-4 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <div className="flex items-center gap-2">
+            <svg className="w-8 h-8 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+            {!isSidebarCollapsed && (
+              <Link href="/" className="text-lg font-bold text-gray-900">
+                DeepDive
+              </Link>
+            )}
+          </div>
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-1.5 hover:bg-gray-100 rounded-lg"
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title={isSidebarCollapsed ? "Expand" : "Collapse"}
           >
-            <svg className={`w-5 h-5 transition-transform ${isSidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isSidebarCollapsed ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              )}
             </svg>
           </button>
         </div>
 
-        {/* Main Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3">
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-2">
           <div className="space-y-1">
             <Link
               href="/"
@@ -155,13 +82,13 @@ export default function Library() {
               title="Explore"
             >
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               {!isSidebarCollapsed && <span>Explore</span>}
             </Link>
             <Link
               href="/library"
-              className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-sm font-medium bg-red-50 text-red-600 rounded-lg`}
+              className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-sm font-medium text-gray-900 bg-pink-50 rounded-lg`}
               title="My Library"
             >
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,187 +145,86 @@ export default function Library() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Library</h1>
-            <p className="text-sm text-gray-600">{bookmarks.size} bookmarked items</p>
+      <main className="flex-1 overflow-y-auto bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">我的图书馆</h1>
+            <p className="text-gray-600">管理您的笔记和收藏</p>
           </div>
 
-          {/* Filters and Sort */}
-          <div className="flex items-center gap-4">
-            {/* Type Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Type:</span>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+          <div className="bg-white rounded-lg shadow-sm mb-6">
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setActiveTab('notes')}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'notes' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
               >
-                <option value="all">All</option>
-                <option value="papers">Papers</option>
-                <option value="projects">Projects</option>
-                <option value="news">News</option>
-              </select>
-            </div>
-
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Sort:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                我的笔记
+              </button>
+              <button
+                onClick={() => setActiveTab('collections')}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'collections' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
               >
-                <option value="publishedAt">Date</option>
-                <option value="title">Title</option>
-              </select>
+                我的收藏
+              </button>
             </div>
           </div>
-        </header>
 
-        {/* Content Area */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-            </div>
-          ) : bookmarks.size === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <svg className="w-24 h-24 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">No bookmarks yet</h2>
-              <p className="text-gray-500 mb-4">Start bookmarking resources to build your library</p>
-              <Link
-                href="/"
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Explore Resources
-              </Link>
-            </div>
-          ) : resources.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <p className="text-gray-500">No resources match your filters</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {resources.map((resource) => (
-                <div
-                  key={resource.id}
-                  className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  {/* Thumbnail */}
-                  {resource.thumbnailUrl ? (
-                    <div className="h-48 bg-gray-100">
-                      <img
-                        src={`http://localhost:4000${resource.thumbnailUrl}`}
-                        alt={resource.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                      {getResourceIcon(resource.type)}
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="p-4">
-                    {/* Type Badge */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                        resource.type === 'papers' ? 'bg-blue-100 text-blue-700' :
-                        resource.type === 'projects' ? 'bg-green-100 text-green-700' :
-                        'bg-purple-100 text-purple-700'
-                      }`}>
-                        {resource.type}
-                      </span>
-                      {resource.categories && resource.categories.length > 0 && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                          {resource.categories[0]}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                      {resource.title}
-                    </h3>
-
-                    {/* Abstract */}
-                    {resource.abstract && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {resource.abstract}
-                      </p>
-                    )}
-
-                    {/* Authors */}
-                    {resource.authors && resource.authors.length > 0 && (
-                      <div className="flex items-center gap-2 mb-3 text-xs text-gray-500">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span className="truncate">
-                          {resource.authors.map(a => a.username).join(', ')}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        {resource.upvoteCount !== undefined && (
-                          <span className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                            {resource.upvoteCount}
-                          </span>
-                        )}
-                        {resource.viewCount !== undefined && (
-                          <span className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            {resource.viewCount}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={resource.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                          title="Open source"
-                        >
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                        <button
-                          onClick={() => removeBookmark(resource.id)}
-                          className="p-1.5 hover:bg-red-50 rounded transition-colors"
-                          title="Remove bookmark"
-                        >
-                          <svg className="w-4 h-4 text-red-600" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            {activeTab === 'notes' && <NotesList />}
+            {activeTab === 'collections' && (
+              loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
-              ))}
-            </div>
-          )}
-        </main>
-      </div>
+              ) : collections.length === 0 || !collections.some(c => c.items && c.items.length > 0) ? (
+                <div className="text-center py-12">
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">暂无收藏内容</h3>
+                  <p className="mt-1 text-sm text-gray-500">浏览内容并点击收藏按钮来保存您感兴趣的资源</p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {collections.map((collection) => (
+                    collection.items && collection.items.length > 0 && (
+                      <div key={collection.id}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">{collection.name}</h3>
+                          <span className="text-sm text-gray-500">{collection.items.length} 个资源</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {collection.items.map((item: any) => (
+                            <a
+                              key={item.id}
+                              href={`/resource/${item.resource.id}`}
+                              className="block border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                            >
+                              {item.resource.thumbnailUrl && (
+                                <img
+                                  src={`${config.apiBaseUrl}${item.resource.thumbnailUrl}`}
+                                  alt={item.resource.title}
+                                  className="w-full h-40 object-cover rounded-md mb-3"
+                                />
+                              )}
+                              <h4 className="font-medium text-gray-900 line-clamp-2 mb-2">
+                                {item.resource.title}
+                              </h4>
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span className="uppercase">{item.resource.type}</span>
+                                {item.resource.publishedAt && (
+                                  <span>{new Date(item.resource.publishedAt).toLocaleDateString()}</span>
+                                )}
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

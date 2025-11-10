@@ -27,6 +27,8 @@ export default function YouTubePage() {
   const [error, setError] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState<string>('');
   const [generating, setGenerating] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translatedTranscript, setTranslatedTranscript] = useState<TranscriptSegment[] | null>(null);
 
   // Extract video ID from YouTube URL
   const extractVideoId = (url: string): string | null => {
@@ -125,6 +127,133 @@ export default function YouTubePage() {
     }
   };
 
+  // Translate transcript to Chinese
+  const handleTranslate = async () => {
+    if (!transcript) {
+      setError('请先获取字幕');
+      return;
+    }
+
+    setTranslating(true);
+    setError(null);
+
+    try {
+      const fullText = transcript.map(seg => seg.text).join('\n');
+
+      const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:5000';
+      const response = await fetch(`${aiServiceUrl}/api/v1/ai/translate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: fullText,
+          targetLanguage: 'zh-CN',
+          model: 'gpt-4'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '翻译失败');
+      }
+
+      const { translatedText } = await response.json();
+      const translatedLines = translatedText.split('\n');
+
+      const translated = transcript.map((seg, idx) => ({
+        ...seg,
+        text: translatedLines[idx] || seg.text
+      }));
+
+      setTranslatedTranscript(translated);
+    } catch (err: any) {
+      console.error('Translation error:', err);
+      setError(err.message || '翻译失败，请重试');
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  // Export report to PDF
+  const handleExportPDF = async () => {
+    if (!report) {
+      setError('请先生成报告');
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Set font (use built-in Helvetica for English/numbers)
+      doc.setFont('helvetica');
+
+      let yPosition = 20;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      const maxWidth = pageWidth - 2 * margin;
+
+      // Title
+      doc.setFontSize(20);
+      doc.text(report.title, margin, yPosition);
+      yPosition += 15;
+
+      // Summary
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Summary:', margin, yPosition);
+      yPosition += 7;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const summaryLines = doc.splitTextToSize(report.summary, maxWidth);
+      doc.text(summaryLines, margin, yPosition);
+      yPosition += summaryLines.length * 5 + 10;
+
+      // Sections
+      report.sections.forEach((section, idx) => {
+        // Check if we need a new page
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(section.title, margin, yPosition);
+        yPosition += 7;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const contentLines = doc.splitTextToSize(section.content, maxWidth);
+
+        contentLines.forEach((line: string) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(line, margin, yPosition);
+          yPosition += 5;
+        });
+
+        yPosition += 5;
+      });
+
+      // Save the PDF
+      const fileName = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}_report.pdf`;
+      doc.save(fileName);
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      setError(err.message || 'PDF导出失败，请重试');
+    }
+  };
+
   // Format time
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -186,28 +315,62 @@ export default function YouTubePage() {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900">{videoTitle}</h2>
-              <button
-                onClick={handleGenerateReport}
-                disabled={generating}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                {generating ? '生成中...' : '生成报告'}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleTranslate}
+                  disabled={translating}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                  </svg>
+                  {translating ? '翻译中...' : '翻译成中文'}
+                </button>
+                <button
+                  onClick={handleGenerateReport}
+                  disabled={generating}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {generating ? '生成中...' : '生成报告'}
+                </button>
+              </div>
             </div>
 
-            <div className="max-h-96 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-4">
-              {transcript.map((segment, index) => (
-                <div key={index} className="flex gap-3 text-sm">
-                  <span className="text-gray-400 font-mono min-w-[50px]">
-                    {formatTime(segment.start)}
-                  </span>
-                  <p className="text-gray-700">{segment.text}</p>
-                </div>
-              ))}
+            {/* Original Transcript */}
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">原文字幕</h3>
+              <div className="max-h-96 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-4">
+                {transcript.map((segment, index) => (
+                  <div key={index} className="flex gap-3 text-sm">
+                    <span className="text-gray-400 font-mono min-w-[50px]">
+                      {formatTime(segment.start)}
+                    </span>
+                    <p className="text-gray-700">{segment.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Translated Transcript */}
+            {translatedTranscript && (
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">中文翻译</h3>
+                <div className="max-h-96 overflow-y-auto space-y-2 border border-purple-200 rounded-lg p-4 bg-purple-50">
+                  {translatedTranscript.map((segment, index) => (
+                    <div key={index} className="flex gap-3 text-sm">
+                      <span className="text-purple-400 font-mono min-w-[50px]">
+                        {formatTime(segment.start)}
+                      </span>
+                      <p className="text-gray-700">{segment.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <p className="mt-3 text-sm text-gray-500">
               总计 {transcript.length} 条字幕片段
             </p>
@@ -218,7 +381,18 @@ export default function YouTubePage() {
         {report && (
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{report.title}</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">{report.title}</h2>
+                <button
+                  onClick={handleExportPDF}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  导出PDF
+                </button>
+              </div>
               <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
                 <p className="text-gray-700">{report.summary}</p>
               </div>
@@ -241,12 +415,14 @@ export default function YouTubePage() {
         )}
 
         {/* Loading Indicator */}
-        {(loading || generating) && (
+        {(loading || generating || translating) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 flex items-center gap-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <p className="text-gray-700">
-                {loading ? '正在获取字幕...' : '正在生成报告...'}
+                {loading && '正在获取字幕...'}
+                {generating && '正在生成报告...'}
+                {translating && '正在翻译字幕...'}
               </p>
             </div>
           </div>

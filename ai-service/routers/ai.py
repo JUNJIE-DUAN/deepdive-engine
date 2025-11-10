@@ -433,3 +433,55 @@ JSON output:
         "action": request.action,
         "model": request.model
     }
+
+
+class TranslateRequest(BaseModel):
+    """翻译请求"""
+    text: str
+    targetLanguage: str = "zh-CN"
+    model: Literal["grok", "openai", "gpt-4"] = "gpt-4"
+
+
+@router.post("/translate")
+async def translate_text(
+    request: TranslateRequest,
+    orch: AIOrchestrator = Depends(get_orchestrator)
+):
+    """
+    翻译文本
+
+    Args:
+        request: 翻译请求
+
+    Returns:
+        翻译结果
+    """
+    logger.info(f"Translating text to {request.targetLanguage}, length: {len(request.text)}")
+
+    prompt = f"""Translate the following text to {request.targetLanguage}.
+Preserve the line breaks and structure. Only output the translation, no explanations.
+
+Text to translate:
+{request.text}
+
+Translation:"""
+
+    # 选择模型（默认使用 OpenAI，因为翻译质量更好）
+    if request.model == "grok":
+        client = orch.grok
+    else:
+        client = orch.openai
+
+    if not client.available:
+        raise HTTPException(status_code=503, detail=f"{request.model} service unavailable")
+
+    result = await client.generate_completion(prompt, max_tokens=4000, temperature=0.3)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Failed to generate translation")
+
+    return {
+        "translatedText": result.strip(),
+        "targetLanguage": request.targetLanguage,
+        "model": request.model
+    }

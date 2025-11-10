@@ -17,6 +17,7 @@ import { AuthModule } from './auth/auth.module';
 import { CollectionsModule } from './collections/collections.module';
 import { NotesModule } from './notes/notes.module';
 import { CommentsModule } from './comments/comments.module';
+import { ReportsModule } from './reports/reports.module';
 // import { LearningPathsModule } from './learning-paths/learning-paths.module'; // TODO: Enable later
 
 @Module({
@@ -49,6 +50,7 @@ import { CommentsModule } from './comments/comments.module';
     CollectionsModule,
     NotesModule,
     CommentsModule,
+    ReportsModule,
     // LearningPathsModule, // TODO: Enable later
   ],
   controllers: [AppController],

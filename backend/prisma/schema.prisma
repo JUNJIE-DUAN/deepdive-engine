@@ -49,6 +49,7 @@ model User {
   learningPaths   LearningPath[]
   notes           Note[]
   comments        Comment[]
+  reports         Report[]
 
   @@map("users")
 }
@@ -345,4 +346,39 @@ model Comment {
   @@index([parentId])
   @@index([createdAt(sort: Desc)])
   @@map("comments")
+}
+
+// ============ 报告系统 ============
+
+model Report {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+
+  // 报告基本信息
+  title         String   @db.VarChar(500)
+  template      String   @db.VarChar(50) // comparison, trend, learning-path, literature-review
+  templateName  String   @map("template_name") @db.VarChar(100) // 对比分析, 趋势报告, etc.
+  templateIcon  String   @map("template_icon") @db.VarChar(10) // 📊, 📈, etc.
+
+  // 报告内容
+  summary       String   @db.Text // 核心摘要
+  sections      Json     // [{ title: string, content: string }]
+
+  // 关联的资源
+  resourceIds   Json     @map("resource_ids") // [resourceId1, resourceId2, ...]
+  resourceCount Int      @map("resource_count")
+
+  // AI生成元数据
+  metadata      Json?    // { model, tokensUsed, generationTime, ... }
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([template])
+  @@index([createdAt(sort: Desc)])
+  @@map("reports")
 }

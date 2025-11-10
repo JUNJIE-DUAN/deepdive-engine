@@ -10,7 +10,7 @@ import sys
 # ⚠️ 关键：必须在导入 secret_manager 之前加载环境变量
 load_dotenv()
 
-from routers import ai
+from routers import ai, report
 from services.grok_client import GrokClient
 from services.openai_client import OpenAIClient
 from services.ai_orchestrator import AIOrchestrator
@@ -63,6 +63,7 @@ orchestrator = AIOrchestrator(grok_client, openai_client)
 
 # 注册路由
 app.include_router(ai.router, prefix="/api/v1")
+app.include_router(report.router)
 
 
 @app.get("/")

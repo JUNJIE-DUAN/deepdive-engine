@@ -164,6 +164,534 @@ def recommend(user_id):
 
 ---
 
+## MVP-2.5：多素材综合报告（Week 5-6）
+
+### 功能概述
+
+**核心价值**: 让用户能够选择多份素材，AI自动生成结构化的综合分析报告
+
+**适用场景**:
+- 技术选型：对比3-5个类似技术/框架
+- 趋势分析：分析10篇最新论文，总结研究趋势
+- 学习路径：选择由浅入深的资源，生成学习计划
+
+### 1. 多选交互UI
+
+**功能要求**:
+```
+┌───────────────────────────────────────────────┐
+│ ☑ 已选择 3 项  [取消选择] [生成报告 →]        │
+├───────────────────────────────────────────────┤
+│ ☑ □ Paper: Attention Is All You Need          │
+│     Vaswani et al. • 2017 • 📊 NLP            │
+│                                                │
+│ ☑ □ Paper: BERT: Pre-training of Deep...      │
+│     Devlin et al. • 2018 • 📊 NLP             │
+│                                                │
+│ ☑ □ Paper: GPT-3: Language Models are...      │
+│     Brown et al. • 2020 • 📊 LLM              │
+└───────────────────────────────────────────────┘
+```
+
+**交互规则**:
+- 最少选择2项，最多选择10项
+- 顶部显示已选数量和操作按钮
+- 点击"生成报告"弹出模板选择对话框
+- 支持快捷键：`Ctrl+A` 全选，`Esc` 取消
+
+**技术实现**:
+```typescript
+// frontend/lib/use-multi-select.ts
+export function useMultiSelect(maxItems = 10) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else if (newSet.size < maxItems) {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = (ids: string[]) => {
+    setSelectedIds(new Set(ids.slice(0, maxItems)));
+  };
+
+  const clearAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  return {
+    selectedIds: Array.from(selectedIds),
+    toggleSelect,
+    selectAll,
+    clearAll,
+    isSelected: (id: string) => selectedIds.has(id),
+    count: selectedIds.size,
+    canSelectMore: selectedIds.size < maxItems,
+  };
+}
+```
+
+### 2. 报告模板选择
+
+**模板配置**:
+```typescript
+// frontend/lib/report-templates.ts
+export const REPORT_TEMPLATES = [
+  {
+    id: 'comparison',
+    name: '对比分析',
+    description: '多维度对比各素材的特点、优劣势和适用场景',
+    icon: '📊',
+    minItems: 2,
+    maxItems: 5,
+    sections: ['概述', '详细对比表', '关键洞察', '选型建议'],
+    estimatedTime: '60秒',
+    model: 'gpt-4', // 需要复杂推理
+  },
+  {
+    id: 'trend',
+    name: '趋势报告',
+    description: '分析技术演进轨迹和未来发展方向',
+    icon: '📈',
+    minItems: 3,
+    maxItems: 10,
+    sections: ['时间轴', '关键突破', '趋势预测', '机会分析'],
+    estimatedTime: '45秒',
+    model: 'grok',
+  },
+  {
+    id: 'learning-path',
+    name: '学习路径',
+    description: '生成由浅入深的学习计划和实践建议',
+    icon: '🗺️',
+    minItems: 3,
+    maxItems: 8,
+    sections: ['前置知识', '学习顺序', '难度分析', '实践建议'],
+    estimatedTime: '50秒',
+    model: 'grok',
+  },
+  {
+    id: 'literature-review',
+    name: '文献综述',
+    description: '学术风格的文献综述报告',
+    icon: '📝',
+    minItems: 5,
+    maxItems: 10,
+    sections: ['研究背景', '方法演进', '结果对比', '未来方向'],
+    estimatedTime: '90秒',
+    model: 'gpt-4',
+  },
+] as const;
+```
+
+**模板选择对话框**:
+```typescript
+// frontend/components/ReportTemplateDialog.tsx
+<Dialog>
+  <DialogTitle>选择报告模板</DialogTitle>
+  <DialogContent>
+    <div className="grid grid-cols-2 gap-4">
+      {REPORT_TEMPLATES.map(template => (
+        <Card
+          key={template.id}
+          className={cn(
+            'cursor-pointer hover:border-red-600',
+            selectedTemplate === template.id && 'border-red-600'
+          )}
+          onClick={() => setSelectedTemplate(template.id)}
+        >
+          <div className="text-4xl mb-2">{template.icon}</div>
+          <h3 className="font-semibold mb-1">{template.name}</h3>
+          <p className="text-sm text-gray-600 mb-2">{template.description}</p>
+          <div className="text-xs text-gray-500">
+            <div>📄 {template.minItems}-{template.maxItems} 项素材</div>
+            <div>⏱️ 预计 {template.estimatedTime}</div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={onCancel}>取消</Button>
+    <Button onClick={handleGenerate} disabled={!selectedTemplate}>
+      开始生成
+    </Button>
+  </DialogActions>
+</Dialog>
+```
+
+### 3. AI报告生成服务
+
+**后端API设计**:
+```typescript
+// backend/src/reports/reports.controller.ts
+
+@Controller('reports')
+export class ReportsController {
+  @Post('generate')
+  async generateReport(@Body() dto: GenerateReportDto) {
+    // 1. 验证资源数量
+    if (dto.resourceIds.length < 2 || dto.resourceIds.length > 10) {
+      throw new BadRequestException('Please select 2-10 resources');
+    }
+
+    // 2. 获取资源详情
+    const resources = await this.resourcesService.findMany(dto.resourceIds);
+
+    // 3. 调用AI服务生成报告
+    const report = await this.aiService.generateReport({
+      resources,
+      template: dto.template,
+      model: dto.model || 'grok',
+    });
+
+    // 4. 保存报告
+    const savedReport = await this.reportsService.create({
+      userId: dto.userId,
+      ...report,
+      resourceIds: dto.resourceIds,
+    });
+
+    return savedReport;
+  }
+
+  @Get(':id')
+  async getReport(@Param('id') id: string) {
+    return this.reportsService.findOne(id);
+  }
+
+  @Get()
+  async getUserReports(@Query('userId') userId: string) {
+    return this.reportsService.findByUser(userId);
+  }
+}
+```
+
+**AI Service实现**:
+```python
+# ai-service/routers/report.py
+
+@router.post("/api/v1/ai/generate-report")
+async def generate_report(request: ReportRequest):
+    """
+    生成多素材综合报告
+    """
+    # 1. 准备资源信息
+    resources_info = prepare_resources_info(request.resources)
+
+    # 2. 选择prompt模板
+    prompt_template = REPORT_PROMPTS[request.template]
+
+    # 3. 构建完整prompt
+    prompt = prompt_template.format(
+        count=len(request.resources),
+        resources_info=resources_info
+    )
+
+    # 4. 调用AI生成
+    if request.model == 'gpt-4':
+        response = await openai_client.chat(prompt)
+    else:
+        response = await grok_client.chat(prompt)
+
+    # 5. 解析并结构化
+    report = parse_report_response(response, request.template)
+
+    return report
+
+
+# Prompt模板
+REPORT_PROMPTS = {
+    'comparison': """
+You are a technical analyst. Analyze and compare the following {count} resources.
+
+Resources:
+{resources_info}
+
+Generate a comprehensive comparison report with these sections:
+
+1. **Executive Summary** (200-300 words)
+   - Overview of all resources
+   - Main themes and connections
+   - Key takeaways
+
+2. **Detailed Comparison**
+   Create a comparison table with these aspects:
+   - Approach/Method
+   - Key Innovation
+   - Performance/Results
+   - Limitations
+   - Use Cases
+
+3. **Key Insights** (5-7 bullet points)
+   - Common patterns across resources
+   - Key differences and trade-offs
+   - Evolution and improvements
+   - Complementary aspects
+
+4. **Recommendations**
+   - Which to choose for different scenarios
+   - Learning order suggestions
+   - Further reading
+
+Output in JSON format:
+{{
+  "title": "Comparison of [Topic]",
+  "summary": "Executive summary text...",
+  "sections": [
+    {{"title": "Detailed Comparison", "content": "markdown table and text"}},
+    {{"title": "Key Insights", "content": "markdown list"}},
+    {{"title": "Recommendations", "content": "markdown text"}}
+  ],
+  "metadata": {{
+    "resourceCount": {count},
+    "template": "comparison"
+  }}
+}}
+""",
+
+    'trend': """
+You are a technology trend analyst. Analyze the following {count} resources to identify trends.
+
+Resources:
+{resources_info}
+
+Generate a trend analysis report with these sections:
+
+1. **Overview** (150-200 words)
+   - Time span covered
+   - Main themes
+   - Overall direction
+
+2. **Technology Timeline**
+   Create a chronological timeline showing:
+   - Year/Date
+   - Key milestone
+   - Innovation introduced
+   - Impact level (High/Medium/Low)
+
+3. **Key Breakthroughs** (4-6 items)
+   For each breakthrough:
+   - What changed
+   - Why it matters
+   - Follow-up work
+
+4. **Trend Predictions**
+   - Emerging patterns
+   - Likely next developments (3-6 months)
+   - Opportunities and challenges
+
+Output in JSON format with markdown content.
+""",
+
+    'learning-path': """
+You are a learning path designer. Create a structured learning plan from these {count} resources.
+
+Resources:
+{resources_info}
+
+Generate a learning path report with these sections:
+
+1. **Learning Objectives** (150 words)
+   - What you'll learn
+   - Target audience
+   - Prerequisites
+
+2. **Recommended Learning Sequence**
+   For each resource (in order):
+   - Title and type
+   - Difficulty level (Beginner/Intermediate/Advanced)
+   - Time investment
+   - Key concepts covered
+   - Why this order
+
+3. **Difficulty Analysis**
+   - Concept progression
+   - Knowledge dependencies
+   - Potential challenges
+
+4. **Practice Recommendations**
+   - Hands-on projects
+   - Additional resources
+   - Learning tips
+
+Output in JSON format with markdown content.
+""",
+}
+
+
+def prepare_resources_info(resources: List[Resource]) -> str:
+    """准备资源信息文本"""
+    info_parts = []
+    for i, resource in enumerate(resources, 1):
+        info = f"""
+Resource {i}:
+- Title: {resource.title}
+- Type: {resource.type}
+- Date: {resource.published_date}
+- Abstract: {resource.abstract[:500]}...
+- Authors: {', '.join(resource.authors) if resource.authors else 'N/A'}
+- Tags: {', '.join(resource.tags) if resource.tags else 'N/A'}
+"""
+        info_parts.append(info)
+
+    return '\n'.join(info_parts)
+```
+
+### 4. 报告展示页面
+
+**页面路由**: `/report/[id]`
+
+**布局设计**:
+```typescript
+// frontend/app/report/[id]/page.tsx
+
+export default function ReportPage({ params }: { params: { id: string } }) {
+  const { report, loading, error } = useReport(params.id);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-8">
+      {/* Header */}
+      <header className="mb-8">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+              <span>{report.templateIcon}</span>
+              <span>{report.templateName}</span>
+              <span>•</span>
+              <span>📄 {report.resourceCount} 篇素材</span>
+              <span>•</span>
+              <span>🕐 {formatDate(report.createdAt)}</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {report.title}
+            </h1>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportMarkdown}>
+              <FileText className="w-4 h-4 mr-2" />
+              导出 MD
+            </Button>
+            <Button variant="outline" onClick={handleExportPDF}>
+              <Download className="w-4 h-4 mr-2" />
+              导出 PDF
+            </Button>
+            <Button onClick={handleRegenerate}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              重新生成
+            </Button>
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            📝 核心摘要
+          </h2>
+          <p className="text-gray-700 leading-relaxed">{report.summary}</p>
+        </div>
+      </header>
+
+      {/* Sections */}
+      <div className="space-y-8 mb-12">
+        {report.sections.map((section, idx) => (
+          <section key={idx} className="bg-white border rounded-lg p-6">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              {section.title}
+            </h2>
+            <div className="prose prose-sm max-w-none">
+              <ReactMarkdown
+                components={{
+                  table: ({ node, ...props }) => (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-300" {...props} />
+                    </div>
+                  ),
+                }}
+              >
+                {section.content}
+              </ReactMarkdown>
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {/* Referenced Resources */}
+      <div className="border-t pt-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          📚 参考素材 ({report.resources.length})
+        </h2>
+        <div className="grid gap-4">
+          {report.resources.map((resource) => (
+            <ResourceCard
+              key={resource.id}
+              resource={resource}
+              compact
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 5. 数据模型
+
+```prisma
+// backend/prisma/schema.prisma
+
+model Report {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+
+  title         String
+  template      String   // comparison, trend, learning-path, literature-review
+  templateName  String   // 对比分析, 趋势报告, etc.
+  templateIcon  String   // 📊, 📈, etc.
+
+  summary       String   // 核心摘要
+  sections      Json[]   // [{ title: string, content: string }]
+
+  resourceIds   String[] @db.ObjectId
+  resources     Resource[] @relation(fields: [resourceIds], references: [id])
+  resourceCount Int
+
+  metadata      Json?    // { model, tokensUsed, generationTime, ... }
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([template])
+}
+```
+
+### 关键指标
+
+| 指标 | Week 5目标 | Week 6目标 |
+|-----|-----------|-----------|
+| 报告生成成功率 | 85% | 95% |
+| 平均生成时间 | <60s | <45s |
+| 模板覆盖率 | 2个模板 | 4个模板 |
+| 用户使用率 | 20% | 35% |
+
+---
+
 ## 界面设计规范
 
 ### 配色方案（参考AlphaXiv）

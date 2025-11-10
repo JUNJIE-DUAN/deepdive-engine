@@ -485,3 +485,68 @@ Translation:"""
         "targetLanguage": request.targetLanguage,
         "model": request.model
     }
+
+
+class YouTubeReportRequest(BaseModel):
+    """YouTube报告生成请求"""
+    title: str
+    transcript: str
+    model: Literal["grok", "openai", "gpt-4"] = "gpt-4"
+
+
+@router.post("/youtube-report")
+async def generate_youtube_report(
+    request: YouTubeReportRequest,
+    orch: AIOrchestrator = Depends(get_orchestrator)
+):
+    """
+    根据YouTube字幕生成报告
+
+    Args:
+        request: YouTube报告请求
+
+    Returns:
+        报告内容
+    """
+    logger.info(f"Generating YouTube report for: {request.title}")
+
+    prompt = f"""Please analyze the following YouTube video transcript and generate a comprehensive report.
+
+Video Title: {request.title}
+
+Transcript:
+{request.transcript}
+
+Generate a structured report with the following sections:
+1. **Summary** (概要): 2-3 sentences summarizing the main content
+2. **Key Points** (要点): 3-5 bullet points of the most important takeaways
+3. **Detailed Analysis** (详细分析): Deeper analysis of the content, themes, and implications
+4. **Conclusions** (结论): Final thoughts and recommendations
+
+Format the output in clear sections with markdown headings."""
+
+    # 选择模型
+    if request.model == "grok":
+        client = orch.grok
+    else:
+        client = orch.openai
+
+    if not client.available:
+        raise HTTPException(status_code=503, detail=f"{request.model} service unavailable")
+
+    result = await client.generate_completion(prompt, max_tokens=2000, temperature=0.7)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Failed to generate report")
+
+    return {
+        "title": f"Analysis Report: {request.title}",
+        "summary": "AI-generated analysis of the video content",
+        "sections": [
+            {
+                "title": "Full Report",
+                "content": result
+            }
+        ],
+        "model": request.model
+    }

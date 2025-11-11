@@ -50,6 +50,7 @@ model User {
   notes           Note[]
   comments        Comment[]
   reports         Report[]
+  youtubeVideos   YouTubeVideo[]
 
   @@map("users")
 }
@@ -381,4 +382,35 @@ model Report {
   @@index([template])
   @@index([createdAt(sort: Desc)])
   @@map("reports")
+}
+
+// ============ YouTube视频系统 ============
+
+model YouTubeVideo {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+
+  // 视频基本信息
+  videoId         String    @map("video_id") @db.VarChar(100) // YouTube视频ID
+  title           String    @db.VarChar(1000)
+  url             String    @db.Text
+
+  // 字幕信息
+  transcript      Json?     // [{ start: number, duration: number, text: string }]
+  translatedText  String?   @map("translated_text") @db.Text
+
+  // AI生成的报告
+  aiReport        Json?     @map("ai_report") // { title, summary, sections }
+
+  // 时间戳
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // 关系
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("youtube_videos")
 }

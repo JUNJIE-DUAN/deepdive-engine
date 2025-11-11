@@ -33,6 +33,8 @@ export default function YouTubePage() {
   const [translatedTranscript, setTranslatedTranscript] = useState<
     TranscriptSegment[] | null
   >(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   // Extract video ID from YouTube URL
   const extractVideoId = (url: string): string | null => {
@@ -126,6 +128,14 @@ export default function YouTubePage() {
 
       const reportData = await response.json();
       setReport(reportData);
+
+      // Auto-scroll to report after generation
+      setTimeout(() => {
+        const reportElement = document.getElementById('youtube-report');
+        if (reportElement) {
+          reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     } catch (err: any) {
       console.error('Generate report error:', err);
       setError(err.message || '生成报告失败，请重试');
@@ -245,8 +255,18 @@ export default function YouTubePage() {
 
       // Title
       doc.setFontSize(20);
-      doc.text(report.title, margin, yPosition);
-      yPosition += 15;
+      doc.text('YouTube Video Analysis Report', margin, yPosition);
+      yPosition += 10;
+
+      // Video Title
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'italic');
+      const videoTitleLines = doc.splitTextToSize(
+        `Video: ${videoTitle}`,
+        maxWidth
+      );
+      doc.text(videoTitleLines, margin, yPosition);
+      yPosition += videoTitleLines.length * 6 + 10;
 
       // Summary
       doc.setFontSize(12);
@@ -295,6 +315,141 @@ export default function YouTubePage() {
     } catch (err: any) {
       console.error('PDF export error:', err);
       setError(err.message || 'PDF导出失败，请重试');
+    }
+  };
+
+  // Export report to PDF using html2canvas (Chinese-friendly)
+  const handleExportPDFNew = async () => {
+    if (!report) {
+      setError('请先生成报告');
+      return;
+    }
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      // Get the report element
+      const reportElement = document.getElementById('youtube-report');
+      if (!reportElement) {
+        throw new Error('无法找到报告元素');
+      }
+
+      // Hide the export button temporarily
+      const exportBtn = reportElement.querySelector('button');
+      const originalDisplay = exportBtn
+        ? (exportBtn as HTMLElement).style.display
+        : '';
+      if (exportBtn) {
+        (exportBtn as HTMLElement).style.display = 'none';
+      }
+
+      // Render the report as canvas
+      const canvas = await html2canvas(reportElement, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      // Restore the export button
+      if (exportBtn) {
+        (exportBtn as HTMLElement).style.display = originalDisplay;
+      }
+
+      // Create PDF
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add the first page
+      doc.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        0,
+        position,
+        imgWidth,
+        imgHeight
+      );
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        doc.addPage();
+        doc.addImage(
+          canvas.toDataURL('image/png'),
+          'PNG',
+          0,
+          position,
+          imgWidth,
+          imgHeight
+        );
+        heightLeft -= pageHeight;
+      }
+
+      // Save the PDF
+      const fileName = `YouTube_Report_${new Date().getTime()}.pdf`;
+      doc.save(fileName);
+    } catch (err: any) {
+      console.error('Export PDF error:', err);
+      setError(err.message || 'PDF导出失败，请重试');
+    }
+  };
+
+  // Save video to backend
+  const handleSaveVideo = async () => {
+    if (!transcript || !videoTitle) {
+      setError('请先获取字幕');
+      return;
+    }
+
+    const videoId = extractVideoId(youtubeUrl);
+    if (!videoId) {
+      setError('无效的YouTube URL');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/youtube-videos`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            videoId,
+            title: videoTitle,
+            url: youtubeUrl,
+            transcript: transcript,
+            translatedText: translatedTranscript
+              ? translatedTranscript.map((seg) => seg.text).join(' ')
+              : undefined,
+            aiReport: report || undefined,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '保存失败');
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000); // Reset after 3 seconds
+    } catch (err: any) {
+      console.error('Save video error:', err);
+      setError(err.message || '保存视频失败，请重试');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -363,8 +518,8 @@ export default function YouTubePage() {
           {/* Transcript Display */}
           {transcript && (
             <div className="mb-6 rounded-lg bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
+              <div className="mb-4">
+                <h2 className="mb-3 text-xl font-semibold text-gray-900">
                   {videoTitle}
                 </h2>
                 <div className="flex gap-3">
@@ -407,6 +562,39 @@ export default function YouTubePage() {
                       />
                     </svg>
                     {generating ? '生成中...' : '生成报告'}
+                  </button>
+                  <button
+                    onClick={handleSaveVideo}
+                    disabled={saving}
+                    className={`flex items-center gap-2 rounded-lg px-4 py-2 text-white transition-colors disabled:cursor-not-allowed ${
+                      saved
+                        ? 'bg-gray-500'
+                        : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400'
+                    }`}
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {saved ? (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      ) : (
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                        />
+                      )}
+                    </svg>
+                    {saving ? '保存中...' : saved ? '已保存' : '保存视频'}
                   </button>
                 </div>
               </div>
@@ -478,31 +666,39 @@ export default function YouTubePage() {
 
           {/* Report Display */}
           {report && (
-            <div className="rounded-lg bg-white p-6 shadow-sm">
+            <div
+              id="youtube-report"
+              className="rounded-lg bg-white p-6 shadow-sm"
+            >
               <div className="mb-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {report.title}
-                  </h2>
-                  <button
-                    onClick={handleExportPDF}
-                    className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                <div className="mb-4">
+                  <div className="mb-3 flex items-start justify-between gap-4">
+                    <h2 className="flex-1 text-2xl font-bold text-gray-900">
+                      YouTube 视频分析报告
+                    </h2>
+                    <button
+                      onClick={handleExportPDFNew}
+                      className="flex flex-shrink-0 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    导出PDF
-                  </button>
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      导出PDF
+                    </button>
+                  </div>
+                  <div className="mb-3 text-sm text-gray-600">
+                    视频标题: {videoTitle}
+                  </div>
                 </div>
                 <div className="rounded border-l-4 border-blue-500 bg-blue-50 p-4">
                   <p className="text-gray-700">{report.summary}</p>

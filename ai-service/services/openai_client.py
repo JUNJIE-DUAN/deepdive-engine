@@ -101,6 +101,43 @@ class OpenAIClient:
         except Exception as e:
             logger.error(f"OpenAI streaming exception: {str(e)}")
 
+    async def chat(
+        self,
+        messages: list,
+        model: str = "gpt-4",
+        max_tokens: int = 500,
+        temperature: float = 0.7
+    ) -> Optional[str]:
+        """
+        使用messages格式进行对话
+
+        Args:
+            messages: 消息列表
+            model: 模型名称
+            max_tokens: 最大 token 数
+            temperature: 温度参数
+
+        Returns:
+            AI回复内容
+        """
+        if not self.available:
+            logger.error("OpenAI client not available")
+            return None
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+
+            return response.choices[0].message.content
+
+        except Exception as e:
+            logger.error(f"OpenAI chat exception: {str(e)}")
+            return None
+
     async def health_check(self) -> bool:
         """
         健康检查

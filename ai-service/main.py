@@ -65,6 +65,9 @@ orchestrator = AIOrchestrator(grok_client, openai_client)
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(report.router)
 
+# 将AI客户端注入到report路由中
+report.init_clients(grok_client, openai_client)
+
 
 @app.get("/")
 async def root():

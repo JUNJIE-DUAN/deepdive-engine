@@ -3,8 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { config } from '@/lib/config';
 import Sidebar from '@/components/Sidebar';
+import PDFThumbnail from '@/components/PDFThumbnail';
 import NotesList from '@/components/NotesList';
 import CommentsList from '@/components/CommentsList';
+import ReportWorkspace from '@/components/ReportWorkspace';
+import { useReportWorkspace } from '@/lib/use-report-workspace';
 
 interface Resource {
   id: string;
@@ -61,9 +64,17 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
 
     // Extract importance if present
     let importance: 'high' | 'medium' | 'low' = 'medium';
-    if (section.includes('重要性：高') || section.includes('importance: high') || section.includes('**重要性：高**')) {
+    if (
+      section.includes('重要性：高') ||
+      section.includes('importance: high') ||
+      section.includes('**重要性：高**')
+    ) {
       importance = 'high';
-    } else if (section.includes('重要性：低') || section.includes('importance: low') || section.includes('**重要性：低**')) {
+    } else if (
+      section.includes('重要性：低') ||
+      section.includes('importance: low') ||
+      section.includes('**重要性：低**')
+    ) {
       importance = 'low';
     }
 
@@ -75,7 +86,7 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
     description = description.replace(/\*\*重要性：[^*]+\*\*/g, '').trim();
     description = description.replace(/重要性：[^\n]+/g, '').trim();
     // Take first few lines as description
-    const lines = description.split('\n').filter(line => line.trim());
+    const lines = description.split('\n').filter((line) => line.trim());
     description = lines.slice(0, 3).join(' ').substring(0, 200);
 
     if (title && description) {
@@ -89,8 +100,12 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
 export default function Home() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'papers' | 'projects' | 'news'>('papers');
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [activeTab, setActiveTab] = useState<'papers' | 'projects' | 'news'>(
+    'papers'
+  );
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
 
@@ -101,29 +116,44 @@ export default function Home() {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [aiMethodology, setAiMethodology] = useState<AIInsight[]>([]);
-  const [aiRightTab, setAiRightTab] = useState<'assistant' | 'notes' | 'comments' | 'similar'>('assistant');
+  const [aiRightTab, setAiRightTab] = useState<
+    'assistant' | 'notes' | 'comments' | 'similar'
+  >('assistant');
 
   // Context menu for adding to notes
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
   const [savingNote, setSavingNote] = useState(false);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
   const [aiModel, setAiModel] = useState<'grok' | 'openai'>('grok');
   const [isStreaming, setIsStreaming] = useState(false);
 
   // Search and filter states
-  const [sortBy, setSortBy] = useState<'publishedAt' | 'qualityScore' | 'trendingScore'>('trendingScore');
+  const [sortBy, setSortBy] = useState<
+    'publishedAt' | 'qualityScore' | 'trendingScore'
+  >('trendingScore');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterCategory, setFilterCategory] = useState<string>('');
 
   // Search suggestions states
-  const [searchSuggestions, setSearchSuggestions] = useState<SearchSuggestion[]>([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<
+    SearchSuggestion[]
+  >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [searchMode, setSearchMode] = useState<'agent' | 'search'>('search');
 
   // Bookmark states
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
-  const [defaultCollectionId, setDefaultCollectionId] = useState<string | null>(null);
+  const [defaultCollectionId, setDefaultCollectionId] = useState<string | null>(
+    null
+  );
+
+  // Report workspace
+  const { addResource, hasResource, canAddMore } = useReportWorkspace();
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -138,19 +168,24 @@ export default function Home() {
         const collections = await response.json();
 
         // Find or create default collection
-        let defaultCollection = collections.find((c: any) => c.name === '我的收藏');
+        let defaultCollection = collections.find(
+          (c: any) => c.name === '我的收藏'
+        );
 
         if (!defaultCollection) {
           // Create default collection
-          const createResponse = await fetch(`${config.apiBaseUrl}/api/v1/collections`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: '我的收藏',
-              description: '默认收藏集',
-              isPublic: false,
-            }),
-          });
+          const createResponse = await fetch(
+            `${config.apiBaseUrl}/api/v1/collections`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: '我的收藏',
+                description: '默认收藏集',
+                isPublic: false,
+              }),
+            }
+          );
 
           if (createResponse.ok) {
             defaultCollection = await createResponse.json();
@@ -162,7 +197,9 @@ export default function Home() {
 
           // Load bookmarked resource IDs
           const bookmarkedIds = new Set<string>(
-            (defaultCollection.items || []).map((item: any) => item.resourceId as string)
+            (defaultCollection.items || []).map(
+              (item: any) => item.resourceId as string
+            )
           );
           setBookmarks(bookmarkedIds);
         }
@@ -244,7 +281,10 @@ export default function Home() {
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      if (selectedSuggestionIndex >= 0 && searchSuggestions[selectedSuggestionIndex]) {
+      if (
+        selectedSuggestionIndex >= 0 &&
+        searchSuggestions[selectedSuggestionIndex]
+      ) {
         // Select the highlighted suggestion
         handleSuggestionClick(searchSuggestions[selectedSuggestionIndex]);
       } else {
@@ -254,12 +294,12 @@ export default function Home() {
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedSuggestionIndex(prev =>
+      setSelectedSuggestionIndex((prev) =>
         prev < searchSuggestions.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedSuggestionIndex(prev => (prev > 0 ? prev - 1 : -1));
+      setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
       setSelectedSuggestionIndex(-1);
@@ -329,7 +369,7 @@ export default function Home() {
     setShowSuggestions(false);
     setSelectedSuggestionIndex(-1);
     // Navigate to the resource detail
-    const resource = resources.find(r => r.id === suggestion.id);
+    const resource = resources.find((r) => r.id === suggestion.id);
     if (resource) {
       handleResourceClick(resource);
     } else {
@@ -364,13 +404,15 @@ export default function Home() {
         body: JSON.stringify({
           content: content,
           max_length: 200,
-          language: 'zh'
+          language: 'zh',
         }),
       });
 
       if (!res.ok) {
         if (res.status === 503) {
-          setAiSummary('⚠️ AI服务暂不可用\n\n请在 ai-service/.env 文件中配置以下API密钥之一：\n• GROK_API_KEY (推荐)\n• OPENAI_API_KEY\n\n配置后重启 ai-service 即可使用AI功能。');
+          setAiSummary(
+            '⚠️ AI服务暂不可用\n\n请在 ai-service/.env 文件中配置以下API密钥之一：\n• GROK_API_KEY (推荐)\n• OPENAI_API_KEY\n\n配置后重启 ai-service 即可使用AI功能。'
+          );
         } else {
           const error = await res.json();
           setAiSummary(`生成失败: ${error.detail || '未知错误'}`);
@@ -382,7 +424,9 @@ export default function Home() {
       setAiSummary(data.summary);
     } catch (error) {
       console.error('Failed to generate summary:', error);
-      setAiSummary('⚠️ 无法连接到AI服务\n\n请确保 ai-service 已启动：\ncd ai-service && uvicorn main:app --reload');
+      setAiSummary(
+        '⚠️ 无法连接到AI服务\n\n请确保 ai-service 已启动：\ncd ai-service && uvicorn main:app --reload'
+      );
     } finally {
       setAiLoading(false);
     }
@@ -399,7 +443,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: content,
-          language: 'zh'
+          language: 'zh',
         }),
       });
 
@@ -437,7 +481,12 @@ export default function Home() {
 
     try {
       setSavingNote(true);
-      console.log('Saving note to resource:', selectedResource.id, 'content:', contextMenu.text.substring(0, 50) + '...');
+      console.log(
+        'Saving note to resource:',
+        selectedResource.id,
+        'content:',
+        contextMenu.text.substring(0, 50) + '...'
+      );
 
       const response = await fetch(`${config.apiBaseUrl}/api/v1/notes`, {
         method: 'POST',
@@ -462,7 +511,7 @@ export default function Home() {
 
         // Trigger notes list refresh after a small delay
         setTimeout(() => {
-          setNotesRefreshKey(prev => prev + 1);
+          setNotesRefreshKey((prev) => prev + 1);
           console.log('Notes list refreshed');
         }, 100);
       } else {
@@ -501,7 +550,7 @@ export default function Home() {
       timestamp: new Date(),
     };
 
-    setAiMessages(prev => [...prev, userMessage]);
+    setAiMessages((prev) => [...prev, userMessage]);
     const currentInput = aiInput;
     setAiInput('');
     setIsStreaming(true);
@@ -517,7 +566,7 @@ export default function Home() {
           message: currentInput,
           context: context,
           model: aiModel,
-          stream: true
+          stream: true,
         }),
       });
 
@@ -533,7 +582,7 @@ export default function Home() {
         timestamp: new Date(),
       };
 
-      setAiMessages(prev => [...prev, assistantMessage]);
+      setAiMessages((prev) => [...prev, assistantMessage]);
       const messageIndex = aiMessages.length + 1;
 
       while (reader) {
@@ -551,11 +600,11 @@ export default function Home() {
             try {
               const parsed = JSON.parse(data);
               if (parsed.content) {
-                setAiMessages(prev => {
+                setAiMessages((prev) => {
                   const newMessages = [...prev];
                   newMessages[messageIndex] = {
                     ...newMessages[messageIndex],
-                    content: newMessages[messageIndex].content + parsed.content
+                    content: newMessages[messageIndex].content + parsed.content,
                   };
                   return newMessages;
                 });
@@ -570,16 +619,19 @@ export default function Home() {
       console.error('Failed to send message:', error);
       const errorMessage: AIMessage = {
         role: 'assistant',
-        content: 'AI服务暂时不可用，请检查AI服务是否运行（http://localhost:5000）',
+        content:
+          'AI服务暂时不可用，请检查AI服务是否运行（http://localhost:5000）',
         timestamp: new Date(),
       };
-      setAiMessages(prev => [...prev, errorMessage]);
+      setAiMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsStreaming(false);
     }
   };
 
-  const handleQuickAction = async (action: 'summary' | 'insights' | 'methodology') => {
+  const handleQuickAction = async (
+    action: 'summary' | 'insights' | 'methodology'
+  ) => {
     if (!selectedResource) return;
 
     setAiLoading(true);
@@ -593,7 +645,7 @@ export default function Home() {
         body: JSON.stringify({
           content: content,
           action: action,
-          model: aiModel
+          model: aiModel,
         }),
       });
 
@@ -613,7 +665,9 @@ export default function Home() {
           }
         } catch {
           // If not valid JSON, try to parse markdown format
-          console.log('JSON parsing failed, trying markdown parsing for insights');
+          console.log(
+            'JSON parsing failed, trying markdown parsing for insights'
+          );
           const parsedInsights = parseMarkdownToInsights(data.content);
           setAiInsights(parsedInsights);
         }
@@ -628,7 +682,9 @@ export default function Home() {
           }
         } catch {
           // If not valid JSON, try to parse markdown format
-          console.log('JSON parsing failed, trying markdown parsing for methodology');
+          console.log(
+            'JSON parsing failed, trying markdown parsing for methodology'
+          );
           const parsedMethodology = parseMarkdownToInsights(data.content);
           setAiMethodology(parsedMethodology);
         }
@@ -642,7 +698,7 @@ export default function Home() {
           content: data.content,
           timestamp: new Date(),
         };
-        setAiMessages(prev => [...prev, assistantMessage]);
+        setAiMessages((prev) => [...prev, assistantMessage]);
       }
     } catch (error) {
       console.error(`Failed to execute ${action}:`, error);
@@ -651,7 +707,7 @@ export default function Home() {
         content: `执行 ${action} 失败，请检查AI服务`,
         timestamp: new Date(),
       };
-      setAiMessages(prev => [...prev, errorMessage]);
+      setAiMessages((prev) => [...prev, errorMessage]);
     } finally {
       setAiLoading(false);
     }
@@ -711,26 +767,39 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-gray-50">
+      <ReportWorkspace />
       <Sidebar />
 
       {/* Center Content Area */}
       <main className="flex-1 overflow-y-auto bg-gray-50">
         {/* Sticky Search Bar Container */}
-        <div className="sticky top-0 z-10 bg-gray-50 pt-6 pb-4">
-          <div className="max-w-5xl mx-auto px-8">
+        <div className="sticky top-0 z-10 bg-gray-50 pb-4 pt-6">
+          <div className="mx-auto max-w-5xl px-8">
             {/* Large Search Bar */}
             <div className="mb-4">
-              <div className="relative bg-white border border-gray-300 rounded-lg shadow-sm">
+              <div className="relative rounded-lg border border-gray-300 bg-white shadow-sm">
                 <div className="flex items-center">
                   {/* Agent Selector */}
-                  <div className="flex items-center gap-2 px-4 py-3 border-r border-gray-200">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <div className="flex items-center gap-2 border-r border-gray-200 px-4 py-3">
+                    <svg
+                      className="h-5 w-5 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
                     </svg>
                     <select
                       value={searchMode}
-                      onChange={(e) => setSearchMode(e.target.value as 'agent' | 'search')}
-                      className="text-sm font-medium text-gray-700 border-none focus:ring-0 bg-transparent cursor-pointer"
+                      onChange={(e) =>
+                        setSearchMode(e.target.value as 'agent' | 'search')
+                      }
+                      className="cursor-pointer border-none bg-transparent text-sm font-medium text-gray-700 focus:ring-0"
                     >
                       <option value="agent">agent</option>
                       <option value="search">search</option>
@@ -750,24 +819,54 @@ export default function Home() {
                         setShowSuggestions(true);
                       }
                     }}
-                    className="flex-1 px-4 py-3 text-sm border-none focus:ring-0 focus:outline-none"
+                    className="flex-1 border-none px-4 py-3 text-sm focus:outline-none focus:ring-0"
                   />
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 px-4">
-                    <button className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                     </button>
-                    <button className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                        />
                       </svg>
                     </button>
-                    <button className="p-2 text-white bg-red-500 hover:bg-red-600 rounded-lg">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    <button className="rounded-lg bg-red-500 p-2 text-white hover:bg-red-600">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 10l7-7m0 0l7 7m-7-7v18"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -777,57 +876,97 @@ export default function Home() {
                 {showSuggestions && searchSuggestions.length > 0 && (
                   <div
                     ref={suggestionsRef}
-                    className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto"
+                    className="absolute left-0 right-0 top-full z-20 mt-2 max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
                   >
                     {searchSuggestions.map((suggestion, index) => (
                       <div
                         key={suggestion.id}
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className={`px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
+                        className={`cursor-pointer border-b border-gray-100 px-4 py-3 transition-colors last:border-b-0 ${
                           index === selectedSuggestionIndex
-                            ? 'bg-red-50 border-l-4 border-l-red-500'
+                            ? 'border-l-4 border-l-red-500 bg-red-50'
                             : 'hover:bg-gray-50'
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           {/* Type Icon */}
-                          <div className="flex-shrink-0 mt-1">
+                          <div className="mt-1 flex-shrink-0">
                             {suggestion.type === 'PAPER' && (
-                              <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <svg
+                                className="h-5 w-5 text-blue-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
                               </svg>
                             )}
                             {suggestion.type === 'PROJECT' && (
-                              <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                              <svg
+                                className="h-5 w-5 text-green-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                />
                               </svg>
                             )}
                             {suggestion.type === 'NEWS' && (
-                              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                              <svg
+                                className="h-5 w-5 text-orange-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                                />
                               </svg>
                             )}
                           </div>
 
                           {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="text-sm font-medium text-gray-900 truncate">
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <h4 className="truncate text-sm font-medium text-gray-900">
                                 {suggestion.title}
                               </h4>
-                              <span className="flex-shrink-0 text-xs text-gray-500 px-2 py-0.5 bg-gray-100 rounded">
+                              <span className="flex-shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
                                 {suggestion.type.toLowerCase()}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-600 line-clamp-2">
+                            <p className="line-clamp-2 text-xs text-gray-600">
                               {suggestion.highlight}
                             </p>
                           </div>
 
                           {/* Arrow Icon */}
-                          <div className="flex-shrink-0 mt-1">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <div className="mt-1 flex-shrink-0">
+                            <svg
+                              className="h-4 w-4 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
                             </svg>
                           </div>
                         </div>
@@ -843,7 +982,7 @@ export default function Home() {
               <div className="flex gap-6">
                 <button
                   onClick={() => setActiveTab('papers')}
-                  className={`pb-1 text-base font-medium border-b-2 transition-colors ${
+                  className={`border-b-2 pb-1 text-base font-medium transition-colors ${
                     activeTab === 'papers'
                       ? 'border-red-600 text-red-600'
                       : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -853,7 +992,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setActiveTab('projects')}
-                  className={`pb-1 text-base font-medium border-b-2 transition-colors ${
+                  className={`border-b-2 pb-1 text-base font-medium transition-colors ${
                     activeTab === 'projects'
                       ? 'border-red-600 text-red-600'
                       : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -863,7 +1002,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setActiveTab('news')}
-                  className={`pb-1 text-base font-medium border-b-2 transition-colors ${
+                  className={`border-b-2 pb-1 text-base font-medium transition-colors ${
                     activeTab === 'news'
                       ? 'border-red-600 text-red-600'
                       : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -876,17 +1015,27 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setFilterCategory(filterCategory ? '' : 'AI')}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+                  className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    />
                   </svg>
                   {filterCategory || 'Filter'}
                 </button>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                 >
                   <option value="trendingScore">Hot</option>
                   <option value="publishedAt">Latest</option>
@@ -898,8 +1047,7 @@ export default function Home() {
         </div>
 
         {/* Content Area */}
-        <div className="max-w-5xl mx-auto px-8 pb-6">
-
+        <div className="mx-auto max-w-5xl px-8 pb-6">
           {/* List View */}
           {viewMode === 'list' && (
             <>
@@ -907,12 +1055,15 @@ export default function Home() {
               {loading && (
                 <div className="space-y-5">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 animate-pulse flex gap-6">
-                      <div className="w-40 h-52 bg-gray-200 rounded-lg flex-shrink-0"></div>
+                    <div
+                      key={i}
+                      className="flex animate-pulse gap-6 rounded-xl border border-gray-200 bg-white p-6"
+                    >
+                      <div className="h-52 w-40 flex-shrink-0 rounded-lg bg-gray-200"></div>
                       <div className="flex-1">
-                        <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                        <div className="mb-4 h-6 w-3/4 rounded bg-gray-200"></div>
+                        <div className="mb-2 h-4 w-full rounded bg-gray-200"></div>
+                        <div className="h-4 w-5/6 rounded bg-gray-200"></div>
                       </div>
                     </div>
                   ))}
@@ -926,80 +1077,150 @@ export default function Home() {
                     <article
                       key={resource.id}
                       onClick={() => handleResourceClick(resource)}
-                      className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all cursor-pointer"
+                      className="cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:shadow-lg"
                     >
                       <div className="flex gap-6 p-6">
                         {/* Left: Paper Thumbnail */}
                         <div className="w-40 flex-shrink-0">
-                          <div className="relative bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200" style={{aspectRatio: '1/1.4'}}>
+                          <div
+                            className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm"
+                            style={{ aspectRatio: '1/1.4' }}
+                          >
                             {resource.thumbnailUrl ? (
-                              <img
-                                src={`${config.apiBaseUrl}${resource.thumbnailUrl}`}
-                                alt={resource.title}
-                                className="w-full h-full object-cover"
-                              />
+                              // Check if thumbnailUrl is a PDF link
+                              resource.thumbnailUrl.includes('arxiv.org/pdf') ||
+                              resource.thumbnailUrl.endsWith('.pdf') ? (
+                                <PDFThumbnail
+                                  pdfUrl={resource.thumbnailUrl}
+                                  alt={resource.title}
+                                  className="h-full w-full"
+                                />
+                              ) : (
+                                <img
+                                  src={`${config.apiBaseUrl}${resource.thumbnailUrl}`}
+                                  alt={resource.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              )
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center text-gray-400">
                                 {resource.type === 'PAPER' && (
-                                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  <svg
+                                    className="h-12 w-12"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
                                   </svg>
                                 )}
                                 {resource.type === 'PROJECT' && (
-                                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                  <svg
+                                    className="h-12 w-12"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                    />
                                   </svg>
                                 )}
                                 {resource.type === 'NEWS' && (
-                                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                                  <svg
+                                    className="h-12 w-12"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                                    />
                                   </svg>
                                 )}
                               </div>
                             )}
                             {/* Stats Overlay */}
-                            <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm flex items-center gap-1 text-xs">
-                              <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            <div className="absolute left-2 top-2 flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-xs shadow-sm backdrop-blur-sm">
+                              <svg
+                                className="h-3 w-3 text-gray-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                                />
                               </svg>
-                              <span className="font-medium text-gray-700">{resource.upvoteCount || 0}</span>
-                              <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                              <span className="font-medium text-gray-700">
+                                {resource.upvoteCount || 0}
+                              </span>
+                              <svg
+                                className="h-3 w-3 text-green-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 10l7-7m0 0l7 7m-7-7v18"
+                                />
                               </svg>
                             </div>
                           </div>
                         </div>
 
                         {/* Right: Content */}
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           {/* Date and Tags */}
-                          <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
+                          <div className="mb-3 flex items-center gap-3 text-xs text-gray-500">
                             <span>
-                              {new Date(resource.publishedAt).toLocaleDateString('en-US', {
+                              {new Date(
+                                resource.publishedAt
+                              ).toLocaleDateString('en-US', {
                                 day: 'numeric',
                                 month: 'short',
                                 year: 'numeric',
                               })}
                             </span>
-                            {resource.categories && resource.categories.slice(0, 3).map((cat, i) => (
-                              <span key={i} className="text-gray-600">{cat}</span>
-                            ))}
+                            {resource.categories &&
+                              resource.categories.slice(0, 3).map((cat, i) => (
+                                <span key={i} className="text-gray-600">
+                                  {cat}
+                                </span>
+                              ))}
                           </div>
 
                           {/* Title */}
-                          <h2 className="text-xl font-semibold text-red-600 mb-3 hover:underline">
+                          <h2 className="mb-3 text-xl font-semibold text-red-600 hover:underline">
                             {resource.title}
                           </h2>
 
                           {/* Abstract */}
                           {(resource.aiSummary || resource.abstract) && (
-                            <p className="text-gray-700 text-sm mb-4 line-clamp-3 leading-relaxed">
+                            <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-gray-700">
                               {resource.aiSummary || resource.abstract}
                             </p>
                           )}
 
                           {/* Bottom Actions */}
-                          <div className="flex items-center gap-6 pt-3 border-t border-gray-100">
+                          <div className="flex items-center gap-6 border-t border-gray-100 pt-3">
                             <button
                               onClick={(e) => toggleBookmark(resource.id, e)}
                               className={`flex items-center gap-2 text-sm transition-colors ${
@@ -1009,31 +1230,114 @@ export default function Home() {
                               }`}
                             >
                               <svg
-                                className="w-4 h-4"
-                                fill={isBookmarked(resource.id) ? 'currentColor' : 'none'}
+                                className="h-4 w-4"
+                                fill={
+                                  isBookmarked(resource.id)
+                                    ? 'currentColor'
+                                    : 'none'
+                                }
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                                />
                               </svg>
-                              {isBookmarked(resource.id) ? 'Bookmarked' : 'Bookmark'}
+                              {isBookmarked(resource.id)
+                                ? 'Bookmarked'
+                                : 'Bookmark'}
                             </button>
                             {resource.commentCount !== undefined && (
-                              <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600" onClick={(e) => e.stopPropagation()}>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              <button
+                                className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                  />
                                 </svg>
                                 {resource.commentCount}
                               </button>
                             )}
                             {resource.upvoteCount !== undefined && (
-                              <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600" onClick={(e) => e.stopPropagation()}>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                              <button
+                                className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                                  />
                                 </svg>
                                 {resource.upvoteCount}
                               </button>
                             )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!hasResource(resource.id) && canAddMore()) {
+                                  addResource({
+                                    id: resource.id,
+                                    type: resource.type,
+                                    title: resource.title,
+                                    abstract: resource.abstract,
+                                    thumbnailUrl: resource.thumbnailUrl,
+                                  });
+                                }
+                              }}
+                              disabled={
+                                hasResource(resource.id) || !canAddMore()
+                              }
+                              className={`flex items-center gap-2 text-sm transition-colors ${
+                                hasResource(resource.id)
+                                  ? 'cursor-default text-green-600'
+                                  : canAddMore()
+                                    ? 'text-gray-600 hover:text-red-600'
+                                    : 'cursor-not-allowed text-gray-400'
+                              }`}
+                              title={
+                                hasResource(resource.id)
+                                  ? '已添加到报告工作区'
+                                  : !canAddMore()
+                                    ? '工作区已满(最多10个资源)'
+                                    : '添加到报告工作区'
+                              }
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                              {hasResource(resource.id) ? '已添加' : '报告'}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1044,9 +1348,11 @@ export default function Home() {
 
               {/* Empty State */}
               {!loading && resources.length === 0 && (
-                <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
-                  <p className="text-gray-500 mb-2">No content available</p>
-                  <p className="text-sm text-gray-400">Try running the data crawler first</p>
+                <div className="rounded-xl border border-gray-200 bg-white py-20 text-center">
+                  <p className="mb-2 text-gray-500">No content available</p>
+                  <p className="text-sm text-gray-400">
+                    Try running the data crawler first
+                  </p>
                 </div>
               )}
             </>
@@ -1058,91 +1364,153 @@ export default function Home() {
               {/* Back Button */}
               <button
                 onClick={handleBackToList}
-                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+                className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
                 Back to list
               </button>
 
               {/* Header */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="rounded-xl border border-gray-200 bg-white p-6">
                 {/* Title */}
-                <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                <h1 className="mb-3 text-2xl font-bold text-gray-900">
                   {selectedResource.title}
                 </h1>
 
                 {/* Metadata */}
-                <div className="flex items-center gap-4 text-xs text-gray-600 mb-4">
+                <div className="mb-4 flex items-center gap-4 text-xs text-gray-600">
                   <span>
-                    {new Date(selectedResource.publishedAt).toLocaleDateString('en-US', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
+                    {new Date(selectedResource.publishedAt).toLocaleDateString(
+                      'en-US',
+                      {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      }
+                    )}
                   </span>
-                  {selectedResource.categories && selectedResource.categories.slice(0, 3).map((cat, i) => (
-                    <span key={i} className="px-2 py-1 bg-gray-100 rounded">{cat}</span>
-                  ))}
+                  {selectedResource.categories &&
+                    selectedResource.categories.slice(0, 3).map((cat, i) => (
+                      <span key={i} className="rounded bg-gray-100 px-2 py-1">
+                        {cat}
+                      </span>
+                    ))}
                 </div>
 
                 {/* Authors */}
-                {selectedResource.authors && selectedResource.authors.length > 0 && (
-                  <div className="mb-4">
-                    <h3 className="text-xs font-semibold text-gray-700 mb-1">Authors</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedResource.authors.map((author, i) => (
-                        <span key={i} className="text-xs text-gray-600">{author.username}</span>
-                      ))}
+                {selectedResource.authors &&
+                  selectedResource.authors.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="mb-1 text-xs font-semibold text-gray-700">
+                        Authors
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedResource.authors.map((author, i) => (
+                          <span key={i} className="text-xs text-gray-600">
+                            {author.username}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Actions */}
-                <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
                   <button
                     onClick={() => toggleBookmark(selectedResource.id)}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
                       isBookmarked(selectedResource.id)
                         ? 'bg-red-600 text-white hover:bg-red-700'
                         : 'border border-red-600 text-red-600 hover:bg-red-50'
                     }`}
                   >
                     <svg
-                      className="w-4 h-4"
-                      fill={isBookmarked(selectedResource.id) ? 'currentColor' : 'none'}
+                      className="h-4 w-4"
+                      fill={
+                        isBookmarked(selectedResource.id)
+                          ? 'currentColor'
+                          : 'none'
+                      }
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                      />
                     </svg>
-                    {isBookmarked(selectedResource.id) ? 'Bookmarked' : 'Bookmark'}
+                    {isBookmarked(selectedResource.id)
+                      ? 'Bookmarked'
+                      : 'Bookmark'}
                   </button>
                   <a
                     href={selectedResource.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
                     </svg>
                     Open in new tab
                   </a>
-                  <div className="flex items-center gap-3 ml-auto text-xs text-gray-600">
+                  <div className="ml-auto flex items-center gap-3 text-xs text-gray-600">
                     {selectedResource.upvoteCount !== undefined && (
                       <span className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 15l7-7 7 7"
+                          />
                         </svg>
                         {selectedResource.upvoteCount}
                       </span>
                     )}
                     {selectedResource.viewCount !== undefined && (
                       <span className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
                         </svg>
                         {selectedResource.viewCount}
                       </span>
@@ -1152,46 +1520,61 @@ export default function Home() {
               </div>
 
               {/* Embedded Content */}
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
                   <span className="text-sm text-gray-600">Preview</span>
                   <a
                     href={
-                      selectedResource.type === 'PAPER' && selectedResource.pdfUrl
+                      selectedResource.type === 'PAPER' &&
+                      selectedResource.pdfUrl
                         ? `${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`
                         : selectedResource.sourceUrl
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
                     </svg>
                     Open in new tab
                   </a>
                 </div>
                 {/* Display preview via proxy */}
-                {selectedResource.type === 'PAPER' && selectedResource.pdfUrl ? (
+                {selectedResource.type === 'PAPER' &&
+                selectedResource.pdfUrl ? (
                   <object
                     data={`${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`}
                     type="application/pdf"
-                    className="w-full h-[800px]"
+                    className="h-[800px] w-full"
                     title={selectedResource.title}
                   >
                     <p className="p-4 text-center text-gray-500">
-                      PDF cannot be displayed. <a
+                      PDF cannot be displayed.{' '}
+                      <a
                         href={`${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
-                      >Click here to download</a>
+                      >
+                        Click here to download
+                      </a>
                     </p>
                   </object>
                 ) : (
                   <iframe
                     src={`${config.apiUrl}/proxy/html?url=${encodeURIComponent(selectedResource.sourceUrl)}`}
-                    className="w-full h-[800px]"
+                    className="h-[800px] w-full"
                     title={selectedResource.title}
                   />
                 )}
@@ -1202,46 +1585,46 @@ export default function Home() {
       </main>
 
       {/* Right AI Interaction Panel */}
-      <aside className="w-96 bg-white border-l border-gray-200 flex flex-col">
+      <aside className="flex w-96 flex-col border-l border-gray-200 bg-white">
         {/* Top Tab Navigation */}
         <div className="border-b border-gray-200">
           <div className="flex items-center px-3">
             <button
               onClick={() => setAiRightTab('assistant')}
-              className={`px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 ${
+              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
                 aiRightTab === 'assistant'
-                  ? 'text-red-600 border-red-600'
-                  : 'text-gray-600 hover:text-gray-900 border-transparent'
+                  ? 'border-red-600 text-red-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
               Assistant
             </button>
             <button
               onClick={() => setAiRightTab('notes')}
-              className={`px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 ${
+              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
                 aiRightTab === 'notes'
-                  ? 'text-red-600 border-red-600'
-                  : 'text-gray-600 hover:text-gray-900 border-transparent'
+                  ? 'border-red-600 text-red-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
               My Notes
             </button>
             <button
               onClick={() => setAiRightTab('comments')}
-              className={`px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 ${
+              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
                 aiRightTab === 'comments'
-                  ? 'text-red-600 border-red-600'
-                  : 'text-gray-600 hover:text-gray-900 border-transparent'
+                  ? 'border-red-600 text-red-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
               Comments
             </button>
             <button
               onClick={() => setAiRightTab('similar')}
-              className={`px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 ${
+              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
                 aiRightTab === 'similar'
-                  ? 'text-red-600 border-red-600'
-                  : 'text-gray-600 hover:text-gray-900 border-transparent'
+                  ? 'border-red-600 text-red-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
               Similar
@@ -1254,12 +1637,16 @@ export default function Home() {
             aiRightTab === 'assistant' ? (
               <div className="space-y-4">
                 {/* Model Selector */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-xs font-medium text-gray-700">AI模型:</span>
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                  <span className="text-xs font-medium text-gray-700">
+                    AI模型:
+                  </span>
                   <select
                     value={aiModel}
-                    onChange={(e) => setAiModel(e.target.value as 'grok' | 'openai')}
-                    className="text-xs px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:outline-none"
+                    onChange={(e) =>
+                      setAiModel(e.target.value as 'grok' | 'openai')
+                    }
+                    className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
                     <option value="grok">Grok-3 (x.AI)</option>
                     <option value="openai">GPT-4o-mini (OpenAI)</option>
@@ -1273,30 +1660,60 @@ export default function Home() {
                     <button
                       onClick={() => handleQuickAction('summary')}
                       disabled={aiLoading || isStreaming}
-                      className="flex flex-col items-center gap-1 px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <svg
+                        className="h-4 w-4 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
                       </svg>
                       <span className="text-gray-700">摘要</span>
                     </button>
                     <button
                       onClick={() => handleQuickAction('insights')}
                       disabled={aiLoading || isStreaming}
-                      className="flex flex-col items-center gap-1 px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      <svg
+                        className="h-4 w-4 text-orange-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                        />
                       </svg>
                       <span className="text-gray-700">洞察</span>
                     </button>
                     <button
                       onClick={() => handleQuickAction('methodology')}
                       disabled={aiLoading || isStreaming}
-                      className="flex flex-col items-center gap-1 px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      <svg
+                        className="h-4 w-4 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                        />
                       </svg>
                       <span className="text-gray-700">方法论</span>
                     </button>
@@ -1306,26 +1723,42 @@ export default function Home() {
                 {/* AI Summary Section */}
                 {aiSummary && (
                   <div
-                    className="bg-gradient-to-br from-pink-50 to-red-50 rounded-lg p-4 border border-pink-200 cursor-text select-text"
+                    className="cursor-text select-text rounded-lg border border-pink-200 bg-gradient-to-br from-pink-50 to-red-50 p-4"
                     onContextMenu={(e) => handleContextMenu(e, aiSummary)}
                   >
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                      <svg
+                        className="h-4 w-4 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
                       </svg>
                       AI摘要
-                      <span className="ml-auto text-xs text-gray-500">右键添加到笔记</span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        右键添加到笔记
+                      </span>
                     </h3>
-                    <p className="text-sm text-gray-700 leading-relaxed">{aiSummary}</p>
+                    <p className="text-sm leading-relaxed text-gray-700">
+                      {aiSummary}
+                    </p>
                   </div>
                 )}
 
                 {/* AI Loading Indicator */}
                 {(aiLoading || isStreaming) && (
-                  <div className="flex items-center justify-center py-4 gap-2">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                  <div className="flex items-center justify-center gap-2 py-4">
+                    <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-red-600"></div>
                     <span className="text-xs text-gray-600">
-                      {isStreaming ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'}正在思考...` : 'AI处理中...'}
+                      {isStreaming
+                        ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'}正在思考...`
+                        : 'AI处理中...'}
                     </span>
                   </div>
                 )}
@@ -1333,27 +1766,48 @@ export default function Home() {
                 {/* AI Insights Section */}
                 {aiInsights.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                      <svg
+                        className="h-4 w-4 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                        />
                       </svg>
                       关键洞察
-                      <span className="ml-auto text-xs text-gray-500">右键添加到笔记</span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        右键添加到笔记
+                      </span>
                     </h3>
                     {aiInsights.map((insight, i) => (
                       <div
                         key={i}
-                        className={`p-3 rounded-lg border cursor-text select-text ${
+                        className={`cursor-text select-text rounded-lg border p-3 ${
                           insight.importance === 'high'
-                            ? 'bg-red-50 border-red-200'
+                            ? 'border-red-200 bg-red-50'
                             : insight.importance === 'medium'
-                            ? 'bg-orange-50 border-orange-200'
-                            : 'bg-gray-50 border-gray-200'
+                              ? 'border-orange-200 bg-orange-50'
+                              : 'border-gray-200 bg-gray-50'
                         }`}
-                        onContextMenu={(e) => handleContextMenu(e, `**${insight.title}**\n\n${insight.description}`)}
+                        onContextMenu={(e) =>
+                          handleContextMenu(
+                            e,
+                            `**${insight.title}**\n\n${insight.description}`
+                          )
+                        }
                       >
-                        <h4 className="text-sm font-semibold text-gray-900 mb-1">{insight.title}</h4>
-                        <p className="text-xs text-gray-600">{insight.description}</p>
+                        <h4 className="mb-1 text-sm font-semibold text-gray-900">
+                          {insight.title}
+                        </h4>
+                        <p className="text-xs text-gray-600">
+                          {insight.description}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -1362,27 +1816,48 @@ export default function Home() {
                 {/* AI Methodology Section */}
                 {aiMethodology.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                      <svg
+                        className="h-4 w-4 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                        />
                       </svg>
                       研究方法论
-                      <span className="ml-auto text-xs text-gray-500">右键添加到笔记</span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        右键添加到笔记
+                      </span>
                     </h3>
                     {aiMethodology.map((method, i) => (
                       <div
                         key={i}
-                        className={`p-3 rounded-lg border cursor-text select-text ${
+                        className={`cursor-text select-text rounded-lg border p-3 ${
                           method.importance === 'high'
-                            ? 'bg-blue-50 border-blue-200'
+                            ? 'border-blue-200 bg-blue-50'
                             : method.importance === 'medium'
-                            ? 'bg-cyan-50 border-cyan-200'
-                            : 'bg-teal-50 border-teal-200'
+                              ? 'border-cyan-200 bg-cyan-50'
+                              : 'border-teal-200 bg-teal-50'
                         }`}
-                        onContextMenu={(e) => handleContextMenu(e, `**${method.title}**\n\n${method.description}`)}
+                        onContextMenu={(e) =>
+                          handleContextMenu(
+                            e,
+                            `**${method.title}**\n\n${method.description}`
+                          )
+                        }
                       >
-                        <h4 className="text-sm font-semibold text-gray-900 mb-1">{method.title}</h4>
-                        <p className="text-xs text-gray-600">{method.description}</p>
+                        <h4 className="mb-1 text-sm font-semibold text-gray-900">
+                          {method.title}
+                        </h4>
+                        <p className="text-xs text-gray-600">
+                          {method.description}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -1390,7 +1865,7 @@ export default function Home() {
 
                 {/* Chat Messages */}
                 {aiMessages.length > 0 && (
-                  <div className="space-y-3 pt-4 border-t border-gray-200">
+                  <div className="space-y-3 border-t border-gray-200 pt-4">
                     {aiMessages.map((msg, i) => (
                       <div
                         key={i}
@@ -1404,8 +1879,11 @@ export default function Home() {
                           }`}
                         >
                           <p className="text-sm">{msg.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                          <p className="mt-1 text-xs opacity-70">
+                            {msg.timestamp.toLocaleTimeString('zh-CN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </p>
                         </div>
                       </div>
@@ -1416,14 +1894,14 @@ export default function Home() {
 
                 {/* Tips when no messages */}
                 {aiMessages.length === 0 && !aiLoading && (
-                  <div className="pt-4 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-3">💡 你可以问：</p>
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="mb-3 text-xs text-gray-500">💡 你可以问：</p>
                     <div className="space-y-2">
                       <button
                         onClick={() => {
                           setAiInput('这篇文章的主要贡献是什么？');
                         }}
-                        className="w-full text-left px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-700"
+                        className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
                       >
                         这篇文章的主要贡献是什么？
                       </button>
@@ -1431,7 +1909,7 @@ export default function Home() {
                         onClick={() => {
                           setAiInput('有哪些实际应用场景？');
                         }}
-                        className="w-full text-left px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-700"
+                        className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
                       >
                         有哪些实际应用场景？
                       </button>
@@ -1439,7 +1917,7 @@ export default function Home() {
                         onClick={() => {
                           setAiInput('有什么局限性？');
                         }}
-                        className="w-full text-left px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-700"
+                        className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
                       >
                         有什么局限性？
                       </button>
@@ -1449,27 +1927,45 @@ export default function Home() {
               </div>
             ) : aiRightTab === 'notes' ? (
               <div className="p-6">
-                <NotesList key={notesRefreshKey} resourceId={selectedResource.id} />
+                <NotesList
+                  key={notesRefreshKey}
+                  resourceId={selectedResource.id}
+                />
               </div>
             ) : aiRightTab === 'comments' ? (
               <div className="p-6">
                 <CommentsList resourceId={selectedResource.id} />
               </div>
             ) : (
-              <div className="text-center text-gray-500 py-8">
+              <div className="py-8 text-center text-gray-500">
                 <p className="text-sm">相似内容推荐功能开发中...</p>
               </div>
             )
           ) : (
-            <div className="flex items-center justify-center h-full text-center px-4">
+            <div className="flex h-full items-center justify-center px-4 text-center">
               <div>
-                <div className="flex justify-center mb-6">
-                  <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                <div className="mb-6 flex justify-center">
+                  <svg
+                    className="h-16 w-16 text-gray-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                    />
                   </svg>
                 </div>
-                <p className="text-sm text-gray-500 mb-2">No content selected</p>
-                <p className="text-xs text-gray-400">Click on any paper, project, or news item to analyze it with AI</p>
+                <p className="mb-2 text-sm text-gray-500">
+                  No content selected
+                </p>
+                <p className="text-xs text-gray-400">
+                  Click on any paper, project, or news item to analyze it with
+                  AI
+                </p>
               </div>
             </div>
           )}
@@ -1488,31 +1984,71 @@ export default function Home() {
                 }
               }}
               disabled={!selectedResource || aiLoading}
-              placeholder={selectedResource ? "Ask anything about this content..." : "Select a resource first..."}
+              placeholder={
+                selectedResource
+                  ? 'Ask anything about this content...'
+                  : 'Select a resource first...'
+              }
               rows={3}
-              className="w-full px-4 py-3 pr-24 text-sm bg-gray-50 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
+              className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 pr-24 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
             />
             <div className="absolute bottom-3 right-3 flex items-center gap-2">
-              <button className="p-1.5 text-gray-400 hover:text-gray-600" disabled={!selectedResource}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              <button
+                className="p-1.5 text-gray-400 hover:text-gray-600"
+                disabled={!selectedResource}
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                  />
                 </svg>
               </button>
-              <button className="p-1.5 text-gray-400 hover:text-gray-600" disabled={!selectedResource}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              <button
+                className="p-1.5 text-gray-400 hover:text-gray-600"
+                disabled={!selectedResource}
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                  />
                 </svg>
               </button>
               <button
                 onClick={sendAIMessage}
                 disabled={!selectedResource || !aiInput.trim() || aiLoading}
-                className="w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {aiLoading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                 ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                    />
                   </svg>
                 )}
               </button>
@@ -1524,7 +2060,7 @@ export default function Home() {
       {/* Context Menu for Adding to Notes */}
       {contextMenu && (
         <div
-          className="context-menu fixed bg-white border-2 border-blue-500 rounded-lg shadow-xl py-2 z-50"
+          className="context-menu fixed z-50 rounded-lg border-2 border-blue-500 bg-white py-2 shadow-xl"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -1535,10 +2071,20 @@ export default function Home() {
               saveToNotes();
             }}
             disabled={savingNote}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-blue-100 disabled:opacity-50 flex items-center gap-2 font-medium"
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium hover:bg-blue-100 disabled:opacity-50"
           >
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <svg
+              className="h-4 w-4 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             {savingNote ? '保存中...' : '添加到笔记'}
           </button>

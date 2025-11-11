@@ -8,14 +8,14 @@ import {
   Query,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common';
-import { ReportsService } from './reports.service';
-import { GenerateReportDto } from './dto/generate-report.dto';
+} from "@nestjs/common";
+import { ReportsService } from "./reports.service";
+import { GenerateReportDto } from "./dto/generate-report.dto";
 
 /**
  * 报告控制器 - 多素材AI综合报告生成
  */
-@Controller('reports')
+@Controller("reports")
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
@@ -23,18 +23,28 @@ export class ReportsController {
    * 生成报告
    * POST /api/v1/reports/generate
    */
-  @Post('generate')
+  @Post("generate")
   @HttpCode(HttpStatus.CREATED)
   async generateReport(@Body() dto: GenerateReportDto) {
     return this.reportsService.generateReport(dto);
   }
 
   /**
+   * 与资源对话 (AI Chat)
+   * POST /api/v1/reports/chat
+   */
+  @Post("chat")
+  @HttpCode(HttpStatus.OK)
+  async chatWithResources(@Body() dto: any) {
+    return this.reportsService.chatWithResources(dto);
+  }
+
+  /**
    * 获取单个报告
    * GET /api/v1/reports/:id
    */
-  @Get(':id')
-  async getReport(@Param('id') id: string, @Query('userId') userId?: string) {
+  @Get(":id")
+  async getReport(@Param("id") id: string, @Query("userId") userId?: string) {
     return this.reportsService.findOne(id, userId);
   }
 
@@ -44,9 +54,9 @@ export class ReportsController {
    */
   @Get()
   async getUserReports(
-    @Query('userId') userId: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query("userId") userId: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 20;
@@ -58,9 +68,9 @@ export class ReportsController {
    * 删除报告
    * DELETE /api/v1/reports/:id?userId=xxx
    */
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.OK)
-  async deleteReport(@Param('id') id: string, @Query('userId') userId: string) {
+  async deleteReport(@Param("id") id: string, @Query("userId") userId: string) {
     return this.reportsService.delete(id, userId);
   }
 }

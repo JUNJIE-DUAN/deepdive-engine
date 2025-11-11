@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../common/prisma/prisma.service';
-import { GenerateReportDto } from './dto/generate-report.dto';
-import axios from 'axios';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { PrismaService } from "../common/prisma/prisma.service";
+import { GenerateReportDto } from "./dto/generate-report.dto";
+import axios from "axios";
 
 interface ReportSection {
   title: string;
@@ -23,24 +27,24 @@ interface TemplateConfig {
 
 const TEMPLATE_CONFIG: Record<string, TemplateConfig> = {
   comparison: {
-    name: '对比分析',
-    icon: '📊',
-    model: 'gpt-4',
+    name: "对比分析",
+    icon: "📊",
+    model: "gpt-4",
   },
   trend: {
-    name: '趋势报告',
-    icon: '📈',
-    model: 'grok',
+    name: "趋势报告",
+    icon: "📈",
+    model: "grok",
   },
-  'learning-path': {
-    name: '学习路径',
-    icon: '🗺️',
-    model: 'grok',
+  "learning-path": {
+    name: "学习路径",
+    icon: "🗺️",
+    model: "grok",
   },
-  'literature-review': {
-    name: '文献综述',
-    icon: '📝',
-    model: 'gpt-4',
+  "literature-review": {
+    name: "文献综述",
+    icon: "📝",
+    model: "gpt-4",
   },
 };
 
@@ -54,7 +58,7 @@ export class ReportsService {
   async generateReport(dto: GenerateReportDto) {
     // 1. 验证资源数量
     if (dto.resourceIds.length < 2 || dto.resourceIds.length > 10) {
-      throw new BadRequestException('Please select 2-10 resources');
+      throw new BadRequestException("Please select 2-10 resources");
     }
 
     // 2. 获取资源详情
@@ -78,41 +82,47 @@ export class ReportsService {
     });
 
     if (resources.length !== dto.resourceIds.length) {
-      throw new BadRequestException('Some resources not found');
+      throw new BadRequestException("Some resources not found");
     }
 
     // 3. 获取模板配置
     const templateConfig = TEMPLATE_CONFIG[dto.template];
     if (!templateConfig) {
-      throw new BadRequestException('Invalid template');
+      throw new BadRequestException("Invalid template");
     }
 
     // 4. 调用AI服务生成报告
-    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:5000';
+    const aiServiceUrl = process.env.AI_SERVICE_URL || "http://localhost:5000";
     const model = dto.model || templateConfig.model;
 
     let aiReport: AIReportResponse;
     try {
-      const response = await axios.post(`${aiServiceUrl}/api/v1/ai/generate-report`, {
-        resources: resources.map((r: typeof resources[0]) => ({
-          id: r.id,
-          title: r.title,
-          abstract: r.abstract,
-          authors: r.authors,
-          published_date: r.publishedAt,
-          tags: r.tags,
-          type: r.type,
-        })),
-        template: dto.template,
-        model,
-      }, {
-        timeout: 120000, // 2 minutes timeout
-      });
+      const response = await axios.post(
+        `${aiServiceUrl}/api/v1/ai/generate-report`,
+        {
+          resources: resources.map((r: (typeof resources)[0]) => ({
+            id: r.id,
+            title: r.title,
+            abstract: r.abstract,
+            authors: r.authors,
+            published_date: r.publishedAt,
+            tags: r.tags,
+            type: r.type,
+          })),
+          template: dto.template,
+          model,
+        },
+        {
+          timeout: 120000, // 2 minutes timeout
+        },
+      );
 
       aiReport = response.data;
     } catch (error) {
-      console.error('AI service error:', error);
-      throw new BadRequestException('Failed to generate report. Please try again.');
+      console.error("AI service error:", error);
+      throw new BadRequestException(
+        "Failed to generate report. Please try again.",
+      );
     }
 
     // 5. 保存报告到数据库
@@ -149,6 +159,29 @@ export class ReportsService {
   }
 
   /**
+   * 与资源对话
+   */
+  async chatWithResources(dto: any) {
+    try {
+      const aiServiceUrl =
+        process.env.AI_SERVICE_URL || "http://localhost:5000";
+
+      const response = await axios.post(`${aiServiceUrl}/api/v1/ai/chat`, dto, {
+        timeout: 60000, // 1 minute timeout
+      });
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new BadRequestException(
+          `AI chat failed: ${error.response?.data?.detail || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
    * 获取单个报告
    */
   async findOne(id: string, userId?: string) {
@@ -167,12 +200,12 @@ export class ReportsService {
     });
 
     if (!report) {
-      throw new NotFoundException('Report not found');
+      throw new NotFoundException("Report not found");
     }
 
     // 如果提供了userId，验证权限
     if (userId && report.userId !== userId) {
-      throw new NotFoundException('Report not found');
+      throw new NotFoundException("Report not found");
     }
 
     // 获取关联的资源
@@ -211,7 +244,7 @@ export class ReportsService {
     const [reports, total] = await Promise.all([
       this.prisma.report.findMany({
         where: { userId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
         select: {
@@ -252,17 +285,17 @@ export class ReportsService {
     });
 
     if (!report) {
-      throw new NotFoundException('Report not found');
+      throw new NotFoundException("Report not found");
     }
 
     if (report.userId !== userId) {
-      throw new BadRequestException('Unauthorized');
+      throw new BadRequestException("Unauthorized");
     }
 
     await this.prisma.report.delete({
       where: { id },
     });
 
-    return { message: 'Report deleted successfully' };
+    return { message: "Report deleted successfully" };
   }
 }

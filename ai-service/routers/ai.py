@@ -236,13 +236,15 @@ async def health_check(orch: AIOrchestrator = Depends(get_orchestrator)):
     )
 
 
-@router.post("/chat")
-async def chat(
+@router.post("/simple-chat")
+async def simple_chat(
     request: ChatRequest,
     orch: AIOrchestrator = Depends(get_orchestrator)
 ):
     """
-    聊天接口（支持流式响应）
+    简单聊天接口（支持流式响应）
+    注意：这是一个简单的聊天接口，不支持资源对话。
+    如果需要与资源对话，请使用 /api/v1/ai/chat 端点。
 
     Args:
         request: 聊天请求
@@ -550,3 +552,4 @@ Format the output in clear sections with markdown headings."""
         ],
         "model": request.model
     }
+

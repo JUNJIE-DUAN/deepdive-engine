@@ -7,15 +7,26 @@ from typing import List, Dict, Any, Optional
 import json
 import logging
 
-from services.grok_client import GrokClient
-from services.openai_client import OpenAIClient
-
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# 初始化AI客户端
-grok_client = GrokClient()
-openai_client = OpenAIClient()
+# AI客户端将从main.py导入
+grok_client = None
+openai_client = None
+
+
+def init_clients(grok, openai):
+    """
+    初始化AI客户端（从main.py注入）
+
+    Args:
+        grok: GrokClient实例
+        openai: OpenAIClient实例
+    """
+    global grok_client, openai_client
+    grok_client = grok
+    openai_client = openai
+    logger.info("Report router: AI clients initialized")
 
 
 class Resource(BaseModel):
@@ -58,7 +69,15 @@ def prepare_resources_info(resources: List[Resource]) -> str:
         authors_str = "N/A"
         if resource.authors:
             if isinstance(resource.authors, list):
-                authors_str = ", ".join(resource.authors[:3])  # 只显示前3个作者
+                # 处理dict或string列表
+                author_names = []
+                for author in resource.authors[:3]:
+                    if isinstance(author, dict):
+                        # 尝试从dict中提取name字段
+                        author_names.append(author.get('name', author.get('id', str(author))))
+                    elif isinstance(author, str):
+                        author_names.append(author)
+                authors_str = ", ".join(author_names) if author_names else "N/A"
             elif isinstance(resource.authors, str):
                 authors_str = resource.authors
 
@@ -443,6 +462,88 @@ async def get_report_templates():
             },
         ]
     }
+
+
+class ChatRequest(BaseModel):
+    """资源对话请求"""
+    resources: List[Resource] = Field(..., min_items=1, max_items=10)
+    message: str = Field(..., min_length=1)
+    history: List[Dict[str, str]] = Field(default_factory=list)
+    model: str = Field(default="grok", pattern="^(grok|gpt-4)$")
+
+
+class ChatResponse(BaseModel):
+    """对话响应"""
+    message: str
+
+
+@router.post("/api/v1/ai/chat", response_model=ChatResponse)
+async def chat_with_resources(request: ChatRequest):
+    """
+    与资源进行对话，基于资源内容回答问题
+
+    Args:
+        request: 包含资源列表、用户消息和对话历史
+
+    Returns:
+        ChatResponse: AI的回答
+    """
+    try:
+        logger.info(f"Chat request for {len(request.resources)} resources using {request.model}")
+
+        # 1. 准备资源信息上下文
+        resources_context = prepare_resources_info(request.resources)
+
+        # 2. 构建系统提示
+        system_prompt = f"""你是一个专业的研究助手。用户选择了以下资源，你需要基于这些资源的内容回答用户的问题。
+
+资源信息：
+{resources_context}
+
+请基于以上资源内容回答用户的问题。如果问题涉及资源中没有的信息，请明确指出。回答要准确、专业、有条理。"""
+
+        # 3. 构建消息列表
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # 添加历史对话（最多保留最近5轮）
+        for h in request.history[-10:]:  # 最多10条历史消息
+            messages.append(h)
+
+        # 添加当前用户消息
+        messages.append({"role": "user", "content": request.message})
+
+        # 4. 调用AI生成响应
+        if request.model == "gpt-4":
+            logger.info("Using OpenAI GPT-4")
+            response = await openai_client.chat(
+                messages=messages,
+                model="gpt-4",
+                temperature=0.7,
+                max_tokens=1500
+            )
+        else:
+            logger.info("Using Grok")
+            response = await grok_client.chat(
+                messages=messages,
+                temperature=0.7,
+                max_tokens=1500
+            )
+
+        if response is None:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable"
+            )
+
+        logger.info(f"Chat response generated: {len(response)} characters")
+        return ChatResponse(message=response)
+
+    except Exception as e:
+        logger.error(f"Chat error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"对话失败: {str(e)}"
+        )
 
 
 # YouTube报告相关模型

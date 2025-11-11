@@ -135,6 +135,54 @@ class GrokClient:
         except Exception as e:
             logger.error(f"Grok streaming exception: {str(e)}")
 
+    async def chat(
+        self,
+        messages: list,
+        max_tokens: int = 500,
+        temperature: float = 0.7
+    ) -> Optional[str]:
+        """
+        使用messages格式进行对话
+
+        Args:
+            messages: 消息列表
+            max_tokens: 最大 token 数
+            temperature: 温度参数
+
+        Returns:
+            AI回复内容
+        """
+        if not self.available:
+            logger.error("Grok client not available")
+            return None
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "grok-3",
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                    }
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    return data["choices"][0]["message"]["content"]
+                else:
+                    logger.error(f"Grok API error: {response.status_code} - {response.text}")
+                    return None
+
+        except Exception as e:
+            logger.error(f"Grok chat exception: {str(e)}")
+            return None
+
     async def health_check(self) -> bool:
         """
         健康检查

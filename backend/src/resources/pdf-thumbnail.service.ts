@@ -1,12 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { getErrorMessage } from '../common/utils/error.utils';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import axios from 'axios';
-// @ts-expect-error - pdfjs-dist types may not be available
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
-import { createCanvas } from 'canvas';
-import sharp from 'sharp';
+import { Injectable, Logger } from "@nestjs/common";
+import { getErrorMessage } from "../common/utils/error.utils";
+import * as fs from "fs/promises";
+import * as path from "path";
+import axios from "axios";
+import sharp from "sharp";
+import * as pdfjsLib from "pdfjs-dist";
+import { createCanvas } from "canvas";
 
 /**
  * PDF缩略图生成服务
@@ -15,7 +14,11 @@ import sharp from 'sharp';
 @Injectable()
 export class PdfThumbnailService {
   private readonly logger = new Logger(PdfThumbnailService.name);
-  private readonly thumbnailDir = path.join(process.cwd(), 'public', 'thumbnails');
+  private readonly thumbnailDir = path.join(
+    process.cwd(),
+    "public",
+    "thumbnails",
+  );
   private readonly thumbnailWidth = 400; // 缩略图宽度
   private readonly thumbnailHeight = 566; // 缩略图高度 (A4比例)
 
@@ -31,7 +34,7 @@ export class PdfThumbnailService {
       await fs.mkdir(this.thumbnailDir, { recursive: true });
       this.logger.log(`Thumbnail directory ensured at: ${this.thumbnailDir}`);
     } catch (error) {
-      this.logger.error('Failed to create thumbnail directory:', error);
+      this.logger.error("Failed to create thumbnail directory:", error);
     }
   }
 
@@ -41,9 +44,14 @@ export class PdfThumbnailService {
    * @param resourceId 资源ID (用于文件命名)
    * @returns 缩略图URL
    */
-  async generateThumbnail(pdfUrl: string, resourceId: string): Promise<string | null> {
+  async generateThumbnail(
+    pdfUrl: string,
+    resourceId: string,
+  ): Promise<string | null> {
     try {
-      this.logger.log(`Generating thumbnail for resource ${resourceId} from ${pdfUrl}`);
+      this.logger.log(
+        `Generating thumbnail for resource ${resourceId} from ${pdfUrl}`,
+      );
 
       // 1. 下载PDF
       const pdfData = await this.downloadPdf(pdfUrl);
@@ -63,28 +71,29 @@ export class PdfThumbnailService {
       const viewport = page.getViewport({ scale: 1.0 });
       const scale = Math.min(
         this.thumbnailWidth / viewport.width,
-        this.thumbnailHeight / viewport.height
+        this.thumbnailHeight / viewport.height,
       );
       const scaledViewport = page.getViewport({ scale });
 
       // 5. 创建canvas
       const canvas = createCanvas(scaledViewport.width, scaledViewport.height);
-      const context = canvas.getContext('2d');
+      const context = canvas.getContext("2d");
 
       // 6. 渲染PDF页面到canvas
       const renderContext = {
         canvasContext: context as any,
         viewport: scaledViewport,
+        canvas: canvas as any,
       };
       await page.render(renderContext).promise;
 
       // 7. 转换为buffer
-      const buffer = canvas.toBuffer('image/png');
+      const buffer = canvas.toBuffer("image/png");
 
       // 8. 使用sharp优化图片（可选：压缩、调整大小）
       const optimizedBuffer = await sharp(buffer)
         .resize(this.thumbnailWidth, this.thumbnailHeight, {
-          fit: 'inside',
+          fit: "inside",
           withoutEnlargement: true,
         })
         .jpeg({ quality: 85 })
@@ -95,14 +104,16 @@ export class PdfThumbnailService {
       const filepath = path.join(this.thumbnailDir, filename);
       await fs.writeFile(filepath, optimizedBuffer);
 
-      this.logger.log(`Thumbnail generated successfully for resource ${resourceId}`);
+      this.logger.log(
+        `Thumbnail generated successfully for resource ${resourceId}`,
+      );
 
       // 10. 返回相对URL
       return `/thumbnails/${filename}`;
     } catch (error) {
       this.logger.error(
         `Failed to generate thumbnail for resource ${resourceId}:`,
-        getErrorMessage(error)
+        getErrorMessage(error),
       );
       return null;
     }
@@ -116,16 +127,20 @@ export class PdfThumbnailService {
   private async downloadPdf(url: string): Promise<Buffer | null> {
     try {
       const response = await axios.get(url, {
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
         timeout: 30000, // 30秒超时
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
       });
 
       return Buffer.from(response.data);
     } catch (error) {
-      this.logger.error(`Failed to download PDF from ${url}:`, getErrorMessage(error));
+      this.logger.error(
+        `Failed to download PDF from ${url}:`,
+        getErrorMessage(error),
+      );
       return null;
     }
   }
@@ -157,7 +172,10 @@ export class PdfThumbnailService {
       await fs.unlink(filepath);
       this.logger.log(`Deleted thumbnail for resource ${resourceId}`);
     } catch (error) {
-      this.logger.warn(`Failed to delete thumbnail for resource ${resourceId}:`, getErrorMessage(error));
+      this.logger.warn(
+        `Failed to delete thumbnail for resource ${resourceId}:`,
+        getErrorMessage(error),
+      );
     }
   }
 
@@ -167,20 +185,25 @@ export class PdfThumbnailService {
    * @returns 生成结果统计
    */
   async generateBatchThumbnails(
-    resources: Array<{ id: string; pdfUrl: string }>
+    resources: Array<{ id: string; pdfUrl: string }>,
   ): Promise<{ success: number; failed: number; skipped: number }> {
     const stats = { success: 0, failed: 0, skipped: 0 };
 
     for (const resource of resources) {
       // 检查是否已有缩略图
       if (await this.thumbnailExists(resource.id)) {
-        this.logger.log(`Thumbnail already exists for resource ${resource.id}, skipping`);
+        this.logger.log(
+          `Thumbnail already exists for resource ${resource.id}, skipping`,
+        );
         stats.skipped++;
         continue;
       }
 
       // 生成缩略图
-      const thumbnailUrl = await this.generateThumbnail(resource.pdfUrl, resource.id);
+      const thumbnailUrl = await this.generateThumbnail(
+        resource.pdfUrl,
+        resource.id,
+      );
       if (thumbnailUrl) {
         stats.success++;
       } else {
@@ -192,7 +215,7 @@ export class PdfThumbnailService {
     }
 
     this.logger.log(
-      `Batch thumbnail generation completed: ${stats.success} success, ${stats.failed} failed, ${stats.skipped} skipped`
+      `Batch thumbnail generation completed: ${stats.success} success, ${stats.failed} failed, ${stats.skipped} skipped`,
     );
 
     return stats;

@@ -7,6 +7,7 @@ import { config } from '@/lib/config';
 import NoteEditor from '@/components/NoteEditor';
 import NotesList from '@/components/NotesList';
 import CommentsList from '@/components/CommentsList';
+import Sidebar from '@/components/Sidebar';
 
 interface Resource {
   id: string;
@@ -93,50 +94,18 @@ export default function ResourcePage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar */}
-      <aside className="w-16 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 flex items-center justify-center">
-          <Link href="/" className="flex items-center gap-2">
-            <svg className="w-8 h-8 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </Link>
-        </div>
-
-        <nav className="flex-1 px-3 py-2">
-          <div className="space-y-1">
-            <Link
-              href="/"
-              className="flex items-center justify-center px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
-              title="Explore"
-            >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </Link>
-            <Link
-              href="/library"
-              className="flex items-center justify-center px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
-              title="My Library"
-            >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-            </Link>
-          </div>
-        </nav>
-      </aside>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar className="flex-shrink-0" />
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-8 py-8">
           {/* Back Button */}
-          <Link href="/" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
+          <Link href="/library" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Explore
+            Back to Library
           </Link>
 
           {/* Resource Header */}

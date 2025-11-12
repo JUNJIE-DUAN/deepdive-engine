@@ -23,6 +23,17 @@ export const config = {
   },
 
   /**
+   * Workspace AI v2 开启状态
+   */
+  get workspaceAiV2Enabled() {
+    const value =
+      process.env.NEXT_PUBLIC_WORKSPACE_AI_V2_ENABLED ??
+      process.env.WORKSPACE_AI_V2_ENABLED ??
+      'false';
+    return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
+  },
+
+  /**
    * 环境标识
    */
   env: process.env.NEXT_PUBLIC_ENV || process.env.NODE_ENV || 'development',

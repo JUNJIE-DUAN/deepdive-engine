@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { config } from '@/lib/config';
 import Sidebar from '@/components/Sidebar';
 
@@ -8,6 +9,48 @@ interface TranscriptSegment {
   text: string;
   start: number;
   duration: number;
+  translation?: string;
+}
+
+interface SavedVideo {
+  id: string;
+  videoId: string;
+  title: string;
+  url: string;
+  transcript?: TranscriptSegment[] | null;
+  translatedText?: string | null;
+  aiReport?: TranscriptReport | null;
+  createdAt: string;
+}
+
+type YTPlayer = {
+  destroy: () => void;
+  loadVideoById: (videoId: string) => void;
+  cueVideoById: (videoId: string) => void;
+  getCurrentTime: () => number;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  playVideo: () => void;
+  pauseVideo: () => void;
+};
+
+declare global {
+  interface Window {
+    YT?: {
+      Player: new (
+        element: string | HTMLElement,
+        options: {
+          videoId: string;
+          playerVars?: Record<string, unknown>;
+          events?: {
+            onReady?: (event: { target: YTPlayer }) => void;
+            onStateChange?: (event: { target: YTPlayer; data: number }) => void;
+          };
+        }
+      ) => YTPlayer;
+      PlayerState?: { PLAYING: number; PAUSED: number; ENDED: number };
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
 }
 
 interface TranscriptReport {
@@ -20,6 +63,8 @@ interface TranscriptReport {
 }
 
 export default function YouTubePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptSegment[] | null>(
@@ -35,6 +80,424 @@ export default function YouTubePage() {
   >(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [currentVideoId, setCurrentVideoId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1);
+  const [savedVideos, setSavedVideos] = useState<SavedVideo[]>([]);
+  const [savedVideosLoading, setSavedVideosLoading] = useState(false);
+  const [selectedSavedVideoId, setSelectedSavedVideoId] = useState<string | null>(null);
+  const [loadingSavedVideo, setLoadingSavedVideo] = useState(false);
+  const playerRef = useRef<YTPlayer | null>(null);
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
+  const activeSegmentRef = useRef<HTMLDivElement | null>(null);
+  const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const savedVideoParam = useMemo(
+    () => searchParams?.get('saved') ?? null,
+    [searchParams]
+  );
+  const hasTranslationsAvailable = useMemo(() => {
+    if (!transcript || transcript.length === 0) {
+      return false;
+    }
+
+    if (
+      transcript.some(
+        (segment) =>
+          typeof segment.translation === 'string' &&
+          segment.translation.trim().length > 0
+      )
+    ) {
+      return true;
+    }
+
+    if (translatedTranscript) {
+      return translatedTranscript.some(
+        (segment) => segment.text && segment.text.trim().length > 0
+      );
+    }
+
+    return false;
+  }, [transcript, translatedTranscript]);
+
+  const normalizeSegments = useCallback((segments: any[]): TranscriptSegment[] => {
+    if (!Array.isArray(segments)) {
+      return [];
+    }
+
+    return segments
+      .map((segment) => {
+        const text =
+          typeof segment?.text === 'string'
+            ? segment.text
+            : Array.isArray(segment?.text)
+            ? segment.text.join(' ')
+            : '';
+        const translation =
+          typeof segment?.translation === 'string'
+            ? segment.translation
+            : undefined;
+
+        return {
+          text,
+          start: Number(segment?.start ?? segment?.offset ?? 0),
+          duration: Number(segment?.duration ?? segment?.dur ?? segment?.length ?? 0),
+          translation,
+        } as TranscriptSegment;
+      })
+      .filter((segment) => segment.text.trim().length > 0)
+      .sort((a, b) => a.start - b.start);
+  }, []);
+
+  const stopPlaybackTracking = useCallback(() => {
+    if (playbackIntervalRef.current) {
+      clearInterval(playbackIntervalRef.current);
+      playbackIntervalRef.current = null;
+    }
+  }, []);
+
+  const startPlaybackTracking = useCallback(() => {
+    if (playbackIntervalRef.current) {
+      return;
+    }
+
+    playbackIntervalRef.current = setInterval(() => {
+      const player = playerRef.current;
+      if (!player) {
+        return;
+      }
+
+      try {
+        const time = player.getCurrentTime();
+        setCurrentTime(time);
+      } catch (err) {
+        console.error('Failed to read current time from player', err);
+      }
+    }, 300);
+  }, []);
+
+  const loadYouTubeAPI = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return Promise.resolve();
+    }
+
+    if (window.YT?.Player) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const existingScript = document.getElementById('youtube-iframe-api');
+      if (existingScript) {
+        window.onYouTubeIframeAPIReady = () => resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'youtube-iframe-api';
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      script.onerror = () =>
+        reject(new Error('Failed to load YouTube iframe API script'));
+      document.body.appendChild(script);
+
+      window.onYouTubeIframeAPIReady = () => {
+        resolve();
+      };
+    });
+  }, []);
+
+  const initializePlayer = useCallback(
+    async (videoId: string) => {
+      if (!videoId) {
+        return;
+      }
+
+      try {
+        await loadYouTubeAPI();
+
+        const container = playerContainerRef.current;
+        if (!container) {
+          return;
+        }
+
+        if (playerRef.current) {
+          stopPlaybackTracking();
+          playerRef.current.cueVideoById(videoId);
+          setCurrentTime(0);
+          return;
+        }
+
+        playerRef.current = new window.YT!.Player(container, {
+          videoId,
+          playerVars: {
+            modestbranding: 1,
+            rel: 0,
+            cc_load_policy: 0,
+          },
+          events: {
+            onReady: () => {
+              playerRef.current?.cueVideoById(videoId);
+              setCurrentTime(0);
+            },
+            onStateChange: (event) => {
+              const playerState = window.YT?.PlayerState;
+              if (!playerState) {
+                return;
+              }
+
+              if (event.data === playerState.PLAYING) {
+                startPlaybackTracking();
+              } else if (
+                event.data === playerState.PAUSED ||
+                event.data === playerState.ENDED
+              ) {
+                stopPlaybackTracking();
+              }
+            },
+          },
+        });
+      } catch (err) {
+        console.error('Failed to initialize YouTube player', err);
+      }
+    },
+    [loadYouTubeAPI, startPlaybackTracking, stopPlaybackTracking]
+  );
+
+  const handleSegmentSeek = useCallback((seconds: number) => {
+    const player = playerRef.current;
+    if (!player) {
+      return;
+    }
+
+    try {
+      player.seekTo(seconds, true);
+      player.playVideo();
+    } catch (err) {
+      console.error('Failed to seek player', err);
+    }
+  }, []);
+
+  const loadSavedVideos = useCallback(async () => {
+    setSavedVideosLoading(true);
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/youtube-videos`);
+      if (!response.ok) {
+        throw new Error('æ— æ³•åŠ è½½å·²ä¿å­˜çš„è§†é¢‘');
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        setSavedVideos([]);
+        return;
+      }
+
+      const normalized: SavedVideo[] = data.map((video: any) => ({
+        id: video.id,
+        videoId: video.videoId ?? video.video_id ?? '',
+        title: video.title ?? 'Î´ÃüÃûÊÓÆµ',
+        url: video.url ?? '',
+        transcript: null,
+        translatedText: video.translatedText ?? video.translated_text ?? null,
+        aiReport: video.aiReport ?? video.ai_report ?? null,
+        createdAt: video.createdAt ?? video.created_at ?? '',
+      }));
+
+      setSavedVideos(normalized);
+    } catch (err) {
+      console.error('Load saved videos error:', err);
+    } finally {
+      setSavedVideosLoading(false);
+    }
+  }, []);
+
+  const handleLoadSavedVideo = useCallback(
+    async (id: string) => {
+      if (!id) {
+        return;
+      }
+
+      setLoading(true);
+      setLoadingSavedVideo(true);
+      setError(null);
+      setReport(null);
+      setTranslatedTranscript(null);
+      setSaved(false);
+
+      try {
+        const response = await fetch(
+          `${config.apiBaseUrl}/api/v1/youtube-videos/${id}`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'åŠ è½½ä¿å­˜çš„è§†é¢‘å¤±è´?);
+        }
+
+        const data = await response.json();
+        const videoId: string =
+          data.videoId ?? data.video_id ?? extractVideoId(data.url) ?? '';
+
+        const normalizedTranscript = normalizeSegments(
+          Array.isArray(data.transcript)
+            ? data.transcript
+            : typeof data.transcript === 'string'
+            ? (() => {
+                try {
+                  const parsed = JSON.parse(data.transcript);
+                  return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  return [];
+                }
+              })()
+            : []
+        );
+
+        setYoutubeUrl(
+          data.url ?? (videoId ? `https://www.youtube.com/watch?v=${videoId}` : '')
+        );
+        setVideoTitle(data.title ?? 'YouTube è§†é¢‘');
+        setTranscript(normalizedTranscript);
+        setReport(data.aiReport ?? data.ai_report ?? null);
+        setCurrentVideoId(videoId || null);
+        setActiveSegmentIndex(-1);
+        setCurrentTime(0);
+        setSelectedSavedVideoId(data.id ?? id);
+
+        if (videoId) {
+          void initializePlayer(videoId);
+        }
+
+        let translations: string[] | null = null;
+
+        if (
+          normalizedTranscript.length > 0 &&
+          normalizedTranscript.some((seg) => seg.translation)
+        ) {
+          translations = normalizedTranscript.map((seg) => seg.translation ?? '');
+        } else if (typeof data.translatedText === 'string') {
+          translations = data.translatedText
+            .split(/\r?\n/)
+            .map((line: string) => line.trim());
+        } else if (typeof data.translated_text === 'string') {
+          translations = data.translated_text
+            .split(/\r?\n/)
+            .map((line: string) => line.trim());
+        }
+
+        if (translations && normalizedTranscript.length > 0) {
+          const bilingualTranscript = normalizedTranscript.map(
+            (segment, index) => ({
+              ...segment,
+              translation: translations?.[index] ?? segment.translation,
+            })
+          );
+
+          setTranscript(bilingualTranscript);
+          setTranslatedTranscript(
+            bilingualTranscript.map((segment) => ({
+              text: segment.translation ?? segment.text,
+              start: segment.start,
+              duration: segment.duration,
+            }))
+          );
+        } else {
+          setTranslatedTranscript(
+            normalizedTranscript.length
+              ? normalizedTranscript.map((segment) => ({
+                  text: segment.translation ?? '',
+                  start: segment.start,
+                  duration: segment.duration,
+                }))
+              : null
+          );
+        }
+      } catch (err: any) {
+        console.error('Load saved video error:', err);
+        setError(err.message || 'åŠ è½½ä¿å­˜çš„è§†é¢‘å¤±è´?);
+      } finally {
+        setLoading(false);
+        setLoadingSavedVideo(false);
+      }
+    },
+    [initializePlayer, normalizeSegments]
+  );
+
+  const handleSelectSavedVideo = useCallback(
+    (id: string) => {
+      if (!id) {
+        return;
+      }
+      setSelectedSavedVideoId(id);
+      void handleLoadSavedVideo(id);
+      router.replace(`/youtube?saved=${id}`, { scroll: false });
+    },
+    [handleLoadSavedVideo, router]
+  );
+
+  useEffect(() => {
+    void loadSavedVideos();
+  }, [loadSavedVideos]);
+
+  useEffect(() => {
+    if (!savedVideoParam) {
+      setSelectedSavedVideoId(null);
+      return;
+    }
+
+    if (savedVideoParam === selectedSavedVideoId) {
+      return;
+    }
+
+    void handleLoadSavedVideo(savedVideoParam);
+  }, [handleLoadSavedVideo, savedVideoParam, selectedSavedVideoId]);
+
+  useEffect(() => {
+    return () => {
+      stopPlaybackTracking();
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy();
+        } catch (err) {
+          console.error('Failed to destroy YouTube player', err);
+        }
+      }
+    };
+  }, [stopPlaybackTracking]);
+
+  useEffect(() => {
+    if (!transcript || transcript.length === 0) {
+      if (activeSegmentIndex !== -1) {
+        setActiveSegmentIndex(-1);
+      }
+      return;
+    }
+
+    const nextIndex = transcript.findIndex((segment, index) => {
+      const start = segment.start;
+      const nextSegment = transcript[index + 1];
+      const end =
+        nextSegment?.start ??
+        segment.start + (segment.duration > 0 ? segment.duration : 4);
+
+      return currentTime >= start && currentTime < end;
+    });
+
+    if (nextIndex !== -1 && nextIndex !== activeSegmentIndex) {
+      setActiveSegmentIndex(nextIndex);
+    }
+  }, [activeSegmentIndex, currentTime, transcript]);
+
+  useEffect(() => {
+    if (activeSegmentIndex < 0) {
+      return;
+    }
+
+    if (activeSegmentRef.current) {
+      activeSegmentRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [activeSegmentIndex]);
 
   // Extract video ID from YouTube URL
   const extractVideoId = (url: string): string | null => {
@@ -69,6 +532,15 @@ export default function YouTubePage() {
     setError(null);
     setTranscript(null);
     setReport(null);
+    setTranslatedTranscript(null);
+    setSaved(false);
+    setSelectedSavedVideoId(null);
+    setActiveSegmentIndex(-1);
+    setCurrentTime(0);
+    setCurrentVideoId(videoId);
+
+    void initializePlayer(videoId);
+    router.replace('/youtube', { scroll: false });
 
     try {
       const response = await fetch(
@@ -77,15 +549,18 @@ export default function YouTubePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'è·å–å­—å¹•å¤±è´¥');
+        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
       }
 
       const data = await response.json();
-      setTranscript(data.transcript);
-      setVideoTitle(data.title || 'YouTube Video');
+      const normalizedTranscript = normalizeSegments(
+        Array.isArray(data.transcript) ? data.transcript : []
+      );
+      setTranscript(normalizedTranscript);
+      setVideoTitle(data.title || 'YouTube è§†é¢‘');
     } catch (err: any) {
       console.error('Fetch transcript error:', err);
-      setError(err.message || 'è·å–å­—å¹•å¤±è´¥ï¼Œè¯·é‡è¯•');
+      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
     } finally {
       setLoading(false);
     }
@@ -123,7 +598,7 @@ export default function YouTubePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'ç”ŸæˆæŠ¥å‘Šå¤±è´¥');
+        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
       }
 
       const reportData = await response.json();
@@ -138,7 +613,7 @@ export default function YouTubePage() {
       }, 100);
     } catch (err: any) {
       console.error('Generate report error:', err);
-      setError(err.message || 'ç”ŸæˆæŠ¥å‘Šå¤±è´¥ï¼Œè¯·é‡è¯•');
+      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
     } finally {
       setGenerating(false);
     }
@@ -146,7 +621,7 @@ export default function YouTubePage() {
 
   // Translate transcript to Chinese
   const handleTranslate = async () => {
-    if (!transcript) {
+    if (!transcript || transcript.length === 0) {
       setError('è¯·å…ˆè·å–å­—å¹•');
       return;
     }
@@ -155,77 +630,138 @@ export default function YouTubePage() {
     setError(null);
 
     try {
-      const fullText = transcript.map((seg) => seg.text).join('\n');
-
       const aiServiceUrl =
         process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:5000';
-      const response = await fetch(`${aiServiceUrl}/api/v1/ai/translate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: fullText,
-          targetLanguage: 'zh-CN',
-          model: 'gpt-4',
-        }),
-      });
+
+      const response = await fetch(
+        `${aiServiceUrl}/api/v1/ai/translate-segments`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            segments: transcript.map((segment) => segment.text),
+            targetLanguage: 'zh-CN',
+            model: 'gpt-4',
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'ç¿»è¯‘å¤±è´¥');
+        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
       }
 
-      const { translatedText } = await response.json();
-      const translatedLines = translatedText.split('\n');
+      const data = await response.json();
+      if (!Array.isArray(data.translations)) {
+        throw new Error('ç¿»è¯‘ç»“æœæ ¼å¼å¼‚å¸¸');
+      }
 
-      const translated = transcript.map((seg, idx) => ({
-        ...seg,
-        text: translatedLines[idx] || seg.text,
+      const bilingualTranscript = transcript.map((segment, index) => ({
+        ...segment,
+        translation:
+          typeof data.translations[index] === 'string' && data.translations[index]
+            ? data.translations[index]
+            : segment.translation ?? segment.text,
       }));
 
-      setTranslatedTranscript(translated);
+      setTranscript(bilingualTranscript);
+      setTranslatedTranscript(
+        bilingualTranscript.map((segment) => ({
+          text: segment.translation ?? segment.text,
+          start: segment.start,
+          duration: segment.duration,
+        }))
+      );
+      setSaved(false);
     } catch (err: any) {
       console.error('Translation error:', err);
-      setError(err.message || 'ç¿»è¯‘å¤±è´¥ï¼Œè¯·é‡è¯•');
+      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
     } finally {
       setTranslating(false);
     }
   };
 
-  // Export bilingual transcript to text file
-  const handleExportBilingualText = () => {
-    if (!transcript || !translatedTranscript) {
-      setError('è¯·å…ˆè·å–å­—å¹•å¹¶ç¿»è¯‘');
+  // Export bilingual transcript to PDF
+  const handleExportBilingualPDF = async () => {
+    if (!transcript || transcript.length === 0) {
+      setError('è¯·å…ˆè·å–å­—å¹•');
+      return;
+    }
+
+    const hasTranslation = transcript.some(
+      (segment) => typeof segment.translation === 'string' && segment.translation
+    );
+
+    if (!hasTranslation) {
+      setError('è¯·å…ˆè¿›è¡Œå­—å¹•ç¿»è¯‘');
       return;
     }
 
     try {
-      let content = `${videoTitle}\n`;
-      content += `${'='.repeat(videoTitle.length)}\n\n`;
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
 
-      transcript.forEach((segment, index) => {
-        const translatedSeg = translatedTranscript[index];
-        const timestamp = formatTime(segment.start);
+      const transcriptElement = document.getElementById(
+        'bilingual-transcript'
+      );
 
-        content += `[${timestamp}]\n`;
-        content += `${segment.text}\n`;
-        content += `${translatedSeg.text}\n\n`;
+      if (!transcriptElement) {
+        throw new Error('æ— æ³•æ‰¾åˆ°å­—å¹•å†…å®¹åŒºåŸŸ');
+      }
+
+      const clone = transcriptElement.cloneNode(true) as HTMLElement;
+      clone.id = 'bilingual-transcript-export';
+      clone.style.maxHeight = 'none';
+      clone.style.height = 'auto';
+      clone.style.overflow = 'visible';
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.padding = '24px';
+      clone.style.backgroundColor = '#ffffff';
+      clone.classList.remove('max-h-96', 'overflow-y-auto');
+      clone.querySelectorAll('button').forEach((button) => {
+        (button as HTMLElement).style.display = 'none';
+      });
+      document.body.appendChild(clone);
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
       });
 
-      // Create blob and download
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}_bilingual.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      document.body.removeChild(clone);
+
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const imageData = canvas.toDataURL('image/png');
+      doc.addImage(imageData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        doc.addPage();
+        doc.addImage(imageData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const safeTitle = videoTitle
+        ? videoTitle.replace(/[^a-z0-9\u4e00-\u9fa5]+/gi, '_')
+        : 'youtube_video';
+      doc.save(`${safeTitle}_bilingual_subtitles.pdf`);
     } catch (err: any) {
-      console.error('Export error:', err);
-      setError(err.message || 'å¯¼å‡ºå¤±è´¥ï¼Œè¯·é‡è¯•');
+      console.error('Export PDF error:', err);
+      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
     }
   };
 
@@ -314,7 +850,7 @@ export default function YouTubePage() {
       doc.save(fileName);
     } catch (err: any) {
       console.error('PDF export error:', err);
-      setError(err.message || 'PDFå¯¼å‡ºå¤±è´¥ï¼Œè¯·é‡è¯•');
+      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
     }
   };
 
@@ -397,18 +933,18 @@ export default function YouTubePage() {
       doc.save(fileName);
     } catch (err: any) {
       console.error('Export PDF error:', err);
-      setError(err.message || 'PDFå¯¼å‡ºå¤±è´¥ï¼Œè¯·é‡è¯•');
+      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
     }
   };
 
   // Save video to backend
   const handleSaveVideo = async () => {
-    if (!transcript || !videoTitle) {
+    if (!transcript || transcript.length === 0) {
       setError('è¯·å…ˆè·å–å­—å¹•');
       return;
     }
 
-    const videoId = extractVideoId(youtubeUrl);
+    const videoId = currentVideoId ?? extractVideoId(youtubeUrl);
     if (!videoId) {
       setError('æ— æ•ˆçš„YouTube URL');
       return;
@@ -418,6 +954,15 @@ export default function YouTubePage() {
     setError(null);
 
     try {
+      const hasTranslations = transcript.some(
+        (segment) => typeof segment.translation === 'string' && segment.translation
+      );
+      const translationText = hasTranslations
+        ? transcript
+            .map((segment) => segment.translation ?? '')
+            .join('\n')
+        : undefined;
+
       const response = await fetch(
         `${config.apiBaseUrl}/api/v1/youtube-videos`,
         {
@@ -427,12 +972,17 @@ export default function YouTubePage() {
           },
           body: JSON.stringify({
             videoId,
-            title: videoTitle,
-            url: youtubeUrl,
-            transcript: transcript,
-            translatedText: translatedTranscript
-              ? translatedTranscript.map((seg) => seg.text).join(' ')
-              : undefined,
+            title: videoTitle || 'YouTube è§†é¢‘',
+            url:
+              youtubeUrl ||
+              `https://www.youtube.com/watch?v=${videoId}`,
+            transcript: transcript.map((segment) => ({
+              text: segment.text,
+              start: segment.start,
+              duration: segment.duration,
+              translation: segment.translation,
+            })),
+            translatedText: translationText,
             aiReport: report || undefined,
           }),
         }
@@ -440,14 +990,24 @@ export default function YouTubePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'ä¿å­˜å¤±è´¥');
+        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
       }
 
+      const savedVideo = await response.json();
+
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000); // Reset after 3 seconds
+      setTimeout(() => setSaved(false), 3000);
+
+      const savedId = savedVideo?.id ?? selectedSavedVideoId;
+      if (savedId) {
+        setSelectedSavedVideoId(savedId);
+        router.replace(`/youtube?saved=${savedId}`, { scroll: false });
+      }
+
+      void loadSavedVideos();
     } catch (err: any) {
       console.error('Save video error:', err);
-      setError(err.message || 'ä¿å­˜è§†é¢‘å¤±è´¥ï¼Œè¯·é‡è¯•');
+      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
     } finally {
       setSaving(false);
     }
@@ -488,7 +1048,7 @@ export default function YouTubePage() {
                   placeholder="https://www.youtube.com/watch?v=..."
                   className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   disabled={loading}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && !loading) {
                       handleFetchTranscript();
                     }
@@ -499,11 +1059,11 @@ export default function YouTubePage() {
                   disabled={loading || !youtubeUrl.trim()}
                   className="rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {loading ? 'è·å–ä¸­...' : 'è·å–å­—å¹•'}
+                  {loading ? 'è·å–ä¸?..' : 'è·å–å­—å¹•'}
                 </button>
               </div>
               <p className="mt-2 text-sm text-gray-500">
-                æ”¯æŒæ ¼å¼ï¼šhttps://www.youtube.com/watch?v=VIDEO_ID æˆ–
+                æ”¯æŒæ ¼å¼ï¼šhttps://www.youtube.com/watch?v=VIDEO_ID æˆ?
                 https://youtu.be/VIDEO_ID
               </p>
             </div>
@@ -513,6 +1073,86 @@ export default function YouTubePage() {
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
+          </div>
+
+          {/* Player & Saved Videos */}
+          <div className="mb-6 grid gap-6 lg:grid-cols-[2fr,1fr]">
+            <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">è§†é¢‘æ’­æ”¾</h2>
+                {currentVideoId && (
+                  <span className="text-xs text-gray-500">
+                    å½“å‰è¿›åº¦ {formatTime(currentTime)}
+                  </span>
+                )}
+              </div>
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+                <div ref={playerContainerRef} className="h-full w-full" />
+                {!currentVideoId && (
+                  <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
+                    è¾“å…¥è§†é¢‘ URL å¹¶è·å–å­—å¹•åå³å¯åœ¨æ­¤æ’­æ”¾
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">å·²ä¿å­˜çš„è§†é¢‘</h2>
+                <button
+                  onClick={() => void loadSavedVideos()}
+                  disabled={savedVideosLoading}
+                  className="text-xs text-blue-600 transition-colors hover:text-blue-700 disabled:text-gray-400"
+                >
+                  {savedVideosLoading ? 'åˆ·æ–°ä¸?..' : 'åˆ·æ–°åˆ—è¡¨'}
+                </button>
+              </div>
+              {savedVideosLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-blue-600" />
+                </div>
+              ) : savedVideos.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  æš‚æ— ä¿å­˜çš„è§†é¢‘ï¼Œè§£æå®Œæˆåç‚¹å‡»â€œä¿å­˜è§†é¢‘â€å³å¯æ”¶è—ã€?
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {savedVideos.map((video) => {
+                    const isActive = selectedSavedVideoId === video.id;
+                    const createdAtLabel = video.createdAt
+                      ? new Date(video.createdAt).toLocaleDateString('zh-CN')
+                      : '';
+
+                    return (
+                      <button
+                        key={video.id}
+                        onClick={() => handleSelectSavedVideo(video.id)}
+                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                          isActive
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                        disabled={loadingSavedVideo && isActive}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="line-clamp-2 font-medium">
+                            {video.title}
+                          </span>
+                          <span className="ml-3 text-xs text-gray-400">
+                            {createdAtLabel}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                          <span>è§†é¢‘IDï¼š{video.videoId || 'æœªçŸ¥'}</span>
+                          {loadingSavedVideo && isActive && (
+                            <span className="text-blue-600">¼ÓÔØÖĞ...</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Transcript Display */}
@@ -541,7 +1181,7 @@ export default function YouTubePage() {
                         d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
                       />
                     </svg>
-                    {translating ? 'ç¿»è¯‘ä¸­...' : 'ç¿»è¯‘æˆä¸­æ–‡'}
+                    {translating ? 'ç¿»è¯‘ä¸?..' : 'ç¿»è¯‘æˆä¸­æ–?}
                   </button>
                   <button
                     onClick={handleGenerateReport}
@@ -561,7 +1201,7 @@ export default function YouTubePage() {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    {generating ? 'ç”Ÿæˆä¸­...' : 'ç”ŸæˆæŠ¥å‘Š'}
+                    {generating ? 'ç”Ÿæˆä¸?..' : 'ç”ŸæˆæŠ¥å‘Š'}
                   </button>
                   <button
                     onClick={handleSaveVideo}
@@ -594,85 +1234,98 @@ export default function YouTubePage() {
                         />
                       )}
                     </svg>
-                    {saving ? 'ä¿å­˜ä¸­...' : saved ? 'å·²ä¿å­˜' : 'ä¿å­˜è§†é¢‘'}
+                    {saving ? 'ä¿å­˜ä¸?..' : saved ? 'å·²ä¿å­? : 'ä¿å­˜è§†é¢‘'}
                   </button>
                 </div>
               </div>
 
-              {/* Bilingual Transcript (Original + Translation) */}
-              <div className="mb-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-gray-700">
-                    {translatedTranscript ? 'åŒè¯­å­—å¹• (ä¸­è‹±å¯¹ç…§)' : 'åŸæ–‡å­—å¹•'}
-                  </h3>
-                  {translatedTranscript && (
-                    <button
-                      onClick={handleExportBilingualText}
-                      className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700"
-                    >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      å¯¼å‡ºåŒè¯­æ–‡æœ¬
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-96 space-y-3 overflow-y-auto rounded-lg border border-gray-200 p-4">
-                  {transcript.map((segment, index) => {
-                    const translatedSeg = translatedTranscript
-                      ? translatedTranscript[index]
-                      : null;
-                    return (
-                      <div
-                        key={index}
-                        className="border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
-                      >
-                        <div className="mb-1 flex gap-3 text-sm">
-                          <span className="min-w-[50px] font-mono text-gray-400">
-                            {formatTime(segment.start)}
-                          </span>
-                          <p className="font-medium text-gray-900">
-                            {segment.text}
-                          </p>
-                        </div>
-                        {translatedSeg && (
-                          <div className="ml-[62px] flex gap-3 text-sm">
-                            <p className="text-purple-700">
-                              {translatedSeg.text}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <p className="mt-3 text-sm text-gray-500">
-                æ€»è®¡ {transcript.length} æ¡å­—å¹•ç‰‡æ®µ
-              </p>
+                        {/* Bilingual Transcript (Original + Translation) */}
+          <div className="mb-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-medium text-gray-700">
+                {hasTranslationsAvailable ? 'åŒè¯­å­—å¹•ï¼ˆä¸­è‹±å¯¹ç…§ï¼‰' : 'åŸæ–‡å­—å¹•'}
+              </h3>
+              {hasTranslationsAvailable && (
+                <button
+                  onClick={handleExportBilingualPDF}
+                  className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  å¯¼å‡ºåŒè¯­PDF
+                </button>
+              )}
             </div>
-          )}
-
-          {/* Report Display */}
-          {report && (
             <div
-              id="youtube-report"
-              className="rounded-lg bg-white p-6 shadow-sm"
+              id="bilingual-transcript"
+              className="max-h-96 space-y-3 overflow-y-auto rounded-lg border border-gray-200 p-4"
             >
-              <div className="mb-6">
-                <div className="mb-4">
-                  <div className="mb-3 flex items-start justify-between gap-4">
+              {transcript.map((segment, index) => {
+                const translationText =
+                  segment.translation ??
+                  (translatedTranscript
+                    ? translatedTranscript[index]?.text
+                    : '');
+                const hasTranslation =
+                  typeof translationText === 'string' &&
+                  translationText.trim().length > 0;
+                const isActive = index === activeSegmentIndex;
+
+                return (
+                  <div
+                    key={`${segment.start}-${index}`}
+                    ref={isActive ? activeSegmentRef : null}
+                    onClick={() => handleSegmentSeek(segment.start)}
+                    className={`cursor-pointer rounded-lg border border-transparent p-3 transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 border-blue-200 shadow-inner'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 text-sm">
+                      <span className="mt-0.5 min-w-[60px] font-mono text-gray-400">
+                        {formatTime(segment.start)}
+                      </span>
+                      <p className="flex-1 font-medium text-gray-900">
+                        {segment.text}
+                      </p>
+                    </div>
+                    {hasTranslation && (
+                      <div className="mt-2 pl-[60px] text-sm text-purple-700">
+                        {translationText}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <p className="mt-3 text-sm text-gray-500">
+            æ€»è®¡ {transcript.length} æ¡å­—å¹•ç‰‡æ®?
+          </p>
+        </div>
+      )}
+      {/* Report Display */}
+      {report && (
+        <div
+          id="youtube-report"
+          className="rounded-lg bg-white p-6 shadow-sm"
+        >
+          <div className="mb-6">
+            <div className="mb-4">
+              <div className="mb-3 flex items-start justify-between gap-4">
                     <h2 className="flex-1 text-2xl font-bold text-gray-900">
                       YouTube è§†é¢‘åˆ†ææŠ¥å‘Š
                     </h2>
@@ -746,3 +1399,12 @@ export default function YouTubePage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+

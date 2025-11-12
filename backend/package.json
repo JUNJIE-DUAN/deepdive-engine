@@ -21,6 +21,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "templates:seed": "ts-node -r tsconfig-paths/register src/scripts/seed-report-templates.ts",
     "thumbnails:generate": "ts-node -r tsconfig-paths/register src/scripts/generate-thumbnails.ts",
     "thumbnails:arxiv": "ts-node -r tsconfig-paths/register src/scripts/update-arxiv-thumbnails.ts"
   },

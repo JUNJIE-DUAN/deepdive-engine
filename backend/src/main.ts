@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { isWorkspaceAiV2Enabled } from './common/utils/feature-flags';
 // Force reload after CORS fix
 
 async function bootstrap() {
@@ -35,6 +36,7 @@ async function bootstrap() {
 
   console.log(`🚀 DeepDive Backend running on http://localhost:${port}`);
   console.log(`📚 API Docs: http://localhost:${port}/api/v1`);
+  console.log(`🧩 Workspace AI v2 enabled: ${isWorkspaceAiV2Enabled()}`);
 }
 
 void bootstrap();

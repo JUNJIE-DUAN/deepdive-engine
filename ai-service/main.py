@@ -10,11 +10,12 @@ import sys
 # ⚠️ 关键：必须在导入 secret_manager 之前加载环境变量
 load_dotenv()
 
-from routers import ai, report
+from routers import ai, report, workspace
 from services.grok_client import GrokClient
 from services.openai_client import OpenAIClient
 from services.ai_orchestrator import AIOrchestrator
 from utils.secret_manager import secret_manager
+from utils.feature_flags import is_workspace_ai_v2_enabled
 
 # 配置日志
 logger.remove()
@@ -64,6 +65,7 @@ orchestrator = AIOrchestrator(grok_client, openai_client)
 # 注册路由
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(report.router)
+app.include_router(workspace.router, prefix="/api/v1")
 
 # 将AI客户端注入到report路由中
 report.init_clients(grok_client, openai_client)
@@ -75,7 +77,8 @@ async def root():
     return {
         "service": "DeepDive AI Service",
         "version": "1.0.0",
-        "status": "running"
+        "status": "running",
+        "workspaceAiV2Enabled": is_workspace_ai_v2_enabled(),
     }
 
 
@@ -100,6 +103,7 @@ async def startup_event():
     logger.info(f"📝 Grok available: {grok_client.available}")
     logger.info(f"📝 OpenAI available: {openai_client.available}")
     logger.info(f"🎯 Active model: {orchestrator.active_model}")
+    logger.info(f"🧩 Workspace AI v2 enabled: {is_workspace_ai_v2_enabled()}")
 
 
 @app.on_event("shutdown")

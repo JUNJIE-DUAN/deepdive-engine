@@ -12,7 +12,7 @@ from models.schemas import (
 )
 from services.ai_orchestrator import AIOrchestrator
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional, Literal, List, Tuple
 import json
 
 
@@ -38,6 +38,52 @@ def get_orchestrator() -> AIOrchestrator:
     """获取 AI 编排器实例（依赖注入）"""
     from main import orchestrator
     return orchestrator
+
+
+def select_ai_client(
+    preferred_model: Literal["grok", "openai", "gpt-4"],
+    orch: AIOrchestrator,
+    purpose: str,
+    error_detail: str = "AI services unavailable"
+) -> Tuple[object, str]:
+    """
+    根据首选模型选择可用的 AI 客户端，如需时自动回退。
+
+    Args:
+        preferred_model: 请求指定的模型
+        orch: AI 编排器
+        purpose: 日志上下文
+
+    Returns:
+        (可用客户端, 实际使用的模型名称)
+    """
+    client = None
+
+    normalized = preferred_model
+    if preferred_model not in ("grok", "openai"):
+        normalized = "openai"
+
+    active_model = normalized
+
+    if normalized == "grok":
+        if orch.grok.available:
+            client = orch.grok
+        elif orch.openai.available:
+            logger.warning("%s: Grok unavailable, falling back to OpenAI", purpose)
+            client = orch.openai
+            active_model = "openai"
+    else:
+        if orch.openai.available:
+            client = orch.openai
+        elif orch.grok.available:
+            logger.warning("%s: OpenAI unavailable, falling back to Grok", purpose)
+            client = orch.grok
+            active_model = "grok"
+
+    if client is None or not getattr(client, "available", False):
+        raise HTTPException(status_code=503, detail=error_detail)
+
+    return client, active_model
 
 
 @router.post("/summary", response_model=SummaryResponse)
@@ -259,22 +305,15 @@ async def simple_chat(
     if request.context:
         prompt = f"Context:\n{request.context}\n\nUser Question:\n{request.message}"
 
-    # 根据指定的模型选择客户端
-    if request.model == "grok":
-        client = orch.grok
-    else:
-        client = orch.openai
-
-    if not client.available:
-        raise HTTPException(status_code=503, detail=f"{request.model.upper()} service unavailable")
+    # Select AI client, fallback when preferred provider is unavailable
+    client, active_model = select_ai_client(request.model, orch, "Chat")
 
     if request.stream:
         # 流式响应
         async def generate():
             try:
                 async for chunk in client.stream_completion(prompt, max_tokens=2000, temperature=0.7):
-                    # 以 SSE 格式发送
-                    yield f"data: {json.dumps({'content': chunk, 'model': request.model})}\n\n"
+                    yield f"data: {json.dumps({'content': chunk, 'model': active_model})}\n\n"
                 yield "data: [DONE]\n\n"
             except Exception as e:
                 logger.error(f"Streaming error: {str(e)}")
@@ -297,7 +336,7 @@ async def simple_chat(
 
         return {
             "content": result,
-            "model": request.model
+            "model": active_model
         }
 
 
@@ -366,14 +405,8 @@ Output format (follow exactly):
 JSON output:
 ["""
 
-    # 选择模型
-    if request.model == "grok":
-        client = orch.grok
-    else:
-        client = orch.openai
-
-    if not client.available:
-        raise HTTPException(status_code=503, detail=f"{request.model.upper()} service unavailable")
+    # Select AI client for quick actions with automatic fallback
+    client, active_model = select_ai_client(request.model, orch, "Quick action")
 
     result = await client.generate_completion(prompt, max_tokens=1500, temperature=0.7)
 
@@ -433,7 +466,7 @@ JSON output:
     return {
         "content": result,
         "action": request.action,
-        "model": request.model
+        "model": active_model
     }
 
 
@@ -468,14 +501,12 @@ Text to translate:
 
 Translation:"""
 
-    # 选择模型（默认使用 OpenAI，因为翻译质量更好）
-    if request.model == "grok":
-        client = orch.grok
-    else:
-        client = orch.openai
-
-    if not client.available:
-        raise HTTPException(status_code=503, detail=f"{request.model} service unavailable")
+    client, active_model = select_ai_client(
+        request.model,
+        orch,
+        "Translate text",
+        "AI translation services unavailable"
+    )
 
     result = await client.generate_completion(prompt, max_tokens=4000, temperature=0.3)
 
@@ -485,7 +516,131 @@ Translation:"""
     return {
         "translatedText": result.strip(),
         "targetLanguage": request.targetLanguage,
-        "model": request.model
+        "model": active_model
+    }
+
+
+class TranslateSegmentsRequest(BaseModel):
+    """逐句翻译请求"""
+    segments: List[str]
+    targetLanguage: str = "zh-CN"
+    model: Literal["grok", "openai", "gpt-4"] = "gpt-4"
+    batchSize: int = 40
+
+
+@router.post("/translate-segments")
+async def translate_segments(
+    request: TranslateSegmentsRequest,
+    orch: AIOrchestrator = Depends(get_orchestrator)
+):
+    """
+    逐句翻译字幕段落，确保与原始顺序对应
+
+    Args:
+        request: 翻译请求
+
+    Returns:
+        翻译结果数组
+    """
+    if not request.segments:
+        raise HTTPException(status_code=400, detail="segments cannot be empty")
+
+    logger.info(
+        "Translating %d caption segments to %s",
+        len(request.segments),
+        request.targetLanguage,
+    )
+
+    client, active_model = select_ai_client(
+        request.model,
+        orch,
+        "Translate segments",
+        "AI translation services unavailable"
+    )
+
+    translations: List[str] = [""] * len(request.segments)
+    batch_size = max(1, min(request.batchSize, 80))
+
+    for start in range(0, len(request.segments), batch_size):
+        end = min(start + batch_size, len(request.segments))
+        chunk = request.segments[start:end]
+
+        numbered_lines = "\n".join(
+            f"{index}: {segment}"
+            for index, segment in enumerate(chunk, start=start)
+        )
+
+        prompt = f"""You are a professional translator. Translate each caption line into {request.targetLanguage}.
+Return a JSON array where each element has the form {{"index": number, "translation": "..."}}.
+- The index must match the zero-based index shown before each caption.
+- Keep the same number of items as the input.
+- Do not merge or split lines.
+- Preserve punctuation and speaker labels.
+- Use double quotes for strings and output valid JSON only.
+
+Captions:
+{numbered_lines}
+
+JSON:"""
+
+        result = await client.generate_completion(
+            prompt,
+            max_tokens=min(4096, 200 + len(chunk) * 40),
+            temperature=0.2,
+        )
+
+        if result is None:
+            raise HTTPException(status_code=503, detail="Failed to generate translation")
+
+        cleaned = result.strip()
+        if "```" in cleaned:
+            cleaned = cleaned.split("```", 2)
+            if len(cleaned) >= 2:
+                cleaned = cleaned[1]
+            else:
+                cleaned = result.strip()
+
+        cleaned = cleaned.strip()
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].strip(": \n\r\t")
+
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError:
+            # 尝试从文本中提取 JSON 数组
+            start_idx = cleaned.find("[")
+            end_idx = cleaned.rfind("]")
+            if start_idx == -1 or end_idx == -1 or end_idx <= start_idx:
+                logger.error("Failed to parse translation JSON: %s", cleaned[:200])
+                raise HTTPException(status_code=500, detail="Invalid translation response format")
+            try:
+                parsed = json.loads(cleaned[start_idx:end_idx + 1])
+            except json.JSONDecodeError as json_error:
+                logger.error("JSON parsing failed: %s", str(json_error))
+                logger.debug("Translation response: %s", cleaned)
+                raise HTTPException(status_code=500, detail="Invalid translation response format")
+
+        if not isinstance(parsed, list):
+            raise HTTPException(status_code=500, detail="Unexpected translation response structure")
+
+        for item in parsed:
+            if not isinstance(item, dict):
+                continue
+            idx = item.get("index")
+            translation = item.get("translation")
+            if isinstance(idx, int) and isinstance(translation, str):
+                if 0 <= idx < len(translations):
+                    translations[idx] = translation.strip()
+
+    # 回填未翻译的段落为原文
+    for idx, text in enumerate(translations):
+        if not text:
+            translations[idx] = request.segments[idx]
+
+    return {
+        "translations": translations,
+        "targetLanguage": request.targetLanguage,
+        "model": active_model,
     }
 
 
@@ -527,14 +682,8 @@ Generate a structured report with the following sections:
 
 Format the output in clear sections with markdown headings."""
 
-    # 选择模型
-    if request.model == "grok":
-        client = orch.grok
-    else:
-        client = orch.openai
-
-    if not client.available:
-        raise HTTPException(status_code=503, detail=f"{request.model} service unavailable")
+    # Select AI client for YouTube reports with fallback
+    client, active_model = select_ai_client(request.model, orch, "YouTube report")
 
     result = await client.generate_completion(prompt, max_tokens=2000, temperature=0.7)
 
@@ -550,6 +699,5 @@ Format the output in clear sections with markdown headings."""
                 "content": result
             }
         ],
-        "model": request.model
+        "model": active_model
     }
-

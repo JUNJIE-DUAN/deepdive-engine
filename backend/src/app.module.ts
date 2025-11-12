@@ -20,6 +20,7 @@ import { CommentsModule } from "./comments/comments.module";
 import { ReportsModule } from "./reports/reports.module";
 import { YoutubeVideosModule } from "./youtube-videos/youtube-videos.module";
 import { YoutubeModule } from "./youtube/youtube.module";
+import { WorkspaceModule } from "./workspace/workspace.module";
 // import { LearningPathsModule } from './learning-paths/learning-paths.module'; // TODO: Enable later
 
 @Module({
@@ -55,6 +56,7 @@ import { YoutubeModule } from "./youtube/youtube.module";
     ReportsModule,
     YoutubeModule,
     YoutubeVideosModule,
+    WorkspaceModule,
     // LearningPathsModule, // TODO: Enable later
   ],
   controllers: [AppController],

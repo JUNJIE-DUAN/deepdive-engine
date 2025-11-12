@@ -11,9 +11,12 @@ interface Resource {
 
 interface ReportWorkspace {
   resources: Resource[];
+  workspaceId: string | null;
   isExpanded: boolean;
   maxResources: number;
 
+  setWorkspaceId: (id: string | null) => void;
+  setResources: (resources: Resource[]) => void;
   addResource: (resource: Resource) => void;
   removeResource: (id: string) => void;
   clearAll: () => void;
@@ -26,8 +29,17 @@ export const useReportWorkspace = create<ReportWorkspace>()(
   persist(
     (set, get) => ({
       resources: [],
+      workspaceId: null,
       isExpanded: false,
-      maxResources: 10,
+      maxResources: 20,
+
+      setWorkspaceId: (id) => {
+        set({ workspaceId: id });
+      },
+
+      setResources: (resources) => {
+        set({ resources, isExpanded: resources.length > 0 });
+      },
 
       addResource: (resource) => {
         const { resources, maxResources } = get();
@@ -44,7 +56,7 @@ export const useReportWorkspace = create<ReportWorkspace>()(
       },
 
       clearAll: () => {
-        set({ resources: [], isExpanded: false });
+        set({ resources: [], isExpanded: false, workspaceId: null });
       },
 
       toggleExpanded: () => {
@@ -62,7 +74,10 @@ export const useReportWorkspace = create<ReportWorkspace>()(
     }),
     {
       name: 'report-workspace',
-      partialize: (state) => ({ resources: state.resources }), // 只持久化资源列表
+      partialize: (state) => ({
+        resources: state.resources,
+        workspaceId: state.workspaceId,
+      }),
     }
   )
 );

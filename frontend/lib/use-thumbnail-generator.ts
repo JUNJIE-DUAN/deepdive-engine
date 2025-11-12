@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import { config } from '@/lib/config';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
@@ -41,6 +42,20 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const resolveUrl = useCallback((url: string): string => {
+    if (!url) {
+      return url;
+    }
+
+    try {
+      const parsed = new URL(url, config.apiBaseUrl);
+      return parsed.toString();
+    } catch {
+      // If parsing fails (e.g., data URI), return original value
+      return url;
+    }
+  }, []);
+
   /**
    * Generate thumbnail from PDF URL
    */
@@ -50,8 +65,10 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
       setError(null);
 
       try {
+        const resolvedPdfUrl = resolveUrl(pdfUrl);
+
         // Load PDF document
-        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        const loadingTask = pdfjsLib.getDocument(resolvedPdfUrl);
         const pdf = await loadingTask.promise;
 
         // Get first page
@@ -129,10 +146,13 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
         const formData = new FormData();
         formData.append('thumbnail', blob, 'thumbnail.jpg');
 
-        const uploadResponse = await fetch(`/api/v1/resources/${resourceId}/thumbnail`, {
-          method: 'POST',
-          body: formData,
-        });
+        const uploadResponse = await fetch(
+          `${config.apiBaseUrl}/api/v1/resources/${resourceId}/thumbnail`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
 
         if (!uploadResponse.ok) {
           throw new Error('Failed to upload thumbnail');

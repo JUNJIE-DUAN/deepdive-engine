@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { config } from '@/lib/config';
 import NotesList from '@/components/NotesList';
 import Sidebar from '@/components/Sidebar';
@@ -75,6 +76,18 @@ export default function LibraryPage() {
     }
   };
 
+  const resolveThumbnailUrl = (thumbnailUrl?: string | null) => {
+    if (!thumbnailUrl) {
+      return null;
+    }
+
+    if (thumbnailUrl.startsWith('http')) {
+      return thumbnailUrl;
+    }
+
+    return `${config.apiBaseUrl}${thumbnailUrl}`;
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
@@ -145,36 +158,66 @@ export default function LibraryPage() {
                             </span>
                           </div>
                           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {collection.items.map((item: any) => (
-                              <a
-                                key={item.id}
-                                href={`/resource/${item.resource.id}`}
-                                className="block rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-md"
-                              >
-                                {item.resource.thumbnailUrl && (
-                                  <img
-                                    src={`${config.apiBaseUrl}${item.resource.thumbnailUrl}`}
-                                    alt={item.resource.title}
-                                    className="mb-3 h-40 w-full rounded-md object-cover"
-                                  />
-                                )}
-                                <h4 className="mb-2 line-clamp-2 font-medium text-gray-900">
-                                  {item.resource.title}
-                                </h4>
-                                <div className="flex items-center justify-between text-xs text-gray-500">
-                                  <span className="uppercase">
-                                    {item.resource.type}
-                                  </span>
-                                  {item.resource.publishedAt && (
-                                    <span>
-                                      {new Date(
-                                        item.resource.publishedAt
-                                      ).toLocaleDateString()}
+                            {collection.items.map((item: any) => {
+                              const thumbnailUrl = resolveThumbnailUrl(
+                                item.resource.thumbnailUrl
+                              );
+
+                              return (
+                                <Link
+                                  key={item.id}
+                                  href={`/resource/${item.resource.id}`}
+                                  className="block rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-md"
+                                >
+                                  {thumbnailUrl ? (
+                                    <img
+                                      src={thumbnailUrl}
+                                      alt={item.resource.title}
+                                      className="mb-3 h-40 w-full rounded-md object-cover"
+                                      onError={(event) => {
+                                        event.currentTarget.style.display =
+                                          'none';
+                                        const fallback = event.currentTarget
+                                          .nextElementSibling as HTMLElement | null;
+                                        if (fallback) {
+                                          fallback.classList.remove('hidden');
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div className={`${thumbnailUrl ? 'hidden' : ''} mb-3 flex h-40 w-full items-center justify-center rounded-md border border-dashed border-gray-200 bg-gray-50 text-gray-400`}>
+                                    <svg
+                                      className="h-10 w-10"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M4 16l4-4 4 4 4-4 4 4M4 6h16v12H4z"
+                                      />
+                                    </svg>
+                                  </div>
+                                  <h4 className="mb-2 line-clamp-2 font-medium text-gray-900">
+                                    {item.resource.title}
+                                  </h4>
+                                  <div className="flex items-center justify-between text-xs text-gray-500">
+                                    <span className="uppercase">
+                                      {item.resource.type}
                                     </span>
-                                  )}
-                                </div>
-                              </a>
-                            ))}
+                                    {item.resource.publishedAt && (
+                                      <span>
+                                        {new Date(
+                                          item.resource.publishedAt
+                                        ).toLocaleDateString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </Link>
+                              );
+                            })}
                           </div>
                         </div>
                       )
@@ -199,11 +242,9 @@ export default function LibraryPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {videos.map((video) => (
-                      <a
+                      <Link
                         key={video.id}
-                        href={video.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={`/youtube?saved=${video.id}`}
                         className="block overflow-hidden rounded-lg border border-gray-200 transition-shadow hover:shadow-md"
                       >
                         <div className="relative aspect-video bg-gray-900">
@@ -233,7 +274,7 @@ export default function LibraryPage() {
                             )}
                           </div>
                         </div>
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>

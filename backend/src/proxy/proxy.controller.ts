@@ -61,6 +61,7 @@ export class ProxyController {
       "wired.com",
       "theverge.com",
       "arstechnica.com",
+      "xslt.rip",
       "news.ycombinator.com",
     ];
 
@@ -171,6 +172,7 @@ export class ProxyController {
       "wired.com",
       "theverge.com",
       "arstechnica.com",
+      "xslt.rip",
       "news.ycombinator.com",
     ];
 

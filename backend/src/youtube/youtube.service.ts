@@ -33,21 +33,19 @@ export class YoutubeService {
    * @returns Transcript data
    */
   async getTranscript(videoId: string): Promise<TranscriptResponse> {
+    let transcriptSegments: TranscriptSegment[] = [];
+    let title: string | null = null;
     try {
       this.logger.log(`Fetching transcript for video: ${videoId}`);
 
-      if (!this.youtube) {
-        this.youtube = await Innertube.create();
-      }
-
-      // Get video info
-      const info = await this.youtube.getInfo(videoId);
+      await this.ensureClient();
+      const info = await this.youtube!.getInfo(videoId);
 
       if (!info) {
         throw new NotFoundException('Video not found');
       }
 
-      const title = info.basic_info.title ?? `YouTube Video ${videoId}`;
+      title = info.basic_info.title ?? null;
 
       // Get transcript
       const transcriptData = await info.getTranscript();
@@ -71,38 +69,47 @@ export class YoutubeService {
           duration: segment.end_ms / 1000 - segment.start_ms / 1000,
         }));
 
-      if (transcript.length === 0) {
-        throw new NotFoundException('No transcript segments found for this video');
-      }
-
-      this.logger.log(`Successfully fetched ${transcript.length} transcript segments for "${title}"`);
-
-      return {
-        videoId,
-        title,
-        transcript,
-      };
+      transcriptSegments = transcript;
+      this.logger.log(`Successfully fetched ${transcript.length} transcript segments for "${title ?? videoId}"`);
     } catch (error: unknown) {
       this.logger.error(`Failed to fetch transcript for ${videoId}:`, error);
 
-      if (error instanceof NotFoundException) {
-        throw error;
+      const fallback = await this.fetchTranscriptFallback(videoId);
+      if (fallback) {
+        transcriptSegments = fallback.segments;
+        title = title ?? fallback.title;
+        this.logger.warn(`Used fallback transcript provider for ${videoId}, segments=${transcriptSegments.length}`);
+      } else {
+        if (error instanceof NotFoundException) {
+          throw error;
+        }
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        if (errorMessage.includes('not found')) {
+          throw new NotFoundException('Video not found or transcript not available');
+        }
+
+        if (errorMessage.includes('Invalid')) {
+          throw new BadRequestException('Invalid YouTube video ID');
+        }
+
+        throw new BadRequestException(`Failed to fetch transcript: ${errorMessage}`);
       }
-
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      if (errorMessage.includes('not found')) {
-        throw new NotFoundException('Video not found or transcript not available');
-      }
-
-      if (errorMessage.includes('Invalid')) {
-        throw new BadRequestException('Invalid YouTube video ID');
-      }
-
-      throw new BadRequestException(
-        `Failed to fetch transcript: ${errorMessage}`,
-      );
     }
+
+    if (transcriptSegments.length === 0) {
+      throw new NotFoundException('Transcript not available for this video.');
+    }
+
+    const finalTitle =
+      title ?? (await this.fetchVideoTitle(videoId)) ?? `YouTube Video ${videoId}`;
+
+    return {
+      videoId,
+      title: finalTitle,
+      transcript: transcriptSegments,
+    };
   }
 
   /**
@@ -124,5 +131,89 @@ export class YoutubeService {
     }
 
     return null;
+  }
+
+  private async ensureClient() {
+    if (!this.youtube) {
+      this.youtube = await Innertube.create();
+    }
+  }
+
+  private async fetchVideoTitle(videoId: string): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      );
+      if (!response.ok) {
+        return null;
+      }
+      const data = (await response.json()) as { title?: string };
+      return data.title ?? null;
+    } catch (error) {
+      this.logger.warn(`Failed to fetch video title via oEmbed: ${String(error)}`);
+      return null;
+    }
+  }
+
+  private async fetchTranscriptFallback(videoId: string): Promise<{
+    segments: TranscriptSegment[];
+    title: string | null;
+  } | null> {
+    try {
+      const endpoint = `https://youtubetranscript.com/?lang=en&server_vid2=${videoId}`;
+      const response = await fetch(endpoint, {
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+        },
+      });
+
+      if (!response.ok) {
+        this.logger.warn(
+          `Fallback transcript service responded with ${response.status} for video ${videoId}`,
+        );
+        return null;
+      }
+
+      const raw = await response.json();
+      const items: Array<Record<string, any>> = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.transcripts)
+          ? raw.transcripts
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : [];
+
+      const segments: TranscriptSegment[] = items
+        .map((item) => {
+          const text = item.text ?? item.caption ?? '';
+          const startValue = Number.parseFloat(item.start ?? item.start_offset ?? item.offset ?? '0');
+          const durationValue = Number.parseFloat(item.dur ?? item.duration ?? item.length ?? '0');
+
+          return {
+            text: typeof text === 'string' ? text : '',
+            start: Number.isFinite(startValue) ? startValue : 0,
+            duration: Number.isFinite(durationValue) ? durationValue : 0,
+          };
+        })
+        .filter((segment) => segment.text.trim().length > 0);
+
+      if (segments.length === 0) {
+        return null;
+      }
+
+      const title =
+        typeof raw?.title === 'string'
+          ? raw.title
+          : typeof raw?.video_title === 'string'
+          ? raw.video_title
+          : null;
+
+      return { segments, title };
+    } catch (error) {
+      this.logger.warn(`Fallback transcript fetch failed: ${String(error)}`);
+      return null;
+    }
   }
 }

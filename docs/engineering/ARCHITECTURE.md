@@ -86,6 +86,7 @@
 ### 1.2 技术栈
 
 **前端**:
+
 - **框架**: Next.js 14+ (App Router)
 - **UI**: React 18+ + TypeScript
 - **样式**: TailwindCSS (参考AlphaXiv)
@@ -95,6 +96,7 @@
 - **表单**: React Hook Form + Zod
 
 **后端**:
+
 - **框架**: NestJS 10+
 - **运行时**: Node.js 20 LTS
 - **API**: GraphQL (Apollo) + REST
@@ -103,12 +105,14 @@
 - **认证**: JWT + Passport.js
 
 **AI服务**:
+
 - **首选**: Grok API (x.AI)
 - **备用**: OpenAI API (GPT-4)
 - **Embedding**: sentence-transformers (Python)
 - **服务框架**: FastAPI (Python)
 
 **数据库**:
+
 - **主数据库**: PostgreSQL 16+
 - **知识图谱**: Neo4j 5+
 - **向量数据库**: Qdrant 1.7+
@@ -116,6 +120,7 @@
 - **原始数据**: MongoDB 7+
 
 **基础设施**:
+
 - **容器**: Docker + Docker Compose
 - **反向代理**: Nginx
 - **消息队列**: BullMQ (Redis-based)
@@ -591,7 +596,7 @@ const summaryKey = `ai:summary:${contentHash}`;
 // TTL: 永久（内容不变）
 
 // 使用示例
-import { redisClient } from './redis';
+import { redisClient } from "./redis";
 
 async function getResource(id: string): Promise<Resource> {
   const cacheKey = `resource:${id}`;
@@ -604,15 +609,15 @@ async function getResource(id: string): Promise<Resource> {
 
   // 查数据库
   const resource = await prisma.resource.findUnique({
-    where: { id }
+    where: { id },
   });
 
   // 写缓存
   if (resource) {
     await redisClient.setex(
       cacheKey,
-      3600,  // 1小时
-      JSON.stringify(resource)
+      3600, // 1小时
+      JSON.stringify(resource),
     );
   }
 
@@ -703,11 +708,7 @@ type Query {
   me: User
 
   # Feed
-  feed(
-    page: Int = 1
-    limit: Int = 20
-    filters: FeedFilters
-  ): FeedResult!
+  feed(page: Int = 1, limit: Int = 20, filters: FeedFilters): FeedResult!
 
   # 资源详情
   resource(id: ID!): Resource!
@@ -721,10 +722,7 @@ type Query {
   ): SearchResult!
 
   # 推荐
-  recommendations(
-    userId: ID
-    limit: Int = 20
-  ): [Resource!]!
+  recommendations(userId: ID, limit: Int = 20): [Resource!]!
 
   # 热榜
   trending(
@@ -734,20 +732,14 @@ type Query {
   ): [Resource!]!
 
   # 知识图谱
-  knowledgeGraph(
-    userId: ID!
-    depth: Int = 2
-  ): KnowledgeGraph!
+  knowledgeGraph(userId: ID!, depth: Int = 2): KnowledgeGraph!
 
   # 学习路径
   learningPath(id: ID!): LearningPath!
   myLearningPaths: [LearningPath!]!
 
   # AI洞察
-  aiInsights(
-    type: InsightType!
-    params: Json
-  ): AIInsight!
+  aiInsights(type: InsightType!, params: Json): AIInsight!
 }
 
 input FeedFilters {
@@ -778,11 +770,7 @@ type Mutation {
   refreshToken: AuthPayload!
 
   # 资源操作
-  saveResource(
-    resourceId: ID!
-    collectionId: ID
-    note: String
-  ): SaveResult!
+  saveResource(resourceId: ID!, collectionId: ID, note: String): SaveResult!
 
   unsaveResource(resourceId: ID!): Boolean!
   upvoteResource(resourceId: ID!): Boolean!
@@ -963,7 +951,7 @@ async def trend_analysis(request: dict):
 ```yaml
 # docker-compose.yml
 
-version: '3.8'
+version: "3.8"
 
 services:
   # PostgreSQL
@@ -984,8 +972,8 @@ services:
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
     ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
     volumes:
       - neo4j_data:/data
 
@@ -1060,7 +1048,7 @@ Load Balancer (AWS ELB)
 // ❌ 不好：N+1查询
 async function getResourcesWithAuthors(ids: string[]) {
   const resources = await prisma.resource.findMany({
-    where: { id: { in: ids } }
+    where: { id: { in: ids } },
   });
 
   for (const resource of resources) {
@@ -1075,7 +1063,7 @@ async function getResourcesWithAuthors(ids: string[]) {
     where: { id: { in: ids } },
     include: {
       // 如果authors是关系
-    }
+    },
   });
 }
 ```

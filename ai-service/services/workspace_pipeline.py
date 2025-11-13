@@ -1,17 +1,19 @@
 """
-Workspace AI pipeline – builds a structured report from workspace task payload.
-This MVP implementation synthesizes deterministic output without calling external models,
-but preserves the interface for future integration with AI orchestrators.
+Workspace AI pipeline that synthesizes structured workspace reports.
+This MVP version generates deterministic output without calling external models
+while preserving the future integration surface.
 """
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from pydantic import BaseModel
 
-from services.workspace_task_manager import WorkspaceTaskPayload
 from services.template_loader import template_repository
+
+if TYPE_CHECKING:
+    from services.workspace_task_manager import WorkspaceTaskPayload
 
 
 class WorkspacePipelineResult(BaseModel):
@@ -21,14 +23,11 @@ class WorkspacePipelineResult(BaseModel):
 
 class WorkspacePipeline:
     """
-    Generates structured report data from workspace task payload.
-    Later this class can call real AI models via orchestrator; for now it aggregates resources.
+    Generates structured report data from a workspace task payload.
+    Later revisions can delegate to real AI orchestrators; currently it aggregates resources.
     """
 
-    def __init__(self):
-        pass
-
-    async def run(self, payload: WorkspaceTaskPayload) -> WorkspacePipelineResult:
+    async def run(self, payload: "WorkspaceTaskPayload") -> WorkspacePipelineResult:
         template = template_repository.get(payload.template_id)
 
         if not template:
@@ -53,12 +52,12 @@ class WorkspacePipeline:
                 + f"\n- 摘要：{summary}\n"
             )
 
-        question_prompt = payload.question or "未提供额外问题。"
-        overview = "\n".join(summary_lines) if summary_lines else "暂无资源。"
-        detail_block = "\n".join(detail_lines) if detail_lines else "暂无详细内容。"
+        question_prompt = payload.question or "未提供额外问题"
+        overview = "\n".join(summary_lines) if summary_lines else "暂无资源"
+        detail_block = "\n".join(detail_lines) if detail_lines else "暂无详细内容"
 
         summary_text = (
-            f"共分析 {len(resources)} 个资源。"
+            f"共分析 {len(resources)} 个资源；"
             f"以下记录了每个资源的核心信息，并参考用户问题：{question_prompt}"
         )
 

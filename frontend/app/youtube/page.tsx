@@ -85,12 +85,16 @@ export default function YouTubePage() {
   const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1);
   const [savedVideos, setSavedVideos] = useState<SavedVideo[]>([]);
   const [savedVideosLoading, setSavedVideosLoading] = useState(false);
-  const [selectedSavedVideoId, setSelectedSavedVideoId] = useState<string | null>(null);
+  const [selectedSavedVideoId, setSelectedSavedVideoId] = useState<
+    string | null
+  >(null);
   const [loadingSavedVideo, setLoadingSavedVideo] = useState(false);
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const activeSegmentRef = useRef<HTMLDivElement | null>(null);
-  const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playbackIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
   const savedVideoParam = useMemo(
     () => searchParams?.get('saved') ?? null,
     [searchParams]
@@ -119,34 +123,39 @@ export default function YouTubePage() {
     return false;
   }, [transcript, translatedTranscript]);
 
-  const normalizeSegments = useCallback((segments: any[]): TranscriptSegment[] => {
-    if (!Array.isArray(segments)) {
-      return [];
-    }
+  const normalizeSegments = useCallback(
+    (segments: any[]): TranscriptSegment[] => {
+      if (!Array.isArray(segments)) {
+        return [];
+      }
 
-    return segments
-      .map((segment) => {
-        const text =
-          typeof segment?.text === 'string'
-            ? segment.text
-            : Array.isArray(segment?.text)
-            ? segment.text.join(' ')
-            : '';
-        const translation =
-          typeof segment?.translation === 'string'
-            ? segment.translation
-            : undefined;
+      return segments
+        .map((segment) => {
+          const text =
+            typeof segment?.text === 'string'
+              ? segment.text
+              : Array.isArray(segment?.text)
+                ? segment.text.join(' ')
+                : '';
+          const translation =
+            typeof segment?.translation === 'string'
+              ? segment.translation
+              : undefined;
 
-        return {
-          text,
-          start: Number(segment?.start ?? segment?.offset ?? 0),
-          duration: Number(segment?.duration ?? segment?.dur ?? segment?.length ?? 0),
-          translation,
-        } as TranscriptSegment;
-      })
-      .filter((segment) => segment.text.trim().length > 0)
-      .sort((a, b) => a.start - b.start);
-  }, []);
+          return {
+            text,
+            start: Number(segment?.start ?? segment?.offset ?? 0),
+            duration: Number(
+              segment?.duration ?? segment?.dur ?? segment?.length ?? 0
+            ),
+            translation,
+          } as TranscriptSegment;
+        })
+        .filter((segment) => segment.text.trim().length > 0)
+        .sort((a, b) => a.start - b.start);
+    },
+    []
+  );
 
   const stopPlaybackTracking = useCallback(() => {
     if (playbackIntervalRef.current) {
@@ -279,9 +288,11 @@ export default function YouTubePage() {
   const loadSavedVideos = useCallback(async () => {
     setSavedVideosLoading(true);
     try {
-      const response = await fetch(`${config.apiBaseUrl}/api/v1/youtube-videos`);
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/youtube-videos`
+      );
       if (!response.ok) {
-        throw new Error('æ— æ³•åŠ è½½å·²ä¿å­˜çš„è§†é¢‘');
+        throw new Error('Unable to load saved videos');
       }
 
       const data = await response.json();
@@ -293,7 +304,7 @@ export default function YouTubePage() {
       const normalized: SavedVideo[] = data.map((video: any) => ({
         id: video.id,
         videoId: video.videoId ?? video.video_id ?? '',
-        title: video.title ?? 'Î´ÃüÃûÊÓÆµ',
+        title: video.title ?? 'Untitled Video',
         url: video.url ?? '',
         transcript: null,
         translatedText: video.translatedText ?? video.translated_text ?? null,
@@ -329,7 +340,7 @@ export default function YouTubePage() {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'åŠ è½½ä¿å­˜çš„è§†é¢‘å¤±è´?);
+          throw new Error(errorData.message || 'Failed to load saved video');
         }
 
         const data = await response.json();
@@ -340,21 +351,22 @@ export default function YouTubePage() {
           Array.isArray(data.transcript)
             ? data.transcript
             : typeof data.transcript === 'string'
-            ? (() => {
-                try {
-                  const parsed = JSON.parse(data.transcript);
-                  return Array.isArray(parsed) ? parsed : [];
-                } catch {
-                  return [];
-                }
-              })()
-            : []
+              ? (() => {
+                  try {
+                    const parsed = JSON.parse(data.transcript);
+                    return Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    return [];
+                  }
+                })()
+              : []
         );
 
         setYoutubeUrl(
-          data.url ?? (videoId ? `https://www.youtube.com/watch?v=${videoId}` : '')
+          data.url ??
+            (videoId ? `https://www.youtube.com/watch?v=${videoId}` : '')
         );
-        setVideoTitle(data.title ?? 'YouTube è§†é¢‘');
+        setVideoTitle(data.title ?? 'YouTube Video');
         setTranscript(normalizedTranscript);
         setReport(data.aiReport ?? data.ai_report ?? null);
         setCurrentVideoId(videoId || null);
@@ -372,7 +384,9 @@ export default function YouTubePage() {
           normalizedTranscript.length > 0 &&
           normalizedTranscript.some((seg) => seg.translation)
         ) {
-          translations = normalizedTranscript.map((seg) => seg.translation ?? '');
+          translations = normalizedTranscript.map(
+            (seg) => seg.translation ?? ''
+          );
         } else if (typeof data.translatedText === 'string') {
           translations = data.translatedText
             .split(/\r?\n/)
@@ -412,7 +426,7 @@ export default function YouTubePage() {
         }
       } catch (err: any) {
         console.error('Load saved video error:', err);
-        setError(err.message || 'åŠ è½½ä¿å­˜çš„è§†é¢‘å¤±è´?);
+        setError(err.message || 'Failed to load saved video.');
       } finally {
         setLoading(false);
         setLoadingSavedVideo(false);
@@ -518,13 +532,13 @@ export default function YouTubePage() {
   // Fetch transcript
   const handleFetchTranscript = async () => {
     if (!youtubeUrl.trim()) {
-      setError('è¯·è¾“å…¥YouTube URL');
+      setError('Please enter a YouTube URL.');
       return;
     }
 
     const videoId = extractVideoId(youtubeUrl);
     if (!videoId) {
-      setError('æ— æ•ˆçš„YouTube URL');
+      setError('Invalid YouTube URL.');
       return;
     }
 
@@ -549,7 +563,9 @@ export default function YouTubePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+        throw new Error(
+          errorData.message || 'Failed to fetch transcript. Please try again.'
+        );
       }
 
       const data = await response.json();
@@ -557,10 +573,10 @@ export default function YouTubePage() {
         Array.isArray(data.transcript) ? data.transcript : []
       );
       setTranscript(normalizedTranscript);
-      setVideoTitle(data.title || 'YouTube è§†é¢‘');
+      setVideoTitle(data.title || 'YouTube Video');
     } catch (err: any) {
       console.error('Fetch transcript error:', err);
-      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+      setError(err.message || 'Failed to fetch transcript. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -569,7 +585,7 @@ export default function YouTubePage() {
   // Generate report from transcript
   const handleGenerateReport = async () => {
     if (!transcript) {
-      setError('è¯·å…ˆè·å–å­—å¹•');
+      setError('');
       return;
     }
 
@@ -598,7 +614,9 @@ export default function YouTubePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+        throw new Error(
+          errorData.message || 'Failed to generate report. Please try again.'
+        );
       }
 
       const reportData = await response.json();
@@ -613,7 +631,7 @@ export default function YouTubePage() {
       }, 100);
     } catch (err: any) {
       console.error('Generate report error:', err);
-      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+      setError(err.message || 'Failed to generate report. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -622,7 +640,7 @@ export default function YouTubePage() {
   // Translate transcript to Chinese
   const handleTranslate = async () => {
     if (!transcript || transcript.length === 0) {
-      setError('è¯·å…ˆè·å–å­—å¹•');
+      setError('Please fetch the transcript first.');
       return;
     }
 
@@ -650,20 +668,24 @@ export default function YouTubePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+        throw new Error(
+          errorData.message ||
+            'Failed to translate transcript. Please try again.'
+        );
       }
 
       const data = await response.json();
       if (!Array.isArray(data.translations)) {
-        throw new Error('ç¿»è¯‘ç»“æœæ ¼å¼å¼‚å¸¸');
+        throw new Error('Unexpected translation response');
       }
 
       const bilingualTranscript = transcript.map((segment, index) => ({
         ...segment,
         translation:
-          typeof data.translations[index] === 'string' && data.translations[index]
+          typeof data.translations[index] === 'string' &&
+          data.translations[index]
             ? data.translations[index]
-            : segment.translation ?? segment.text,
+            : (segment.translation ?? segment.text),
       }));
 
       setTranscript(bilingualTranscript);
@@ -677,7 +699,9 @@ export default function YouTubePage() {
       setSaved(false);
     } catch (err: any) {
       console.error('Translation error:', err);
-      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+      setError(
+        err.message || 'Failed to translate transcript. Please try again.'
+      );
     } finally {
       setTranslating(false);
     }
@@ -686,16 +710,17 @@ export default function YouTubePage() {
   // Export bilingual transcript to PDF
   const handleExportBilingualPDF = async () => {
     if (!transcript || transcript.length === 0) {
-      setError('è¯·å…ˆè·å–å­—å¹•');
+      setError('Please fetch the transcript first.');
       return;
     }
 
     const hasTranslation = transcript.some(
-      (segment) => typeof segment.translation === 'string' && segment.translation
+      (segment) =>
+        typeof segment.translation === 'string' && segment.translation
     );
 
     if (!hasTranslation) {
-      setError('è¯·å…ˆè¿›è¡Œå­—å¹•ç¿»è¯‘');
+      setError('Please translate the transcript first.');
       return;
     }
 
@@ -703,12 +728,10 @@ export default function YouTubePage() {
       const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
 
-      const transcriptElement = document.getElementById(
-        'bilingual-transcript'
-      );
+      const transcriptElement = document.getElementById('bilingual-transcript');
 
       if (!transcriptElement) {
-        throw new Error('æ— æ³•æ‰¾åˆ°å­—å¹•å†…å®¹åŒºåŸŸ');
+        throw new Error('Transcript container not found');
       }
 
       const clone = transcriptElement.cloneNode(true) as HTMLElement;
@@ -761,14 +784,16 @@ export default function YouTubePage() {
       doc.save(`${safeTitle}_bilingual_subtitles.pdf`);
     } catch (err: any) {
       console.error('Export PDF error:', err);
-      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+      setError(
+        err.message || 'Failed to export bilingual PDF. Please try again.'
+      );
     }
   };
 
   // Export report to PDF
   const handleExportPDF = async () => {
     if (!report) {
-      setError('è¯·å…ˆç”ŸæˆæŠ¥å‘Š');
+      setError('Please generate the report first.');
       return;
     }
 
@@ -850,7 +875,7 @@ export default function YouTubePage() {
       doc.save(fileName);
     } catch (err: any) {
       console.error('PDF export error:', err);
-      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+      setError(err.message || 'PDF');
     }
   };
 
@@ -868,7 +893,7 @@ export default function YouTubePage() {
       // Get the report element
       const reportElement = document.getElementById('youtube-report');
       if (!reportElement) {
-        throw new Error('æ— æ³•æ‰¾åˆ°æŠ¥å‘Šå…ƒç´ ');
+        throw new Error('Report container not found');
       }
 
       // Hide the export button temporarily
@@ -933,7 +958,7 @@ export default function YouTubePage() {
       doc.save(fileName);
     } catch (err: any) {
       console.error('Export PDF error:', err);
-      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+      setError(err.message || 'PDF');
     }
   };
 
@@ -955,12 +980,11 @@ export default function YouTubePage() {
 
     try {
       const hasTranslations = transcript.some(
-        (segment) => typeof segment.translation === 'string' && segment.translation
+        (segment) =>
+          typeof segment.translation === 'string' && segment.translation
       );
       const translationText = hasTranslations
-        ? transcript
-            .map((segment) => segment.translation ?? '')
-            .join('\n')
+        ? transcript.map((segment) => segment.translation ?? '').join('\n')
         : undefined;
 
       const response = await fetch(
@@ -972,10 +996,8 @@ export default function YouTubePage() {
           },
           body: JSON.stringify({
             videoId,
-            title: videoTitle || 'YouTube è§†é¢‘',
-            url:
-              youtubeUrl ||
-              `https://www.youtube.com/watch?v=${videoId}`,
+            title: videoTitle || 'YouTube ',
+            url: youtubeUrl || `https://www.youtube.com/watch?v=${videoId}`,
             transcript: transcript.map((segment) => ({
               text: segment.text,
               start: segment.start,
@@ -990,7 +1012,7 @@ export default function YouTubePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+        throw new Error(errorData.message || 'ä¿å­˜è§†é¢‘å¤±è´¥ï¼Œè¯·é‡è¯•');
       }
 
       const savedVideo = await response.json();
@@ -1007,7 +1029,7 @@ export default function YouTubePage() {
       void loadSavedVideos();
     } catch (err: any) {
       console.error('Save video error:', err);
-      setError(err.message || '¼ÓÔØ±£´æµÄÊÓÆµÊ§°Ü£¬ÇëÖØÊÔ');
+      setError(err.message || 'ä¿å­˜è§†é¢‘å¤±è´¥ï¼Œè¯·é‡è¯•');
     } finally {
       setSaving(false);
     }
@@ -1028,7 +1050,7 @@ export default function YouTubePage() {
       <main className="flex-1 overflow-y-auto p-8">
         <div className="mx-auto max-w-7xl">
           <h1 className="mb-8 text-2xl font-bold text-gray-900">
-            YouTube å­—å¹•æå–
+            YouTube å­—å¹•å–
           </h1>
           {/* Input Section */}
           <div className="mb-6 rounded-lg bg-white p-6 shadow-sm">
@@ -1037,7 +1059,7 @@ export default function YouTubePage() {
                 htmlFor="youtube-url"
                 className="mb-2 block text-sm font-medium text-gray-700"
               >
-                YouTube è§†é¢‘ URL
+                YouTube URL
               </label>
               <div className="flex gap-3">
                 <input
@@ -1059,11 +1081,11 @@ export default function YouTubePage() {
                   disabled={loading || !youtubeUrl.trim()}
                   className="rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {loading ? 'è·å–ä¸?..' : 'è·å–å­—å¹•'}
+                  {loading ? 'è·å–ä¸­...' : 'è·å–å­—å¹•'}
                 </button>
               </div>
               <p className="mt-2 text-sm text-gray-500">
-                æ”¯æŒæ ¼å¼ï¼šhttps://www.youtube.com/watch?v=VIDEO_ID æˆ?
+                æ”¯æŒæ ¼å¼ï¼šhttps://www.youtube.com/watch?v=VIDEO_ID æˆ–
                 https://youtu.be/VIDEO_ID
               </p>
             </div>
@@ -1079,7 +1101,7 @@ export default function YouTubePage() {
           <div className="mb-6 grid gap-6 lg:grid-cols-[2fr,1fr]">
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">è§†é¢‘æ’­æ”¾</h2>
+                <h2 className="text-lg font-semibold text-gray-900">è§†é¢‘</h2>
                 {currentVideoId && (
                   <span className="text-xs text-gray-500">
                     å½“å‰è¿›åº¦ {formatTime(currentTime)}
@@ -1090,20 +1112,20 @@ export default function YouTubePage() {
                 <div ref={playerContainerRef} className="h-full w-full" />
                 {!currentVideoId && (
                   <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
-                    è¾“å…¥è§†é¢‘ URL å¹¶è·å–å­—å¹•åå³å¯åœ¨æ­¤æ’­æ”¾
+                    è¾“å…¥è§†é¢‘ URL å¹¶è·å–å­—å¹•åå³å¯åœ¨
                   </div>
                 )}
               </div>
             </div>
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">å·²ä¿å­˜çš„è§†é¢‘</h2>
+                <h2 className="text-lg font-semibold text-gray-900"></h2>
                 <button
                   onClick={() => void loadSavedVideos()}
                   disabled={savedVideosLoading}
                   className="text-xs text-blue-600 transition-colors hover:text-blue-700 disabled:text-gray-400"
                 >
-                  {savedVideosLoading ? 'åˆ·æ–°ä¸?..' : 'åˆ·æ–°åˆ—è¡¨'}
+                  {savedVideosLoading ? 'åˆ·?..' : 'åˆ·åˆ—è¡¨'}
                 </button>
               </div>
               {savedVideosLoading ? (
@@ -1112,7 +1134,7 @@ export default function YouTubePage() {
                 </div>
               ) : savedVideos.length === 0 ? (
                 <p className="text-sm text-gray-500">
-                  æš‚æ— ä¿å­˜çš„è§†é¢‘ï¼Œè§£æå®Œæˆåç‚¹å‡»â€œä¿å­˜è§†é¢‘â€å³å¯æ”¶è—ã€?
+                  ä¿å­˜çš„è§†é¢‘ï¼Œè§£å®Œåç‚¹å‡»â€œä¿å­˜è§†é¢‘â€å³å¯è—?
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -1142,9 +1164,9 @@ export default function YouTubePage() {
                           </span>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
-                          <span>è§†é¢‘IDï¼š{video.videoId || 'æœªçŸ¥'}</span>
+                          <span>ID{video.videoId || 'çŸ¥'}</span>
                           {loadingSavedVideo && isActive && (
-                            <span className="text-blue-600">¼ÓÔØÖĞ...</span>
+                            <span className="text-blue-600">...</span>
                           )}
                         </div>
                       </button>
@@ -1181,7 +1203,7 @@ export default function YouTubePage() {
                         d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
                       />
                     </svg>
-                    {translating ? 'ç¿»è¯‘ä¸?..' : 'ç¿»è¯‘æˆä¸­æ–?}
+                    {translating ? 'ç¿»è¯‘ä¸­...' : 'ç¿»è¯‘æˆä¸­æ–‡'}
                   </button>
                   <button
                     onClick={handleGenerateReport}
@@ -1201,7 +1223,7 @@ export default function YouTubePage() {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    {generating ? 'ç”Ÿæˆä¸?..' : 'ç”ŸæˆæŠ¥å‘Š'}
+                    {generating ? 'ç”Ÿ?..' : 'ç”Ÿå‘Š'}
                   </button>
                   <button
                     onClick={handleSaveVideo}
@@ -1234,100 +1256,100 @@ export default function YouTubePage() {
                         />
                       )}
                     </svg>
-                    {saving ? 'ä¿å­˜ä¸?..' : saved ? 'å·²ä¿å­? : 'ä¿å­˜è§†é¢‘'}
+                    {saving ? 'ä¿å­˜ä¸­...' : saved ? 'å·²ä¿å­˜' : 'ä¿å­˜è§†é¢‘'}
                   </button>
                 </div>
               </div>
 
-                        {/* Bilingual Transcript (Original + Translation) */}
-          <div className="mb-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-700">
-                {hasTranslationsAvailable ? 'åŒè¯­å­—å¹•ï¼ˆä¸­è‹±å¯¹ç…§ï¼‰' : 'åŸæ–‡å­—å¹•'}
-              </h3>
-              {hasTranslationsAvailable && (
-                <button
-                  onClick={handleExportBilingualPDF}
-                  className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700"
+              {/* Bilingual Transcript (Original + Translation) */}
+              <div className="mb-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    {hasTranslationsAvailable ? '' : 'åŸå­—å¹•'}
+                  </h3>
+                  {hasTranslationsAvailable && (
+                    <button
+                      onClick={handleExportBilingualPDF}
+                      className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      PDF
+                    </button>
+                  )}
+                </div>
+                <div
+                  id="bilingual-transcript"
+                  className="max-h-96 space-y-3 overflow-y-auto rounded-lg border border-gray-200 p-4"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  å¯¼å‡ºåŒè¯­PDF
-                </button>
-              )}
-            </div>
-            <div
-              id="bilingual-transcript"
-              className="max-h-96 space-y-3 overflow-y-auto rounded-lg border border-gray-200 p-4"
-            >
-              {transcript.map((segment, index) => {
-                const translationText =
-                  segment.translation ??
-                  (translatedTranscript
-                    ? translatedTranscript[index]?.text
-                    : '');
-                const hasTranslation =
-                  typeof translationText === 'string' &&
-                  translationText.trim().length > 0;
-                const isActive = index === activeSegmentIndex;
+                  {transcript.map((segment, index) => {
+                    const translationText =
+                      segment.translation ??
+                      (translatedTranscript
+                        ? translatedTranscript[index]?.text
+                        : '');
+                    const hasTranslation =
+                      typeof translationText === 'string' &&
+                      translationText.trim().length > 0;
+                    const isActive = index === activeSegmentIndex;
 
-                return (
-                  <div
-                    key={`${segment.start}-${index}`}
-                    ref={isActive ? activeSegmentRef : null}
-                    onClick={() => handleSegmentSeek(segment.start)}
-                    className={`cursor-pointer rounded-lg border border-transparent p-3 transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 border-blue-200 shadow-inner'
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 text-sm">
-                      <span className="mt-0.5 min-w-[60px] font-mono text-gray-400">
-                        {formatTime(segment.start)}
-                      </span>
-                      <p className="flex-1 font-medium text-gray-900">
-                        {segment.text}
-                      </p>
-                    </div>
-                    {hasTranslation && (
-                      <div className="mt-2 pl-[60px] text-sm text-purple-700">
-                        {translationText}
+                    return (
+                      <div
+                        key={`${segment.start}-${index}`}
+                        ref={isActive ? activeSegmentRef : null}
+                        onClick={() => handleSegmentSeek(segment.start)}
+                        className={`cursor-pointer rounded-lg border border-transparent p-3 transition-colors ${
+                          isActive
+                            ? 'border-blue-200 bg-blue-50 shadow-inner'
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3 text-sm">
+                          <span className="mt-0.5 min-w-[60px] font-mono text-gray-400">
+                            {formatTime(segment.start)}
+                          </span>
+                          <p className="flex-1 font-medium text-gray-900">
+                            {segment.text}
+                          </p>
+                        </div>
+                        {hasTranslation && (
+                          <div className="mt-2 pl-[60px] text-sm text-purple-700">
+                            {translationText}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-          <p className="mt-3 text-sm text-gray-500">
-            æ€»è®¡ {transcript.length} æ¡å­—å¹•ç‰‡æ®?
-          </p>
-        </div>
-      )}
-      {/* Report Display */}
-      {report && (
-        <div
-          id="youtube-report"
-          className="rounded-lg bg-white p-6 shadow-sm"
-        >
-          <div className="mb-6">
-            <div className="mb-4">
-              <div className="mb-3 flex items-start justify-between gap-4">
+              <p className="mt-3 text-sm text-gray-500">
+                è®¡ {transcript.length} å­—å¹•ç‰‡?
+              </p>
+            </div>
+          )}
+          {/* Report Display */}
+          {report && (
+            <div
+              id="youtube-report"
+              className="rounded-lg bg-white p-6 shadow-sm"
+            >
+              <div className="mb-6">
+                <div className="mb-4">
+                  <div className="mb-3 flex items-start justify-between gap-4">
                     <h2 className="flex-1 text-2xl font-bold text-gray-900">
-                      YouTube è§†é¢‘åˆ†ææŠ¥å‘Š
+                      YouTube è§†é¢‘åˆ†å‘Š
                     </h2>
                     <button
                       onClick={handleExportPDFNew}
@@ -1350,7 +1372,7 @@ export default function YouTubePage() {
                     </button>
                   </div>
                   <div className="mb-3 text-sm text-gray-600">
-                    è§†é¢‘æ ‡é¢˜: {videoTitle}
+                    è§†é¢‘é¢˜: {videoTitle}
                   </div>
                 </div>
                 <div className="rounded border-l-4 border-blue-500 bg-blue-50 p-4">
@@ -1387,9 +1409,9 @@ export default function YouTubePage() {
               <div className="flex items-center gap-4 rounded-lg bg-white p-6">
                 <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
                 <p className="text-gray-700">
-                  {loading && 'æ­£åœ¨è·å–å­—å¹•...'}
-                  {generating && 'æ­£åœ¨ç”ŸæˆæŠ¥å‘Š...'}
-                  {translating && 'æ­£åœ¨ç¿»è¯‘å­—å¹•...'}
+                  {loading && 'åœ¨è·å–å­—å¹•...'}
+                  {generating && 'åœ¨ç”Ÿå‘Š...'}
+                  {translating && 'åœ¨ç¿»è¯‘å­—å¹•...'}
                 </p>
               </div>
             </div>
@@ -1399,12 +1421,3 @@ export default function YouTubePage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-

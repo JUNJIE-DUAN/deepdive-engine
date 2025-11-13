@@ -1,5 +1,12 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { Innertube } from 'youtubei.js';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+
+type YoutubeModule = typeof import("youtubei.js");
+type YoutubeClient = Awaited<ReturnType<YoutubeModule["Innertube"]["create"]>>;
 
 export interface TranscriptSegment {
   text: string;
@@ -16,14 +23,14 @@ export interface TranscriptResponse {
 @Injectable()
 export class YoutubeService {
   private readonly logger = new Logger(YoutubeService.name);
-  private youtube: Innertube | null = null;
+  private youtube: YoutubeClient | null = null;
 
   async onModuleInit() {
     try {
-      this.youtube = await Innertube.create();
-      this.logger.log('YouTube client initialized successfully');
+      await this.ensureClient();
+      this.logger.log("YouTube client initialized successfully");
     } catch (error) {
-      this.logger.error('Failed to initialize YouTube client:', error);
+      this.logger.error("Failed to initialize YouTube client:", error);
     }
   }
 
@@ -42,7 +49,7 @@ export class YoutubeService {
       const info = await this.youtube!.getInfo(videoId);
 
       if (!info) {
-        throw new NotFoundException('Video not found');
+        throw new NotFoundException("Video not found");
       }
 
       title = info.basic_info.title ?? null;
@@ -52,25 +59,31 @@ export class YoutubeService {
 
       if (!transcriptData || !transcriptData.transcript) {
         throw new NotFoundException(
-          'Transcript not available for this video. The video may not have captions enabled.',
+          "Transcript not available for this video. The video may not have captions enabled.",
         );
       }
 
       // Transform transcript data
-      if (!transcriptData.transcript.content || !transcriptData.transcript.content.body) {
-        throw new NotFoundException('Invalid transcript data structure');
+      if (
+        !transcriptData.transcript.content ||
+        !transcriptData.transcript.content.body
+      ) {
+        throw new NotFoundException("Invalid transcript data structure");
       }
 
-      const transcript: TranscriptSegment[] = transcriptData.transcript.content.body.initial_segments
-        .filter((segment: any) => segment.snippet?.text) // Filter out segments without text
-        .map((segment: any) => ({
-          text: segment.snippet.text,
-          start: segment.start_ms / 1000, // Convert milliseconds to seconds
-          duration: segment.end_ms / 1000 - segment.start_ms / 1000,
-        }));
+      const transcript: TranscriptSegment[] =
+        transcriptData.transcript.content.body.initial_segments
+          .filter((segment: any) => segment.snippet?.text) // Filter out segments without text
+          .map((segment: any) => ({
+            text: segment.snippet.text,
+            start: segment.start_ms / 1000, // Convert milliseconds to seconds
+            duration: segment.end_ms / 1000 - segment.start_ms / 1000,
+          }));
 
       transcriptSegments = transcript;
-      this.logger.log(`Successfully fetched ${transcript.length} transcript segments for "${title ?? videoId}"`);
+      this.logger.log(
+        `Successfully fetched ${transcript.length} transcript segments for "${title ?? videoId}"`,
+      );
     } catch (error: unknown) {
       this.logger.error(`Failed to fetch transcript for ${videoId}:`, error);
 
@@ -78,32 +91,41 @@ export class YoutubeService {
       if (fallback) {
         transcriptSegments = fallback.segments;
         title = title ?? fallback.title;
-        this.logger.warn(`Used fallback transcript provider for ${videoId}, segments=${transcriptSegments.length}`);
+        this.logger.warn(
+          `Used fallback transcript provider for ${videoId}, segments=${transcriptSegments.length}`,
+        );
       } else {
         if (error instanceof NotFoundException) {
           throw error;
         }
 
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
 
-        if (errorMessage.includes('not found')) {
-          throw new NotFoundException('Video not found or transcript not available');
+        if (errorMessage.includes("not found")) {
+          throw new NotFoundException(
+            "Video not found or transcript not available",
+          );
         }
 
-        if (errorMessage.includes('Invalid')) {
-          throw new BadRequestException('Invalid YouTube video ID');
+        if (errorMessage.includes("Invalid")) {
+          throw new BadRequestException("Invalid YouTube video ID");
         }
 
-        throw new BadRequestException(`Failed to fetch transcript: ${errorMessage}`);
+        throw new BadRequestException(
+          `Failed to fetch transcript: ${errorMessage}`,
+        );
       }
     }
 
     if (transcriptSegments.length === 0) {
-      throw new NotFoundException('Transcript not available for this video.');
+      throw new NotFoundException("Transcript not available for this video.");
     }
 
     const finalTitle =
-      title ?? (await this.fetchVideoTitle(videoId)) ?? `YouTube Video ${videoId}`;
+      title ??
+      (await this.fetchVideoTitle(videoId)) ??
+      `YouTube Video ${videoId}`;
 
     return {
       videoId,
@@ -135,6 +157,7 @@ export class YoutubeService {
 
   private async ensureClient() {
     if (!this.youtube) {
+      const { Innertube } = (await import("youtubei.js")) as YoutubeModule;
       this.youtube = await Innertube.create();
     }
   }
@@ -150,7 +173,9 @@ export class YoutubeService {
       const data = (await response.json()) as { title?: string };
       return data.title ?? null;
     } catch (error) {
-      this.logger.warn(`Failed to fetch video title via oEmbed: ${String(error)}`);
+      this.logger.warn(
+        `Failed to fetch video title via oEmbed: ${String(error)}`,
+      );
       return null;
     }
   }
@@ -163,9 +188,9 @@ export class YoutubeService {
       const endpoint = `https://youtubetranscript.com/?lang=en&server_vid2=${videoId}`;
       const response = await fetch(endpoint, {
         headers: {
-          'Accept': 'application/json, text/plain, */*',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+          Accept: "application/json, text/plain, */*",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
         },
       });
 
@@ -187,12 +212,16 @@ export class YoutubeService {
 
       const segments: TranscriptSegment[] = items
         .map((item) => {
-          const text = item.text ?? item.caption ?? '';
-          const startValue = Number.parseFloat(item.start ?? item.start_offset ?? item.offset ?? '0');
-          const durationValue = Number.parseFloat(item.dur ?? item.duration ?? item.length ?? '0');
+          const text = item.text ?? item.caption ?? "";
+          const startValue = Number.parseFloat(
+            item.start ?? item.start_offset ?? item.offset ?? "0",
+          );
+          const durationValue = Number.parseFloat(
+            item.dur ?? item.duration ?? item.length ?? "0",
+          );
 
           return {
-            text: typeof text === 'string' ? text : '',
+            text: typeof text === "string" ? text : "",
             start: Number.isFinite(startValue) ? startValue : 0,
             duration: Number.isFinite(durationValue) ? durationValue : 0,
           };
@@ -204,11 +233,11 @@ export class YoutubeService {
       }
 
       const title =
-        typeof raw?.title === 'string'
+        typeof raw?.title === "string"
           ? raw.title
-          : typeof raw?.video_title === 'string'
-          ? raw.video_title
-          : null;
+          : typeof raw?.video_title === "string"
+            ? raw.video_title
+            : null;
 
       return { segments, title };
     } catch (error) {

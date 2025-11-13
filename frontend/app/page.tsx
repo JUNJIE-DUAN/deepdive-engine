@@ -119,6 +119,7 @@ export default function Home() {
   const [aiRightTab, setAiRightTab] = useState<
     'assistant' | 'notes' | 'comments' | 'similar'
   >('assistant');
+  const [isAiPanelCollapsed, setIsAiPanelCollapsed] = useState(false);
 
   // Context menu for adding to notes
   const [contextMenu, setContextMenu] = useState<{
@@ -766,7 +767,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="relative flex h-screen bg-gray-50">
       <ReportWorkspace />
       <Sidebar />
 
@@ -1336,7 +1337,9 @@ export default function Home() {
                                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                 />
                               </svg>
-                              {hasResource(resource.id) ? '已添加' : 'DeepDive 工作区'}
+                              {hasResource(resource.id)
+                                ? '已添加'
+                                : 'DeepDive 工作区'}
                             </button>
                           </div>
                         </div>
@@ -1585,460 +1588,446 @@ export default function Home() {
       </main>
 
       {/* Right AI Interaction Panel */}
-      <aside className="flex w-96 flex-col border-l border-gray-200 bg-white">
-        {/* Top Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <div className="flex items-center px-3">
-            <button
-              onClick={() => setAiRightTab('assistant')}
-              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
-                aiRightTab === 'assistant'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+      {!isAiPanelCollapsed && (
+        <aside className="relative flex w-96 flex-col border-l border-gray-200 bg-white">
+          <button
+            type="button"
+            onClick={() => setIsAiPanelCollapsed(true)}
+            className="absolute -left-3 top-4 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 shadow hover:bg-gray-100"
+            aria-label="收起 AI 助手面板"
+          >
+            <svg
+              className="h-3 w-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Assistant
-            </button>
-            <button
-              onClick={() => setAiRightTab('notes')}
-              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
-                aiRightTab === 'notes'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              My Notes
-            </button>
-            <button
-              onClick={() => setAiRightTab('comments')}
-              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
-                aiRightTab === 'comments'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Comments
-            </button>
-            <button
-              onClick={() => setAiRightTab('similar')}
-              className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
-                aiRightTab === 'similar'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Similar
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14 5l-7 7 7 7"
+              />
+            </svg>
+          </button>
+
+          {/* Top Tab Navigation */}
+          <div className="border-b border-gray-200">
+            <div className="flex items-center px-3">
+              <button
+                onClick={() => setAiRightTab('assistant')}
+                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                  aiRightTab === 'assistant'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Assistant
+              </button>
+              <button
+                onClick={() => setAiRightTab('notes')}
+                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                  aiRightTab === 'notes'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                My Notes
+              </button>
+              <button
+                onClick={() => setAiRightTab('comments')}
+                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                  aiRightTab === 'comments'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Comments
+              </button>
+              <button
+                onClick={() => setAiRightTab('similar')}
+                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                  aiRightTab === 'similar'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Similar
+              </button>
+            </div>
           </div>
-        </div>
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {selectedResource ? (
-            aiRightTab === 'assistant' ? (
-              <div className="space-y-4">
-                {/* Model Selector */}
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                  <span className="text-xs font-medium text-gray-700">
-                    AI模型:
-                  </span>
-                  <select
-                    value={aiModel}
-                    onChange={(e) =>
-                      setAiModel(e.target.value as 'grok' | 'openai')
-                    }
-                    className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value="grok">Grok-3 (x.AI)</option>
-                    <option value="openai">GPT-4o-mini (OpenAI)</option>
-                  </select>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-700">快捷操作:</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      onClick={() => handleQuickAction('summary')}
-                      disabled={aiLoading || isStreaming}
-                      className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <svg
-                        className="h-4 w-4 text-red-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      <span className="text-gray-700">摘要</span>
-                    </button>
-                    <button
-                      onClick={() => handleQuickAction('insights')}
-                      disabled={aiLoading || isStreaming}
-                      className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <svg
-                        className="h-4 w-4 text-orange-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                        />
-                      </svg>
-                      <span className="text-gray-700">洞察</span>
-                    </button>
-                    <button
-                      onClick={() => handleQuickAction('methodology')}
-                      disabled={aiLoading || isStreaming}
-                      className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <svg
-                        className="h-4 w-4 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                        />
-                      </svg>
-                      <span className="text-gray-700">方法论</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* AI Summary Section */}
-                {aiSummary && (
-                  <div
-                    className="cursor-text select-text rounded-lg border border-pink-200 bg-gradient-to-br from-pink-50 to-red-50 p-4"
-                    onContextMenu={(e) => handleContextMenu(e, aiSummary)}
-                  >
-                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                      <svg
-                        className="h-4 w-4 text-red-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      AI摘要
-                      <span className="ml-auto text-xs text-gray-500">
-                        右键添加到笔记
-                      </span>
-                    </h3>
-                    <p className="text-sm leading-relaxed text-gray-700">
-                      {aiSummary}
-                    </p>
-                  </div>
-                )}
-
-                {/* AI Loading Indicator */}
-                {(aiLoading || isStreaming) && (
-                  <div className="flex items-center justify-center gap-2 py-4">
-                    <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-red-600"></div>
-                    <span className="text-xs text-gray-600">
-                      {isStreaming
-                        ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'}正在思考...`
-                        : 'AI处理中...'}
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {selectedResource ? (
+              aiRightTab === 'assistant' ? (
+                <div className="space-y-4">
+                  {/* Model Selector */}
+                  <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                    <span className="text-xs font-medium text-gray-700">
+                      AI模型:
                     </span>
+                    <select
+                      value={aiModel}
+                      onChange={(e) =>
+                        setAiModel(e.target.value as 'grok' | 'openai')
+                      }
+                      className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="grok">Grok-3 (x.AI)</option>
+                      <option value="openai">GPT-4o-mini (OpenAI)</option>
+                    </select>
                   </div>
-                )}
 
-                {/* AI Insights Section */}
-                {aiInsights.length > 0 && (
+                  {/* Quick Actions */}
                   <div className="space-y-2">
-                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                      <svg
-                        className="h-4 w-4 text-red-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    <p className="text-xs font-medium text-gray-700">
+                      快捷操作:
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => handleQuickAction('summary')}
+                        disabled={aiLoading || isStreaming}
+                        className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                        />
-                      </svg>
-                      关键洞察
-                      <span className="ml-auto text-xs text-gray-500">
-                        右键添加到笔记
-                      </span>
-                    </h3>
-                    {aiInsights.map((insight, i) => (
-                      <div
-                        key={i}
-                        className={`cursor-text select-text rounded-lg border p-3 ${
-                          insight.importance === 'high'
-                            ? 'border-red-200 bg-red-50'
-                            : insight.importance === 'medium'
-                              ? 'border-orange-200 bg-orange-50'
-                              : 'border-gray-200 bg-gray-50'
-                        }`}
-                        onContextMenu={(e) =>
-                          handleContextMenu(
-                            e,
-                            `**${insight.title}**\n\n${insight.description}`
-                          )
-                        }
-                      >
-                        <h4 className="mb-1 text-sm font-semibold text-gray-900">
-                          {insight.title}
-                        </h4>
-                        <p className="text-xs text-gray-600">
-                          {insight.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* AI Methodology Section */}
-                {aiMethodology.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                      <svg
-                        className="h-4 w-4 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                        />
-                      </svg>
-                      研究方法论
-                      <span className="ml-auto text-xs text-gray-500">
-                        右键添加到笔记
-                      </span>
-                    </h3>
-                    {aiMethodology.map((method, i) => (
-                      <div
-                        key={i}
-                        className={`cursor-text select-text rounded-lg border p-3 ${
-                          method.importance === 'high'
-                            ? 'border-blue-200 bg-blue-50'
-                            : method.importance === 'medium'
-                              ? 'border-cyan-200 bg-cyan-50'
-                              : 'border-teal-200 bg-teal-50'
-                        }`}
-                        onContextMenu={(e) =>
-                          handleContextMenu(
-                            e,
-                            `**${method.title}**\n\n${method.description}`
-                          )
-                        }
-                      >
-                        <h4 className="mb-1 text-sm font-semibold text-gray-900">
-                          {method.title}
-                        </h4>
-                        <p className="text-xs text-gray-600">
-                          {method.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Chat Messages */}
-                {aiMessages.length > 0 && (
-                  <div className="space-y-3 border-t border-gray-200 pt-4">
-                    {aiMessages.map((msg, i) => (
-                      <div
-                        key={i}
-                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                            msg.role === 'user'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-gray-100 text-gray-900'
-                          }`}
+                        <svg
+                          className="h-4 w-4 text-red-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <p className="text-sm">{msg.content}</p>
-                          <p className="mt-1 text-xs opacity-70">
-                            {msg.timestamp.toLocaleTimeString('zh-CN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={chatEndRef} />
-                  </div>
-                )}
-
-                {/* Tips when no messages */}
-                {aiMessages.length === 0 && !aiLoading && (
-                  <div className="border-t border-gray-200 pt-4">
-                    <p className="mb-3 text-xs text-gray-500">💡 你可以问：</p>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          setAiInput('这篇文章的主要贡献是什么？');
-                        }}
-                        className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
-                      >
-                        这篇文章的主要贡献是什么？
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <span className="text-gray-700">摘要</span>
                       </button>
                       <button
-                        onClick={() => {
-                          setAiInput('有哪些实际应用场景？');
-                        }}
-                        className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
+                        onClick={() => handleQuickAction('insights')}
+                        disabled={aiLoading || isStreaming}
+                        className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        有哪些实际应用场景？
+                        <svg
+                          className="h-4 w-4 text-orange-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                          />
+                        </svg>
+                        <span className="text-gray-700">洞察</span>
                       </button>
                       <button
-                        onClick={() => {
-                          setAiInput('有什么局限性？');
-                        }}
-                        className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
+                        onClick={() => handleQuickAction('methodology')}
+                        disabled={aiLoading || isStreaming}
+                        className="flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        有什么局限性？
+                        <svg
+                          className="h-4 w-4 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                          />
+                        </svg>
+                        <span className="text-gray-700">方法论</span>
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-            ) : aiRightTab === 'notes' ? (
-              <div className="p-6">
-                <NotesList
-                  key={notesRefreshKey}
-                  resourceId={selectedResource.id}
-                />
-              </div>
-            ) : aiRightTab === 'comments' ? (
-              <div className="p-6">
-                <CommentsList resourceId={selectedResource.id} />
-              </div>
-            ) : (
-              <div className="py-8 text-center text-gray-500">
-                <p className="text-sm">相似内容推荐功能开发中...</p>
-              </div>
-            )
-          ) : (
-            <div className="flex h-full items-center justify-center px-4 text-center">
-              <div>
-                <div className="mb-6 flex justify-center">
-                  <svg
-                    className="h-16 w-16 text-gray-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                    />
-                  </svg>
-                </div>
-                <p className="mb-2 text-sm text-gray-500">
-                  No content selected
-                </p>
-                <p className="text-xs text-gray-400">
-                  Click on any paper, project, or news item to analyze it with
-                  AI
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Bottom Input Area */}
-        <div className="border-t border-gray-200 p-4">
-          <div className="relative">
-            <textarea
-              value={aiInput}
-              onChange={(e) => setAiInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendAIMessage();
+                  {/* AI Summary Section */}
+                  {aiSummary && (
+                    <div
+                      className="cursor-text select-text rounded-lg border border-pink-200 bg-gradient-to-br from-pink-50 to-red-50 p-4"
+                      onContextMenu={(e) => handleContextMenu(e, aiSummary)}
+                    >
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <svg
+                          className="h-4 w-4 text-red-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        AI摘要
+                        <span className="ml-auto text-xs text-gray-500">
+                          右键添加到笔记
+                        </span>
+                      </h3>
+                      <p className="text-sm leading-relaxed text-gray-700">
+                        {aiSummary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* AI Loading Indicator */}
+                  {(aiLoading || isStreaming) && (
+                    <div className="flex items-center justify-center gap-2 py-4">
+                      <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-red-600"></div>
+                      <span className="text-xs text-gray-600">
+                        {isStreaming
+                          ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'}正在思考...`
+                          : 'AI处理中...'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* AI Insights Section */}
+                  {aiInsights.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <svg
+                          className="h-4 w-4 text-red-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                          />
+                        </svg>
+                        关键洞察
+                        <span className="ml-auto text-xs text-gray-500">
+                          右键添加到笔记
+                        </span>
+                      </h3>
+                      {aiInsights.map((insight, i) => (
+                        <div
+                          key={i}
+                          className={`cursor-text select-text rounded-lg border p-3 ${
+                            insight.importance === 'high'
+                              ? 'border-red-200 bg-red-50'
+                              : insight.importance === 'medium'
+                                ? 'border-orange-200 bg-orange-50'
+                                : 'border-gray-200 bg-gray-50'
+                          }`}
+                          onContextMenu={(e) =>
+                            handleContextMenu(
+                              e,
+                              `**${insight.title}**\n\n${insight.description}`
+                            )
+                          }
+                        >
+                          <h4 className="mb-1 text-sm font-semibold text-gray-900">
+                            {insight.title}
+                          </h4>
+                          <p className="text-xs text-gray-600">
+                            {insight.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* AI Methodology Section */}
+                  {aiMethodology.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <svg
+                          className="h-4 w-4 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                          />
+                        </svg>
+                        研究方法论
+                        <span className="ml-auto text-xs text-gray-500">
+                          右键添加到笔记
+                        </span>
+                      </h3>
+                      {aiMethodology.map((method, i) => (
+                        <div
+                          key={i}
+                          className={`cursor-text select-text rounded-lg border p-3 ${
+                            method.importance === 'high'
+                              ? 'border-blue-200 bg-blue-50'
+                              : method.importance === 'medium'
+                                ? 'border-cyan-200 bg-cyan-50'
+                                : 'border-teal-200 bg-teal-50'
+                          }`}
+                          onContextMenu={(e) =>
+                            handleContextMenu(
+                              e,
+                              `**${method.title}**\n\n${method.description}`
+                            )
+                          }
+                        >
+                          <h4 className="mb-1 text-sm font-semibold text-gray-900">
+                            {method.title}
+                          </h4>
+                          <p className="text-xs text-gray-600">
+                            {method.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Chat Messages */}
+                  {aiMessages.length > 0 && (
+                    <div className="space-y-3 border-t border-gray-200 pt-4">
+                      {aiMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                              msg.role === 'user'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-100 text-gray-900'
+                            }`}
+                          >
+                            <p className="text-sm">{msg.content}</p>
+                            <p className="mt-1 text-xs opacity-70">
+                              {msg.timestamp.toLocaleTimeString('zh-CN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={chatEndRef} />
+                    </div>
+                  )}
+
+                  {/* Tips when no messages */}
+                  {aiMessages.length === 0 && !aiLoading && (
+                    <div className="border-t border-gray-200 pt-4">
+                      <p className="mb-3 text-xs text-gray-500">
+                        💡 你可以问：
+                      </p>
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => {
+                            setAiInput('这篇文章的主要贡献是什么？');
+                          }}
+                          className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
+                        >
+                          这篇文章的主要贡献是什么？
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAiInput('有哪些实际应用场景？');
+                          }}
+                          className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
+                        >
+                          有哪些实际应用场景？
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAiInput('有什么局限性？');
+                          }}
+                          className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
+                        >
+                          有什么局限性？
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : aiRightTab === 'notes' ? (
+                <div className="p-6">
+                  <NotesList
+                    key={notesRefreshKey}
+                    resourceId={selectedResource.id}
+                  />
+                </div>
+              ) : aiRightTab === 'comments' ? (
+                <div className="p-6">
+                  <CommentsList resourceId={selectedResource.id} />
+                </div>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  <p className="text-sm">相似内容推荐功能开发中...</p>
+                </div>
+              )
+            ) : (
+              <div className="flex h-full items-center justify-center px-4 text-center">
+                <div>
+                  <div className="mb-6 flex justify-center">
+                    <svg
+                      className="h-16 w-16 text-gray-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="mb-2 text-sm text-gray-500">
+                    No content selected
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Click on any paper, project, or news item to analyze it with
+                    AI
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Input Area */}
+          <div className="border-t border-gray-200 p-4">
+            <div className="relative">
+              <textarea
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendAIMessage();
+                  }
+                }}
+                disabled={!selectedResource || aiLoading}
+                placeholder={
+                  selectedResource
+                    ? 'Ask anything about this content...'
+                    : 'Select a resource first...'
                 }
-              }}
-              disabled={!selectedResource || aiLoading}
-              placeholder={
-                selectedResource
-                  ? 'Ask anything about this content...'
-                  : 'Select a resource first...'
-              }
-              rows={3}
-              className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 pr-24 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
-            />
-            <div className="absolute bottom-3 right-3 flex items-center gap-2">
-              <button
-                className="p-1.5 text-gray-400 hover:text-gray-600"
-                disabled={!selectedResource}
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                rows={3}
+                className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 pr-24 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+              />
+              <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                <button
+                  className="p-1.5 text-gray-400 hover:text-gray-600"
+                  disabled={!selectedResource}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                  />
-                </svg>
-              </button>
-              <button
-                className="p-1.5 text-gray-400 hover:text-gray-600"
-                disabled={!selectedResource}
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={sendAIMessage}
-                disabled={!selectedResource || !aiInput.trim() || aiLoading}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {aiLoading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
-                ) : (
                   <svg
-                    className="h-4 w-4"
+                    className="h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -2047,15 +2036,80 @@ export default function Home() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
                     />
                   </svg>
-                )}
-              </button>
+                </button>
+                <button
+                  className="p-1.5 text-gray-400 hover:text-gray-600"
+                  disabled={!selectedResource}
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={sendAIMessage}
+                  disabled={!selectedResource || !aiInput.trim() || aiLoading}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {aiLoading ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
+                  ) : (
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 10l7-7m0 0l7 7m-7-7v18"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
+
+      {isAiPanelCollapsed && (
+        <button
+          type="button"
+          onClick={() => setIsAiPanelCollapsed(false)}
+          aria-label="展开 AI 助手面板"
+          className="group absolute right-2 top-1/2 z-20 flex -translate-y-1/2 items-center gap-2 rounded-l-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-lg transition hover:bg-gray-100"
+        >
+          <svg
+            className="h-4 w-4 text-gray-400 transition group-hover:text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 6l6 6-6 6"
+            />
+          </svg>
+          <span>AI助手</span>
+        </button>
+      )}
 
       {/* Context Menu for Adding to Notes */}
       {contextMenu && (

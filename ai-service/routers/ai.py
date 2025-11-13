@@ -367,11 +367,12 @@ Requirements:
 1. Extract 3-5 main methods or techniques
 2. Each method must have exactly these fields: title, description, importance
 3. importance must be one of: high, medium, low
-4. Output ONLY a valid JSON array, nothing else
-5. No explanations, no markdown, no code blocks, just the JSON array
+4. All titles and descriptions must be written in Simplified Chinese
+5. Output ONLY a valid JSON array, nothing else
+6. No explanations, no markdown, no code blocks, just the JSON array
 
 Output format (follow exactly):
-[{{"title":"Method Name","description":"Method description and features","importance":"high"}},{{"title":"Method Name 2","description":"Method description 2","importance":"medium"}}]
+[{{"title":"方法名称","description":"方法的关键步骤与核心要点","importance":"high"}},{{"title":"方法名称2","description":"方法的应用场景与优势","importance":"medium"}}]
 
 JSON output:
 ["""

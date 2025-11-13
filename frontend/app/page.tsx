@@ -120,6 +120,7 @@ export default function Home() {
     'assistant' | 'notes' | 'comments' | 'similar'
   >('assistant');
   const [isAiPanelCollapsed, setIsAiPanelCollapsed] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(true);
 
   // Context menu for adding to notes
   const [contextMenu, setContextMenu] = useState<{
@@ -399,7 +400,7 @@ export default function Home() {
       setAiLoading(true);
       const content = resource.abstract || resource.title;
 
-      const res = await fetch('http://localhost:5000/api/v1/ai/summary', {
+      const res = await fetch('/api/ai-service/ai/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -439,7 +440,7 @@ export default function Home() {
     try {
       const content = resource.abstract || resource.title;
 
-      const res = await fetch('http://localhost:5000/api/v1/ai/insights', {
+      const res = await fetch('/api/ai-service/ai/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -560,7 +561,7 @@ export default function Home() {
       // Build context from selected resource
       const context = `Title: ${selectedResource.title}\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || 'No abstract available'}`;
 
-      const res = await fetch('http://localhost:5000/api/v1/ai/chat', {
+      const res = await fetch('/api/ai-service/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -640,7 +641,7 @@ export default function Home() {
     try {
       const content = `Title: ${selectedResource.title}\n\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || ''}`;
 
-      const res = await fetch('http://localhost:5000/api/v1/ai/quick-action', {
+      const res = await fetch('/api/ai-service/ai/quick-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1364,162 +1365,201 @@ export default function Home() {
           {/* Detail View */}
           {viewMode === 'detail' && selectedResource && (
             <div className="space-y-4">
-              {/* Back Button */}
-              <button
-                onClick={handleBackToList}
-                className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                Back to list
-              </button>
+              {/* Collapsible Header */}
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                {/* Collapsed View - Always Visible */}
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      {/* Title */}
+                      <h1 className="mb-2 text-2xl font-bold leading-tight text-gray-900">
+                        {selectedResource.title}
+                      </h1>
 
-              {/* Header */}
-              <div className="rounded-xl border border-gray-200 bg-white p-6">
-                {/* Title */}
-                <h1 className="mb-3 text-2xl font-bold text-gray-900">
-                  {selectedResource.title}
-                </h1>
-
-                {/* Metadata */}
-                <div className="mb-4 flex items-center gap-4 text-xs text-gray-600">
-                  <span>
-                    {new Date(selectedResource.publishedAt).toLocaleDateString(
-                      'en-US',
-                      {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      }
-                    )}
-                  </span>
-                  {selectedResource.categories &&
-                    selectedResource.categories.slice(0, 3).map((cat, i) => (
-                      <span key={i} className="rounded bg-gray-100 px-2 py-1">
-                        {cat}
-                      </span>
-                    ))}
-                </div>
-
-                {/* Authors */}
-                {selectedResource.authors &&
-                  selectedResource.authors.length > 0 && (
-                    <div className="mb-4">
-                      <h3 className="mb-1 text-xs font-semibold text-gray-700">
-                        Authors
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedResource.authors.map((author, i) => (
-                          <span key={i} className="text-xs text-gray-600">
-                            {author.username}
-                          </span>
-                        ))}
-                      </div>
+                      {/* Back to list link - positioned below title */}
+                      <button
+                        onClick={handleBackToList}
+                        className="inline-flex items-center gap-1.5 text-sm text-gray-600 transition-colors hover:text-gray-900"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                        返回列表
+                      </button>
                     </div>
-                  )}
 
-                {/* Actions */}
-                <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
-                  <button
-                    onClick={() => toggleBookmark(selectedResource.id)}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                      isBookmarked(selectedResource.id)
-                        ? 'bg-red-600 text-white hover:bg-red-700'
-                        : 'border border-red-600 text-red-600 hover:bg-red-50'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill={
-                        isBookmarked(selectedResource.id)
-                          ? 'currentColor'
-                          : 'none'
-                      }
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                    {/* Toggle Button */}
+                    <button
+                      onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+                      className="flex-shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                      title={isHeaderCollapsed ? '展开详情' : '收起详情'}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                      />
-                    </svg>
-                    {isBookmarked(selectedResource.id)
-                      ? 'Bookmarked'
-                      : 'Bookmark'}
-                  </button>
-                  <a
-                    href={selectedResource.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                    Open in new tab
-                  </a>
-                  <div className="ml-auto flex items-center gap-3 text-xs text-gray-600">
-                    {selectedResource.upvoteCount !== undefined && (
-                      <span className="flex items-center gap-1">
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 15l7-7 7 7"
-                          />
-                        </svg>
-                        {selectedResource.upvoteCount}
-                      </span>
-                    )}
-                    {selectedResource.viewCount !== undefined && (
-                      <span className="flex items-center gap-1">
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
-                        {selectedResource.viewCount}
-                      </span>
-                    )}
+                      <svg
+                        className={`h-5 w-5 transition-transform duration-200 ${
+                          isHeaderCollapsed ? 'rotate-0' : 'rotate-180'
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
+
+                {/* Expanded Content */}
+                {!isHeaderCollapsed && (
+                  <div className="border-t border-gray-200 px-6 pb-6">
+                    {/* Metadata */}
+                    <div className="mb-4 flex items-center gap-4 pt-4 text-xs text-gray-600">
+                      <span>
+                        {new Date(
+                          selectedResource.publishedAt
+                        ).toLocaleDateString('en-US', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </span>
+                      {selectedResource.categories &&
+                        selectedResource.categories
+                          .slice(0, 3)
+                          .map((cat, i) => (
+                            <span
+                              key={i}
+                              className="rounded bg-gray-100 px-2 py-1"
+                            >
+                              {cat}
+                            </span>
+                          ))}
+                    </div>
+
+                    {/* Authors */}
+                    {selectedResource.authors &&
+                      selectedResource.authors.length > 0 && (
+                        <div className="mb-4">
+                          <h3 className="mb-1 text-xs font-semibold text-gray-700">
+                            Authors
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedResource.authors.map((author, i) => (
+                              <span key={i} className="text-xs text-gray-600">
+                                {author.username}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+                      <button
+                        onClick={() => toggleBookmark(selectedResource.id)}
+                        className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                          isBookmarked(selectedResource.id)
+                            ? 'bg-red-600 text-white hover:bg-red-700'
+                            : 'border border-red-600 text-red-600 hover:bg-red-50'
+                        }`}
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill={
+                            isBookmarked(selectedResource.id)
+                              ? 'currentColor'
+                              : 'none'
+                          }
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                          />
+                        </svg>
+                        {isBookmarked(selectedResource.id)
+                          ? 'Bookmarked'
+                          : 'Bookmark'}
+                      </button>
+                      <a
+                        href={selectedResource.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                        Open in new tab
+                      </a>
+                      <div className="ml-auto flex items-center gap-3 text-xs text-gray-600">
+                        {selectedResource.upvoteCount !== undefined && (
+                          <span className="flex items-center gap-1">
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 15l7-7 7 7"
+                              />
+                            </svg>
+                            {selectedResource.upvoteCount}
+                          </span>
+                        )}
+                        {selectedResource.viewCount !== undefined && (
+                          <span className="flex items-center gap-1">
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            {selectedResource.viewCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Embedded Content */}
@@ -1593,11 +1633,11 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsAiPanelCollapsed(true)}
-            className="absolute -left-3 top-4 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 shadow hover:bg-gray-100"
+            className="group absolute -left-4 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-gradient-to-br from-red-50 to-pink-50 shadow-md ring-1 ring-red-200/50 transition-all duration-200 hover:shadow-lg hover:ring-red-300/60"
             aria-label="收起 AI 助手面板"
           >
             <svg
-              className="h-3 w-3"
+              className="h-4 w-4 text-gray-600 transition-all duration-200 group-hover:text-red-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1605,10 +1645,11 @@ export default function Home() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
-                d="M14 5l-7 7 7 7"
+                strokeWidth={2.5}
+                d="M9 5l7 7-7 7"
               />
             </svg>
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-red-400/0 to-pink-400/0 opacity-0 transition-opacity duration-200 group-hover:from-red-400/10 group-hover:to-pink-400/10 group-hover:opacity-100" />
           </button>
 
           {/* Top Tab Navigation */}
@@ -2092,10 +2133,10 @@ export default function Home() {
           type="button"
           onClick={() => setIsAiPanelCollapsed(false)}
           aria-label="展开 AI 助手面板"
-          className="group absolute right-2 top-1/2 z-20 flex -translate-y-1/2 items-center gap-2 rounded-l-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-lg transition hover:bg-gray-100"
+          className="group absolute right-0 top-1/2 z-20 flex -translate-y-1/2 items-center gap-2 rounded-l-lg bg-gradient-to-br from-red-50 to-pink-50 px-4 py-3 text-sm font-medium text-gray-700 shadow-lg ring-1 ring-red-200/50 transition-all duration-200 hover:shadow-xl hover:ring-red-300/60"
         >
           <svg
-            className="h-4 w-4 text-gray-400 transition group-hover:text-gray-600"
+            className="h-4 w-4 text-gray-600 transition-all duration-200 group-hover:text-red-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -2103,11 +2144,14 @@ export default function Home() {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 6l6 6-6 6"
+              strokeWidth={2.5}
+              d="M15 19l-7-7 7-7"
             />
           </svg>
-          <span>AI助手</span>
+          <span className="transition-colors duration-200 group-hover:text-red-600">
+            AI助手
+          </span>
+          <div className="absolute inset-0 rounded-l-lg bg-gradient-to-br from-red-400/0 to-pink-400/0 opacity-0 transition-opacity duration-200 group-hover:from-red-400/10 group-hover:to-pink-400/10 group-hover:opacity-100" />
         </button>
       )}
 

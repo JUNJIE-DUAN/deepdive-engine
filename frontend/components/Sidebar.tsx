@@ -16,11 +16,33 @@ export default function Sidebar({ className = '' }: SidebarProps) {
 
   return (
     <aside
-      className={`${isCollapsed ? 'w-16' : 'w-52'} flex flex-col border-r border-gray-200 bg-white transition-all duration-300 ${className}`}
+      className={`${isCollapsed ? 'w-16' : 'w-52'} relative flex flex-col border-r border-gray-200 bg-white transition-all duration-300 ${className}`}
     >
+      {/* Collapse/Expand Button - Vertically Centered */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="group absolute -right-4 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 shadow-sm ring-1 ring-gray-200/50 transition-all duration-200 hover:shadow-md hover:ring-blue-300/50"
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <svg
+          className={`h-4 w-4 text-gray-600 transition-all duration-200 group-hover:text-blue-600 ${isCollapsed ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2.5}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-400/0 to-purple-400/0 opacity-0 transition-opacity duration-200 group-hover:from-blue-400/10 group-hover:to-purple-400/10 group-hover:opacity-100" />
+      </button>
+
       {/* Header */}
       <div
-        className={`flex items-center p-4 ${isCollapsed ? 'justify-center' : 'justify-between'}`}
+        className={`flex items-center p-4 ${isCollapsed ? 'justify-center' : ''}`}
       >
         <div className="flex items-center gap-2">
           <svg
@@ -202,34 +224,6 @@ export default function Sidebar({ className = '' }: SidebarProps) {
             </Link>
           )}
         </div>
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="rounded p-1 transition-colors hover:bg-gray-100"
-          title={isCollapsed ? 'Expand' : 'Collapse'}
-        >
-          <svg
-            className="h-5 w-5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {isCollapsed ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 5l7 7-7 7M5 5l7 7-7 7"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-              />
-            )}
-          </svg>
-        </button>
       </div>
 
       {/* Main Navigation */}
@@ -261,6 +255,25 @@ export default function Sidebar({ className = '' }: SidebarProps) {
           </Link>
 
           <Link
+            href="/youtube"
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
+              isActive('/youtube')
+                ? 'bg-pink-50 text-gray-900'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+            title="YouTube"
+          >
+            <svg
+              className="h-5 w-5 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+            </svg>
+            {!isCollapsed && <span>YouTube</span>}
+          </Link>
+
+          <Link
             href="/library"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
               isActive('/library')
@@ -283,25 +296,6 @@ export default function Sidebar({ className = '' }: SidebarProps) {
               />
             </svg>
             {!isCollapsed && <span>My Library</span>}
-          </Link>
-
-          <Link
-            href="/youtube"
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
-              isActive('/youtube')
-                ? 'bg-pink-50 text-gray-900'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
-            title="YouTube"
-          >
-            <svg
-              className="h-5 w-5 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-            </svg>
-            {!isCollapsed && <span>YouTube</span>}
           </Link>
 
           <Link

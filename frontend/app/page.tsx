@@ -2076,6 +2076,22 @@ export default function Home() {
                           </div>
                         </div>
                       ))}
+
+                      {/* Inline Loading Message */}
+                      {isStreaming && (
+                        <div className="flex justify-start">
+                          <div className="max-w-[80%] rounded-lg bg-gray-100 px-4 py-3 text-gray-900">
+                            <div className="flex items-center gap-2">
+                              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-red-600"></div>
+                              <p className="text-sm">
+                                {aiModel === 'grok' ? 'Grok' : 'GPT-4'}
+                                正在思考...
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div ref={chatEndRef} />
                     </div>
                   )}

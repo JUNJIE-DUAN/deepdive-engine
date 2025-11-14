@@ -322,9 +322,25 @@ export default function Home() {
 
   const handleResourceClick = (resource: Resource) => {
     // For YouTube videos, navigate to the YouTube page
-    if (resource.type === 'YOUTUBE' || (resource as any).videoId) {
-      router.push(`/youtube?videoId=${(resource as any).videoId}`);
-      return;
+    if (
+      resource.type === 'YOUTUBE' ||
+      resource.type === 'YOUTUBE_VIDEO' ||
+      (resource as any).videoId
+    ) {
+      let videoId = (resource as any).videoId;
+
+      // If no videoId, extract from sourceUrl
+      if (!videoId && resource.sourceUrl) {
+        const urlMatch = resource.sourceUrl.match(/[?&]v=([^&]+)/);
+        if (urlMatch) {
+          videoId = urlMatch[1];
+        }
+      }
+
+      if (videoId) {
+        router.push(`/youtube?videoId=${videoId}`);
+        return;
+      }
     }
 
     setSelectedResource(resource);

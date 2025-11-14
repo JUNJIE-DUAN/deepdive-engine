@@ -10,7 +10,6 @@ import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
-import * as pdfjsLib from 'pdfjs-dist';
 
 interface Resource {
   id: string;
@@ -290,13 +289,6 @@ export default function Home() {
     }
   }, [aiMessages]);
 
-  // Configure PDF.js worker on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-    }
-  }, []);
-
   // Extract PDF text when resource changes
   useEffect(() => {
     const extractPdfText = async () => {
@@ -306,6 +298,12 @@ export default function Home() {
       }
 
       try {
+        // Dynamically import PDF.js only on client side
+        const pdfjsLib = await import('pdfjs-dist');
+
+        // Configure worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
         const pdfUrl = `${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`;
 
         const loadingTask = pdfjsLib.getDocument(pdfUrl);

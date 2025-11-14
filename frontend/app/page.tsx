@@ -150,6 +150,14 @@ export default function Home() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterCategory, setFilterCategory] = useState<string>('');
 
+  // Advanced filter states
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<
+    'all' | '24h' | '7d' | '30d' | '90d'
+  >('all');
+  const [minQualityScore, setMinQualityScore] = useState<number>(0);
+
   // Search suggestions states
   const [searchSuggestions, setSearchSuggestions] = useState<
     SearchSuggestion[]
@@ -1168,10 +1176,8 @@ export default function Home() {
                     导入URL
                   </button>
                   <button
-                    onClick={() =>
-                      setFilterCategory(filterCategory ? '' : 'AI')
-                    }
-                    className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    onClick={() => setShowFilterPanel(true)}
+                    className="relative flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                   >
                     <svg
                       className="h-4 w-4"
@@ -1186,7 +1192,16 @@ export default function Home() {
                         d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                       />
                     </svg>
-                    {filterCategory || 'Filter'}
+                    Filter
+                    {(selectedCategories.length > 0 ||
+                      dateRange !== 'all' ||
+                      minQualityScore > 0) && (
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                        {selectedCategories.length +
+                          (dateRange !== 'all' ? 1 : 0) +
+                          (minQualityScore > 0 ? 1 : 0)}
+                      </span>
+                    )}
                   </button>
                   <select
                     value={sortBy}

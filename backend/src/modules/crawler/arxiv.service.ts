@@ -189,10 +189,7 @@ export class ArxivService {
 
       // 链接信息（完整）
       links: links,
-      pdfUrl:
-        links
-          .find((l) => l.title === "pdf")
-          ?.href?.replace("http://", "https://") || null,
+      pdfUrl: this.extractPdfUrl(links, entry.id),
       abstractUrl: entry.id?.replace("http://", "https://"),
 
       // DOI（如果有）
@@ -256,6 +253,37 @@ export class ArxivService {
       type: link.$.type,
       title: link.$.title,
     }));
+  }
+
+  /**
+   * 提取 PDF URL（多策略）
+   * 1. 优先查找 type === "application/pdf" 的链接
+   * 2. 其次查找 title === "pdf" 的链接
+   * 3. 最后从 abstract URL 构造 PDF URL
+   */
+  private extractPdfUrl(links: any[], abstractUrl: string): string | null {
+    // 策略 1: 查找 type 为 application/pdf 的链接
+    let pdfLink = links.find((l) => l.type === "application/pdf");
+    if (pdfLink?.href) {
+      return pdfLink.href.replace("http://", "https://");
+    }
+
+    // 策略 2: 查找 title 为 pdf 的链接
+    pdfLink = links.find((l) => l.title === "pdf");
+    if (pdfLink?.href) {
+      return pdfLink.href.replace("http://", "https://");
+    }
+
+    // 策略 3: 从 abstract URL 构造 PDF URL
+    // 例如: https://arxiv.org/abs/2311.12345v1 -> https://arxiv.org/pdf/2311.12345v1.pdf
+    if (abstractUrl) {
+      const arxivIdMatch = abstractUrl.match(/arxiv\.org\/abs\/(.+)/);
+      if (arxivIdMatch) {
+        return `https://arxiv.org/pdf/${arxivIdMatch[1]}.pdf`;
+      }
+    }
+
+    return null;
   }
 
   /**

@@ -351,12 +351,19 @@ export class ResourcesService {
         .replace(/[-_]/g, " ")
         .replace(/\.(html|htm|pdf)$/i, "");
 
+      // 提取 PDF URL（如果是论文类型）
+      let pdfUrl: string | null = null;
+      if (type === "PAPER") {
+        pdfUrl = this.extractPdfUrl(finalUrl);
+      }
+
       // 创建资源数据
       const resourceData: Prisma.ResourceCreateInput = {
         type: type as any,
         title: defaultTitle,
         abstract: `从URL导入: ${finalUrl}`,
         sourceUrl: finalUrl, // 使用转换后的URL
+        pdfUrl: pdfUrl, // 添加 PDF URL
         publishedAt: new Date(),
         // 默认值
         upvoteCount: 0,
@@ -378,6 +385,45 @@ export class ResourcesService {
       const err = ensureError(error);
       this.logger.error(`Failed to import URL: ${err.message}`, err.stack);
       throw err;
+    }
+  }
+
+  /**
+   * 从URL中提取PDF URL
+   * 支持 arXiv, OpenReview 等常见论文网站
+   */
+  private extractPdfUrl(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+
+      // arXiv: https://arxiv.org/abs/2311.12345v1 -> https://arxiv.org/pdf/2311.12345v1.pdf
+      if (
+        urlObj.hostname === "arxiv.org" ||
+        urlObj.hostname === "www.arxiv.org"
+      ) {
+        const arxivIdMatch = url.match(/arxiv\.org\/abs\/(.+)/);
+        if (arxivIdMatch) {
+          return `https://arxiv.org/pdf/${arxivIdMatch[1]}.pdf`;
+        }
+      }
+
+      // OpenReview: https://openreview.net/forum?id=xxx -> https://openreview.net/pdf?id=xxx
+      if (
+        urlObj.hostname === "openreview.net" ||
+        urlObj.hostname === "www.openreview.net"
+      ) {
+        return url.replace("/forum?", "/pdf?");
+      }
+
+      // 如果URL本身就是PDF链接，直接返回
+      if (url.toLowerCase().endsWith(".pdf")) {
+        return url;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to extract PDF URL from: ${url}`, error);
+      return null;
     }
   }
 }

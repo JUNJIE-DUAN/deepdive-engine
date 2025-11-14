@@ -9,6 +9,7 @@ import NotesList from '@/components/features/NotesList';
 import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
+import FilterPanel from '@/components/features/FilterPanel';
 
 interface Resource {
   id: string;
@@ -143,6 +144,10 @@ export default function Home() {
   const [aiModel, setAiModel] = useState<'grok' | 'openai'>('grok');
   const [isStreaming, setIsStreaming] = useState(false);
 
+  // Attachment upload states for AI chat
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const attachmentFileInputRef = useRef<HTMLInputElement>(null);
+
   // Search and filter states
   const [sortBy, setSortBy] = useState<
     'publishedAt' | 'qualityScore' | 'trendingScore'
@@ -157,6 +162,34 @@ export default function Home() {
     'all' | '24h' | '7d' | '30d' | '90d'
   >('all');
   const [minQualityScore, setMinQualityScore] = useState<number>(0);
+
+  // File upload states
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // File type restrictions per tab
+  const FILE_RESTRICTIONS: Record<
+    string,
+    { accept: string; maxSize: number; label: string }
+  > = {
+    papers: {
+      accept: '.pdf,application/pdf',
+      maxSize: 50 * 1024 * 1024,
+      label: 'PDF文件',
+    },
+    projects: {
+      accept: '.zip,.tar.gz,application/zip,application/gzip',
+      maxSize: 100 * 1024 * 1024,
+      label: '压缩文件',
+    },
+    news: { accept: 'image/*', maxSize: 10 * 1024 * 1024, label: '图片' },
+    youtube: {
+      accept: '.srt,.vtt,text/plain',
+      maxSize: 5 * 1024 * 1024,
+      label: '字幕文件',
+    },
+  };
 
   // Search suggestions states
   const [searchSuggestions, setSearchSuggestions] = useState<
@@ -316,6 +349,17 @@ export default function Home() {
         params.append('category', filterCategory);
       }
 
+      // Add advanced filter parameters
+      if (selectedCategories.length > 0) {
+        selectedCategories.forEach((cat) => params.append('categories', cat));
+      }
+      if (dateRange !== 'all') {
+        params.append('dateRange', dateRange);
+      }
+      if (minQualityScore > 0) {
+        params.append('minQualityScore', minQualityScore.toString());
+      }
+
       const url = `${config.apiUrl}/resources?${params.toString()}`;
       const res = await fetch(url);
       const data = await res.json();
@@ -325,6 +369,115 @@ export default function Home() {
       setResources([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApplyFilters = () => {
+    fetchResources();
+  };
+
+  const handleResetFilters = () => {
+    setSelectedCategories([]);
+    setDateRange('all');
+    setMinQualityScore(0);
+    fetchResources();
+  };
+
+  const handleFileUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Get restrictions for current tab
+    const restrictions = FILE_RESTRICTIONS[activeTab];
+    if (!restrictions) {
+      alert('当前标签页不支持文件上传');
+      return;
+    }
+
+    // Check file size
+    if (file.size > restrictions.maxSize) {
+      const maxSizeMB = restrictions.maxSize / (1024 * 1024);
+      alert(`文件大小超过限制（最大 ${maxSizeMB}MB）`);
+      return;
+    }
+
+    // Check file type
+    const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+    const acceptedExts = restrictions.accept
+      .split(',')
+      .map((ext) => ext.trim().toLowerCase());
+    const isValidType = acceptedExts.some((ext) => {
+      if (ext.includes('*')) {
+        const mimeType = file.type.split('/')[0];
+        return ext.startsWith(mimeType);
+      }
+      return fileExt === ext || file.type === ext;
+    });
+
+    if (!isValidType) {
+      alert(`请上传${restrictions.label}（${restrictions.accept}）`);
+      return;
+    }
+
+    setSelectedFile(file);
+    setUploadingFile(true);
+
+    try {
+      // Map tab to resource type
+      const typeMap: Record<string, string> = {
+        papers: 'PAPER',
+        projects: 'PROJECT',
+        news: 'NEWS',
+        youtube: 'YOUTUBE_VIDEO',
+      };
+
+      const resourceType = typeMap[activeTab];
+
+      // Create FormData
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', resourceType);
+
+      // Upload file to backend
+      const response = await fetch(`${config.apiUrl}/resources/upload-file`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || '文件上传失败');
+      }
+
+      const data = await response.json();
+      console.log('File uploaded successfully:', data);
+
+      // Show success message
+      alert(
+        `文件 "${file.name}" 上传成功！\n\n文件将保存为资源，您可以在列表中查看。`
+      );
+
+      // Refresh resources list
+      await fetchResources();
+    } catch (error) {
+      console.error('File upload error:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : '文件上传失败';
+      alert(errorMessage);
+    } finally {
+      setUploadingFile(false);
+      setSelectedFile(null);
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -626,6 +779,72 @@ export default function Home() {
     }
   }, [contextMenu]);
 
+  // Attachment handling functions
+  const handleAttachmentClick = () => {
+    attachmentFileInputRef.current?.click();
+  };
+
+  const handleAttachmentFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles = Array.from(files);
+    setAttachments((prev) => [...prev, ...newFiles]);
+
+    // Reset input to allow selecting the same file again
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Save conversation to notes
+  const saveConversationToNotes = async () => {
+    if (!selectedResource || aiMessages.length === 0) {
+      alert('No conversation to save');
+      return;
+    }
+
+    try {
+      // Format conversation as markdown
+      let conversationText = `# AI Conversation: ${selectedResource.title}\n\n`;
+      conversationText += `**Resource:** ${selectedResource.title}\n`;
+      conversationText += `**Date:** ${new Date().toLocaleString()}\n\n`;
+      conversationText += `---\n\n`;
+
+      aiMessages.forEach((msg) => {
+        const role = msg.role === 'user' ? '👤 You' : '🤖 AI';
+        conversationText += `**${role}** (${new Date(msg.timestamp).toLocaleTimeString()})\n\n`;
+        conversationText += `${msg.content}\n\n`;
+        conversationText += `---\n\n`;
+      });
+
+      // Save to notes using the existing notes API
+      const response = await fetch(`${config.apiUrl}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resourceId: selectedResource.id,
+          content: conversationText,
+          type: 'AI_CONVERSATION',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save conversation');
+
+      alert('Conversation saved to notes successfully!');
+      setNotesRefreshKey((prev) => prev + 1); // Refresh notes list
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
+      alert('Failed to save conversation. Please try again.');
+    }
+  };
+
   const sendAIMessage = async () => {
     if (!aiInput.trim() || !selectedResource) return;
 
@@ -642,7 +861,17 @@ export default function Home() {
 
     try {
       // Build context from selected resource
-      const context = `Title: ${selectedResource.title}\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || 'No abstract available'}`;
+      let context = `Title: ${selectedResource.title}\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || 'No abstract available'}`;
+
+      // Add attachment information to context
+      if (attachments.length > 0) {
+        context += `\n\nAttached files for comparison (${attachments.length}):\n`;
+        attachments.forEach((file, index) => {
+          context += `${index + 1}. ${file.name} (${(file.size / 1024).toFixed(2)} KB, ${file.type || 'unknown type'})\n`;
+        });
+        context +=
+          '\nNote: The user has uploaded these files for comparison or reference. Please acknowledge them in your response.';
+      }
 
       const res = await fetch('/api/ai-service/ai/chat', {
         method: 'POST',
@@ -970,7 +1199,20 @@ export default function Home() {
                           />
                         </svg>
                       </button>
-                      <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                      {/* File Upload Button */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={FILE_RESTRICTIONS[activeTab]?.accept || '*'}
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={handleFileUpload}
+                        disabled={uploadingFile}
+                        className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+                        title={`上传${FILE_RESTRICTIONS[activeTab]?.label || '文件'}`}
+                      >
                         <svg
                           className="h-5 w-5"
                           fill="none"
@@ -1300,7 +1542,8 @@ export default function Home() {
                               />
                             </svg>
                           )}
-                          {resource.type === 'YOUTUBE' && (
+                          {(resource.type === 'YOUTUBE' ||
+                            resource.type === 'YOUTUBE_VIDEO') && (
                             <svg
                               className="h-6 w-6 text-red-600"
                               fill="currentColor"
@@ -2200,6 +2443,63 @@ export default function Home() {
 
           {/* Bottom Input Area */}
           <div className="border-t border-gray-200 p-4">
+            {/* Attachments Display */}
+            {attachments.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {attachments.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm"
+                  >
+                    <svg
+                      className="h-4 w-4 flex-shrink-0 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span className="max-w-[150px] truncate text-gray-700">
+                      {file.name}
+                    </span>
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="flex-shrink-0 text-gray-400 hover:text-red-500"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Hidden File Input */}
+            <input
+              ref={attachmentFileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+              onChange={handleAttachmentFileChange}
+              className="hidden"
+            />
+
             <div className="relative">
               <textarea
                 value={aiInput}
@@ -2221,8 +2521,10 @@ export default function Home() {
               />
               <div className="absolute bottom-3 right-3 flex items-center gap-2">
                 <button
-                  className="p-1.5 text-gray-400 hover:text-gray-600"
+                  onClick={handleAttachmentClick}
+                  className="p-1.5 text-gray-400 transition-colors hover:text-gray-600"
                   disabled={!selectedResource}
+                  title="Upload attachment"
                 >
                   <svg
                     className="h-5 w-5"
@@ -2239,8 +2541,10 @@ export default function Home() {
                   </svg>
                 </button>
                 <button
-                  className="p-1.5 text-gray-400 hover:text-gray-600"
-                  disabled={!selectedResource}
+                  onClick={saveConversationToNotes}
+                  className="p-1.5 text-gray-400 transition-colors hover:text-gray-600"
+                  disabled={!selectedResource || aiMessages.length === 0}
+                  title="Save conversation to notes"
                 >
                   <svg
                     className="h-5 w-5"
@@ -2442,6 +2746,21 @@ export default function Home() {
           </button>
         </div>
       )}
+
+      {/* Filter Panel */}
+      <FilterPanel
+        isOpen={showFilterPanel}
+        onClose={() => setShowFilterPanel(false)}
+        activeTab={activeTab}
+        selectedCategories={selectedCategories}
+        setSelectedCategories={setSelectedCategories}
+        dateRange={dateRange}
+        setDateRange={setDateRange}
+        minQualityScore={minQualityScore}
+        setMinQualityScore={setMinQualityScore}
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
+      />
     </div>
   );
 }

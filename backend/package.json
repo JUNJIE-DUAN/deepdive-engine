@@ -56,6 +56,7 @@
     "rxjs": "^7.8.1",
     "sharp": "^0.34.5",
     "xml2js": "^0.6.2",
+    "youtube-transcript": "^1.2.1",
     "youtubei.js": "^16.0.1"
   },
   "devDependencies": {

@@ -87,34 +87,45 @@ export class YoutubeService {
     } catch (error: unknown) {
       this.logger.error(`Failed to fetch transcript for ${videoId}:`, error);
 
-      const fallback = await this.fetchTranscriptFallback(videoId);
-      if (fallback) {
-        transcriptSegments = fallback.segments;
-        title = title ?? fallback.title;
-        this.logger.warn(
-          `Used fallback transcript provider for ${videoId}, segments=${transcriptSegments.length}`,
+      // Try youtube-transcript library first
+      const npmTranscript = await this.fetchTranscriptNpm(videoId);
+      if (npmTranscript) {
+        transcriptSegments = npmTranscript.segments;
+        title = title ?? npmTranscript.title;
+        this.logger.log(
+          `Used youtube-transcript npm package for ${videoId}, segments=${transcriptSegments.length}`,
         );
       } else {
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
+        // Try external API fallback
+        const fallback = await this.fetchTranscriptFallback(videoId);
+        if (fallback) {
+          transcriptSegments = fallback.segments;
+          title = title ?? fallback.title;
+          this.logger.warn(
+            `Used fallback transcript provider for ${videoId}, segments=${transcriptSegments.length}`,
+          );
+        } else {
+          if (error instanceof NotFoundException) {
+            throw error;
+          }
 
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
 
-        if (errorMessage.includes("not found")) {
-          throw new NotFoundException(
-            "Video not found or transcript not available",
+          if (errorMessage.includes("not found")) {
+            throw new NotFoundException(
+              "Video not found or transcript not available",
+            );
+          }
+
+          if (errorMessage.includes("Invalid")) {
+            throw new BadRequestException("Invalid YouTube video ID");
+          }
+
+          throw new BadRequestException(
+            `Failed to fetch transcript: ${errorMessage}`,
           );
         }
-
-        if (errorMessage.includes("Invalid")) {
-          throw new BadRequestException("Invalid YouTube video ID");
-        }
-
-        throw new BadRequestException(
-          `Failed to fetch transcript: ${errorMessage}`,
-        );
       }
     }
 
@@ -180,69 +191,130 @@ export class YoutubeService {
     }
   }
 
-  private async fetchTranscriptFallback(videoId: string): Promise<{
+  private async fetchTranscriptNpm(videoId: string): Promise<{
     segments: TranscriptSegment[];
     title: string | null;
   } | null> {
     try {
-      const endpoint = `https://youtubetranscript.com/?lang=en&server_vid2=${videoId}`;
-      const response = await fetch(endpoint, {
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
-        },
-      });
+      const { YoutubeTranscript } = await import("youtube-transcript");
 
-      if (!response.ok) {
-        this.logger.warn(
-          `Fallback transcript service responded with ${response.status} for video ${videoId}`,
-        );
-        return null;
+      // Try with different language codes
+      const languages = ["zh-Hans", "zh-Hant", "zh", "en", "ja", "ko"];
+
+      for (const lang of languages) {
+        try {
+          const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
+            lang: lang,
+          });
+
+          if (transcript && transcript.length > 0) {
+            const segments: TranscriptSegment[] = transcript.map(
+              (item: any) => ({
+                text: item.text || "",
+                start: item.offset / 1000, // Convert milliseconds to seconds
+                duration: item.duration / 1000, // Convert milliseconds to seconds
+              }),
+            );
+
+            this.logger.log(
+              `Successfully fetched transcript using youtube-transcript (lang: ${lang}) for ${videoId}`,
+            );
+            return { segments, title: null };
+          }
+        } catch (langError) {
+          this.logger.debug(
+            `youtube-transcript failed for lang ${lang}: ${String(langError)}`,
+          );
+          continue;
+        }
       }
 
-      const raw = await response.json();
-      const items: Array<Record<string, any>> = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.transcripts)
-          ? raw.transcripts
-          : Array.isArray(raw?.data)
-            ? raw.data
-            : [];
-
-      const segments: TranscriptSegment[] = items
-        .map((item) => {
-          const text = item.text ?? item.caption ?? "";
-          const startValue = Number.parseFloat(
-            item.start ?? item.start_offset ?? item.offset ?? "0",
-          );
-          const durationValue = Number.parseFloat(
-            item.dur ?? item.duration ?? item.length ?? "0",
-          );
-
-          return {
-            text: typeof text === "string" ? text : "",
-            start: Number.isFinite(startValue) ? startValue : 0,
-            duration: Number.isFinite(durationValue) ? durationValue : 0,
-          };
-        })
-        .filter((segment) => segment.text.trim().length > 0);
-
-      if (segments.length === 0) {
-        return null;
-      }
-
-      const title =
-        typeof raw?.title === "string"
-          ? raw.title
-          : typeof raw?.video_title === "string"
-            ? raw.video_title
-            : null;
-
-      return { segments, title };
+      this.logger.warn(
+        `All youtube-transcript language attempts failed for ${videoId}`,
+      );
+      return null;
     } catch (error) {
-      this.logger.warn(`Fallback transcript fetch failed: ${String(error)}`);
+      this.logger.warn(`youtube-transcript library failed: ${String(error)}`);
       return null;
     }
+  }
+
+  private async fetchTranscriptFallback(videoId: string): Promise<{
+    segments: TranscriptSegment[];
+    title: string | null;
+  } | null> {
+    // Try multiple language codes
+    const languages = ["zh", "zh-CN", "zh-TW", "en", "ja", "ko"];
+
+    for (const lang of languages) {
+      try {
+        const endpoint = `https://youtubetranscript.com/?lang=${lang}&server_vid2=${videoId}`;
+        const response = await fetch(endpoint, {
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+          },
+        });
+
+        if (!response.ok) {
+          this.logger.debug(
+            `Fallback transcript service responded with ${response.status} for video ${videoId} (lang: ${lang})`,
+          );
+          continue;
+        }
+
+        const raw = await response.json();
+        const items: Array<Record<string, any>> = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.transcripts)
+            ? raw.transcripts
+            : Array.isArray(raw?.data)
+              ? raw.data
+              : [];
+
+        const segments: TranscriptSegment[] = items
+          .map((item) => {
+            const text = item.text ?? item.caption ?? "";
+            const startValue = Number.parseFloat(
+              item.start ?? item.start_offset ?? item.offset ?? "0",
+            );
+            const durationValue = Number.parseFloat(
+              item.dur ?? item.duration ?? item.length ?? "0",
+            );
+
+            return {
+              text: typeof text === "string" ? text : "",
+              start: Number.isFinite(startValue) ? startValue : 0,
+              duration: Number.isFinite(durationValue) ? durationValue : 0,
+            };
+          })
+          .filter((segment) => segment.text.trim().length > 0);
+
+        if (segments.length === 0) {
+          continue;
+        }
+
+        const title =
+          typeof raw?.title === "string"
+            ? raw.title
+            : typeof raw?.video_title === "string"
+              ? raw.video_title
+              : null;
+
+        this.logger.log(
+          `Successfully fetched transcript using fallback (lang: ${lang}) for ${videoId}`,
+        );
+        return { segments, title };
+      } catch (error) {
+        this.logger.debug(
+          `Fallback transcript fetch failed for lang ${lang}: ${String(error)}`,
+        );
+        continue;
+      }
+    }
+
+    this.logger.warn(`All fallback transcript attempts failed for ${videoId}`);
+    return null;
   }
 }

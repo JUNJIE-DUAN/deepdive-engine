@@ -417,13 +417,11 @@ export default function Home() {
   // Debounce search suggestions
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchMode === 'search') {
-        fetchSearchSuggestions(searchQuery);
-      }
+      fetchSearchSuggestions(searchQuery);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, searchMode, fetchSearchSuggestions]);
+  }, [searchQuery, fetchSearchSuggestions]);
 
   // Handle clicks outside suggestions dropdown
   useEffect(() => {
@@ -914,10 +912,10 @@ export default function Home() {
               <div className="mb-4">
                 <div className="relative rounded-lg border border-gray-300 bg-white shadow-sm">
                   <div className="flex items-center">
-                    {/* Agent Selector */}
-                    <div className="flex items-center gap-2 border-r border-gray-200 px-4 py-3">
+                    {/* Search Icon */}
+                    <div className="flex items-center px-4 py-3">
                       <svg
-                        className="h-5 w-5 text-gray-500"
+                        className="h-5 w-5 text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -926,19 +924,9 @@ export default function Home() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                         />
                       </svg>
-                      <select
-                        value={searchMode}
-                        onChange={(e) =>
-                          setSearchMode(e.target.value as 'agent' | 'search')
-                        }
-                        className="cursor-pointer border-none bg-transparent text-sm font-medium text-gray-700 focus:ring-0"
-                      >
-                        <option value="agent">agent</option>
-                        <option value="search">search</option>
-                      </select>
                     </div>
 
                     {/* Search Input */}
@@ -950,10 +938,7 @@ export default function Home() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={handleSearch}
                       onFocus={() => {
-                        if (
-                          searchMode === 'search' &&
-                          searchQuery.length >= 2
-                        ) {
+                        if (searchQuery.length >= 2) {
                           setShowSuggestions(true);
                         }
                       }}
@@ -1208,7 +1193,7 @@ export default function Home() {
                     onChange={(e) => setSortBy(e.target.value as any)}
                     className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                   >
-                    <option value="trendingScore">Hot</option>
+                    <option value="trendingScore">Trending</option>
                     <option value="publishedAt">Latest</option>
                     <option value="qualityScore">Quality</option>
                   </select>

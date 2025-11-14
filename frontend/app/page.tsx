@@ -10,6 +10,10 @@ import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
+import {
+  AIContextBuilder,
+  type Resource as AIResource,
+} from '@/lib/ai-context-builder';
 
 interface Resource {
   id: string;
@@ -911,71 +915,25 @@ export default function Home() {
     setIsStreaming(true);
 
     try {
-      // Build comprehensive context from selected resource
-      let context = '';
+      // Build context using AIContextBuilder
+      const resourceForAI: AIResource = {
+        ...selectedResource,
+        type: selectedResource.type as any, // Convert to AIResource type
+        pdfText: pdfText || undefined,
+      } as AIResource;
 
-      // Build metadata section
-      const metadata = [];
-      metadata.push(`Title: ${selectedResource.title}`);
+      let context = AIContextBuilder.buildContext(resourceForAI, {
+        includeCore: true,
+        includeMetadata: true,
+        includeMetrics: true,
+        includeTaxonomy: true,
+        maxContentLength: 15000,
+      });
 
-      if (selectedResource.authors && selectedResource.authors.length > 0) {
-        const authorNames = selectedResource.authors
-          .map((a) => a.username || a.platform || 'Unknown')
-          .join(', ');
-        metadata.push(`Authors: ${authorNames}`);
-      }
-
-      if (selectedResource.publishedAt) {
-        metadata.push(
-          `Published: ${new Date(selectedResource.publishedAt).toLocaleDateString()}`
-        );
-      }
-
-      if (
-        selectedResource.categories &&
-        selectedResource.categories.length > 0
-      ) {
-        metadata.push(`Categories: ${selectedResource.categories.join(', ')}`);
-      }
-
-      if (selectedResource.qualityScore) {
-        metadata.push(`Quality Score: ${selectedResource.qualityScore}`);
-      }
-
-      if (selectedResource.upvoteCount || selectedResource.viewCount) {
-        const stats = [];
-        if (selectedResource.upvoteCount)
-          stats.push(`${selectedResource.upvoteCount} upvotes`);
-        if (selectedResource.viewCount)
-          stats.push(`${selectedResource.viewCount} views`);
-        metadata.push(`Engagement: ${stats.join(', ')}`);
-      }
-
-      if (selectedResource.sourceUrl) {
-        metadata.push(`Source: ${selectedResource.sourceUrl}`);
-      }
-
-      // Add abstract if available
-      if (selectedResource.abstract || selectedResource.aiSummary) {
-        metadata.push(
-          `\nAbstract:\n${selectedResource.abstract || selectedResource.aiSummary}`
-        );
-      }
-
-      // Build context with PDF text or metadata
-      if (pdfText && pdfText.trim()) {
-        // Use extracted PDF text as primary context with metadata header
-        context = `=== Paper Metadata ===\n${metadata.join('\n')}\n\n=== PDF Full Text (first ~15000 characters) ===\n${pdfText}`;
-        console.log(
-          'Using enriched context: metadata +',
-          pdfText.length,
-          'chars of PDF text'
-        );
-      } else {
-        // Fallback to metadata only
-        context = `=== Paper Metadata ===\n${metadata.join('\n')}`;
-        console.log('Using metadata-only context (PDF text not available)');
-      }
+      console.log(
+        `Built AI context for ${selectedResource.type}:`,
+        context.substring(0, 200) + '...'
+      );
 
       // Add attachment information to context
       if (attachments.length > 0) {

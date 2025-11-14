@@ -10,6 +10,7 @@ import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
+import * as pdfjsLib from 'pdfjs-dist';
 
 interface Resource {
   id: string;
@@ -143,6 +144,9 @@ export default function Home() {
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
   const [aiModel, setAiModel] = useState<'grok' | 'openai'>('grok');
   const [isStreaming, setIsStreaming] = useState(false);
+
+  // PDF text extraction state
+  const [pdfText, setPdfText] = useState<string>('');
 
   // Attachment upload states for AI chat
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -285,6 +289,55 @@ export default function Home() {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [aiMessages]);
+
+  // Configure PDF.js worker on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    }
+  }, []);
+
+  // Extract PDF text when resource changes
+  useEffect(() => {
+    const extractPdfText = async () => {
+      if (!selectedResource || !selectedResource.pdfUrl) {
+        setPdfText('');
+        return;
+      }
+
+      try {
+        const pdfUrl = `${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`;
+
+        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        const pdf = await loadingTask.promise;
+
+        let fullText = '';
+        const maxPages = Math.min(pdf.numPages, 20); // Limit to first 20 pages
+
+        for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ');
+          fullText += pageText + '\n';
+
+          // Break if we have enough text (>15000 chars is enough for AI context)
+          if (fullText.length > 15000) {
+            break;
+          }
+        }
+
+        setPdfText(fullText.substring(0, 15000));
+        console.log('PDF text extracted:', fullText.length, 'characters');
+      } catch (error) {
+        console.error('Failed to extract PDF text:', error);
+        setPdfText('');
+      }
+    };
+
+    extractPdfText();
+  }, [selectedResource]);
 
   const fetchResources = async () => {
     try {
@@ -860,8 +913,17 @@ export default function Home() {
     setIsStreaming(true);
 
     try {
-      // Build context from selected resource
-      let context = `Title: ${selectedResource.title}\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || 'No abstract available'}`;
+      // Build context from selected resource - prioritize PDF text content
+      let context = '';
+      if (pdfText && pdfText.trim()) {
+        // Use extracted PDF text as primary context
+        context = `PDF Content (first ~15000 characters):\n${pdfText}\n\nTitle: ${selectedResource.title}`;
+        console.log('Using PDF text as context:', pdfText.length, 'characters');
+      } else {
+        // Fallback to title and abstract if PDF text not available
+        context = `Title: ${selectedResource.title}\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || 'No abstract available'}`;
+        console.log('Using title/abstract as context (PDF text not available)');
+      }
 
       // Add attachment information to context
       if (attachments.length > 0) {

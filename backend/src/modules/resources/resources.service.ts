@@ -336,23 +336,33 @@ export class ResourcesService {
         where: { sourceUrl: finalUrl },
       });
 
-      if (existing) {
-        const errorMessage = `URL已存在: 该资源已经导入过了 (ID: ${existing.id}, 标题: ${existing.title})`;
-        this.logger.warn(errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      // 解析URL获取标题
+      // 获取真实标题和摘要
       let title: string;
+      let abstract: string | null = null;
 
       if (type === "YOUTUBE_VIDEO") {
-        // 对于YouTube视频，从URL中提取videoId并获取真实标题
+        // YouTube视频：使用oEmbed API获取标题
         const videoId = this.extractYoutubeVideoId(finalUrl);
         if (videoId) {
           title = await this.fetchYoutubeTitle(videoId);
         } else {
           title = "YouTube Video";
         }
+      } else if (type === "PAPER") {
+        // 论文：尝试从arXiv、OpenReview等获取真实标题
+        const paperInfo = await this.fetchPaperInfo(finalUrl);
+        title = paperInfo.title;
+        abstract = paperInfo.abstract;
+      } else if (type === "PROJECT") {
+        // 开源项目：从GitHub获取真实项目信息
+        const projectInfo = await this.fetchGithubProjectInfo(finalUrl);
+        title = projectInfo.title;
+        abstract = projectInfo.abstract;
+      } else if (type === "NEWS") {
+        // 新闻：从网页获取真实标题
+        const newsInfo = await this.fetchWebPageInfo(finalUrl);
+        title = newsInfo.title;
+        abstract = newsInfo.abstract;
       } else {
         // 其他类型：从URL的最后部分提取标题
         const pathParts = urlObj.pathname
@@ -370,11 +380,31 @@ export class ResourcesService {
         pdfUrl = this.extractPdfUrl(finalUrl);
       }
 
-      // 创建资源数据
+      // 如果URL已存在，更新现有资源
+      if (existing) {
+        this.logger.log(
+          `URL already exists, updating resource: ${existing.id}`,
+        );
+
+        const resource = await this.prisma.resource.update({
+          where: { id: existing.id },
+          data: {
+            title: title,
+            abstract: abstract || `从URL导入: ${finalUrl}`,
+            pdfUrl: pdfUrl,
+            // 保留原有的统计数据
+          },
+        });
+
+        this.logger.log(`Resource updated successfully: ${resource.id}`);
+        return resource;
+      }
+
+      // 创建新资源
       const resourceData: Prisma.ResourceCreateInput = {
         type: type as any,
         title: title,
-        abstract: `从URL导入: ${finalUrl}`,
+        abstract: abstract || `从URL导入: ${finalUrl}`,
         sourceUrl: finalUrl, // 使用转换后的URL
         pdfUrl: pdfUrl, // 添加 PDF URL
         publishedAt: new Date(),
@@ -386,7 +416,6 @@ export class ResourcesService {
         trendingScore: 0,
       };
 
-      // 创建资源
       const resource = await this.prisma.resource.create({
         data: resourceData,
       });
@@ -487,6 +516,176 @@ export class ResourcesService {
         `Failed to fetch video title via oEmbed: ${String(error)}`,
       );
       return `YouTube Video ${videoId}`;
+    }
+  }
+
+  /**
+   * 获取论文信息（支持arXiv）
+   */
+  private async fetchPaperInfo(
+    url: string,
+  ): Promise<{ title: string; abstract: string | null }> {
+    try {
+      const urlObj = new URL(url);
+
+      // arXiv论文
+      if (
+        urlObj.hostname === "arxiv.org" ||
+        urlObj.hostname === "www.arxiv.org"
+      ) {
+        const arxivIdMatch = url.match(/arxiv\.org\/abs\/(.+)/);
+        if (arxivIdMatch) {
+          const arxivId = arxivIdMatch[1];
+          const response = await fetch(
+            `http://export.arxiv.org/api/query?id_list=${arxivId}`,
+          );
+
+          if (response.ok) {
+            const xml = await response.text();
+            // 解析XML，提取<entry>标签内的<title>和<summary>
+            // 跳过第一个<title>（feed title），匹配<entry>内的<title>
+            const entryMatch = xml.match(/<entry>([\s\S]*?)<\/entry>/);
+            if (entryMatch) {
+              const entryContent = entryMatch[1];
+              const titleMatch = entryContent.match(/<title>([^<]+)<\/title>/);
+              const summaryMatch = entryContent.match(
+                /<summary>([^<]+)<\/summary>/,
+              );
+
+              if (titleMatch && titleMatch[1]) {
+                const title = titleMatch[1]
+                  .replace(/\s+/g, " ")
+                  .trim()
+                  .replace(/^arXiv:\d+\.\d+v?\d*\s*/, ""); // 移除arXiv ID前缀
+                const abstract = summaryMatch
+                  ? summaryMatch[1].replace(/\s+/g, " ").trim()
+                  : null;
+
+                this.logger.log(`Fetched arXiv paper title: ${title}`);
+                return { title, abstract };
+              }
+            }
+          }
+        }
+      }
+
+      // 如果无法获取，返回从URL提取的标题
+      const pathParts = urlObj.pathname.split("/").filter((p) => p.length > 0);
+      const lastPart = pathParts[pathParts.length - 1] || urlObj.hostname;
+      const fallbackTitle = lastPart
+        .replace(/[-_]/g, " ")
+        .replace(/\.(html|htm|pdf)$/i, "");
+
+      return { title: fallbackTitle, abstract: null };
+    } catch (error) {
+      this.logger.warn(`Failed to fetch paper info: ${String(error)}`);
+      return { title: "Paper", abstract: null };
+    }
+  }
+
+  /**
+   * 获取GitHub项目信息
+   */
+  private async fetchGithubProjectInfo(
+    url: string,
+  ): Promise<{ title: string; abstract: string | null }> {
+    try {
+      const urlObj = new URL(url);
+
+      // GitHub项目
+      if (
+        urlObj.hostname === "github.com" ||
+        urlObj.hostname === "www.github.com"
+      ) {
+        const pathMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        if (pathMatch) {
+          const owner = pathMatch[1];
+          const repo = pathMatch[2].replace(/\.git$/, "");
+
+          // 使用GitHub API获取项目信息
+          const response = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}`,
+            {
+              headers: {
+                Accept: "application/vnd.github.v3+json",
+                "User-Agent": "DeepDive-Engine",
+              },
+            },
+          );
+
+          if (response.ok) {
+            const data = (await response.json()) as {
+              name?: string;
+              full_name?: string;
+              description?: string;
+            };
+            const title = data.full_name || data.name || `${owner}/${repo}`;
+            const abstract = data.description || null;
+
+            this.logger.log(`Fetched GitHub project: ${title}`);
+            return { title, abstract };
+          }
+        }
+      }
+
+      // 如果无法获取，返回从URL提取的标题
+      const pathParts = urlObj.pathname.split("/").filter((p) => p.length > 0);
+      const fallbackTitle =
+        pathParts.length >= 2
+          ? `${pathParts[0]}/${pathParts[1]}`
+          : urlObj.hostname;
+
+      return { title: fallbackTitle, abstract: null };
+    } catch (error) {
+      this.logger.warn(`Failed to fetch GitHub project info: ${String(error)}`);
+      return { title: "GitHub Project", abstract: null };
+    }
+  }
+
+  /**
+   * 获取网页信息（通用）
+   */
+  private async fetchWebPageInfo(
+    url: string,
+  ): Promise<{ title: string; abstract: string | null }> {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+        },
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+
+        // 提取标题
+        const titleMatch =
+          html.match(/<title[^>]*>([^<]+)<\/title>/i) ||
+          html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i);
+        const title = titleMatch
+          ? titleMatch[1].replace(/\s+/g, " ").trim()
+          : new URL(url).hostname;
+
+        // 提取描述
+        const descMatch = html.match(
+          /<meta[^>]+(?:name="description"|property="og:description")[^>]+content="([^"]+)"/i,
+        );
+        const abstract = descMatch
+          ? descMatch[1].replace(/\s+/g, " ").trim()
+          : null;
+
+        this.logger.log(`Fetched web page title: ${title}`);
+        return { title, abstract };
+      }
+
+      // 如果无法获取，返回域名作为标题
+      const fallbackTitle = new URL(url).hostname;
+      return { title: fallbackTitle, abstract: null };
+    } catch (error) {
+      this.logger.warn(`Failed to fetch web page info: ${String(error)}`);
+      const fallbackTitle = new URL(url).hostname;
+      return { title: fallbackTitle, abstract: null };
     }
   }
 }

@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 echo ========================================
 echo   DeepDive Engine - 启动所有服务
 echo ========================================
@@ -39,16 +40,16 @@ start "DeepDive Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 
 echo.
 echo ========================================
-echo   所有服务启动完成！
+echo   All services started!
 echo ========================================
 echo.
-echo 服务访问地址：
-echo   前端:     http://localhost:3000
-echo   后端API:  http://localhost:4000/api/v1
-echo   AI服务:   http://localhost:5000/docs
-echo   Neo4j:    http://localhost:7474
+echo Service URLs:
+echo   Frontend:  http://localhost:3000
+echo   Backend:   http://localhost:4000/api/v1
+echo   AI:        http://localhost:5000/docs
+echo   Neo4j:     http://localhost:7474
 echo.
-echo 提示：所有服务在独立的命令窗口中运行
-echo       关闭对应窗口即可停止服务
+echo Note: Services run in separate windows
+echo       Close window to stop service
 echo.
 pause

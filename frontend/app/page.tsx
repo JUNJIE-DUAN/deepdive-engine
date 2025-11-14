@@ -167,6 +167,15 @@ export default function Home() {
   // Report workspace
   const { addResource, hasResource, canAddMore } = useReportWorkspace();
 
+  // Import URL states
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importMessage, setImportMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -803,6 +812,66 @@ export default function Home() {
     }
   };
 
+  const handleImportUrl = async () => {
+    if (!importUrl.trim()) {
+      setImportMessage({ type: 'error', text: '请输入URL' });
+      return;
+    }
+
+    setImportLoading(true);
+    setImportMessage(null);
+
+    try {
+      // Map current tab to resource type (skip YouTube as it's not supported)
+      if (activeTab === 'youtube') {
+        setImportMessage({ type: 'error', text: 'YouTube暂不支持URL导入' });
+        setImportLoading(false);
+        return;
+      }
+
+      const typeMap: Record<string, string> = {
+        papers: 'PAPER',
+        projects: 'PROJECT',
+        news: 'NEWS',
+      };
+
+      const type = typeMap[activeTab] || 'PAPER';
+
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/resources/import-url`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: importUrl, type }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setImportMessage({ type: 'success', text: '导入成功！' });
+        setImportUrl('');
+        setTimeout(() => {
+          setShowImportDialog(false);
+          setImportMessage(null);
+          fetchResources(); // Refresh the list
+        }, 1500);
+      } else {
+        setImportMessage({
+          type: 'error',
+          text: data.message || '导入失败',
+        });
+      }
+    } catch (error) {
+      setImportMessage({
+        type: 'error',
+        text: '网络错误，请重试',
+      });
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   const isBookmarked = (resourceId: string) => {
     return bookmarks.has(resourceId);
   };
@@ -1069,6 +1138,29 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {/* Import URL Button - Only for Papers, Projects, News */}
+                  {activeTab !== 'youtube' && (
+                    <button
+                      onClick={() => setShowImportDialog(true)}
+                      className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-100"
+                      title="导入URL"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                      导入URL
+                    </button>
+                  )}
                   <button
                     onClick={() =>
                       setFilterCategory(filterCategory ? '' : 'AI')
@@ -2181,6 +2273,101 @@ export default function Home() {
           </span>
           <div className="absolute inset-0 rounded-l-lg bg-gradient-to-br from-red-400/0 to-pink-400/0 opacity-0 transition-opacity duration-200 group-hover:from-red-400/10 group-hover:to-pink-400/10 group-hover:opacity-100" />
         </button>
+      )}
+
+      {/* Import URL Dialog */}
+      {showImportDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">导入URL</h3>
+              <button
+                onClick={() => {
+                  setShowImportDialog(false);
+                  setImportUrl('');
+                  setImportMessage(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label
+                htmlFor="import-url"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                请输入
+                {activeTab === 'papers'
+                  ? '论文'
+                  : activeTab === 'projects'
+                    ? '项目'
+                    : '新闻'}
+                的URL
+              </label>
+              <input
+                id="import-url"
+                type="url"
+                value={importUrl}
+                onChange={(e) => setImportUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !importLoading) {
+                    handleImportUrl();
+                  }
+                }}
+                placeholder="https://example.com/..."
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={importLoading}
+              />
+            </div>
+
+            {importMessage && (
+              <div
+                className={`mb-4 rounded-lg p-3 text-sm ${
+                  importMessage.type === 'success'
+                    ? 'bg-green-50 text-green-800'
+                    : 'bg-red-50 text-red-800'
+                }`}
+              >
+                {importMessage.text}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowImportDialog(false);
+                  setImportUrl('');
+                  setImportMessage(null);
+                }}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                disabled={importLoading}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleImportUrl}
+                disabled={importLoading || !importUrl.trim()}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {importLoading ? '导入中...' : '导入'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Context Menu for Adding to Notes */}

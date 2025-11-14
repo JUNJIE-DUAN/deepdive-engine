@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 REM 更新 GCP Secret Manager 中的 API 密钥 (Windows 版本)
 
 set PROJECT_ID=deepdive-engine

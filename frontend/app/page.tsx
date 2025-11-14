@@ -911,16 +911,70 @@ export default function Home() {
     setIsStreaming(true);
 
     try {
-      // Build context from selected resource - prioritize PDF text content
+      // Build comprehensive context from selected resource
       let context = '';
+
+      // Build metadata section
+      const metadata = [];
+      metadata.push(`Title: ${selectedResource.title}`);
+
+      if (selectedResource.authors && selectedResource.authors.length > 0) {
+        const authorNames = selectedResource.authors
+          .map((a) => a.username || a.platform || 'Unknown')
+          .join(', ');
+        metadata.push(`Authors: ${authorNames}`);
+      }
+
+      if (selectedResource.publishedAt) {
+        metadata.push(
+          `Published: ${new Date(selectedResource.publishedAt).toLocaleDateString()}`
+        );
+      }
+
+      if (
+        selectedResource.categories &&
+        selectedResource.categories.length > 0
+      ) {
+        metadata.push(`Categories: ${selectedResource.categories.join(', ')}`);
+      }
+
+      if (selectedResource.qualityScore) {
+        metadata.push(`Quality Score: ${selectedResource.qualityScore}`);
+      }
+
+      if (selectedResource.upvoteCount || selectedResource.viewCount) {
+        const stats = [];
+        if (selectedResource.upvoteCount)
+          stats.push(`${selectedResource.upvoteCount} upvotes`);
+        if (selectedResource.viewCount)
+          stats.push(`${selectedResource.viewCount} views`);
+        metadata.push(`Engagement: ${stats.join(', ')}`);
+      }
+
+      if (selectedResource.sourceUrl) {
+        metadata.push(`Source: ${selectedResource.sourceUrl}`);
+      }
+
+      // Add abstract if available
+      if (selectedResource.abstract || selectedResource.aiSummary) {
+        metadata.push(
+          `\nAbstract:\n${selectedResource.abstract || selectedResource.aiSummary}`
+        );
+      }
+
+      // Build context with PDF text or metadata
       if (pdfText && pdfText.trim()) {
-        // Use extracted PDF text as primary context
-        context = `PDF Content (first ~15000 characters):\n${pdfText}\n\nTitle: ${selectedResource.title}`;
-        console.log('Using PDF text as context:', pdfText.length, 'characters');
+        // Use extracted PDF text as primary context with metadata header
+        context = `=== Paper Metadata ===\n${metadata.join('\n')}\n\n=== PDF Full Text (first ~15000 characters) ===\n${pdfText}`;
+        console.log(
+          'Using enriched context: metadata +',
+          pdfText.length,
+          'chars of PDF text'
+        );
       } else {
-        // Fallback to title and abstract if PDF text not available
-        context = `Title: ${selectedResource.title}\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || 'No abstract available'}`;
-        console.log('Using title/abstract as context (PDF text not available)');
+        // Fallback to metadata only
+        context = `=== Paper Metadata ===\n${metadata.join('\n')}`;
+        console.log('Using metadata-only context (PDF text not available)');
       }
 
       // Add attachment information to context

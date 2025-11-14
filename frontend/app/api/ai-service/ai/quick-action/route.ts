@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const { content, action, model = 'grok-3' } = body;
 
     // Forward request to AI service
-    const response = await fetch(`${AI_SERVICE_URL}/ai/quick-action`, {
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/ai/quick-action`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const { message, context, model = 'grok-3', stream = true } = body;
 
     // Forward request to AI service
-    const response = await fetch(`${AI_SERVICE_URL}/ai/chat`, {
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/ai/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

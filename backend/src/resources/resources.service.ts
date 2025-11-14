@@ -1,8 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../common/prisma/prisma.service';
-import { MongoDBService } from '../common/mongodb/mongodb.service';
-import { ensureError } from '../common/utils/error.utils';
-import { Prisma } from '@prisma/client';
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../common/prisma/prisma.service";
+import { MongoDBService } from "../common/mongodb/mongodb.service";
+import { ensureError } from "../common/utils/error.utils";
+import { Prisma } from "@prisma/client";
 
 /**
  * 资源管理服务
@@ -25,8 +25,8 @@ export class ResourcesService {
     type?: string;
     category?: string;
     search?: string;
-    sortBy?: 'publishedAt' | 'qualityScore' | 'trendingScore';
-    sortOrder?: 'asc' | 'desc';
+    sortBy?: "publishedAt" | "qualityScore" | "trendingScore";
+    sortOrder?: "asc" | "desc";
   }) {
     const {
       skip = 0,
@@ -34,8 +34,8 @@ export class ResourcesService {
       type,
       category,
       search,
-      sortBy = 'publishedAt',
-      sortOrder = 'desc',
+      sortBy = "publishedAt",
+      sortOrder = "desc",
     } = params;
 
     // 构建查询条件
@@ -55,8 +55,8 @@ export class ResourcesService {
 
     if (search) {
       where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { abstract: { contains: search, mode: 'insensitive' } },
+        { title: { contains: search, mode: "insensitive" } },
+        { abstract: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -73,7 +73,9 @@ export class ResourcesService {
       this.prisma.resource.count({ where }),
     ]);
 
-    this.logger.log(`Found ${resources.length}/${total} resources (skip: ${skip}, take: ${take})`);
+    this.logger.log(
+      `Found ${resources.length}/${total} resources (skip: ${skip}, take: ${take})`,
+    );
 
     return {
       data: resources,
@@ -140,7 +142,7 @@ export class ResourcesService {
       return resource;
     } catch (error) {
       const err = error as { code?: string };
-      if (err.code === 'P2025') {
+      if (err.code === "P2025") {
         throw new NotFoundException(`Resource with ID ${id} not found`);
       }
       throw ensureError(error);
@@ -161,7 +163,7 @@ export class ResourcesService {
       return resource;
     } catch (error) {
       const err = error as { code?: string };
-      if (err.code === 'P2025') {
+      if (err.code === "P2025") {
         throw new NotFoundException(`Resource with ID ${id} not found`);
       }
       throw ensureError(error);
@@ -173,7 +175,7 @@ export class ResourcesService {
    */
   async getStats() {
     const stats = await this.prisma.resource.groupBy({
-      by: ['type'],
+      by: ["type"],
       _count: {
         id: true,
       },
@@ -201,9 +203,9 @@ export class ResourcesService {
     const results = await this.prisma.resource.findMany({
       where: {
         OR: [
-          { title: { contains: searchQuery, mode: 'insensitive' } },
-          { abstract: { contains: searchQuery, mode: 'insensitive' } },
-          { content: { contains: searchQuery, mode: 'insensitive' } },
+          { title: { contains: searchQuery, mode: "insensitive" } },
+          { abstract: { contains: searchQuery, mode: "insensitive" } },
+          { content: { contains: searchQuery, mode: "insensitive" } },
         ],
       },
       select: {
@@ -216,7 +218,7 @@ export class ResourcesService {
       },
       take: limit * 2, // 获取更多结果用于排序
       orderBy: {
-        qualityScore: 'desc', // 按质量分数排序
+        qualityScore: "desc", // 按质量分数排序
       },
     });
 
@@ -248,7 +250,8 @@ export class ResourcesService {
       // 新鲜度加权（最近发布的加分）
       if (resource.publishedAt) {
         const daysSincePublished = Math.floor(
-          (Date.now() - new Date(resource.publishedAt).getTime()) / (1000 * 60 * 60 * 24),
+          (Date.now() - new Date(resource.publishedAt).getTime()) /
+            (1000 * 60 * 60 * 24),
         );
         if (daysSincePublished < 7) score += 3;
         else if (daysSincePublished < 30) score += 2;
@@ -258,7 +261,11 @@ export class ResourcesService {
       return {
         ...resource,
         searchScore: score,
-        highlight: this.generateHighlight(resource.title, resource.abstract, searchQuery),
+        highlight: this.generateHighlight(
+          resource.title,
+          resource.abstract,
+          searchQuery,
+        ),
       };
     });
 
@@ -271,7 +278,7 @@ export class ResourcesService {
       id: r.id,
       title: r.title,
       type: r.type,
-      abstract: r.abstract?.substring(0, 150) + '...',
+      abstract: r.abstract?.substring(0, 150) + "...",
       highlight: r.highlight,
     }));
   }
@@ -284,21 +291,93 @@ export class ResourcesService {
     abstract: string | null,
     query: string,
   ): string {
-    const text = title || abstract || '';
+    const text = title || abstract || "";
     const lowerText = text.toLowerCase();
     const lowerQuery = query.toLowerCase();
 
     const index = lowerText.indexOf(lowerQuery);
-    if (index === -1) return text.substring(0, 100) + '...';
+    if (index === -1) return text.substring(0, 100) + "...";
 
     // 获取匹配周围的文本
     const start = Math.max(0, index - 30);
     const end = Math.min(text.length, index + query.length + 30);
 
     let snippet = text.substring(start, end);
-    if (start > 0) snippet = '...' + snippet;
-    if (end < text.length) snippet = snippet + '...';
+    if (start > 0) snippet = "..." + snippet;
+    if (end < text.length) snippet = snippet + "...";
 
     return snippet;
+  }
+
+  /**
+   * 从URL导入资源
+   */
+  async importFromUrl(url: string, type: string) {
+    this.logger.log(`Importing resource from URL: ${url} (type: ${type})`);
+
+    try {
+      // 解析URL
+      const urlObj = new URL(url);
+      let finalUrl = url;
+
+      // 如果是 AlphaXiv URL，转换为对应的 arXiv URL
+      if (
+        urlObj.hostname === "www.alphaxiv.org" ||
+        urlObj.hostname === "alphaxiv.org"
+      ) {
+        // AlphaXiv: https://www.alphaxiv.org/abs/2511.04676
+        // ArXiv:    https://arxiv.org/abs/2511.04676
+        finalUrl = `https://arxiv.org${urlObj.pathname}`;
+        this.logger.log(`Converting AlphaXiv URL to arXiv: ${finalUrl}`);
+      }
+
+      // 检查URL是否已存在（使用转换后的URL检查）
+      const existing = await this.prisma.resource.findFirst({
+        where: { sourceUrl: finalUrl },
+      });
+
+      if (existing) {
+        const errorMessage = `URL已存在: 该资源已经导入过了 (ID: ${existing.id}, 标题: ${existing.title})`;
+        this.logger.warn(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      // 解析URL获取标题（从URL的最后部分）
+      const pathParts = urlObj.pathname.split("/").filter((p) => p.length > 0);
+      const lastPart = pathParts[pathParts.length - 1] || urlObj.hostname;
+
+      // 生成默认标题
+      const defaultTitle = lastPart
+        .replace(/[-_]/g, " ")
+        .replace(/\.(html|htm|pdf)$/i, "");
+
+      // 创建资源数据
+      const resourceData: Prisma.ResourceCreateInput = {
+        type: type as any,
+        title: defaultTitle,
+        abstract: `从URL导入: ${finalUrl}`,
+        sourceUrl: finalUrl, // 使用转换后的URL
+        publishedAt: new Date(),
+        // 默认值
+        upvoteCount: 0,
+        viewCount: 0,
+        commentCount: 0,
+        qualityScore: "0",
+        trendingScore: 0,
+      };
+
+      // 创建资源
+      const resource = await this.prisma.resource.create({
+        data: resourceData,
+      });
+
+      this.logger.log(`Resource imported successfully: ${resource.id}`);
+
+      return resource;
+    } catch (error) {
+      const err = ensureError(error);
+      this.logger.error(`Failed to import URL: ${err.message}`, err.stack);
+      throw err;
+    }
   }
 }

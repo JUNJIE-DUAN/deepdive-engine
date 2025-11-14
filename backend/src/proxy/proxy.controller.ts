@@ -39,6 +39,8 @@ export class ProxyController {
     // 安全检查：只允许代理特定域名的 PDF
     const allowedDomains = [
       "arxiv.org",
+      "alphaxiv.org",
+      "www.alphaxiv.org",
       "openreview.net",
       "papers.nips.cc",
       "proceedings.mlr.press",
@@ -150,6 +152,8 @@ export class ProxyController {
     // 安全检查：只允许代理特定域名
     const allowedDomains = [
       "arxiv.org",
+      "alphaxiv.org",
+      "www.alphaxiv.org",
       "openreview.net",
       "papers.nips.cc",
       "proceedings.mlr.press",

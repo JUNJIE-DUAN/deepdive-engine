@@ -14,20 +14,20 @@ import {
   HttpStatus,
   UploadedFile,
   UseInterceptors,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import * as path from 'path';
-import * as fs from 'fs/promises';
-import { ResourcesService } from './resources.service';
-import { AIEnrichmentService } from './ai-enrichment.service';
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+import * as path from "path";
+import * as fs from "fs/promises";
+import { ResourcesService } from "./resources.service";
+import { AIEnrichmentService } from "./ai-enrichment.service";
 // import { PdfThumbnailService } from './pdf-thumbnail.service';
-import { Prisma } from '@prisma/client';
+import { Prisma } from "@prisma/client";
 
 /**
  * 资源管理控制器
  */
-@Controller('resources')
+@Controller("resources")
 export class ResourcesController {
   private readonly logger = new Logger(ResourcesController.name);
 
@@ -43,13 +43,13 @@ export class ResourcesController {
    */
   @Get()
   async findAll(
-    @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip: number,
-    @Query('take', new DefaultValuePipe(20), ParseIntPipe) take: number,
-    @Query('type') type?: string,
-    @Query('category') category?: string,
-    @Query('search') search?: string,
-    @Query('sortBy') sortBy?: 'publishedAt' | 'qualityScore' | 'trendingScore',
-    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query("skip", new DefaultValuePipe(0), ParseIntPipe) skip: number,
+    @Query("take", new DefaultValuePipe(20), ParseIntPipe) take: number,
+    @Query("type") type?: string,
+    @Query("category") category?: string,
+    @Query("search") search?: string,
+    @Query("sortBy") sortBy?: "publishedAt" | "qualityScore" | "trendingScore",
+    @Query("sortOrder") sortOrder?: "asc" | "desc",
   ) {
     this.logger.log(`Fetching resources (skip: ${skip}, take: ${take})`);
 
@@ -70,10 +70,10 @@ export class ResourcesController {
    *
    * 注意：此路由必须在 @Get(':id') 之前，否则会被 :id 捕获
    */
-  @Get('search/suggestions')
+  @Get("search/suggestions")
   async searchSuggestions(
-    @Query('q') query: string,
-    @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+    @Query("q") query: string,
+    @Query("limit", new DefaultValuePipe(5), ParseIntPipe) limit: number,
   ) {
     if (!query || query.trim().length < 2) {
       return { suggestions: [] };
@@ -81,7 +81,10 @@ export class ResourcesController {
 
     this.logger.log(`Searching suggestions for: ${query}`);
 
-    const suggestions = await this.resourcesService.searchSuggestions(query, limit);
+    const suggestions = await this.resourcesService.searchSuggestions(
+      query,
+      limit,
+    );
 
     return { suggestions };
   }
@@ -92,9 +95,9 @@ export class ResourcesController {
    *
    * 注意：此路由必须在 @Get(':id') 之前，否则会被 :id 捕获
    */
-  @Get('stats/summary')
+  @Get("stats/summary")
   async getStats() {
-    this.logger.log('Fetching resource statistics');
+    this.logger.log("Fetching resource statistics");
 
     return this.resourcesService.getStats();
   }
@@ -105,14 +108,14 @@ export class ResourcesController {
    *
    * 注意：此路由必须在 @Get(':id') 之前，否则会被 :id 捕获
    */
-  @Get('ai/health')
+  @Get("ai/health")
   async checkAIHealth() {
-    this.logger.log('Checking AI service health');
+    this.logger.log("Checking AI service health");
 
     const isHealthy = await this.aiEnrichmentService.checkHealth();
 
     return {
-      status: isHealthy ? 'ok' : 'error',
+      status: isHealthy ? "ok" : "error",
       aiServiceAvailable: isHealthy,
     };
   }
@@ -123,11 +126,55 @@ export class ResourcesController {
    *
    * 注意：动态路由必须放在所有具体路由之后，以免捕获其他路径
    */
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
+  @Get(":id")
+  async findOne(@Param("id") id: string) {
     this.logger.log(`Fetching resource ${id}`);
 
     return this.resourcesService.findOne(id);
+  }
+
+  /**
+   * 从URL导入资源
+   * POST /api/v1/resources/import-url
+   * Body: { url: string, type: 'PAPER' | 'PROJECT' | 'NEWS' }
+   *
+   * 注意：此路由必须在 @Post() 之前，否则会被通用POST路由捕获
+   */
+  @Post("import-url")
+  async importFromUrl(@Body() body: { url: string; type: string }) {
+    const { url, type } = body;
+
+    if (!url || !type) {
+      throw new HttpException(
+        "URL and type are required",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const validTypes = ["PAPER", "PROJECT", "NEWS"];
+    if (!validTypes.includes(type)) {
+      throw new HttpException(
+        `Invalid type. Must be one of: ${validTypes.join(", ")}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    this.logger.log(`Importing resource from URL: ${url} (type: ${type})`);
+
+    try {
+      const resource = await this.resourcesService.importFromUrl(url, type);
+      return {
+        message: "URL imported successfully",
+        resource,
+      };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Failed to import URL: ${err.message}`, err.stack);
+      throw new HttpException(
+        `Failed to import URL: ${err.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /**
@@ -136,7 +183,7 @@ export class ResourcesController {
    */
   @Post()
   async create(@Body() createResourceDto: Prisma.ResourceCreateInput) {
-    this.logger.log('Creating new resource');
+    this.logger.log("Creating new resource");
 
     return this.resourcesService.create(createResourceDto);
   }
@@ -145,9 +192,9 @@ export class ResourcesController {
    * 更新资源
    * PATCH /api/v1/resources/:id
    */
-  @Patch(':id')
+  @Patch(":id")
   async update(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() updateResourceDto: Prisma.ResourceUpdateInput,
   ) {
     this.logger.log(`Updating resource ${id}`);
@@ -159,8 +206,8 @@ export class ResourcesController {
    * 删除资源
    * DELETE /api/v1/resources/:id
    */
-  @Delete(':id')
-  async remove(@Param('id') id: string) {
+  @Delete(":id")
+  async remove(@Param("id") id: string) {
     this.logger.log(`Deleting resource ${id}`);
 
     return this.resourcesService.remove(id);
@@ -170,8 +217,8 @@ export class ResourcesController {
    * AI 增强资源（生成摘要、洞察、分类）
    * POST /api/v1/resources/:id/enrich
    */
-  @Post(':id/enrich')
-  async enrichResource(@Param('id') id: string) {
+  @Post(":id/enrich")
+  async enrichResource(@Param("id") id: string) {
     this.logger.log(`Enriching resource ${id} with AI`);
 
     // 获取资源
@@ -208,19 +255,19 @@ export class ResourcesController {
    *
    * 前端使用 PDF.js 客户端生成缩略图，然后上传到服务器
    */
-  @Post(':id/thumbnail')
+  @Post(":id/thumbnail")
   @UseInterceptors(
-    FileInterceptor('thumbnail', {
+    FileInterceptor("thumbnail", {
       storage: diskStorage({
         destination: (_req, _file, cb) => {
-          const uploadPath = path.join(process.cwd(), 'public', 'thumbnails');
+          const uploadPath = path.join(process.cwd(), "public", "thumbnails");
           fs.mkdir(uploadPath, { recursive: true })
             .then(() => cb(null, uploadPath))
             .catch((error) => cb(error as Error, uploadPath));
         },
         filename: (req, file, cb) => {
           const resourceId = req.params.id;
-          const ext = path.extname(file.originalname) || '.jpg';
+          const ext = path.extname(file.originalname) || ".jpg";
           cb(null, `${resourceId}${ext}`);
         },
       }),
@@ -229,22 +276,22 @@ export class ResourcesController {
       },
       fileFilter: (_req, file, cb) => {
         // 只接受图片文件
-        if (file.mimetype.startsWith('image/')) {
+        if (file.mimetype.startsWith("image/")) {
           cb(null, true);
         } else {
-          cb(new Error('Only image files are allowed'), false);
+          cb(new Error("Only image files are allowed"), false);
         }
       },
-    })
+    }),
   )
   async uploadThumbnail(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File
+    @Param("id") id: string,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     this.logger.log(`Uploading thumbnail for resource ${id}`);
 
     if (!file) {
-      throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+      throw new HttpException("No file uploaded", HttpStatus.BAD_REQUEST);
     }
 
     // 检查资源是否存在
@@ -264,7 +311,7 @@ export class ResourcesController {
     this.logger.log(`Thumbnail uploaded successfully for resource ${id}`);
 
     return {
-      message: 'Thumbnail uploaded successfully',
+      message: "Thumbnail uploaded successfully",
       thumbnailUrl,
       resource: updated,
     };

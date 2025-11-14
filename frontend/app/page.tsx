@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { config } from '@/lib/config';
 import Sidebar from '@/components/Sidebar';
 import PDFThumbnail from '@/components/PDFThumbnail';
@@ -98,11 +99,20 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'papers' | 'projects' | 'news'>(
-    'papers'
-  );
+
+  // Initialize activeTab from URL query parameter if present
+  const initialTab = (searchParams?.get('tab') || 'papers') as
+    | 'papers'
+    | 'projects'
+    | 'news'
+    | 'youtube';
+  const [activeTab, setActiveTab] = useState<
+    'papers' | 'projects' | 'news' | 'youtube'
+  >(initialTab);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(
     null
   );
@@ -230,6 +240,27 @@ export default function Home() {
     try {
       setLoading(true);
 
+      // Handle YouTube tab separately
+      if (activeTab === 'youtube') {
+        const url = `${config.apiUrl}/youtube-videos`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const videos = (Array.isArray(data) ? data : data.data || []).map(
+          (video: any) => ({
+            id: video.id,
+            type: 'YOUTUBE',
+            title: video.title,
+            abstract: null,
+            sourceUrl: video.url,
+            publishedAt: video.createdAt,
+            videoId: video.videoId,
+          })
+        );
+        setResources(videos);
+        setLoading(false);
+        return;
+      }
+
       // Build query params
       const params = new URLSearchParams({
         take: '50',
@@ -239,12 +270,15 @@ export default function Home() {
       });
 
       // Map tab to resource type
-      const typeMap = {
+      const typeMap: Record<'papers' | 'projects' | 'news', string> = {
         papers: 'PAPER',
         projects: 'PROJECT',
         news: 'NEWS',
       };
-      params.append('type', typeMap[activeTab]);
+      params.append(
+        'type',
+        typeMap[activeTab as 'papers' | 'projects' | 'news']
+      );
 
       if (searchQuery) {
         params.append('search', searchQuery);
@@ -266,6 +300,12 @@ export default function Home() {
   };
 
   const handleResourceClick = (resource: Resource) => {
+    // For YouTube videos, navigate to the YouTube page
+    if (resource.type === 'YOUTUBE' || (resource as any).videoId) {
+      router.push(`/youtube?videoId=${(resource as any).videoId}`);
+      return;
+    }
+
     setSelectedResource(resource);
     setViewMode('detail');
     // Clear previous AI data
@@ -578,7 +618,7 @@ export default function Home() {
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
 
-      let assistantMessage: AIMessage = {
+      const assistantMessage: AIMessage = {
         role: 'assistant',
         content: '',
         timestamp: new Date(),
@@ -774,17 +814,269 @@ export default function Home() {
 
       {/* Center Content Area */}
       <main className="flex-1 overflow-y-auto bg-gray-50">
-        {/* Sticky Search Bar Container */}
-        <div className="sticky top-0 z-10 bg-gray-50 pb-4 pt-6">
-          <div className="mx-auto max-w-5xl px-8">
-            {/* Large Search Bar */}
-            <div className="mb-4">
-              <div className="relative rounded-lg border border-gray-300 bg-white shadow-sm">
-                <div className="flex items-center">
-                  {/* Agent Selector */}
-                  <div className="flex items-center gap-2 border-r border-gray-200 px-4 py-3">
+        {/* Sticky Search Bar Container - Only show in list view */}
+        {viewMode === 'list' && (
+          <div className="sticky top-0 z-10 bg-gray-50 pb-4 pt-6">
+            <div className="mx-auto max-w-5xl px-8">
+              {/* Large Search Bar */}
+              <div className="mb-4">
+                <div className="relative rounded-lg border border-gray-300 bg-white shadow-sm">
+                  <div className="flex items-center">
+                    {/* Agent Selector */}
+                    <div className="flex items-center gap-2 border-r border-gray-200 px-4 py-3">
+                      <svg
+                        className="h-5 w-5 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                      </svg>
+                      <select
+                        value={searchMode}
+                        onChange={(e) =>
+                          setSearchMode(e.target.value as 'agent' | 'search')
+                        }
+                        className="cursor-pointer border-none bg-transparent text-sm font-medium text-gray-700 focus:ring-0"
+                      >
+                        <option value="agent">agent</option>
+                        <option value="search">search</option>
+                      </select>
+                    </div>
+
+                    {/* Search Input */}
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Ask or search anything..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleSearch}
+                      onFocus={() => {
+                        if (
+                          searchMode === 'search' &&
+                          searchQuery.length >= 2
+                        ) {
+                          setShowSuggestions(true);
+                        }
+                      }}
+                      className="flex-1 border-none px-4 py-3 text-sm focus:outline-none focus:ring-0"
+                    />
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 px-4">
+                      <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </button>
+                      <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                          />
+                        </svg>
+                      </button>
+                      <button className="rounded-lg bg-red-500 p-2 text-white hover:bg-red-600">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 10l7-7m0 0l7 7m-7-7v18"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search Suggestions Dropdown */}
+                  {showSuggestions && searchSuggestions.length > 0 && (
+                    <div
+                      ref={suggestionsRef}
+                      className="absolute left-0 right-0 top-full z-20 mt-2 max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+                    >
+                      {searchSuggestions.map((suggestion, index) => (
+                        <div
+                          key={suggestion.id}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className={`cursor-pointer border-b border-gray-100 px-4 py-3 transition-colors last:border-b-0 ${
+                            index === selectedSuggestionIndex
+                              ? 'border-l-4 border-l-red-500 bg-red-50'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Type Icon */}
+                            <div className="mt-1 flex-shrink-0">
+                              {suggestion.type === 'PAPER' && (
+                                <svg
+                                  className="h-5 w-5 text-blue-500"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                              )}
+                              {suggestion.type === 'PROJECT' && (
+                                <svg
+                                  className="h-5 w-5 text-green-500"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                  />
+                                </svg>
+                              )}
+                              {suggestion.type === 'NEWS' && (
+                                <svg
+                                  className="h-5 w-5 text-orange-500"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex items-center gap-2">
+                                <h4 className="truncate text-sm font-medium text-gray-900">
+                                  {suggestion.title}
+                                </h4>
+                                <span className="flex-shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                                  {suggestion.type.toLowerCase()}
+                                </span>
+                              </div>
+                              <p className="line-clamp-2 text-xs text-gray-600">
+                                {suggestion.highlight}
+                              </p>
+                            </div>
+
+                            {/* Arrow Icon */}
+                            <div className="mt-1 flex-shrink-0">
+                              <svg
+                                className="h-4 w-4 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tabs and Filters */}
+              <div className="flex items-center justify-between">
+                <div className="flex gap-6">
+                  <button
+                    onClick={() => setActiveTab('papers')}
+                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                      activeTab === 'papers'
+                        ? 'border-red-600 text-red-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Papers
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('projects')}
+                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                      activeTab === 'projects'
+                        ? 'border-red-600 text-red-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Projects
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('news')}
+                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                      activeTab === 'news'
+                        ? 'border-red-600 text-red-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    News
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('youtube')}
+                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                      activeTab === 'youtube'
+                        ? 'border-red-600 text-red-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    YouTube
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() =>
+                      setFilterCategory(filterCategory ? '' : 'AI')
+                    }
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                  >
                     <svg
-                      className="h-5 w-5 text-gray-500"
+                      className="h-4 w-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -793,260 +1085,25 @@ export default function Home() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                       />
                     </svg>
-                    <select
-                      value={searchMode}
-                      onChange={(e) =>
-                        setSearchMode(e.target.value as 'agent' | 'search')
-                      }
-                      className="cursor-pointer border-none bg-transparent text-sm font-medium text-gray-700 focus:ring-0"
-                    >
-                      <option value="agent">agent</option>
-                      <option value="search">search</option>
-                    </select>
-                  </div>
-
-                  {/* Search Input */}
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder="Ask or search anything..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={handleSearch}
-                    onFocus={() => {
-                      if (searchMode === 'search' && searchQuery.length >= 2) {
-                        setShowSuggestions(true);
-                      }
-                    }}
-                    className="flex-1 border-none px-4 py-3 text-sm focus:outline-none focus:ring-0"
-                  />
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 px-4">
-                    <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </button>
-                    <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                        />
-                      </svg>
-                    </button>
-                    <button className="rounded-lg bg-red-500 p-2 text-white hover:bg-red-600">
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 10l7-7m0 0l7 7m-7-7v18"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                    {filterCategory || 'Filter'}
+                  </button>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                  >
+                    <option value="trendingScore">Hot</option>
+                    <option value="publishedAt">Latest</option>
+                    <option value="qualityScore">Quality</option>
+                  </select>
                 </div>
-
-                {/* Search Suggestions Dropdown */}
-                {showSuggestions && searchSuggestions.length > 0 && (
-                  <div
-                    ref={suggestionsRef}
-                    className="absolute left-0 right-0 top-full z-20 mt-2 max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
-                  >
-                    {searchSuggestions.map((suggestion, index) => (
-                      <div
-                        key={suggestion.id}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className={`cursor-pointer border-b border-gray-100 px-4 py-3 transition-colors last:border-b-0 ${
-                          index === selectedSuggestionIndex
-                            ? 'border-l-4 border-l-red-500 bg-red-50'
-                            : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Type Icon */}
-                          <div className="mt-1 flex-shrink-0">
-                            {suggestion.type === 'PAPER' && (
-                              <svg
-                                className="h-5 w-5 text-blue-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                              </svg>
-                            )}
-                            {suggestion.type === 'PROJECT' && (
-                              <svg
-                                className="h-5 w-5 text-green-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                                />
-                              </svg>
-                            )}
-                            {suggestion.type === 'NEWS' && (
-                              <svg
-                                className="h-5 w-5 text-orange-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                                />
-                              </svg>
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center gap-2">
-                              <h4 className="truncate text-sm font-medium text-gray-900">
-                                {suggestion.title}
-                              </h4>
-                              <span className="flex-shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                                {suggestion.type.toLowerCase()}
-                              </span>
-                            </div>
-                            <p className="line-clamp-2 text-xs text-gray-600">
-                              {suggestion.highlight}
-                            </p>
-                          </div>
-
-                          {/* Arrow Icon */}
-                          <div className="mt-1 flex-shrink-0">
-                            <svg
-                              className="h-4 w-4 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Tabs and Filters */}
-            <div className="flex items-center justify-between">
-              <div className="flex gap-6">
-                <button
-                  onClick={() => setActiveTab('papers')}
-                  className={`border-b-2 pb-1 text-base font-medium transition-colors ${
-                    activeTab === 'papers'
-                      ? 'border-red-600 text-red-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Papers
-                </button>
-                <button
-                  onClick={() => setActiveTab('projects')}
-                  className={`border-b-2 pb-1 text-base font-medium transition-colors ${
-                    activeTab === 'projects'
-                      ? 'border-red-600 text-red-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Projects
-                </button>
-                <button
-                  onClick={() => setActiveTab('news')}
-                  className={`border-b-2 pb-1 text-base font-medium transition-colors ${
-                    activeTab === 'news'
-                      ? 'border-red-600 text-red-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  News
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setFilterCategory(filterCategory ? '' : 'AI')}
-                  className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-                >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                    />
-                  </svg>
-                  {filterCategory || 'Filter'}
-                </button>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-                >
-                  <option value="trendingScore">Hot</option>
-                  <option value="publishedAt">Latest</option>
-                  <option value="qualityScore">Quality</option>
-                </select>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Content Area */}
         <div className="mx-auto max-w-5xl px-8 pb-6">
@@ -1059,11 +1116,12 @@ export default function Home() {
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="flex animate-pulse gap-6 rounded-xl border border-gray-200 bg-white p-6"
+                      className="flex animate-pulse items-start gap-4 rounded-xl border border-gray-200 bg-white p-6"
                     >
-                      <div className="h-52 w-40 flex-shrink-0 rounded-lg bg-gray-200"></div>
+                      <div className="h-6 w-6 flex-shrink-0 rounded bg-gray-200"></div>
                       <div className="flex-1">
-                        <div className="mb-4 h-6 w-3/4 rounded bg-gray-200"></div>
+                        <div className="mb-3 h-3 w-48 rounded bg-gray-200"></div>
+                        <div className="mb-3 h-6 w-3/4 rounded bg-gray-200"></div>
                         <div className="mb-2 h-4 w-full rounded bg-gray-200"></div>
                         <div className="h-4 w-5/6 rounded bg-gray-200"></div>
                       </div>
@@ -1081,117 +1139,69 @@ export default function Home() {
                       onClick={() => handleResourceClick(resource)}
                       className="cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:shadow-lg"
                     >
-                      <div className="flex gap-6 p-6">
-                        {/* Left: Paper Thumbnail */}
-                        <div className="w-40 flex-shrink-0">
-                          <div
-                            className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm"
-                            style={{ aspectRatio: '1/1.4' }}
-                          >
-                            {resource.thumbnailUrl ? (
-                              // Check if thumbnailUrl is a PDF link
-                              resource.thumbnailUrl.includes('arxiv.org/pdf') ||
-                              resource.thumbnailUrl.endsWith('.pdf') ? (
-                                <PDFThumbnail
-                                  pdfUrl={resource.thumbnailUrl}
-                                  alt={resource.title}
-                                  className="h-full w-full"
-                                />
-                              ) : (
-                                <img
-                                  src={`${config.apiBaseUrl}${resource.thumbnailUrl}`}
-                                  alt={resource.title}
-                                  className="h-full w-full object-cover"
-                                />
-                              )
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                                {resource.type === 'PAPER' && (
-                                  <svg
-                                    className="h-12 w-12"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                  </svg>
-                                )}
-                                {resource.type === 'PROJECT' && (
-                                  <svg
-                                    className="h-12 w-12"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                                    />
-                                  </svg>
-                                )}
-                                {resource.type === 'NEWS' && (
-                                  <svg
-                                    className="h-12 w-12"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                                    />
-                                  </svg>
-                                )}
-                              </div>
-                            )}
-                            {/* Stats Overlay */}
-                            <div className="absolute left-2 top-2 flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-xs shadow-sm backdrop-blur-sm">
-                              <svg
-                                className="h-3 w-3 text-gray-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                                />
-                              </svg>
-                              <span className="font-medium text-gray-700">
-                                {resource.upvoteCount || 0}
-                              </span>
-                              <svg
-                                className="h-3 w-3 text-green-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 10l7-7m0 0l7 7m-7-7v18"
-                                />
-                              </svg>
-                            </div>
-                          </div>
+                      <div className="flex items-start gap-4 p-6">
+                        {/* Icon */}
+                        <div className="flex-shrink-0 pt-1">
+                          {resource.type === 'PAPER' && (
+                            <svg
+                              className="h-6 w-6 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                          )}
+                          {resource.type === 'PROJECT' && (
+                            <svg
+                              className="h-6 w-6 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                              />
+                            </svg>
+                          )}
+                          {resource.type === 'NEWS' && (
+                            <svg
+                              className="h-6 w-6 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                              />
+                            </svg>
+                          )}
+                          {resource.type === 'YOUTUBE' && (
+                            <svg
+                              className="h-6 w-6 text-red-600"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                            </svg>
+                          )}
                         </div>
 
-                        {/* Right: Content */}
+                        {/* Content */}
                         <div className="min-w-0 flex-1">
-                          {/* Date and Tags */}
-                          <div className="mb-3 flex items-center gap-3 text-xs text-gray-500">
+                          {/* Date, Tags, and Stats */}
+                          <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                             <span>
                               {new Date(
                                 resource.publishedAt
@@ -1201,6 +1211,24 @@ export default function Home() {
                                 year: 'numeric',
                               })}
                             </span>
+                            {resource.upvoteCount !== undefined && (
+                              <span className="flex items-center gap-1 text-gray-600">
+                                <svg
+                                  className="h-3 w-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 10l7-7m0 0l7 7m-7-7v18"
+                                  />
+                                </svg>
+                                {resource.upvoteCount}
+                              </span>
+                            )}
                             {resource.categories &&
                               resource.categories.slice(0, 3).map((cat, i) => (
                                 <span key={i} className="text-gray-600">

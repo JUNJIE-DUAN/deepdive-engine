@@ -78,6 +78,7 @@ export const useReportWorkspace = create<ReportWorkspace>()(
         resources: state.resources,
         workspaceId: state.workspaceId,
       }),
+      skipHydration: true,
     }
   )
 );

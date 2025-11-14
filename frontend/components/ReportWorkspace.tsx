@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import { config } from '@/lib/config';
@@ -8,6 +9,11 @@ export default function ReportWorkspace() {
   const router = useRouter();
   const { resources, removeResource, clearAll, maxResources } =
     useReportWorkspace();
+
+  // Manually hydrate the store on client side
+  useEffect(() => {
+    useReportWorkspace.persist.rehydrate();
+  }, []);
 
   if (resources.length === 0) return null;
 

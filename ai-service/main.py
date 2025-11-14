@@ -34,22 +34,15 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# 配置 CORS
+# 配置 CORS - 使用正则表达式匹配所有localhost端口
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:3003",
-        "http://localhost:3004",
-        "http://localhost:3005",
-        "http://localhost:3006",
-        "http://localhost:4000"
-    ],  # 前端和后端
+    allow_origin_regex=r"http://localhost:\d+",  # 允许所有localhost端口
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,  # OPTIONS预检缓存时间
 )
 
 # 初始化 AI 客户端

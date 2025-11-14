@@ -86,6 +86,20 @@ def select_ai_client(
     return client, active_model
 
 
+
+# OPTIONS endpoints for CORS preflight
+@router.options("/summary")
+@router.options("/insights")
+@router.options("/classify")
+@router.options("/simple-chat")
+@router.options("/quick-action")
+@router.options("/translate")
+@router.options("/translate-segments")
+@router.options("/youtube-report")
+@router.options("/chat")
+async def options_handler():
+    return {}
+
 @router.post("/summary", response_model=SummaryResponse)
 async def generate_summary(
     request: SummaryRequest,

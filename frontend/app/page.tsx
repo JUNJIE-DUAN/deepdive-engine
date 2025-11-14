@@ -249,23 +249,35 @@ export default function Home() {
     try {
       setLoading(true);
 
-      // Handle YouTube tab separately
+      // Handle YouTube tab separately - fetch from both sources
       if (activeTab === 'youtube') {
-        const url = `${config.apiUrl}/youtube-videos`;
-        const res = await fetch(url);
-        const data = await res.json();
-        const videos = (Array.isArray(data) ? data : data.data || []).map(
-          (video: any) => ({
-            id: video.id,
-            type: 'YOUTUBE',
-            title: video.title,
-            abstract: null,
-            sourceUrl: video.url,
-            publishedAt: video.createdAt,
-            videoId: video.videoId,
-          })
-        );
-        setResources(videos);
+        // Fetch from youtube-videos table
+        const youtubeVideosUrl = `${config.apiUrl}/youtube-videos`;
+        const youtubeRes = await fetch(youtubeVideosUrl);
+        const youtubeData = await youtubeRes.json();
+        const youtubeVideos = (
+          Array.isArray(youtubeData) ? youtubeData : youtubeData.data || []
+        ).map((video: any) => ({
+          id: video.id,
+          type: 'YOUTUBE',
+          title: video.title,
+          abstract: null,
+          sourceUrl: video.url,
+          publishedAt: video.createdAt,
+          videoId: video.videoId,
+        }));
+
+        // Fetch from resources table with type=YOUTUBE_VIDEO
+        const resourcesUrl = `${config.apiUrl}/resources?type=YOUTUBE_VIDEO&take=50&skip=0`;
+        const resourcesRes = await fetch(resourcesUrl);
+        const resourcesData = await resourcesRes.json();
+        const resourceVideos = Array.isArray(resourcesData)
+          ? resourcesData
+          : resourcesData.data || [];
+
+        // Merge both sources
+        const allVideos = [...youtubeVideos, ...resourceVideos];
+        setResources(allVideos);
         setLoading(false);
         return;
       }

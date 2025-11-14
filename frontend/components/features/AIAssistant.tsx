@@ -15,6 +15,7 @@ interface AIAssistantProps {
     explanations?: AIExplanation[];
   };
   onExplanationAdded?: (explanation: AIExplanation) => void;
+  pdfContext?: string; // PDF文本内容
 }
 
 /**
@@ -30,6 +31,7 @@ export default function AIAssistant({
   noteId,
   existingInsights,
   onExplanationAdded,
+  pdfContext,
 }: AIAssistantProps) {
   const [selectedText, setSelectedText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,7 +60,10 @@ export default function AIAssistant({
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: textToExplain }),
+            body: JSON.stringify({
+              text: textToExplain,
+              pdfContext: pdfContext || undefined,
+            }),
           }
         );
 

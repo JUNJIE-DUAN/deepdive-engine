@@ -140,10 +140,11 @@ export class NotesController {
     @Param("id") id: string,
     @Request() req: any,
     @Body("text") text: string,
+    @Body("pdfContext") pdfContext?: string,
   ) {
     // TODO: 从JWT token获取userId
     const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
-    return this.notesService.requestAIExplanation(id, userId, text);
+    return this.notesService.requestAIExplanation(id, userId, text, pdfContext);
   }
 
   /**

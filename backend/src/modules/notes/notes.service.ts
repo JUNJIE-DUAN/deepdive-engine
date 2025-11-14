@@ -310,7 +310,12 @@ export class NotesService {
   /**
    * 请求AI解释
    */
-  async requestAIExplanation(noteId: string, userId: string, text: string) {
+  async requestAIExplanation(
+    noteId: string,
+    userId: string,
+    text: string,
+    pdfContext?: string,
+  ) {
     // 验证所有权
     const note = await this.prisma.note.findUnique({
       where: { id: noteId },
@@ -333,14 +338,28 @@ export class NotesService {
     try {
       const aiServiceUrl =
         process.env.AI_SERVICE_URL || "http://localhost:5000";
+
+      // 构建上下文：优先使用传入的PDF内容，否则使用资源的标题和摘要
+      let context = "";
+      if (pdfContext && pdfContext.trim()) {
+        // 使用传入的PDF内容，限制长度以避免超过token限制
+        const maxContextLength = 10000;
+        const trimmedContext =
+          pdfContext.length > maxContextLength
+            ? pdfContext.substring(0, maxContextLength) + "...[内容已截断]"
+            : pdfContext;
+        context = `PDF内容:\n${trimmedContext}`;
+      } else if (note.resource) {
+        // 回退到使用标题和摘要
+        context = `资源标题: ${note.resource.title}\n摘要: ${note.resource.abstract || "无"}`;
+      }
+
       const response = await fetch(`${aiServiceUrl}/api/v1/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `请解释以下文本的含义和重要性：\n\n${text}`,
-          context: note.resource
-            ? `资源标题: ${note.resource.title}\n摘要: ${note.resource.abstract || "无"}`
-            : undefined,
+          message: `基于以下PDF文档内容，请详细解释所选文本的含义、重要性和在文档中的作用：\n\n选中的文本：${text}`,
+          context: context || undefined,
           model: "grok",
           stream: false,
         }),

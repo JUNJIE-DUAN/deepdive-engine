@@ -1,0 +1,159 @@
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  Logger,
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { PrismaService } from "../../common/prisma/prisma.service";
+import * as bcrypt from "bcrypt";
+
+/**
+ * 认证服务
+ */
+@Injectable()
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  /**
+   * 用户注册
+   */
+  async register(email: string, username: string, password: string) {
+    // 检查用户是否已存在
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { username }],
+      },
+    });
+
+    if (existingUser) {
+      throw new ConflictException("Email or username already exists");
+    }
+
+    // 密码加密
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 创建用户
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        username,
+        passwordHash: hashedPassword,
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        createdAt: true,
+      },
+    });
+
+    // 生成 tokens
+    const tokens = this.generateTokens(user.id, user.email);
+
+    this.logger.log(`New user registered: ${user.username}`);
+
+    return {
+      user,
+      ...tokens,
+    };
+  }
+
+  /**
+   * 用户登录
+   */
+  async login(email: string, password: string) {
+    // 查找用户
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    // 验证密码
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.passwordHash ?? "",
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    // 生成 tokens
+    const tokens = this.generateTokens(user.id, user.email);
+
+    this.logger.log(`User logged in: ${user.username}`);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        createdAt: user.createdAt,
+      },
+      ...tokens,
+    };
+  }
+
+  /**
+   * 刷新 token
+   */
+  async refreshToken(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("User not found");
+    }
+
+    if (!user.email) {
+      throw new UnauthorizedException("User email is required");
+    }
+
+    return this.generateTokens(user.id, user.email);
+  }
+
+  /**
+   * 生成 access token 和 refresh token
+   */
+  private generateTokens(userId: string, email: string) {
+    const payload = { sub: userId, email };
+
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: "30d" });
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  /**
+   * 验证用户
+   */
+  async validateUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        createdAt: true,
+      },
+    });
+
+    return user;
+  }
+}

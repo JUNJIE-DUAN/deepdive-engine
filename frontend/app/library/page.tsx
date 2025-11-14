@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { config } from '@/lib/config';
-import NotesList from '@/components/NotesList';
-import Sidebar from '@/components/Sidebar';
+import NotesList from '@/components/features/NotesList';
+import Sidebar from '@/components/layout/Sidebar';
 
 export const dynamic = 'force-dynamic';
 
@@ -185,7 +185,9 @@ export default function LibraryPage() {
                                       }}
                                     />
                                   ) : null}
-                                  <div className={`${thumbnailUrl ? 'hidden' : ''} mb-3 flex h-40 w-full items-center justify-center rounded-md border border-dashed border-gray-200 bg-gray-50 text-gray-400`}>
+                                  <div
+                                    className={`${thumbnailUrl ? 'hidden' : ''} mb-3 flex h-40 w-full items-center justify-center rounded-md border border-dashed border-gray-200 bg-gray-50 text-gray-400`}
+                                  >
                                     <svg
                                       className="h-10 w-10"
                                       fill="none"

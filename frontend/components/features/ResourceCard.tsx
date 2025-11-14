@@ -1,0 +1,334 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
+import {
+  useThumbnailGenerator,
+  needsThumbnail,
+} from '@/lib/use-thumbnail-generator';
+
+interface Resource {
+  id: string;
+  type: string;
+  title: string;
+  abstract?: string;
+  aiSummary?: string;
+  publishedAt: string;
+  sourceUrl: string;
+  pdfUrl?: string;
+  thumbnailUrl?: string;
+  authors?: Array<{ username: string; platform: string }>;
+  categories?: string[];
+  qualityScore?: string;
+  upvoteCount?: number;
+  viewCount?: number;
+  commentCount?: number;
+}
+
+interface ResourceCardProps {
+  resource: Resource;
+  onClick: () => void;
+  onToggleBookmark: (e: React.MouseEvent) => void;
+  isBookmarked: boolean;
+}
+
+export default function ResourceCard({
+  resource,
+  onClick,
+  onToggleBookmark,
+  isBookmarked,
+}: ResourceCardProps) {
+  const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(
+    resource.thumbnailUrl || null
+  );
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+  const { generateAndUploadThumbnail } = useThumbnailGenerator();
+
+  // Auto-generate thumbnail on mount if needed
+  useEffect(() => {
+    const autoGenerateThumbnail = async () => {
+      if (needsThumbnail(resource) && !isGeneratingThumbnail) {
+        setIsGeneratingThumbnail(true);
+
+        try {
+          const success = await generateAndUploadThumbnail(
+            resource.id,
+            resource.pdfUrl!
+          );
+
+          if (success) {
+            // Fetch updated resource to get thumbnail URL
+            const response = await fetch(
+              `${config.apiBaseUrl}/api/v1/resources/${resource.id}`
+            );
+            if (response.ok) {
+              const updatedResource = await response.json();
+              setLocalThumbnailUrl(updatedResource.thumbnailUrl);
+            }
+          }
+        } catch (error) {
+          console.error('Auto thumbnail generation failed:', error);
+        } finally {
+          setIsGeneratingThumbnail(false);
+        }
+      }
+    };
+
+    // Delay auto-generation to avoid overwhelming on initial load
+    const timer = setTimeout(autoGenerateThumbnail, Math.random() * 2000);
+    return () => clearTimeout(timer);
+  }, [resource.id, resource.pdfUrl, resource.type]);
+
+  return (
+    <article
+      onClick={onClick}
+      className="cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:shadow-lg"
+    >
+      <div className="flex gap-6 p-6">
+        {/* Left: Thumbnail */}
+        <div className="w-40 flex-shrink-0">
+          <div
+            className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm"
+            style={{ aspectRatio: '1/1.4' }}
+          >
+            {localThumbnailUrl ? (
+              <img
+                src={`${config.apiBaseUrl}${localThumbnailUrl}`}
+                alt={resource.title}
+                className="h-full w-full object-cover"
+              />
+            ) : isGeneratingThumbnail ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                <svg
+                  className="h-8 w-8 animate-spin text-blue-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <span className="mt-2 text-xs">Generating...</span>
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                {resource.type === 'PAPER' && (
+                  <svg
+                    className="h-12 w-12"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                )}
+                {resource.type === 'PROJECT' && (
+                  <svg
+                    className="h-12 w-12"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                    />
+                  </svg>
+                )}
+                {resource.type === 'NEWS' && (
+                  <svg
+                    className="h-12 w-12"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                    />
+                  </svg>
+                )}
+              </div>
+            )}
+
+            {/* Stats Overlay */}
+            <div className="absolute left-2 top-2 flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-xs shadow-sm backdrop-blur-sm">
+              <svg
+                className="h-3 w-3 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                />
+              </svg>
+              <span className="font-medium text-gray-700">
+                {resource.upvoteCount || 0}
+              </span>
+              <svg
+                className="h-3 w-3 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 10l7-7m0 0l7 7m-7-7v18"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Content */}
+        <div className="min-w-0 flex-1">
+          {/* Date and Tags */}
+          <div className="mb-3 flex items-center gap-3 text-xs text-gray-500">
+            <span>
+              {new Date(resource.publishedAt).toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </span>
+            {resource.categories &&
+              resource.categories.slice(0, 3).map((cat, i) => (
+                <span key={i} className="text-gray-600">
+                  {cat}
+                </span>
+              ))}
+          </div>
+
+          {/* Title */}
+          <h2 className="mb-3 text-xl font-semibold text-red-600 hover:underline">
+            {resource.title}
+          </h2>
+
+          {/* Abstract */}
+          {(resource.aiSummary || resource.abstract) && (
+            <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-gray-700">
+              {resource.aiSummary || resource.abstract}
+            </p>
+          )}
+
+          {/* Bottom Actions */}
+          <div className="flex items-center gap-6 border-t border-gray-100 pt-3">
+            <button
+              onClick={onToggleBookmark}
+              className={`flex items-center gap-2 text-sm transition-colors ${
+                isBookmarked
+                  ? 'font-medium text-blue-600'
+                  : 'text-gray-600 hover:text-blue-600'
+              }`}
+            >
+              <svg
+                className="h-4 w-4"
+                fill={isBookmarked ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                />
+              </svg>
+              {isBookmarked ? 'Saved' : 'Save'}
+            </button>
+
+            {resource.pdfUrl && (
+              <a
+                href={resource.pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-red-600"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                PDF
+              </a>
+            )}
+
+            <a
+              href={resource.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-red-600"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+              Source
+            </a>
+
+            <button className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-red-600">
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+              </svg>
+              Share
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}

@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { config } from '@/lib/config';
-import Sidebar from '@/components/Sidebar';
-import PDFThumbnail from '@/components/PDFThumbnail';
-import NotesList from '@/components/NotesList';
-import CommentsList from '@/components/CommentsList';
-import ReportWorkspace from '@/components/ReportWorkspace';
+import Sidebar from '@/components/layout/Sidebar';
+import PDFThumbnail from '@/components/ui/PDFThumbnail';
+import NotesList from '@/components/features/NotesList';
+import CommentsList from '@/components/features/CommentsList';
+import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 
 interface Resource {

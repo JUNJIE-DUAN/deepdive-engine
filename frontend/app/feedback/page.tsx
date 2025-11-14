@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Sidebar from '@/components/Sidebar';
+import Sidebar from '@/components/layout/Sidebar';
 
 export default function Feedback() {
-  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'improvement' | 'other'>('feature');
+  const [feedbackType, setFeedbackType] = useState<
+    'bug' | 'feature' | 'improvement' | 'other'
+  >('feature');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [email, setEmail] = useState('');
@@ -14,7 +16,12 @@ export default function Feedback() {
     e.preventDefault();
 
     // Mock submission
-    console.log('Feedback submitted:', { feedbackType, title, description, email });
+    console.log('Feedback submitted:', {
+      feedbackType,
+      title,
+      description,
+      email,
+    });
 
     setSubmitted(true);
     setTimeout(() => {
@@ -26,10 +33,30 @@ export default function Feedback() {
   };
 
   const feedbackTypes = [
-    { value: 'bug', label: 'Bug Report', icon: '🐛', description: 'Report a bug or issue' },
-    { value: 'feature', label: 'Feature Request', icon: '💡', description: 'Suggest a new feature' },
-    { value: 'improvement', label: 'Improvement', icon: '⚡', description: 'Suggest an improvement' },
-    { value: 'other', label: 'Other', icon: '💬', description: 'General feedback' },
+    {
+      value: 'bug',
+      label: 'Bug Report',
+      icon: '🐛',
+      description: 'Report a bug or issue',
+    },
+    {
+      value: 'feature',
+      label: 'Feature Request',
+      icon: '💡',
+      description: 'Suggest a new feature',
+    },
+    {
+      value: 'improvement',
+      label: 'Improvement',
+      icon: '⚡',
+      description: 'Suggest an improvement',
+    },
+    {
+      value: 'other',
+      label: 'Other',
+      icon: '💬',
+      description: 'General feedback',
+    },
   ];
 
   return (
@@ -37,9 +64,9 @@ export default function Feedback() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center px-6">
+        <header className="flex h-16 items-center border-b border-gray-200 bg-white px-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Send Feedback</h1>
             <p className="text-sm text-gray-600">Help us improve DeepDive</p>
@@ -48,33 +75,47 @@ export default function Feedback() {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-2xl mx-auto">
+          <div className="mx-auto max-w-2xl">
             {submitted ? (
               /* Success Message */
-              <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                  <svg
+                    className="h-8 w-8 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Thank you!</h2>
-                <p className="text-gray-600">Your feedback has been submitted successfully.</p>
+                <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                  Thank you!
+                </h2>
+                <p className="text-gray-600">
+                  Your feedback has been submitted successfully.
+                </p>
               </div>
             ) : (
               /* Feedback Form */
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Feedback Type Selection */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                  <label className="mb-3 block text-sm font-medium text-gray-700">
                     What type of feedback do you have?
                   </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {feedbackTypes.map((type) => (
                       <button
                         key={type.value}
                         type="button"
                         onClick={() => setFeedbackType(type.value as any)}
-                        className={`p-4 rounded-lg border-2 text-left transition-all ${
+                        className={`rounded-lg border-2 p-4 text-left transition-all ${
                           feedbackType === type.value
                             ? 'border-red-500 bg-red-50'
                             : 'border-gray-200 hover:border-gray-300'
@@ -83,8 +124,12 @@ export default function Feedback() {
                         <div className="flex items-start gap-3">
                           <span className="text-2xl">{type.icon}</span>
                           <div>
-                            <p className="font-medium text-gray-900">{type.label}</p>
-                            <p className="text-sm text-gray-500">{type.description}</p>
+                            <p className="font-medium text-gray-900">
+                              {type.label}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {type.description}
+                            </p>
                           </div>
                         </div>
                       </button>
@@ -93,8 +138,11 @@ export default function Feedback() {
                 </div>
 
                 {/* Title */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                  <label
+                    htmlFor="title"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
                     Title *
                   </label>
                   <input
@@ -104,13 +152,16 @@ export default function Feedback() {
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Brief summary of your feedback"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
                 </div>
 
                 {/* Description */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                  <label
+                    htmlFor="description"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
                     Description *
                   </label>
                   <textarea
@@ -120,19 +171,26 @@ export default function Feedback() {
                     placeholder="Provide detailed information about your feedback..."
                     required
                     rows={8}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
-                  <p className="text-xs text-gray-500 mt-2">
-                    {feedbackType === 'bug' && 'Please include steps to reproduce the issue and any error messages.'}
-                    {feedbackType === 'feature' && 'Describe the feature you\'d like to see and how it would help you.'}
-                    {feedbackType === 'improvement' && 'Explain what could be improved and why.'}
-                    {feedbackType === 'other' && 'Share your thoughts, suggestions, or questions.'}
+                  <p className="mt-2 text-xs text-gray-500">
+                    {feedbackType === 'bug' &&
+                      'Please include steps to reproduce the issue and any error messages.'}
+                    {feedbackType === 'feature' &&
+                      "Describe the feature you'd like to see and how it would help you."}
+                    {feedbackType === 'improvement' &&
+                      'Explain what could be improved and why.'}
+                    {feedbackType === 'other' &&
+                      'Share your thoughts, suggestions, or questions.'}
                   </p>
                 </div>
 
                 {/* Email (Optional) */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                  <label
+                    htmlFor="email"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
                     Email (Optional)
                   </label>
                   <input
@@ -141,9 +199,9 @@ export default function Feedback() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="your@email.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="mt-2 text-xs text-gray-500">
                     Provide your email if you'd like us to follow up with you.
                   </p>
                 </div>
@@ -154,7 +212,7 @@ export default function Feedback() {
                   <button
                     type="submit"
                     disabled={!title || !description}
-                    className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded-lg bg-red-600 px-6 py-3 font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Submit Feedback
                   </button>
@@ -164,15 +222,29 @@ export default function Feedback() {
 
             {/* Additional Info */}
             {!submitted && (
-              <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-6">
                 <div className="flex items-start gap-3">
-                  <svg className="w-6 h-6 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="h-6 w-6 flex-shrink-0 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <div>
-                    <h3 className="font-semibold text-blue-900 mb-1">Your privacy matters</h3>
+                    <h3 className="mb-1 font-semibold text-blue-900">
+                      Your privacy matters
+                    </h3>
                     <p className="text-sm text-blue-800">
-                      We take your feedback seriously and will use it to improve DeepDive. Your information will never be shared with third parties.
+                      We take your feedback seriously and will use it to improve
+                      DeepDive. Your information will never be shared with third
+                      parties.
                     </p>
                   </div>
                 </div>

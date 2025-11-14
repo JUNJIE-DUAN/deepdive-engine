@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import { PdfThumbnailService } from '../resources/pdf-thumbnail.service';
+import { PrismaClient } from "@prisma/client";
+import { PdfThumbnailService } from "../modules/resources/pdf-thumbnail.service";
 
 /**
  * 批量生成PDF缩略图脚本
@@ -9,14 +9,18 @@ async function generateThumbnails() {
   const pdfThumbnailService = new PdfThumbnailService();
 
   try {
-    console.log('================================================================================');
-    console.log('📸 批量生成PDF缩略图');
-    console.log('================================================================================\n');
+    console.log(
+      "================================================================================",
+    );
+    console.log("📸 批量生成PDF缩略图");
+    console.log(
+      "================================================================================\n",
+    );
 
     // 获取所有PAPER类型且有pdfUrl的资源
     const papers = await prisma.resource.findMany({
       where: {
-        type: 'PAPER',
+        type: "PAPER",
         pdfUrl: {
           not: null,
         },
@@ -32,7 +36,7 @@ async function generateThumbnails() {
     console.log(`📊 找到 ${papers.length} 篇论文需要处理\n`);
 
     if (papers.length === 0) {
-      console.log('✅ 没有需要生成缩略图的论文');
+      console.log("✅ 没有需要生成缩略图的论文");
       return;
     }
 
@@ -41,7 +45,7 @@ async function generateThumbnails() {
     console.log(`🔄 其中 ${papersNeedingThumbnails.length} 篇需要生成缩略图\n`);
 
     if (papersNeedingThumbnails.length === 0) {
-      console.log('✅ 所有论文都已有缩略图');
+      console.log("✅ 所有论文都已有缩略图");
       return;
     }
 
@@ -53,15 +57,19 @@ async function generateThumbnails() {
 
     const stats = await pdfThumbnailService.generateBatchThumbnails(resources);
 
-    console.log('\n================================================================================');
-    console.log('📊 生成统计:');
+    console.log(
+      "\n================================================================================",
+    );
+    console.log("📊 生成统计:");
     console.log(`  ✅ 成功: ${stats.success}`);
     console.log(`  ❌ 失败: ${stats.failed}`);
     console.log(`  ⏭️ 跳过: ${stats.skipped}`);
-    console.log('================================================================================\n');
+    console.log(
+      "================================================================================\n",
+    );
 
     // 更新数据库中的thumbnailUrl
-    console.log('📝 更新数据库中的thumbnailUrl字段...\n');
+    console.log("📝 更新数据库中的thumbnailUrl字段...\n");
 
     let updateCount = 0;
     for (const paper of papersNeedingThumbnails) {
@@ -81,9 +89,11 @@ async function generateThumbnails() {
     }
 
     console.log(`\n✅ 数据库更新完成！共更新 ${updateCount} 条记录\n`);
-    console.log('================================================================================');
+    console.log(
+      "================================================================================",
+    );
   } catch (error) {
-    console.error('❌ 批量生成失败:', error);
+    console.error("❌ 批量生成失败:", error);
   } finally {
     await prisma.$disconnect();
   }

@@ -7,21 +7,21 @@ import { AppService } from "./app.service";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { MongoDBModule } from "./common/mongodb/mongodb.module";
 import { Neo4jModule } from "./common/neo4j/neo4j.module";
-import { CrawlerModule } from "./crawler/crawler.module";
-import { ResourcesModule } from "./resources/resources.module";
-import { FeedModule } from "./feed/feed.module";
-import { KnowledgeGraphModule } from "./knowledge-graph/knowledge-graph.module";
-import { ProxyModule } from "./proxy/proxy.module";
-import { RecommendationsModule } from "./recommendations/recommendations.module";
-import { AuthModule } from "./auth/auth.module";
-import { CollectionsModule } from "./collections/collections.module";
-import { NotesModule } from "./notes/notes.module";
-import { CommentsModule } from "./comments/comments.module";
-import { ReportsModule } from "./reports/reports.module";
-import { YoutubeVideosModule } from "./youtube-videos/youtube-videos.module";
-import { YoutubeModule } from "./youtube/youtube.module";
-import { WorkspaceModule } from "./workspace/workspace.module";
-// import { LearningPathsModule } from './learning-paths/learning-paths.module'; // TODO: Enable later
+import { CrawlerModule } from "./modules/crawler/crawler.module";
+import { ResourcesModule } from "./modules/resources/resources.module";
+import { FeedModule } from "./modules/feed/feed.module";
+import { KnowledgeGraphModule } from "./modules/knowledge-graph/knowledge-graph.module";
+import { ProxyModule } from "./modules/proxy/proxy.module";
+import { RecommendationsModule } from "./modules/recommendations/recommendations.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { CollectionsModule } from "./modules/collections/collections.module";
+import { NotesModule } from "./modules/notes/notes.module";
+import { CommentsModule } from "./modules/comments/comments.module";
+import { ReportsModule } from "./modules/reports/reports.module";
+import { YoutubeVideosModule } from "./modules/youtube-videos/youtube-videos.module";
+import { YoutubeModule } from "./modules/youtube/youtube.module";
+import { WorkspaceModule } from "./modules/workspace/workspace.module";
+// import { LearningPathsModule } from './modules/learning-paths/learning-paths.module'; // TODO: Enable later
 
 @Module({
   imports: [

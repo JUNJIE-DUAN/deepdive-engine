@@ -10,6 +10,7 @@ interface ResourceDetailPanelProps {
   resourceId: string;
   noteId?: string;
   defaultTab?: 'notes' | 'comments' | 'ai' | 'graph';
+  pdfContext?: string; // PDF文本内容，用于AI上下文
 }
 
 /**
@@ -25,6 +26,7 @@ export default function ResourceDetailPanel({
   resourceId,
   noteId,
   defaultTab = 'notes',
+  pdfContext,
 }: ResourceDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<
     'notes' | 'comments' | 'ai' | 'graph'
@@ -153,6 +155,7 @@ export default function ResourceDetailPanel({
             <AIAssistant
               noteId={note.id}
               existingInsights={note.aiInsights}
+              pdfContext={pdfContext}
               onExplanationAdded={(explanation) => {
                 // Update note's AI insights
                 setNote({

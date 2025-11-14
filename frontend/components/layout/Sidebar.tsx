@@ -231,6 +231,13 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         <div className="space-y-1">
           <Link
             href="/"
+            onClick={(e) => {
+              // Force navigation even if already on homepage
+              if (pathname === '/') {
+                e.preventDefault();
+                window.location.href = '/';
+              }
+            }}
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
               isActive('/')
                 ? 'bg-pink-50 text-gray-900'
@@ -256,6 +263,13 @@ export default function Sidebar({ className = '' }: SidebarProps) {
 
           <Link
             href="/library"
+            onClick={(e) => {
+              // Force navigation even if already on library page
+              if (pathname === '/library') {
+                e.preventDefault();
+                window.location.href = '/library';
+              }
+            }}
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
               isActive('/library')
                 ? 'bg-pink-50 text-gray-900'
@@ -281,6 +295,13 @@ export default function Sidebar({ className = '' }: SidebarProps) {
 
           <Link
             href="/notifications"
+            onClick={(e) => {
+              // Force navigation even if already on notifications page
+              if (pathname === '/notifications') {
+                e.preventDefault();
+                window.location.href = '/notifications';
+              }
+            }}
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
               isActive('/notifications')
                 ? 'bg-pink-50 text-gray-900'
@@ -306,6 +327,13 @@ export default function Sidebar({ className = '' }: SidebarProps) {
 
           <Link
             href="/profile"
+            onClick={(e) => {
+              // Force navigation even if already on profile page
+              if (pathname === '/profile') {
+                e.preventDefault();
+                window.location.href = '/profile';
+              }
+            }}
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
               isActive('/profile')
                 ? 'bg-pink-50 text-gray-900'
@@ -325,6 +353,13 @@ export default function Sidebar({ className = '' }: SidebarProps) {
       <div className="space-y-1 border-t border-gray-200 p-3">
         <Link
           href="/labs"
+          onClick={(e) => {
+            // Force navigation even if already on labs page
+            if (pathname === '/labs') {
+              e.preventDefault();
+              window.location.href = '/labs';
+            }
+          }}
           className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2 text-sm ${
             isActive('/labs')
               ? 'bg-pink-50 text-gray-900'
@@ -349,6 +384,13 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         </Link>
         <Link
           href="/feedback"
+          onClick={(e) => {
+            // Force navigation even if already on feedback page
+            if (pathname === '/feedback') {
+              e.preventDefault();
+              window.location.href = '/feedback';
+            }
+          }}
           className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2 text-sm ${
             isActive('/feedback')
               ? 'bg-pink-50 text-gray-900'

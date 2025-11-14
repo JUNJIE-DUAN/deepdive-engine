@@ -316,4 +316,152 @@ export class ResourcesController {
       resource: updated,
     };
   }
+
+  /**
+   * 上传文件并创建资源
+   * POST /api/v1/resources/upload-file
+   *
+   * 根据resource type限制文件类型：
+   * - PAPER: PDF文件（最大50MB）
+   * - PROJECT: ZIP/TAR.GZ文件（最大100MB）
+   * - NEWS: 图片文件（最大10MB）
+   * - YOUTUBE_VIDEO: 字幕文件（最大5MB）
+   */
+  @Post("upload-file")
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const uploadPath = path.join(process.cwd(), "public", "uploads");
+          fs.mkdir(uploadPath, { recursive: true })
+            .then(() => cb(null, uploadPath))
+            .catch((error) => cb(error as Error, uploadPath));
+        },
+        filename: (_req, file, cb) => {
+          const timestamp = Date.now();
+          const ext = path.extname(file.originalname);
+          const name = path.basename(file.originalname, ext);
+          cb(null, `${name}-${timestamp}${ext}`);
+        },
+      }),
+      limits: {
+        fileSize: 100 * 1024 * 1024, // Max 100MB (will be further validated based on type)
+      },
+    }),
+  )
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body("type") type: string,
+  ) {
+    this.logger.log(`Uploading file: ${file.originalname} (type: ${type})`);
+
+    if (!file) {
+      throw new HttpException("No file uploaded", HttpStatus.BAD_REQUEST);
+    }
+
+    if (!type) {
+      throw new HttpException(
+        "Resource type is required",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Validate file type and size based on resource type
+    const typeRestrictions: Record<
+      string,
+      { mimeTypes: string[]; maxSize: number; extensions: string[] }
+    > = {
+      PAPER: {
+        mimeTypes: ["application/pdf"],
+        maxSize: 50 * 1024 * 1024,
+        extensions: [".pdf"],
+      },
+      PROJECT: {
+        mimeTypes: [
+          "application/zip",
+          "application/x-gzip",
+          "application/gzip",
+          "application/x-tar",
+        ],
+        maxSize: 100 * 1024 * 1024,
+        extensions: [".zip", ".tar.gz", ".tgz"],
+      },
+      NEWS: {
+        mimeTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+        maxSize: 10 * 1024 * 1024,
+        extensions: [".jpg", ".jpeg", ".png", ".gif", ".webp"],
+      },
+      YOUTUBE_VIDEO: {
+        mimeTypes: ["text/plain", "application/x-subrip"],
+        maxSize: 5 * 1024 * 1024,
+        extensions: [".srt", ".vtt"],
+      },
+    };
+
+    const restrictions = typeRestrictions[type];
+    if (!restrictions) {
+      // Clean up uploaded file
+      await fs.unlink(file.path).catch(() => {});
+      throw new HttpException(
+        `Invalid resource type. Must be one of: ${Object.keys(typeRestrictions).join(", ")}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Check file size
+    if (file.size > restrictions.maxSize) {
+      await fs.unlink(file.path).catch(() => {});
+      const maxSizeMB = restrictions.maxSize / (1024 * 1024);
+      throw new HttpException(
+        `File size exceeds maximum allowed (${maxSizeMB}MB) for ${type}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Check file extension
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    const isValidExt = restrictions.extensions.some(
+      (ext) => ext === fileExt || fileExt.endsWith(ext),
+    );
+
+    if (!isValidExt) {
+      await fs.unlink(file.path).catch(() => {});
+      throw new HttpException(
+        `Invalid file type. Allowed extensions for ${type}: ${restrictions.extensions.join(", ")}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Check MIME type
+    const isValidMime = restrictions.mimeTypes.some(
+      (mime) =>
+        file.mimetype === mime || file.mimetype.startsWith(mime.split("/")[0]),
+    );
+
+    if (!isValidMime) {
+      await fs.unlink(file.path).catch(() => {});
+      throw new HttpException(
+        `Invalid file MIME type. Allowed types for ${type}: ${restrictions.mimeTypes.join(", ")}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Construct file URL
+    const fileUrl = `/uploads/${file.filename}`;
+
+    this.logger.log(`File uploaded successfully: ${file.filename}`);
+
+    // Return file info - frontend can decide whether to create resource or analyze
+    return {
+      message: "File uploaded successfully",
+      file: {
+        originalName: file.originalname,
+        filename: file.filename,
+        size: file.size,
+        mimetype: file.mimetype,
+        url: fileUrl,
+        type,
+      },
+    };
+  }
 }

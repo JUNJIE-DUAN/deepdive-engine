@@ -1399,8 +1399,8 @@ export default function Home() {
                   {/* Import URL Button - Available for all tabs */}
                   <button
                     onClick={() => setShowImportDialog(true)}
-                    className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-100"
-                    title="导入URL"
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    title="Import"
                   >
                     <svg
                       className="h-4 w-4"
@@ -1415,7 +1415,7 @@ export default function Home() {
                         d="M12 4v16m8-8H4"
                       />
                     </svg>
-                    导入URL
+                    Import
                   </button>
                   <button
                     onClick={() => setShowFilterPanel(true)}
@@ -2603,7 +2603,7 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">导入URL</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Import</h3>
               <button
                 onClick={() => {
                   setShowImportDialog(false);

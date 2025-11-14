@@ -342,14 +342,27 @@ export class ResourcesService {
         throw new Error(errorMessage);
       }
 
-      // 解析URL获取标题（从URL的最后部分）
-      const pathParts = urlObj.pathname.split("/").filter((p) => p.length > 0);
-      const lastPart = pathParts[pathParts.length - 1] || urlObj.hostname;
+      // 解析URL获取标题
+      let title: string;
 
-      // 生成默认标题
-      const defaultTitle = lastPart
-        .replace(/[-_]/g, " ")
-        .replace(/\.(html|htm|pdf)$/i, "");
+      if (type === "YOUTUBE_VIDEO") {
+        // 对于YouTube视频，从URL中提取videoId并获取真实标题
+        const videoId = this.extractYoutubeVideoId(finalUrl);
+        if (videoId) {
+          title = await this.fetchYoutubeTitle(videoId);
+        } else {
+          title = "YouTube Video";
+        }
+      } else {
+        // 其他类型：从URL的最后部分提取标题
+        const pathParts = urlObj.pathname
+          .split("/")
+          .filter((p) => p.length > 0);
+        const lastPart = pathParts[pathParts.length - 1] || urlObj.hostname;
+        title = lastPart
+          .replace(/[-_]/g, " ")
+          .replace(/\.(html|htm|pdf)$/i, "");
+      }
 
       // 提取 PDF URL（如果是论文类型）
       let pdfUrl: string | null = null;
@@ -360,7 +373,7 @@ export class ResourcesService {
       // 创建资源数据
       const resourceData: Prisma.ResourceCreateInput = {
         type: type as any,
-        title: defaultTitle,
+        title: title,
         abstract: `从URL导入: ${finalUrl}`,
         sourceUrl: finalUrl, // 使用转换后的URL
         pdfUrl: pdfUrl, // 添加 PDF URL
@@ -424,6 +437,56 @@ export class ResourcesService {
     } catch (error) {
       this.logger.error(`Failed to extract PDF URL from: ${url}`, error);
       return null;
+    }
+  }
+
+  /**
+   * 从YouTube URL中提取视频ID
+   */
+  private extractYoutubeVideoId(url: string): string | null {
+    try {
+      const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /^([a-zA-Z0-9_-]{11})$/,
+      ];
+
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match?.[1]) {
+          return match[1];
+        }
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to extract video ID from: ${url}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取YouTube视频标题
+   */
+  private async fetchYoutubeTitle(videoId: string): Promise<string> {
+    try {
+      const response = await fetch(
+        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      );
+
+      if (!response.ok) {
+        this.logger.warn(
+          `Failed to fetch YouTube title for ${videoId}: ${response.status}`,
+        );
+        return `YouTube Video ${videoId}`;
+      }
+
+      const data = (await response.json()) as { title?: string };
+      return data.title || `YouTube Video ${videoId}`;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to fetch video title via oEmbed: ${String(error)}`,
+      );
+      return `YouTube Video ${videoId}`;
     }
   }
 }

@@ -822,17 +822,12 @@ export default function Home() {
     setImportMessage(null);
 
     try {
-      // Map current tab to resource type (skip YouTube as it's not supported)
-      if (activeTab === 'youtube') {
-        setImportMessage({ type: 'error', text: 'YouTube暂不支持URL导入' });
-        setImportLoading(false);
-        return;
-      }
-
+      // Map current tab to resource type
       const typeMap: Record<string, string> = {
         papers: 'PAPER',
         projects: 'PROJECT',
         news: 'NEWS',
+        youtube: 'YOUTUBE_VIDEO',
       };
 
       const type = typeMap[activeTab] || 'PAPER';
@@ -1138,29 +1133,27 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {/* Import URL Button - Only for Papers, Projects, News */}
-                  {activeTab !== 'youtube' && (
-                    <button
-                      onClick={() => setShowImportDialog(true)}
-                      className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-100"
-                      title="导入URL"
+                  {/* Import URL Button - Available for all tabs */}
+                  <button
+                    onClick={() => setShowImportDialog(true)}
+                    className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-100"
+                    title="导入URL"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 4v16m8-8H4"
-                        />
-                      </svg>
-                      导入URL
-                    </button>
-                  )}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    导入URL
+                  </button>
                   <button
                     onClick={() =>
                       setFilterCategory(filterCategory ? '' : 'AI')
@@ -2331,7 +2324,9 @@ export default function Home() {
                   ? '论文'
                   : activeTab === 'projects'
                     ? '项目'
-                    : '新闻'}
+                    : activeTab === 'youtube'
+                      ? 'YouTube视频'
+                      : '新闻'}
                 的URL
               </label>
               <input

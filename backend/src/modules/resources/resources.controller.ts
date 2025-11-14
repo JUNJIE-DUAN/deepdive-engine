@@ -151,7 +151,7 @@ export class ResourcesController {
       );
     }
 
-    const validTypes = ["PAPER", "PROJECT", "NEWS"];
+    const validTypes = ["PAPER", "PROJECT", "NEWS", "YOUTUBE_VIDEO"];
     if (!validTypes.includes(type)) {
       throw new HttpException(
         `Invalid type. Must be one of: ${validTypes.join(", ")}`,

@@ -9,6 +9,9 @@ import {
   type Resource as AIResource,
 } from '@/lib/ai-context-builder';
 import ReactMarkdown from 'react-markdown';
+import KeyMomentsPanel, {
+  type KeyMoment,
+} from '@/components/youtube/KeyMomentsPanel';
 
 interface TranscriptSegment {
   text: string;
@@ -79,6 +82,20 @@ export default function YouTubeTLDW() {
 
   // Right panel collapse state
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+
+  // Translation control states
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translations, setTranslations] = useState<Map<number, string>>(
+    new Map()
+  );
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [translationProgress, setTranslationProgress] = useState({
+    current: 0,
+    total: 0,
+  });
+
+  // Key moments states
+  const [keyMoments, setKeyMoments] = useState<KeyMoment[]>([]);
 
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -244,6 +261,61 @@ export default function YouTubeTLDW() {
     }
   }, [activeSegmentIndex, autoScroll]);
 
+  // Generate key moments from transcript
+  useEffect(() => {
+    if (!transcript || transcript.length === 0) {
+      setKeyMoments([]);
+      return;
+    }
+
+    // Generate mock key moments based on transcript segments
+    // In production, this would come from AI analysis
+    const moments: KeyMoment[] = [
+      {
+        id: '1',
+        timestamp: transcript[Math.floor(transcript.length * 0.1)]?.start || 0,
+        title: 'Introduction & Overview',
+        summary: 'Opening remarks and introduction to the main topic',
+        importance: 'high',
+        tags: ['intro', 'overview'],
+      },
+      {
+        id: '2',
+        timestamp: transcript[Math.floor(transcript.length * 0.3)]?.start || 0,
+        title: 'Key Concept Explanation',
+        summary: 'Detailed explanation of the core concept',
+        importance: 'high',
+        tags: ['concept', 'explanation'],
+      },
+      {
+        id: '3',
+        timestamp: transcript[Math.floor(transcript.length * 0.5)]?.start || 0,
+        title: 'Practical Examples',
+        summary: 'Real-world examples and use cases',
+        importance: 'medium',
+        tags: ['examples', 'practical'],
+      },
+      {
+        id: '4',
+        timestamp: transcript[Math.floor(transcript.length * 0.7)]?.start || 0,
+        title: 'Advanced Topics',
+        summary: 'Deep dive into advanced techniques',
+        importance: 'medium',
+        tags: ['advanced', 'techniques'],
+      },
+      {
+        id: '5',
+        timestamp: transcript[Math.floor(transcript.length * 0.9)]?.start || 0,
+        title: 'Summary & Conclusion',
+        summary: 'Recap of key points and final thoughts',
+        importance: 'high',
+        tags: ['summary', 'conclusion'],
+      },
+    ];
+
+    setKeyMoments(moments);
+  }, [transcript]);
+
   const handleSeekToTopic = (timestamp: number) => {
     if (playerRef.current) {
       playerRef.current.seekTo(timestamp, true);
@@ -376,6 +448,69 @@ export default function YouTubeTLDW() {
     }
   };
 
+  // Translate current segment when it's played (on-demand translation)
+  useEffect(() => {
+    const translateCurrentSegment = async () => {
+      if (
+        !showTranslation ||
+        activeSegmentIndex === -1 ||
+        transcript.length === 0
+      )
+        return;
+
+      // Check if already translated
+      if (translations.has(activeSegmentIndex)) return;
+
+      const currentSegment = transcript[activeSegmentIndex];
+      if (!currentSegment || !currentSegment.text) return;
+
+      setTranslationLoading(true);
+      try {
+        const res = await fetch('/api/ai-service/ai/translate-single', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: currentSegment.text,
+            targetLanguage: 'zh-CN',
+            model: 'openai', // 使用最便宜的模型 gpt-4o-mini
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to translate');
+        }
+
+        const data = await res.json();
+
+        // Update translations map
+        setTranslations((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(
+            activeSegmentIndex,
+            data.translation || currentSegment.text
+          );
+          return newMap;
+        });
+
+        console.log(
+          `Translated segment ${activeSegmentIndex}: "${currentSegment.text}" -> "${data.translation}"`
+        );
+      } catch (error: any) {
+        console.error('Failed to translate segment:', error?.message || error);
+        // Fallback to original text on error
+        setTranslations((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(activeSegmentIndex, currentSegment.text);
+          return newMap;
+        });
+      } finally {
+        setTranslationLoading(false);
+      }
+    };
+
+    translateCurrentSegment();
+  }, [showTranslation, activeSegmentIndex, transcript, translations]);
+
   if (!videoId) {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -425,34 +560,144 @@ export default function YouTubeTLDW() {
           </button>
 
           {/* Video Player */}
-          <div className="mb-6">
+          <div className="relative mb-6">
             <div
               ref={playerContainerRef}
               className="aspect-video w-full overflow-hidden rounded-lg bg-black"
             />
           </div>
 
-          {/* Topics Section */}
-          <div className="flex-1 overflow-y-auto">
-            <h3 className="mb-4 text-sm font-semibold text-gray-700">视频</h3>
-            <div className="space-y-3">
-              {topics.map((topic, index) => (
-                <div
-                  key={index}
-                  onClick={() => handleSeekToTopic(topic.timestamp)}
-                  className="group flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors hover:bg-gray-50"
-                >
-                  <div
-                    className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${topic.color}`}
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-800">{topic.title}</p>
-                    <p className="mt-1 text-xs text-gray-400">
-                      {formatTime(topic.timestamp)}
-                    </p>
-                  </div>
+          {/* Key Moments Section - Below Video */}
+          <div className="mb-4 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
                 </div>
-              ))}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">关键时刻</h3>
+                  <p className="text-xs text-gray-500">
+                    {keyMoments.length} 个重点
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Key Moments List */}
+            <div
+              className="overflow-y-auto p-3"
+              style={{ maxHeight: 'calc(100vh - 600px)' }}
+            >
+              {keyMoments.length === 0 ? (
+                <div className="py-12 text-center">
+                  <div className="text-4xl">🔍</div>
+                  <p className="mt-2 text-sm text-gray-500">暂无关键时刻</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {keyMoments.map((moment) => {
+                    const isActive =
+                      currentTime >= moment.timestamp &&
+                      (keyMoments.find((m) => m.timestamp > currentTime)
+                        ?.timestamp || Infinity) > moment.timestamp;
+
+                    const importanceConfig = {
+                      high: {
+                        icon: '■',
+                        color: 'bg-blue-50 border-blue-200 text-blue-900',
+                        badgeColor: 'bg-blue-600 text-white',
+                        hoverColor: 'hover:border-blue-300 hover:bg-blue-100',
+                      },
+                      medium: {
+                        icon: '■',
+                        color: 'bg-slate-50 border-slate-200 text-slate-900',
+                        badgeColor: 'bg-slate-500 text-white',
+                        hoverColor: 'hover:border-slate-300 hover:bg-slate-100',
+                      },
+                      low: {
+                        icon: '■',
+                        color: 'bg-gray-50 border-gray-200 text-gray-700',
+                        badgeColor: 'bg-gray-400 text-white',
+                        hoverColor: 'hover:border-gray-300 hover:bg-gray-100',
+                      },
+                    };
+
+                    const config = importanceConfig[moment.importance];
+
+                    return (
+                      <div
+                        key={moment.id}
+                        onClick={() => {
+                          if (playerRef.current) {
+                            playerRef.current.seekTo(moment.timestamp, true);
+                          }
+                        }}
+                        className={`group cursor-pointer rounded-lg border-2 p-3 transition-all ${
+                          isActive
+                            ? 'border-blue-500 bg-blue-50 shadow-md'
+                            : `${config.color} ${config.hoverColor}`
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-xl">{config.icon}</span>
+                            <span
+                              className={`rounded px-2 py-0.5 text-xs font-bold ${
+                                isActive
+                                  ? 'bg-blue-600 text-white'
+                                  : config.badgeColor
+                              }`}
+                            >
+                              {formatTime(moment.timestamp)}
+                            </span>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h4
+                              className={`text-sm font-semibold leading-snug ${
+                                isActive ? 'text-blue-900' : 'text-gray-900'
+                              }`}
+                            >
+                              {moment.title}
+                            </h4>
+
+                            {moment.summary && (
+                              <p className="mt-1 line-clamp-2 text-xs text-gray-600">
+                                {moment.summary}
+                              </p>
+                            )}
+
+                            {moment.tags && moment.tags.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {moment.tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="rounded-full bg-white/60 px-2 py-0.5 text-xs font-medium text-gray-700"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -535,28 +780,74 @@ export default function YouTubeTLDW() {
                   </button>
                 </div>
 
-                {/* Auto Toggle */}
-                <button
-                  onClick={() => setAutoScroll(!autoScroll)}
-                  className={`ml-2 flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    autoScroll
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  <span>Auto</span>
-                  <div
-                    className={`h-4 w-8 rounded-full transition-colors ${
-                      autoScroll ? 'bg-blue-500' : 'bg-gray-300'
+                {/* Toggle Buttons Group */}
+                <div className="flex items-center gap-1">
+                  {/* Translation Toggle */}
+                  <button
+                    onClick={() => {
+                      const newShowTranslation = !showTranslation;
+                      setShowTranslation(newShowTranslation);
+                      // 重新打开翻译时，清除缓存以便重新翻译
+                      if (newShowTranslation) {
+                        setTranslations(new Map());
+                      }
+                    }}
+                    className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      showTranslation
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-gray-100 text-gray-600'
                     }`}
                   >
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                      />
+                    </svg>
+                    <span>翻译</span>
                     <div
-                      className={`h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                        autoScroll ? 'translate-x-4' : 'translate-x-0'
+                      className={`h-4 w-8 rounded-full transition-colors ${
+                        showTranslation ? 'bg-purple-500' : 'bg-gray-300'
                       }`}
-                    />
-                  </div>
-                </button>
+                    >
+                      <div
+                        className={`h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                          showTranslation ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Auto Scroll Toggle */}
+                  <button
+                    onClick={() => setAutoScroll(!autoScroll)}
+                    className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      autoScroll
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    <span>Auto</span>
+                    <div
+                      className={`h-4 w-8 rounded-full transition-colors ${
+                        autoScroll ? 'bg-blue-500' : 'bg-gray-300'
+                      }`}
+                    >
+                      <div
+                        className={`h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                          autoScroll ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -594,15 +885,25 @@ export default function YouTubeTLDW() {
                             >
                               {formatTime(segment.start)}
                             </span>
-                            <span
-                              className={`flex-1 leading-relaxed ${
-                                isActive
-                                  ? 'font-medium text-gray-900'
-                                  : 'text-gray-700'
-                              }`}
-                            >
-                              {segment.text}
-                            </span>
+                            <div className="flex-1">
+                              <div
+                                className={`leading-relaxed ${
+                                  isActive
+                                    ? 'font-medium text-gray-900'
+                                    : 'text-gray-700'
+                                }`}
+                              >
+                                {segment.text}
+                              </div>
+                              {showTranslation && (
+                                <div className="mt-1.5 text-sm leading-relaxed text-blue-600">
+                                  {translationLoading && isActive
+                                    ? '翻译中...'
+                                    : translations.get(index) ||
+                                      (isActive ? '' : '')}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

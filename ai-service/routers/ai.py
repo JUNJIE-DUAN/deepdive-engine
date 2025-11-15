@@ -659,6 +659,94 @@ JSON:"""
     }
 
 
+class TranslateSingleRequest(BaseModel):
+    """单句翻译请求"""
+    text: str
+    targetLanguage: str = "zh-CN"
+    model: Literal["grok", "openai"] = "openai"  # 默认使用 openai (gpt-4o-mini)
+
+
+@router.post("/translate-single")
+async def translate_single(
+    request: TranslateSingleRequest,
+    orch: AIOrchestrator = Depends(get_orchestrator)
+):
+    """
+    翻译单个句子（使用最便宜的模型）
+
+    Args:
+        request: 翻译请求
+
+    Returns:
+        翻译结果
+    """
+    if not request.text or not request.text.strip():
+        return {
+            "translation": "",
+            "targetLanguage": request.targetLanguage,
+            "model": "none"
+        }
+
+    logger.info("Translating: '%s' -> %s", request.text[:50], request.targetLanguage)
+
+    client, active_model = select_ai_client(
+        request.model,
+        orch,
+        "Translate single sentence",
+        "AI translation services unavailable"
+    )
+
+    # 智能多语言翻译prompt
+    target_lang_name = {
+        "zh-CN": "Simplified Chinese (简体中文)",
+        "zh-TW": "Traditional Chinese (繁體中文)",
+        "en": "English",
+        "ja": "Japanese (日本語)",
+        "ko": "Korean (한국어)",
+        "fr": "French (Français)",
+        "de": "German (Deutsch)",
+        "es": "Spanish (Español)",
+    }.get(request.targetLanguage, request.targetLanguage)
+
+    prompt = f"""You are a professional translator. Translate the following text to {target_lang_name}.
+
+IMPORTANT RULES:
+1. Detect the source language automatically
+2. Translate to {target_lang_name} regardless of source language
+3. If the text is already in {target_lang_name}, keep it as is
+4. Only return the translation, no explanations or notes
+5. Preserve the original meaning and tone
+
+Text to translate:
+{request.text}
+
+Translation:"""
+
+    result = await client.generate_completion(
+        prompt,
+        max_tokens=200,
+        temperature=0.2,
+    )
+
+    if result is None:
+        # Fallback to original text
+        logger.warning("Translation failed, using original text")
+        return {
+            "translation": request.text,
+            "targetLanguage": request.targetLanguage,
+            "model": active_model
+        }
+
+    translation = result.strip()
+    logger.info("Translation result: '%s'", translation[:50])
+
+    return {
+        "translation": translation,
+        "targetLanguage": request.targetLanguage,
+        "model": active_model
+    }
+
+
 class YouTubeReportRequest(BaseModel):
     """YouTube报告生成请求"""
     title: str

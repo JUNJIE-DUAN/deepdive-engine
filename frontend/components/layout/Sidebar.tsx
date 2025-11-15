@@ -1,16 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useResourceStore } from '@/stores/aiOfficeStore';
 
 interface SidebarProps {
   className?: string;
 }
 
 export default function Sidebar({ className = '' }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // 默认折叠，但读取localStorage的设置
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      return saved !== null ? JSON.parse(saved) : true;
+    }
+    return true;
+  });
   const pathname = usePathname();
+  const aiOfficeResourceCount = useResourceStore(
+    (state) => state.resources.length
+  );
+
+  // 持久化折叠状态
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
+  }, [isCollapsed]);
 
   const isActive = (path: string) => pathname === path;
 
@@ -259,6 +275,58 @@ export default function Sidebar({ className = '' }: SidebarProps) {
               />
             </svg>
             {!isCollapsed && <span>Explore</span>}
+          </Link>
+
+          <Link
+            href="/ai-office"
+            onClick={(e) => {
+              // Force navigation even if already on ai-office page
+              if (pathname === '/ai-office') {
+                e.preventDefault();
+                window.location.href = '/ai-office';
+              }
+            }}
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} relative rounded-lg px-3 py-2.5 text-sm font-medium ${
+              isActive('/ai-office') || pathname?.startsWith('/ai-office')
+                ? 'bg-gradient-to-r from-blue-50 to-purple-50 text-gray-900 shadow-sm'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+            title="AI Office"
+          >
+            <svg
+              className="h-5 w-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
+              />
+            </svg>
+            {!isCollapsed && (
+              <div className="flex flex-1 items-center justify-between">
+                <span>AI Office</span>
+                {aiOfficeResourceCount > 0 && (
+                  <span className="ml-auto rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                    {aiOfficeResourceCount}
+                  </span>
+                )}
+              </div>
+            )}
+            {isCollapsed && aiOfficeResourceCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                {aiOfficeResourceCount > 9 ? '9+' : aiOfficeResourceCount}
+              </span>
+            )}
           </Link>
 
           <Link

@@ -14,6 +14,8 @@ import {
   AIContextBuilder,
   type Resource as AIResource,
 } from '@/lib/ai-context-builder';
+import { useResourceStore } from '@/stores/aiOfficeStore';
+import type { Resource as AIOfficeResource } from '@/types/ai-office';
 
 interface Resource {
   id: string;
@@ -223,8 +225,69 @@ export default function Home() {
     null
   );
 
-  // Report workspace
+  // Report workspace (legacy - for /workspace page)
   const { addResource, hasResource, canAddMore } = useReportWorkspace();
+
+  // AI Office resource store
+  const aiOfficeStore = useResourceStore();
+
+  // Helper function to convert page Resource to AI Office Resource
+  const convertToAIOfficeResource = (
+    resource: Resource
+  ): Partial<AIOfficeResource> => {
+    const baseResource = {
+      _id: resource.id,
+      userId: 'current-user', // TODO: Get from auth
+      resourceId: resource.id,
+      status: 'collected' as const,
+      collectedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Determine resource type and create appropriate structure
+    if (resource.type === 'youtube') {
+      return {
+        ...baseResource,
+        resourceType: 'youtube_video',
+        metadata: {
+          title: resource.title,
+          description: resource.abstract || '',
+          thumbnails: {
+            default: resource.thumbnailUrl || '',
+            medium: resource.thumbnailUrl || '',
+            high: resource.thumbnailUrl || '',
+          },
+        },
+        aiAnalysis: {
+          summary: resource.aiSummary || resource.abstract || '',
+        },
+      } as any;
+    } else if (resource.type === 'paper') {
+      return {
+        ...baseResource,
+        resourceType: 'academic_paper',
+        metadata: {
+          title: resource.title,
+          abstract: resource.abstract || '',
+        },
+        aiAnalysis: {
+          summary: resource.aiSummary || resource.abstract || '',
+        },
+      } as any;
+    } else {
+      return {
+        ...baseResource,
+        resourceType: 'web_page',
+        metadata: {
+          title: resource.title,
+          description: resource.abstract || '',
+        },
+        aiAnalysis: {
+          summary: resource.aiSummary || resource.abstract || '',
+        },
+      } as any;
+    }
+  };
 
   // Import URL states
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -1804,32 +1867,26 @@ export default function Home() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (!hasResource(resource.id) && canAddMore()) {
-                                  addResource({
-                                    id: resource.id,
-                                    type: resource.type,
-                                    title: resource.title,
-                                    abstract: resource.abstract,
-                                    thumbnailUrl: resource.thumbnailUrl,
-                                  });
-                                }
+                                const aiResource =
+                                  convertToAIOfficeResource(resource);
+                                aiOfficeStore.addResource(aiResource as any);
                               }}
-                              disabled={
-                                hasResource(resource.id) || !canAddMore()
-                              }
+                              disabled={aiOfficeStore.resources.some(
+                                (r) => r._id === resource.id
+                              )}
                               className={`flex items-center gap-2 text-sm transition-colors ${
-                                hasResource(resource.id)
+                                aiOfficeStore.resources.some(
+                                  (r) => r._id === resource.id
+                                )
                                   ? 'cursor-default text-green-600'
-                                  : canAddMore()
-                                    ? 'text-gray-600 hover:text-red-600'
-                                    : 'cursor-not-allowed text-gray-400'
+                                  : 'text-gray-600 hover:text-blue-600'
                               }`}
                               title={
-                                hasResource(resource.id)
-                                  ? '已添加到工作区'
-                                  : !canAddMore()
-                                    ? '工作区已满（最多 10 个资源）'
-                                    : '添加到工作区'
+                                aiOfficeStore.resources.some(
+                                  (r) => r._id === resource.id
+                                )
+                                  ? '已添加到 AI Office'
+                                  : '添加到 AI Office'
                               }
                             >
                               <svg
@@ -1845,7 +1902,11 @@ export default function Home() {
                                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                 />
                               </svg>
-                              {hasResource(resource.id) ? 'Added' : 'Workspace'}
+                              {aiOfficeStore.resources.some(
+                                (r) => r._id === resource.id
+                              )
+                                ? 'Added'
+                                : 'AI Office'}
                             </button>
                           </div>
                         </div>
@@ -2006,26 +2067,26 @@ export default function Home() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!hasResource(selectedResource.id)) {
-                            addResource(selectedResource);
-                          }
+                          const aiResource =
+                            convertToAIOfficeResource(selectedResource);
+                          aiOfficeStore.addResource(aiResource as any);
                         }}
-                        disabled={
-                          hasResource(selectedResource.id) || !canAddMore()
-                        }
+                        disabled={aiOfficeStore.resources.some(
+                          (r) => r._id === selectedResource.id
+                        )}
                         className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                          hasResource(selectedResource.id)
+                          aiOfficeStore.resources.some(
+                            (r) => r._id === selectedResource.id
+                          )
                             ? 'cursor-not-allowed border border-green-600 bg-green-50 text-green-600'
-                            : !canAddMore()
-                              ? 'cursor-not-allowed border border-gray-300 text-gray-400'
-                              : 'border border-blue-600 text-blue-600 hover:bg-blue-50'
+                            : 'border border-blue-600 text-blue-600 hover:bg-blue-50'
                         }`}
                         title={
-                          hasResource(selectedResource.id)
-                            ? '已添加到工作区'
-                            : !canAddMore()
-                              ? '工作区已满（最多 10 个资源）'
-                              : '添加到工作区'
+                          aiOfficeStore.resources.some(
+                            (r) => r._id === selectedResource.id
+                          )
+                            ? '已添加到 AI Office'
+                            : '添加到 AI Office'
                         }
                       >
                         <svg
@@ -2041,9 +2102,11 @@ export default function Home() {
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        {hasResource(selectedResource.id)
+                        {aiOfficeStore.resources.some(
+                          (r) => r._id === selectedResource.id
+                        )
                           ? 'Added'
-                          : 'Workspace'}
+                          : 'AI Office'}
                       </button>
                       <a
                         href={selectedResource.sourceUrl}

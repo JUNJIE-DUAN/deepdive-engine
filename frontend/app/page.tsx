@@ -25,12 +25,23 @@ interface Resource {
   sourceUrl: string;
   pdfUrl?: string;
   thumbnailUrl?: string;
-  authors?: Array<{ username: string; platform: string }>;
+  authors?: Array<{ username?: string; platform?: string; name?: string }>;
   categories?: string[];
   qualityScore?: string;
   upvoteCount?: number;
   viewCount?: number;
   commentCount?: number;
+  // GitHub/原始数据增强
+  rawData?: {
+    readme?: string;
+    description?: string;
+    stars?: number;
+    forks?: number;
+    language?: string;
+    languages?: Record<string, number>;
+    contributors?: Array<any>;
+    [key: string]: any;
+  };
 }
 
 interface SearchSuggestion {
@@ -1424,46 +1435,104 @@ export default function Home() {
 
               {/* Tabs and Filters */}
               <div className="flex items-center justify-between">
-                <div className="flex gap-6">
+                <div className="flex gap-2">
                   <button
                     onClick={() => setActiveTab('papers')}
-                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'papers'
-                        ? 'border-red-600 text-red-600'
-                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
                     }`}
                   >
-                    Papers
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span>Papers</span>
+                    {activeTab === 'papers' && (
+                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
+                    )}
                   </button>
                   <button
                     onClick={() => setActiveTab('projects')}
-                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'projects'
-                        ? 'border-red-600 text-red-600'
-                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
                     }`}
                   >
-                    Projects
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                      />
+                    </svg>
+                    <span>Projects</span>
+                    {activeTab === 'projects' && (
+                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
+                    )}
                   </button>
                   <button
                     onClick={() => setActiveTab('news')}
-                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'news'
-                        ? 'border-red-600 text-red-600'
-                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
                     }`}
                   >
-                    News
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                      />
+                    </svg>
+                    <span>News</span>
+                    {activeTab === 'news' && (
+                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
+                    )}
                   </button>
                   <button
                     onClick={() => setActiveTab('youtube')}
-                    className={`border-b-2 pb-1 text-base font-medium transition-colors ${
+                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'youtube'
-                        ? 'border-red-600 text-red-600'
-                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
                     }`}
                   >
-                    YouTube
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                    </svg>
+                    <span>YouTube</span>
+                    {activeTab === 'youtube' && (
+                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
+                    )}
                   </button>
                 </div>
 
@@ -1757,10 +1826,10 @@ export default function Home() {
                               }`}
                               title={
                                 hasResource(resource.id)
-                                  ? '已添加到 DeepDive 工作区'
+                                  ? '已添加到工作区'
                                   : !canAddMore()
                                     ? '工作区已满（最多 10 个资源）'
-                                    : '添加到 DeepDive 工作区'
+                                    : '添加到工作区'
                               }
                             >
                               <svg
@@ -1776,9 +1845,7 @@ export default function Home() {
                                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                 />
                               </svg>
-                              {hasResource(resource.id)
-                                ? '已添加'
-                                : 'DeepDive 工作区'}
+                              {hasResource(resource.id) ? 'Added' : 'Workspace'}
                             </button>
                           </div>
                         </div>
@@ -1936,6 +2003,48 @@ export default function Home() {
                           ? 'Bookmarked'
                           : 'Bookmark'}
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!hasResource(selectedResource.id)) {
+                            addResource(selectedResource);
+                          }
+                        }}
+                        disabled={
+                          hasResource(selectedResource.id) || !canAddMore()
+                        }
+                        className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                          hasResource(selectedResource.id)
+                            ? 'cursor-not-allowed border border-green-600 bg-green-50 text-green-600'
+                            : !canAddMore()
+                              ? 'cursor-not-allowed border border-gray-300 text-gray-400'
+                              : 'border border-blue-600 text-blue-600 hover:bg-blue-50'
+                        }`}
+                        title={
+                          hasResource(selectedResource.id)
+                            ? '已添加到工作区'
+                            : !canAddMore()
+                              ? '工作区已满（最多 10 个资源）'
+                              : '添加到工作区'
+                        }
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        {hasResource(selectedResource.id)
+                          ? 'Added'
+                          : 'Workspace'}
+                      </button>
                       <a
                         href={selectedResource.sourceUrl}
                         target="_blank"
@@ -2091,47 +2200,111 @@ export default function Home() {
           </button>
 
           {/* Top Tab Navigation */}
-          <div className="border-b border-gray-200">
-            <div className="flex items-center px-3">
+          <div className="border-b border-gray-100 bg-gray-50 px-2 py-2">
+            <div className="grid grid-cols-4 gap-1">
               <button
                 onClick={() => setAiRightTab('assistant')}
-                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
                   aiRightTab === 'assistant'
-                    ? 'border-red-600 text-red-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
-                Assistant
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                  />
+                </svg>
+                <span className="leading-tight">AI</span>
+                {aiRightTab === 'assistant' && (
+                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
+                )}
               </button>
               <button
                 onClick={() => setAiRightTab('notes')}
-                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
                   aiRightTab === 'notes'
-                    ? 'border-red-600 text-red-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
-                My Notes
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+                <span className="leading-tight">Notes</span>
+                {aiRightTab === 'notes' && (
+                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
+                )}
               </button>
               <button
                 onClick={() => setAiRightTab('comments')}
-                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
                   aiRightTab === 'comments'
-                    ? 'border-red-600 text-red-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
-                Comments
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <span className="leading-tight">Comments</span>
+                {aiRightTab === 'comments' && (
+                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
+                )}
               </button>
               <button
                 onClick={() => setAiRightTab('similar')}
-                className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium ${
+                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
                   aiRightTab === 'similar'
-                    ? 'border-red-600 text-red-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
-                Similar
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
+                </svg>
+                <span className="leading-tight">Similar</span>
+                {aiRightTab === 'similar' && (
+                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
+                )}
               </button>
             </div>
           </div>
@@ -2218,7 +2391,7 @@ export default function Home() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 008 10.586V5L7 4z"
                           />
                         </svg>
                         <span className="text-gray-700">方法论</span>
@@ -2228,10 +2401,7 @@ export default function Home() {
 
                   {/* AI Summary Section */}
                   {aiSummary && (
-                    <div
-                      className="cursor-text select-text rounded-lg border border-pink-200 bg-gradient-to-br from-pink-50 to-red-50 p-4"
-                      onContextMenu={(e) => handleContextMenu(e, aiSummary)}
-                    >
+                    <div className="space-y-2">
                       <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
                         <svg
                           className="h-4 w-4 text-red-600"
@@ -2251,9 +2421,14 @@ export default function Home() {
                           右键添加到笔记
                         </span>
                       </h3>
-                      <p className="text-sm leading-relaxed text-gray-700">
-                        {aiSummary}
-                      </p>
+                      <div
+                        className="cursor-text select-text rounded-lg border border-red-200 bg-red-50 p-3"
+                        onContextMenu={(e) => handleContextMenu(e, aiSummary)}
+                      >
+                        <p className="text-sm leading-relaxed text-gray-700">
+                          {aiSummary}
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -2333,7 +2508,7 @@ export default function Home() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 008 10.586V5L7 4z"
                           />
                         </svg>
                         研究方法论
@@ -2454,6 +2629,14 @@ export default function Home() {
                   <NotesList
                     key={notesRefreshKey}
                     resourceId={selectedResource.id}
+                    onEditNote={(note) => {
+                      // TODO: Implement note editing modal
+                      alert('编辑功能即将推出');
+                    }}
+                    onDeleteNote={(noteId) => {
+                      // Refresh notes list after deletion
+                      setNotesRefreshKey(Date.now());
+                    }}
                   />
                 </div>
               ) : aiRightTab === 'comments' ? (

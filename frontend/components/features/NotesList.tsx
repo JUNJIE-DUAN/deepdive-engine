@@ -131,8 +131,8 @@ export default function NotesList({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">暂无笔记</h3>
-        <p className="mt-1 text-sm text-gray-500">开始创建笔记来记录您的想法</p>
+        <h3 className="mt-2 text-sm font-semibold text-gray-900">暂无笔记</h3>
+        <p className="mt-1 text-xs text-gray-600">开始创建笔记来记录您的想法</p>
       </div>
     );
   }
@@ -155,7 +155,7 @@ export default function NotesList({
                   className="h-8 w-8 rounded object-cover"
                 />
               )}
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-semibold text-gray-900">
                 {note.resource.title}
               </span>
               <span className="text-xs uppercase text-gray-500">
@@ -165,7 +165,7 @@ export default function NotesList({
           )}
 
           {/* Content */}
-          <div className="prose prose-sm mb-3 max-w-none">
+          <div className="prose prose-sm mb-3 max-w-none text-sm leading-relaxed text-gray-700">
             <ReactMarkdown>{note.content}</ReactMarkdown>
           </div>
 
@@ -184,13 +184,11 @@ export default function NotesList({
           )}
 
           {/* Metadata */}
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-gray-600">
             <div className="flex items-center gap-3">
-              <span>
-                创建于 {new Date(note.createdAt).toLocaleDateString()}
-              </span>
+              <span>{new Date(note.createdAt).toLocaleDateString()}</span>
               {note.updatedAt !== note.createdAt && (
-                <span>
+                <span className="text-gray-500">
                   更新于 {new Date(note.updatedAt).toLocaleDateString()}
                 </span>
               )}
@@ -209,7 +207,7 @@ export default function NotesList({
                     e.stopPropagation();
                     onEditNote(note);
                   }}
-                  className="font-medium text-blue-600 hover:text-blue-800"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800"
                 >
                   编辑
                 </button>
@@ -220,7 +218,7 @@ export default function NotesList({
                     e.stopPropagation();
                     handleDelete(note.id);
                   }}
-                  className="font-medium text-red-600 hover:text-red-800"
+                  className="text-xs font-medium text-red-600 hover:text-red-800"
                 >
                   删除
                 </button>

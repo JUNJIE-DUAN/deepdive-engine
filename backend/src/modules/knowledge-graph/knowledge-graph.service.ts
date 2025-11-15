@@ -34,7 +34,11 @@ export class KnowledgeGraphService {
     if (resource.authors && Array.isArray(resource.authors)) {
       for (const author of resource.authors as any[]) {
         await this.createAuthorNode(author);
-        await this.linkResourceToAuthor(resourceId, author.username);
+        // Support both arXiv format (name) and GitHub format (username)
+        const authorId = author.name || author.username;
+        if (authorId) {
+          await this.linkResourceToAuthor(resourceId, authorId);
+        }
       }
     }
 
@@ -86,21 +90,30 @@ export class KnowledgeGraphService {
 
   /**
    * 创建作者节点
+   * Support both arXiv format (name, affiliation) and GitHub format (username, platform)
    */
   private async createAuthorNode(author: {
-    username: string;
+    username?: string;
     platform?: string;
+    name?: string;
+    affiliation?: string;
   }): Promise<void> {
+    // Use name (arXiv) or username (GitHub) as the unique identifier
+    const authorId = author.name || author.username;
+    if (!authorId) {
+      return;
+    }
+
     const existingNode = await this.neo4j.findNode("Author", {
-      username: author.username,
+      username: authorId,
     });
     if (existingNode) {
       return;
     }
 
     await this.neo4j.createNode("Author", {
-      username: author.username,
-      platform: author.platform || "Unknown",
+      username: authorId,
+      platform: author.platform || author.affiliation || "Unknown",
     });
   }
 

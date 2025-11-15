@@ -5,6 +5,91 @@
  * 遵循 docs/AI_CONTEXT_ARCHITECTURE.md 中定义的架构
  */
 
+// ==================== Token估算器 ====================
+
+/**
+ * Token估算工具类
+ * 使用简化估算：1 token ≈ 4 字符（英文）或 1.5 字符（中文）
+ */
+class TokenEstimator {
+  private static readonly CHARS_PER_TOKEN_EN = 4;
+  private static readonly CHARS_PER_TOKEN_ZH = 1.5;
+
+  /**
+   * 估算文本的token数量
+   */
+  static estimate(text: string): number {
+    // 检测中文字符比例
+    const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+    const totalChars = text.length;
+    const chineseRatio = chineseChars / totalChars;
+
+    // 混合比例计算
+    const avgCharsPerToken =
+      this.CHARS_PER_TOKEN_EN * (1 - chineseRatio) +
+      this.CHARS_PER_TOKEN_ZH * chineseRatio;
+
+    return Math.ceil(totalChars / avgCharsPerToken);
+  }
+
+  /**
+   * 根据token限制截断文本
+   */
+  static truncateToTokens(text: string, maxTokens: number): string {
+    const currentTokens = this.estimate(text);
+    if (currentTokens <= maxTokens) {
+      return text;
+    }
+
+    // 估算应保留的字符数
+    const ratio = maxTokens / currentTokens;
+    const targetLength = Math.floor(text.length * ratio * 0.95); // 留5%余量
+
+    return text.substring(0, targetLength) + '...';
+  }
+}
+
+// ==================== AI模型配置 ====================
+
+interface ModelTokenLimits {
+  contextWindow: number; // 模型上下文窗口
+  reservedForResponse: number; // 预留给回复的token
+  maxContentTokens: number; // 内容最大token数
+}
+
+const MODEL_LIMITS: Record<string, ModelTokenLimits> = {
+  grok: {
+    contextWindow: 128000,
+    reservedForResponse: 4000,
+    maxContentTokens: 120000,
+  },
+  'gpt-4o-mini': {
+    contextWindow: 128000,
+    reservedForResponse: 4000,
+    maxContentTokens: 120000,
+  },
+  default: {
+    contextWindow: 8000,
+    reservedForResponse: 2000,
+    maxContentTokens: 5000,
+  },
+};
+
+// ==================== 内容优先级策略 ====================
+
+enum ContentPriority {
+  CRITICAL = 1, // 核心内容：标题、摘要
+  HIGH = 2, // 高优先级：正文、README
+  MEDIUM = 3, // 中优先级：元数据、统计
+  LOW = 4, // 低优先级：标签、分类
+}
+
+interface ContentSection {
+  priority: ContentPriority;
+  content: string;
+  label: string;
+}
+
 // ==================== 类型定义 ====================
 
 export type ResourceType = 'PAPER' | 'PROJECT' | 'NEWS' | 'YOUTUBE_VIDEO';
@@ -15,6 +100,10 @@ export interface ResourceContextConfig {
   includeMetrics: boolean;
   includeTaxonomy: boolean;
   maxContentLength: number;
+  // Token优化配置
+  modelName?: string; // AI模型名称
+  enableSmartTruncation?: boolean; // 启用智能截断
+  maxTokens?: number; // 最大token数（可选，覆盖模型默认值）
 }
 
 export const DEFAULT_CONFIG: ResourceContextConfig = {
@@ -23,6 +112,8 @@ export const DEFAULT_CONFIG: ResourceContextConfig = {
   includeMetrics: true,
   includeTaxonomy: true,
   maxContentLength: 15000,
+  modelName: 'grok',
+  enableSmartTruncation: true,
 };
 
 // 资源接口定义
@@ -109,10 +200,219 @@ export type Resource =
   | NewsResource
   | VideoResource;
 
-// ==================== 构建器接口 ====================
+// ==================== 构建器接口和基类 ====================
 
 interface ContextBuilder {
   build(resource: Resource, config: ResourceContextConfig): string;
+}
+
+/**
+ * 抽象基类 - 提供通用构建逻辑
+ * 遵循Template Method模式
+ */
+abstract class BaseContextBuilder<T extends BaseResource>
+  implements ContextBuilder
+{
+  build(resource: T, config: ResourceContextConfig): string {
+    // 如果启用智能截断，使用优先级分配
+    if (config.enableSmartTruncation) {
+      return this.buildWithSmartTruncation(resource, config);
+    }
+
+    // 传统构建方式
+    return this.buildTraditional(resource, config);
+  }
+
+  /**
+   * 智能截断构建 - 基于优先级分配token
+   */
+  private buildWithSmartTruncation(
+    resource: T,
+    config: ResourceContextConfig
+  ): string {
+    const modelName = config.modelName || 'default';
+    const limits = MODEL_LIMITS[modelName] || MODEL_LIMITS['default'];
+    const maxTokens = config.maxTokens || limits.maxContentTokens;
+
+    // 收集所有内容片段
+    const contentSections: ContentSection[] = [];
+
+    // 1. Header (CRITICAL)
+    const header = this.buildHeader(resource);
+    contentSections.push({
+      priority: ContentPriority.CRITICAL,
+      content: header,
+      label: 'Header',
+    });
+
+    // 2. Core content (CRITICAL/HIGH)
+    if (config.includeCore) {
+      const core = this.buildCoreSection(resource, config.maxContentLength);
+      if (core) {
+        contentSections.push({
+          priority: ContentPriority.HIGH,
+          content: core,
+          label: 'Core',
+        });
+      }
+    }
+
+    // 3. Metadata (MEDIUM)
+    if (config.includeMetadata) {
+      const metadata = this.buildMetadataSection(resource);
+      if (metadata) {
+        contentSections.push({
+          priority: ContentPriority.MEDIUM,
+          content: metadata,
+          label: 'Metadata',
+        });
+      }
+    }
+
+    // 4. Metrics (MEDIUM)
+    if (config.includeMetrics) {
+      const metrics = this.buildMetricsSection(resource);
+      if (metrics) {
+        contentSections.push({
+          priority: ContentPriority.MEDIUM,
+          content: metrics,
+          label: 'Metrics',
+        });
+      }
+    }
+
+    // 5. Taxonomy (LOW)
+    if (config.includeTaxonomy) {
+      const taxonomy = this.buildTaxonomySection(resource);
+      if (taxonomy) {
+        contentSections.push({
+          priority: ContentPriority.LOW,
+          content: taxonomy,
+          label: 'Taxonomy',
+        });
+      }
+    }
+
+    // 6. Source (LOW)
+    if (resource.sourceUrl) {
+      contentSections.push({
+        priority: ContentPriority.LOW,
+        content: `SOURCE: ${resource.sourceUrl}`,
+        label: 'Source',
+      });
+    }
+
+    // 按优先级分配token
+    return this.allocateTokensByPriority(contentSections, maxTokens);
+  }
+
+  /**
+   * 按优先级分配token
+   */
+  private allocateTokensByPriority(
+    sections: ContentSection[],
+    maxTokens: number
+  ): string {
+    // 按优先级排序
+    sections.sort((a, b) => a.priority - b.priority);
+
+    const result: string[] = [];
+    let remainingTokens = maxTokens;
+
+    for (const section of sections) {
+      const sectionTokens = TokenEstimator.estimate(section.content);
+
+      if (sectionTokens <= remainingTokens) {
+        // 完整包含
+        result.push(section.content);
+        remainingTokens -= sectionTokens;
+      } else if (remainingTokens > 100) {
+        // 部分包含（截断）
+        const truncated = TokenEstimator.truncateToTokens(
+          section.content,
+          remainingTokens
+        );
+        result.push(truncated);
+        remainingTokens = 0;
+        break;
+      } else {
+        // Token耗尽
+        break;
+      }
+    }
+
+    return result.join('\n\n');
+  }
+
+  /**
+   * 传统构建方式（向后兼容）
+   */
+  private buildTraditional(resource: T, config: ResourceContextConfig): string {
+    const sections: string[] = [];
+
+    // Header
+    sections.push(this.buildHeader(resource));
+
+    // Core content
+    if (config.includeCore) {
+      const coreSection = this.buildCoreSection(
+        resource,
+        config.maxContentLength
+      );
+      if (coreSection) sections.push(coreSection);
+    }
+
+    // Metadata
+    if (config.includeMetadata) {
+      const metadataSection = this.buildMetadataSection(resource);
+      if (metadataSection) sections.push(metadataSection);
+    }
+
+    // Metrics
+    if (config.includeMetrics) {
+      const metricsSection = this.buildMetricsSection(resource);
+      if (metricsSection) sections.push(metricsSection);
+    }
+
+    // Taxonomy
+    if (config.includeTaxonomy) {
+      const taxonomySection = this.buildTaxonomySection(resource);
+      if (taxonomySection) sections.push(taxonomySection);
+    }
+
+    // Source
+    if (resource.sourceUrl) {
+      sections.push(`SOURCE: ${resource.sourceUrl}`);
+    }
+
+    return sections.join('\n\n');
+  }
+
+  // Abstract methods - 子类必须实现
+  protected abstract buildHeader(resource: T): string;
+  protected abstract buildCoreSection(resource: T, maxLength: number): string;
+
+  // Optional methods - 子类可选实现
+  protected buildMetadataSection(resource: T): string {
+    return '';
+  }
+
+  protected buildMetricsSection(resource: T): string {
+    return '';
+  }
+
+  protected buildTaxonomySection(resource: T): string {
+    return '';
+  }
+
+  // Helper methods
+  protected formatDate(dateString: string | undefined): string {
+    return dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
+  }
+
+  protected truncateText(text: string, maxLength: number): string {
+    return text.length > maxLength ? text.substring(0, maxLength) : text;
+  }
 }
 
 // ==================== 主入口类 ====================
@@ -150,59 +450,30 @@ export class AIContextBuilder {
 
 // ==================== 论文上下文构建器 ====================
 
-class PaperContextBuilder implements ContextBuilder {
-  build(resource: PaperResource, config: ResourceContextConfig): string {
-    const sections: string[] = [];
-
-    // Header
-    sections.push('=== RESOURCE TYPE: Academic Paper ===\n');
-
-    // Core content
-    if (config.includeCore) {
-      sections.push(this.buildCoreSection(resource, config.maxContentLength));
-    }
-
-    // Metadata
-    if (config.includeMetadata) {
-      sections.push(this.buildMetadataSection(resource));
-    }
-
-    // Metrics
-    if (config.includeMetrics) {
-      sections.push(this.buildMetricsSection(resource));
-    }
-
-    // Taxonomy
-    if (config.includeTaxonomy) {
-      sections.push(this.buildTaxonomySection(resource));
-    }
-
-    // Source
-    if (resource.sourceUrl) {
-      sections.push(`SOURCE: ${resource.sourceUrl}`);
-    }
-
-    return sections.join('\n\n');
+class PaperContextBuilder extends BaseContextBuilder<PaperResource> {
+  protected buildHeader(resource: PaperResource): string {
+    return '=== RESOURCE TYPE: Academic Paper ===\n';
   }
 
-  private buildCoreSection(resource: PaperResource, maxLength: number): string {
+  protected buildCoreSection(
+    resource: PaperResource,
+    maxLength: number
+  ): string {
     const parts: string[] = ['CORE CONTENT:'];
 
     parts.push(`Title: ${resource.title}`);
 
-    // Authors
+    // Authors - Support both arXiv format (name, affiliation) and GitHub format (username, platform)
     if (resource.authors && resource.authors.length > 0) {
       const authorNames = resource.authors
-        .map((a) => a.username || a.platform || 'Unknown')
+        .map((a: any) => a.name || a.username || a.platform || 'Unknown')
         .join(', ');
       parts.push(`Authors: ${authorNames}`);
     }
 
     // Published date
     if (resource.publishedAt) {
-      parts.push(
-        `Published: ${new Date(resource.publishedAt).toLocaleDateString()}`
-      );
+      parts.push(`Published: ${this.formatDate(resource.publishedAt)}`);
     }
 
     // Abstract
@@ -212,7 +483,7 @@ class PaperContextBuilder implements ContextBuilder {
 
     // PDF full text
     if (resource.pdfText && resource.pdfText.trim()) {
-      const truncated = resource.pdfText.substring(0, maxLength);
+      const truncated = this.truncateText(resource.pdfText, maxLength);
       parts.push(
         `\nPDF FULL TEXT (first ${truncated.length} characters):\n${truncated}`
       );
@@ -221,7 +492,7 @@ class PaperContextBuilder implements ContextBuilder {
     return parts.join('\n');
   }
 
-  private buildMetadataSection(resource: PaperResource): string {
+  protected buildMetadataSection(resource: PaperResource): string {
     const parts: string[] = ['METADATA:'];
 
     if (resource.categories && resource.categories.length > 0) {
@@ -235,7 +506,7 @@ class PaperContextBuilder implements ContextBuilder {
     return parts.length > 1 ? parts.join('\n') : '';
   }
 
-  private buildMetricsSection(resource: PaperResource): string {
+  protected buildMetricsSection(resource: PaperResource): string {
     const metrics: string[] = [];
 
     if (resource.upvoteCount) {
@@ -249,7 +520,7 @@ class PaperContextBuilder implements ContextBuilder {
     return metrics.length > 0 ? `ENGAGEMENT:\n${metrics.join(', ')}` : '';
   }
 
-  private buildTaxonomySection(resource: PaperResource): string {
+  protected buildTaxonomySection(resource: PaperResource): string {
     if (resource.tags && resource.tags.length > 0) {
       return `TAGS: ${resource.tags.join(', ')}`;
     }

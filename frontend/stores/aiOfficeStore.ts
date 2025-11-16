@@ -372,6 +372,157 @@ export const useUIStore = create<UIStoreState>()(
 );
 
 // ============================================================================
+// Task Store (Genspark风格任务管理)
+// ============================================================================
+
+export interface Task {
+  _id: string;
+  title: string;
+  type: 'article' | 'ppt' | 'summary' | 'analysis';
+  status: 'in_progress' | 'completed' | 'failed';
+  createdAt: Date;
+  updatedAt: Date;
+
+  // 任务上下文
+  context: {
+    resourceIds: string[]; // 关联的资源
+    documentId?: string; // 生成的文档
+    chatMessages: ChatMessage[]; // AI对话历史
+    aiConfig?: any; // AI配置
+  };
+
+  // 元数据
+  metadata: {
+    progress?: number; // 生成进度
+    error?: string; // 错误信息
+    thumbnail?: string; // 缩略图
+    wordCount?: number; // 字数
+  };
+}
+
+interface TaskState {
+  tasks: Task[];
+  currentTaskId: string | null;
+  isTaskListOpen: boolean;
+
+  // Actions
+  addTask: (task: Task) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
+  deleteTask: (id: string) => void;
+  setCurrentTask: (id: string | null) => void;
+  toggleTaskList: () => void;
+  setTaskListOpen: (open: boolean) => void;
+
+  // 任务上下文操作
+  saveTaskContext: (taskId: string, context: Partial<Task['context']>) => void;
+  restoreTaskContext: (taskId: string) => void;
+}
+
+export const useTaskStore = create<TaskState>()(
+  persist(
+    (set, get) => ({
+      tasks: [],
+      currentTaskId: null,
+      isTaskListOpen: false,
+
+      addTask: (task) =>
+        set((state) => ({
+          tasks: [task, ...state.tasks], // 新任务在最前面
+        })),
+
+      updateTask: (id, updates) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t._id === id
+              ? {
+                  ...t,
+                  ...updates,
+                  updatedAt: new Date(),
+                }
+              : t
+          ),
+        })),
+
+      deleteTask: (id) =>
+        set((state) => ({
+          tasks: state.tasks.filter((t) => t._id !== id),
+          currentTaskId: state.currentTaskId === id ? null : state.currentTaskId,
+        })),
+
+      setCurrentTask: (id) =>
+        set({
+          currentTaskId: id,
+        }),
+
+      toggleTaskList: () =>
+        set((state) => ({
+          isTaskListOpen: !state.isTaskListOpen,
+        })),
+
+      setTaskListOpen: (open) =>
+        set({
+          isTaskListOpen: open,
+        }),
+
+      saveTaskContext: (taskId, context) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t._id === taskId
+              ? {
+                  ...t,
+                  context: {
+                    ...t.context,
+                    ...context,
+                  },
+                  updatedAt: new Date(),
+                }
+              : t
+          ),
+        })),
+
+      restoreTaskContext: (taskId) => {
+        const task = get().tasks.find((t) => t._id === taskId);
+        if (!task) return;
+
+        // 恢复资源选择
+        const resourceStore = useResourceStore.getState();
+        resourceStore.clearSelection();
+        task.context.resourceIds.forEach((id) => {
+          resourceStore.selectResource(id);
+        });
+
+        // 恢复文档
+        if (task.context.documentId) {
+          const documentStore = useDocumentStore.getState();
+          documentStore.setCurrentDocument(task.context.documentId);
+        }
+
+        // 恢复聊天历史
+        const chatStore = useChatStore.getState();
+        if (task.context.documentId && task.context.chatMessages.length > 0) {
+          // 清空当前会话
+          chatStore.clearSession(task.context.documentId);
+          // 恢复历史消息
+          task.context.chatMessages.forEach((msg) => {
+            chatStore.addMessage(task.context.documentId!, msg);
+          });
+        }
+
+        // 设置当前任务
+        set({ currentTaskId: taskId });
+      },
+    }),
+    {
+      name: 'ai-office-task-storage',
+      partialize: (state) => ({
+        tasks: state.tasks,
+        currentTaskId: state.currentTaskId,
+      }),
+    }
+  )
+);
+
+// ============================================================================
 // Selectors (派生状态)
 // ============================================================================
 
@@ -396,4 +547,11 @@ export const useCurrentChatMessages = () => {
   );
 
   return currentDocumentId ? sessions[currentDocumentId] || [] : [];
+};
+
+export const useCurrentTask = () => {
+  const tasks = useTaskStore((state) => state.tasks);
+  const currentId = useTaskStore((state) => state.currentTaskId);
+
+  return tasks.find((t) => t._id === currentId);
 };

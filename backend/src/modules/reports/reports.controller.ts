@@ -8,7 +8,9 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
 } from "@nestjs/common";
+import { Response } from "express";
 import { ReportsService } from "./reports.service";
 import { GenerateReportDto } from "./dto/generate-report.dto";
 
@@ -35,8 +37,8 @@ export class ReportsController {
    */
   @Post("chat")
   @HttpCode(HttpStatus.OK)
-  async chatWithResources(@Body() dto: any) {
-    return this.reportsService.chatWithResources(dto);
+  async chatWithResources(@Body() dto: any, @Res() res: Response) {
+    return this.reportsService.chatWithResources(dto, res);
   }
 
   /**
@@ -72,5 +74,18 @@ export class ReportsController {
   @HttpCode(HttpStatus.OK)
   async deleteReport(@Param("id") id: string, @Query("userId") userId: string) {
     return this.reportsService.delete(id, userId);
+  }
+
+  /**
+   * 导出文档 (Word, PPT, PDF, Markdown)
+   * POST /api/v1/reports/export
+   */
+  @Post("export")
+  @HttpCode(HttpStatus.OK)
+  async exportDocument(
+    @Body() dto: { format: string; content: string; title: string },
+    @Res() res: Response,
+  ) {
+    return this.reportsService.exportDocument(dto, res);
   }
 }

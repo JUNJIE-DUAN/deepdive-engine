@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ServeStaticModule } from "@nestjs/serve-static";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
 import { join } from "path";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -21,6 +23,8 @@ import { ReportsModule } from "./modules/reports/reports.module";
 import { YoutubeVideosModule } from "./modules/youtube-videos/youtube-videos.module";
 import { YoutubeModule } from "./modules/youtube/youtube.module";
 import { WorkspaceModule } from "./modules/workspace/workspace.module";
+import { AiModule } from "./modules/ai/ai.module";
+// import { AiOfficeModule } from "./ai-office/ai-office.module"; // Moved to backup - export handled by frontend
 // import { LearningPathsModule } from './modules/learning-paths/learning-paths.module'; // TODO: Enable later
 
 @Module({
@@ -30,6 +34,12 @@ import { WorkspaceModule } from "./modules/workspace/workspace.module";
       isGlobal: true,
       envFilePath: ".env",
     }),
+
+    // API限流保护 - 全局默认60请求/分钟
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 时间窗口：60秒
+      limit: 60,  // 限制：60次请求
+    }]),
 
     // 静态文件服务
     ServeStaticModule.forRoot({
@@ -57,9 +67,18 @@ import { WorkspaceModule } from "./modules/workspace/workspace.module";
     YoutubeModule,
     YoutubeVideosModule,
     WorkspaceModule,
+    AiModule,
+    // AiOfficeModule, // Moved to backup - export handled by frontend
     // LearningPathsModule, // TODO: Enable later
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // 全局启用限流守卫
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       model = 'grok',
       stream = true,
       generateDocument = false,
+      isDocumentGeneration = false,
+      conversationHistory = [],
     } = body as {
       message: string;
       resources?: AIOfficeResource[];
@@ -38,24 +40,39 @@ export async function POST(request: NextRequest) {
       model?: string;
       stream?: boolean;
       generateDocument?: boolean;
+      isDocumentGeneration?: boolean;
+      conversationHistory?: Array<{ role: string; content: string }>;
     };
 
     // Build context from selected resources
     const context = buildResourceContext(resources);
 
-    // Forward request to AI service
-    const response = await fetch(`${AI_SERVICE_URL}/api/v1/ai/simple-chat`, {
+    // 构建系统提示
+    let systemPrompt = '';
+    if (isDocumentGeneration || generateDocument) {
+      systemPrompt = `你是一个专业的文档创作助手。当用户要求生成PPT、Word文档或报告时：
+1. 直接输出可用的结构化内容，而不是建议或步骤
+2. 使用清晰的Markdown格式
+3. 对于PPT，使用"## 第X页：标题"来标记每一页幻灯片
+4. 确保内容专业、完整、可直接使用
+5. 不要说"我建议"、"你可以"等指导性语言，直接给出内容
+
+请基于用户提供的资源和要求，生成高质量的内容。`;
+    }
+
+    // Forward request to AI service (using reports/chat endpoint)
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/reports/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: generateDocument
-          ? `${message}\n\n请基于以上资源生成一份专业的文档。`
-          : message,
-        context,
+        message,
+        context: systemPrompt ? `${systemPrompt}\n\n${context}` : context,
         model,
         stream,
+        resources, // Pass resources array to backend
+        conversationHistory, // Pass conversation history for context
       }),
     });
 

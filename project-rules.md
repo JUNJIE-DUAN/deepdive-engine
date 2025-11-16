@@ -1,8 +1,9 @@
 # DeepDive Engine - 项目规则与开发规范
 
-> **版本**: v2.0
-> **更新日期**: 2025-11-08
+> **版本**: v2.1
+> **更新日期**: 2025-11-15
 > **适用范围**: 所有开发人员和AI助手
+> **最新变更**: 添加文件名小写强制规范
 
 ---
 
@@ -48,7 +49,122 @@ git checkout -b feature/001-your-feature
 
 ---
 
-## 1. 项目结构规范
+## 1. 文件与目录命名规范 ⚠️
+
+### 1.1 核心原则
+
+**所有文件名和目录名必须使用小写字母**
+
+这是项目的强制规范，适用于所有文件类型（除了极少数例外）。
+
+### 1.2 命名规则详解
+
+#### 文档文件（.md）
+```bash
+✅ 正确示例
+docs/readme.md
+docs/architecture/overview.md
+docs/api/readme.md
+docs/guides/deployment-guide.md
+docs/features/ai-office/product-spec.md
+
+❌ 错误示例
+docs/README.md                    # 不使用大写
+docs/Architecture/Overview.md     # 目录和文件都不应大写
+docs/API/README.MD                # 扩展名也应小写
+docs/guides/Deployment_Guide.md   # 不使用下划线，使用连字符
+docs/features/AI Office/产品.md   # 避免空格和中文文件名
+```
+
+#### TypeScript/JavaScript 文件
+```bash
+✅ 正确示例
+# 组件文件：PascalCase（唯一例外）
+components/UserProfile.tsx
+components/ResourceCard.tsx
+
+# 工具函数：kebab-case
+utils/api-client.ts
+lib/date-utils.ts
+services/auth-service.ts
+
+# 配置文件：kebab-case
+config/database-config.ts
+config/redis-config.ts
+
+❌ 错误示例
+utils/API_Client.ts               # 不使用大写和下划线
+lib/dateUtils.ts                  # 使用kebab-case而非camelCase
+services/AuthService.ts           # 非组件文件不使用PascalCase
+```
+
+#### 目录命名
+```bash
+✅ 正确示例
+docs/
+docs/architecture/
+docs/features/ai-office/
+backend/src/modules/
+frontend/components/
+
+❌ 错误示例
+docs/Architecture/                # 不使用大写
+docs/features/AI_Office/          # 不使用下划线
+backend/src/Modules/              # 不使用大写
+```
+
+#### Python 文件
+```bash
+✅ 正确示例
+services/grok_client.py
+utils/embedding_utils.py
+config/settings.py
+
+❌ 错误示例
+services/GrokClient.py            # 使用snake_case
+utils/EmbeddingUtils.py           # 使用snake_case
+```
+
+### 1.3 例外情况
+
+**仅以下文件允许使用大写：**
+1. `README.md` - 项目根目录（约定俗成）
+2. `LICENSE` - 许可证文件
+3. `CHANGELOG.md` - 变更日志
+4. `CONTRIBUTING.md` - 贡献指南
+5. React组件文件（`.tsx`）
+
+**重要**：即使是例外情况，在 `docs/` 目录下也建议全部使用小写以保持一致性。
+
+### 1.4 迁移指南
+
+如果发现不符合规范的文件名：
+
+```bash
+# 1. 重命名文件
+mv docs/README.md docs/readme.md
+mv docs/Architecture/Overview.md docs/architecture/overview.md
+
+# 2. 更新所有引用该文件的链接
+# 使用IDE全局搜索替换或手动更新
+
+# 3. Git提交
+git add -A
+git commit -m "refactor: rename files to lowercase for consistency"
+```
+
+### 1.5 检查命令
+
+```bash
+# 检查docs目录是否有大写文件
+find docs -name "*.md" | grep -E "[A-Z]"
+
+# 如果有输出，说明存在需要修复的文件
+```
+
+---
+
+## 2. 项目结构规范
 
 ### 1.1 根目录结构
 
@@ -147,6 +263,19 @@ ResourceCard.tsx
 // 工具函数文件：kebab-case
 user-utils.ts
 api-client.ts
+
+// 文档文件：全部小写 + kebab-case
+// ✅ 好的文档命名
+architecture/overview.md
+api/readme.md
+guides/deployment-guide.md
+features/ai-office/product-spec.md
+
+// ❌ 避免的文档命名
+Architecture/Overview.md        // 目录不应大写
+api/README.md                   // 文件名不应大写
+guides/Deployment_Guide.md      // 不使用下划线或大写
+features/AI Office/产品方案.md  // 避免空格和中文文件名
 
 // ❌ 避免的命名
 const data = {};  // 太模糊

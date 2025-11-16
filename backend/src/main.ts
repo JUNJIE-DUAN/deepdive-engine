@@ -1,11 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { isWorkspaceAiV2Enabled } from './common/utils/feature-flags';
 // Force reload after CORS fix
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // 启用安全头 (Helmet)
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // 允许跨域资源嵌入
+  }));
 
   // 启用CORS - 允许所有localhost端口（开发环境）
   app.enableCors({
@@ -27,6 +42,9 @@ async function bootstrap() {
       transform: true,
     })
   );
+
+  // 启用全局异常过滤器
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // API前缀
   app.setGlobalPrefix('api/v1');

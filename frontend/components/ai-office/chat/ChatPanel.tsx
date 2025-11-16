@@ -10,6 +10,8 @@ import {
   useChatStore,
   useDocumentStore,
   useResourceStore,
+  useTaskStore,
+  Task,
 } from '@/stores/aiOfficeStore';
 import { Send, Paperclip, Sparkles, FileText, StopCircle } from 'lucide-react';
 import DocumentGenerationWizard, {
@@ -160,25 +162,178 @@ export default function ChatPanel() {
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return;
 
+    const userInput = input;
+    setInput('');
+
+    // 任务管理：创建或更新任务
+    const currentTaskId = useTaskStore.getState().currentTaskId;
+    let taskId = currentTaskId;
+
+    // 检测用户是否要生成文档（PPT、Word等）
+    // 更灵活的检测：包含动词+文档类型 OR 只包含文档类型（如"一页PPT"）
+    const hasDocumentType = /(ppt|powerpoint|演示文稿|幻灯片|word|文档|报告)/i.test(userInput);
+    const hasActionVerb = /(生成|创建|制作|输出|写|撰写|做|准备|起草|编写|创作|一页|几页|页)/i.test(userInput);
+    const isDocumentGenerationRequest = hasDocumentType && (hasActionVerb || hasDocumentType);
+
+    // 检测是否是重新生成/更新当前文档
+    const isRegenerateRequest =
+      /重新生成|重新制作|重新创建|更新|修改|regenerate|update|refresh/i.test(userInput);
+
+    // 检测文档类型
+    const isPPTRequest = /ppt|powerpoint|演示文稿|幻灯片/i.test(userInput);
+    const isWordRequest = /word|文档|报告/i.test(userInput) && !isPPTRequest;
+
+    // 如果是文档生成请求，立即创建对应类型的文档
+    let targetDocumentId = currentDocumentId;
+    // 只有在不是重新生成请求时才创建新文档
+    const shouldCreateNewDocument = isDocumentGenerationRequest && !isRegenerateRequest;
+
+    if (shouldCreateNewDocument) {
+      const documentType = isPPTRequest ? 'ppt' : 'article';
+      const documentTitle = isPPTRequest ? '未命名演示文稿' : '未命名文档';
+
+      // 如果是PPT，根据用户输入选择模板
+      let templateId = 'corporate'; // 默认商务模板
+      if (isPPTRequest) {
+        const input = userInput.toLowerCase();
+        if (input.includes('简约') || input.includes('简洁')) {
+          templateId = 'minimal';
+        } else if (input.includes('现代') || input.includes('渐变')) {
+          templateId = 'modern';
+        } else if (input.includes('创意') || input.includes('多彩')) {
+          templateId = 'creative';
+        } else if (input.includes('学术') || input.includes('教育')) {
+          templateId = 'academic';
+        } else if (input.includes('科技') || input.includes('技术')) {
+          templateId = 'tech';
+        } else if (input.includes('商务') || input.includes('企业')) {
+          templateId = 'corporate';
+        }
+      }
+
+      const newDocumentId = `doc-${Date.now()}`;
+      const newDocument = {
+        _id: newDocumentId,
+        userId: 'current-user',
+        type: documentType,
+        title: documentTitle,
+        template: isPPTRequest ? {
+          id: templateId,
+          version: '1.0',
+        } : undefined,
+        content: {
+          markdown: '', // 统一使用markdown字段存储内容
+        },
+        metadata: {
+          wordCount: 0,
+          lastEditedBy: 'AI Assistant',
+        },
+        tags: [],
+        collaborators: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      useDocumentStore.getState().addDocument(newDocument as any);
+      useDocumentStore.getState().setCurrentDocument(newDocumentId);
+      targetDocumentId = newDocumentId;
+    }
+
+    // 在确定targetDocumentId后创建用户消息
     const userMessage = {
       id: Date.now().toString(),
-      documentId: currentDocumentId,
+      documentId: targetDocumentId,
       role: 'user' as const,
-      content: input,
+      content: userInput,
       timestamp: new Date(),
     };
 
-    // 添加用户消息
-    addMessage(currentDocumentId, userMessage);
-    const userInput = input;
-    setInput('');
+    // 添加用户消息到目标文档
+    addMessage(targetDocumentId, userMessage);
+
+    if (isDocumentGenerationRequest && !isRegenerateRequest && selectedResourceIds.length === 0) {
+      // 如果没有选择资源，提示用户
+      const hintMessage = {
+        id: (Date.now() + 1).toString(),
+        documentId: targetDocumentId,
+        role: 'assistant' as const,
+        content: '💡 检测到您想生成文档！建议先在左侧选择相关资源，然后我可以帮您生成更专业的内容。\n\n或者，您可以直接描述需求，我会尽力帮您生成。',
+        timestamp: new Date(),
+      };
+      addMessage(targetDocumentId, hintMessage);
+    }
+
+    // 创建或更新任务（针对所有AI交互，不只是文档生成）
+    if (!currentTaskId || shouldCreateNewDocument) {
+      // 创建新任务
+      const newTaskId = `task-${Date.now()}`;
+      taskId = newTaskId;
+
+      // 解析 @ 提及，获取资源列表
+      const mentionedResourceIds = parseMentions(userInput);
+      const resourceIdsToUse =
+        mentionedResourceIds.length > 0
+          ? mentionedResourceIds
+          : selectedResourceIds;
+
+      // 确定任务类型
+      let taskType: 'article' | 'ppt' | 'summary' | 'analysis' = 'analysis';
+      if (isDocumentGenerationRequest) {
+        taskType = isPPTRequest ? 'ppt' : 'article';
+      } else if (
+        /总结|摘要|summary/i.test(userInput) ||
+        resourceIdsToUse.length > 0
+      ) {
+        taskType = 'summary';
+      }
+
+      // 生成任务标题
+      let taskTitle = '';
+      if (isDocumentGenerationRequest) {
+        taskTitle = `${isPPTRequest ? 'PPT演示' : '文档'} - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+      } else if (userInput.length > 30) {
+        taskTitle = `${userInput.substring(0, 30)}... - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        taskTitle = `${userInput} - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+      }
+
+      const newTask: Task = {
+        _id: newTaskId,
+        title: taskTitle,
+        type: taskType,
+        status: 'in_progress',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        context: {
+          resourceIds: resourceIdsToUse,
+          documentId: targetDocumentId,
+          chatMessages: [...messages, userMessage],
+        },
+        metadata: {
+          progress: 0,
+        },
+      };
+
+      useTaskStore.getState().addTask(newTask);
+      useTaskStore.getState().setCurrentTask(newTaskId);
+    } else {
+      // 更新现有任务的上下文
+      useTaskStore.getState().updateTask(taskId, {
+        context: {
+          resourceIds: useTaskStore.getState().tasks.find((t) => t._id === taskId)?.context.resourceIds || selectedResourceIds,
+          documentId: targetDocumentId,
+          chatMessages: [...messages, userMessage],
+        },
+        updatedAt: new Date(),
+      });
+    }
 
     // 设置为正在生成状态
     setStreaming(true);
 
     try {
       // 解析 @ 提及，获取资源列表
-      const mentionedResourceIds = parseMentions(userInput);
+      const mentionedResourceIds = parseMentions(userInput || '');
 
       // 如果有 @ 提及，使用提及的资源；否则使用选中的资源
       const resourceIdsToUse =
@@ -190,6 +345,74 @@ export default function ChatPanel() {
         .getState()
         .resources.filter((r) => resourceIdsToUse.includes(r._id));
 
+      // 构建增强的prompt
+      let enhancedPrompt = userInput || '';
+      if (isDocumentGenerationRequest) {
+        // 如果是文档生成请求，添加结构化输出指令
+        if (isPPTRequest) {
+          enhancedPrompt = `${userInput || ''}
+
+【重要格式要求】请严格按照以下Markdown格式输出PPT内容，必须包含主题相关的配图：
+
+### Slide 1: [封面标题]
+![封面配图](https://picsum.photos/seed/slide1-主题关键词/800/450)
+- 副标题或核心观点
+
+---
+
+### Slide 2: [内容页标题]
+![相关配图](https://picsum.photos/seed/slide2-内容关键词/800/450)
+- 要点1
+- 要点2
+- 要点3
+
+---
+
+### Slide 3: [数据页标题]
+- 数据要点1
+- 数据要点2
+![图表配图](https://picsum.photos/seed/slide3-数据关键词/800/450)
+
+---
+
+【内容要求】
+1. 每页幻灯片必须以 "### Slide X: " 开头（X为页码）
+2. 使用 "---" 分隔不同幻灯片
+3. **每页必须包含1张配图**，图片URL格式：
+   https://picsum.photos/seed/幻灯片关键词/800/450
+
+4. **每页使用不同的seed关键词**确保图片多样性：
+   - Slide 1 → seed/slide1-主题/800/450
+   - Slide 2 → seed/slide2-主题/800/450
+   - Slide 3 → seed/slide3-主题/800/450
+   - 依此类推...
+
+5. 图片可以放在标题后（图文左右布局）或内容后（图文上下布局）
+6. 内容使用列表形式（- 开头），简洁专业
+7. 每页3-5个要点
+
+【示例】
+如果主题是"渥太华历史"，应该使用：
+- https://picsum.photos/seed/slide1-ottawa-parliament/800/450
+- https://picsum.photos/seed/slide2-canada-history/800/450
+- https://picsum.photos/seed/slide3-heritage-culture/800/450
+
+如果主题是"AI技术"，应该使用：
+- https://picsum.photos/seed/slide1-ai-technology/800/450
+- https://picsum.photos/seed/slide2-robot-innovation/800/450
+- https://picsum.photos/seed/slide3-data-science/800/450
+
+请直接输出可用的图文并茂的PPT内容，不要添加说明文字。`;
+        } else {
+          enhancedPrompt = `${userInput || ''}
+
+【重要】请直接生成可用的文档内容，使用Markdown格式。`;
+        }
+      }
+
+      // 获取当前文档的对话历史（用于上下文）
+      const conversationHistory = useChatStore.getState().sessions[targetDocumentId] || [];
+
       // 调用AI Office API
       const response = await fetch('/api/ai-office/chat', {
         method: 'POST',
@@ -197,10 +420,12 @@ export default function ChatPanel() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userInput,
+          message: enhancedPrompt,
           resources: selectedResources,
-          documentId: currentDocumentId,
+          documentId: targetDocumentId,
           stream: true,
+          isDocumentGeneration: isDocumentGenerationRequest,
+          conversationHistory: conversationHistory, // 发送完整对话历史
         }),
       });
 
@@ -217,12 +442,12 @@ export default function ChatPanel() {
       const aiMessageId = (Date.now() + 1).toString();
       const aiMessage = {
         id: aiMessageId,
-        documentId: currentDocumentId,
+        documentId: targetDocumentId,
         role: 'assistant' as const,
         content: '',
         timestamp: new Date(),
       };
-      addMessage(currentDocumentId, aiMessage);
+      addMessage(targetDocumentId, aiMessage);
 
       if (reader) {
         while (true) {
@@ -250,9 +475,25 @@ export default function ChatPanel() {
                   // 更新消息内容
                   useChatStore
                     .getState()
-                    .updateMessage(currentDocumentId, aiMessageId, {
+                    .updateMessage(targetDocumentId, aiMessageId, {
                       content: aiContent,
                     });
+
+                  // 实时同步到文档
+                  const currentDoc = useDocumentStore.getState().documents.find(
+                    (d) => d._id === targetDocumentId
+                  );
+                  if (currentDoc) {
+                    useDocumentStore.getState().updateDocument(targetDocumentId, {
+                      content: {
+                        markdown: aiContent,
+                      },
+                      metadata: {
+                        wordCount: aiContent.length,
+                      },
+                      updatedAt: new Date(),
+                    } as any);
+                  }
                 }
               } catch (e) {
                 // 忽略解析错误
@@ -262,19 +503,49 @@ export default function ChatPanel() {
         }
       }
 
+      // 流式生成已经在过程中实时同步到文档，这里只需要结束生成状态
       setStreaming(false);
+
+      // 更新任务为完成状态
+      if (taskId) {
+        const allMessages = useChatStore.getState().sessions[targetDocumentId] || [];
+        useTaskStore.getState().updateTask(taskId, {
+          status: 'completed',
+          context: {
+            resourceIds: useTaskStore.getState().tasks.find((t) => t._id === taskId)?.context.resourceIds || selectedResourceIds,
+            documentId: targetDocumentId,
+            chatMessages: allMessages,
+          },
+          metadata: {
+            progress: 100,
+            wordCount: aiContent.length,
+          },
+          updatedAt: new Date(),
+        });
+      }
     } catch (error) {
       console.error('AI chat error:', error);
-      // 添加错误消息
+      // 添加错误消息到目标文档
       const errorMessage = {
         id: (Date.now() + 1).toString(),
-        documentId: currentDocumentId,
+        documentId: targetDocumentId,
         role: 'assistant' as const,
         content: '抱歉，AI服务暂时不可用，请稍后再试。',
         timestamp: new Date(),
       };
-      addMessage(currentDocumentId, errorMessage);
+      addMessage(targetDocumentId, errorMessage);
       setStreaming(false);
+
+      // 标记任务为失败
+      if (taskId) {
+        useTaskStore.getState().updateTask(taskId, {
+          status: 'failed',
+          metadata: {
+            error: error instanceof Error ? error.message : 'AI服务暂时不可用',
+          },
+          updatedAt: new Date(),
+        });
+      }
     }
   };
 
@@ -284,6 +555,27 @@ export default function ChatPanel() {
 
     setGenerating(true);
     setStreaming(true);
+
+    // 创建任务
+    const taskId = `task-${Date.now()}`;
+    const newTask: Task = {
+      _id: taskId,
+      title: `${config.template.name} - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
+      type: config.template.name.includes('PPT') || config.template.name.includes('演示') ? 'ppt' : 'article',
+      status: 'in_progress',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      context: {
+        resourceIds: selectedResourceIds,
+        chatMessages: messages,
+        aiConfig: config.options,
+      },
+      metadata: {
+        progress: 0,
+      },
+    };
+    useTaskStore.getState().addTask(newTask);
+    useTaskStore.getState().setCurrentTask(taskId);
 
     // 初始化生成步骤
     const steps = [
@@ -338,6 +630,10 @@ export default function ChatPanel() {
           status: 'processing',
           message: '正在搜索扩展资源...',
         });
+        // 更新任务进度
+        useTaskStore.getState().updateTask(taskId, {
+          metadata: { progress: 20 },
+        });
       }, 1000);
 
       // 步骤2: 智能扩展 (模拟)
@@ -351,6 +647,10 @@ export default function ChatPanel() {
         updateGenerationStep('outline', {
           status: 'processing',
           message: '正在生成文档大纲...',
+        });
+        // 更新任务进度
+        useTaskStore.getState().updateTask(taskId, {
+          metadata: { progress: 40 },
         });
       }, 3000);
 
@@ -435,6 +735,10 @@ export default function ChatPanel() {
           status: 'processing',
           message: 'AI正在编写文档内容...',
         });
+        // 更新任务进度
+        useTaskStore.getState().updateTask(taskId, {
+          metadata: { progress: 60 },
+        });
       }, 5000);
 
       // 处理流式响应
@@ -497,12 +801,30 @@ export default function ChatPanel() {
         status: 'processing',
         message: '正在整理和格式化...',
       });
+      // 更新任务进度
+      useTaskStore.getState().updateTask(taskId, {
+        metadata: { progress: 90 },
+      });
 
       // 短暂延迟后完成
       setTimeout(() => {
         updateGenerationStep('finalize', {
           status: 'completed',
           message: '文档生成完成！',
+        });
+        // 完成任务并保存上下文
+        useTaskStore.getState().updateTask(taskId, {
+          status: 'completed',
+          context: {
+            resourceIds: selectedResourceIds,
+            documentId: newDocumentId,
+            chatMessages: useChatStore.getState().sessions[currentDocumentId] || [],
+            aiConfig: config.options,
+          },
+          metadata: {
+            progress: 100,
+            wordCount: documentContent.length,
+          },
         });
       }, 500);
 
@@ -530,6 +852,13 @@ export default function ChatPanel() {
       addMessage(currentDocumentId, errorMessage);
       setStreaming(false);
       setGenerating(false);
+      // 标记任务为失败
+      useTaskStore.getState().updateTask(taskId, {
+        status: 'failed',
+        metadata: {
+          error: error instanceof Error ? error.message : '文档生成失败',
+        },
+      });
     }
   };
 

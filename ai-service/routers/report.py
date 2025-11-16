@@ -546,6 +546,150 @@ async def chat_with_resources(request: ChatRequest):
         )
 
 
+# AI Office Chat 相关模型和端点
+class ReportsChatRequest(BaseModel):
+    """AI Office 报告对话请求"""
+    message: str = Field(..., min_length=1)
+    context: Optional[str] = None
+    model: str = Field(default="grok", pattern="^(grok|gpt-4)$")
+    stream: bool = Field(default=False)
+    resources: Optional[List[Dict[str, Any]]] = None
+    conversationHistory: Optional[List[Dict[str, str]]] = None  # 对话历史
+
+
+@router.post("/api/v1/reports/chat")
+async def reports_chat(request: ReportsChatRequest):
+    """
+    AI Office 对话端点 - 支持流式和非流式响应
+
+    这个端点专门为 AI Office 设计，支持基于上下文的对话
+    """
+    try:
+        logger.info(f"Reports chat request using {request.model}, stream={request.stream}, message={request.message[:50]}...")
+
+        # 构建消息列表
+        messages = []
+
+        # 如果有上下文，添加为系统消息
+        if request.context:
+            messages.append({
+                "role": "system",
+                "content": request.context
+            })
+
+        # 添加对话历史（如果有）
+        if request.conversationHistory and len(request.conversationHistory) > 0:
+            # 只取最近的5轮对话（10条消息），避免上下文过长
+            recent_history = request.conversationHistory[-10:]
+            logger.info(f"Adding {len(recent_history)} messages from conversation history")
+            for hist_msg in recent_history:
+                if 'role' in hist_msg and 'content' in hist_msg:
+                    messages.append({
+                        "role": hist_msg['role'],
+                        "content": hist_msg['content']
+                    })
+
+        # 添加当前用户消息
+        messages.append({
+            "role": "user",
+            "content": request.message
+        })
+
+        logger.info(f"Total messages in context: {len(messages)}")
+
+        # 选择 AI 客户端
+        ai_client = openai_client if request.model == "gpt-4" else grok_client
+
+        if not ai_client or not ai_client.available:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable"
+            )
+
+        # 流式响应
+        if request.stream:
+            from fastapi.responses import StreamingResponse
+            import asyncio
+
+            async def generate_stream():
+                """生成 SSE 流式响应"""
+                try:
+                    import json
+                    logger.info("Starting SSE stream generation")
+                    # 使用 stream_completion 方法
+                    # 将 messages 转换为单个 prompt
+                    prompt_parts = []
+                    for msg in messages:
+                        role = msg.get("role", "user")
+                        content = msg.get("content", "")
+                        if role == "system":
+                            prompt_parts.append(f"System: {content}")
+                        elif role == "user":
+                            prompt_parts.append(f"User: {content}")
+
+                    full_prompt = "\n\n".join(prompt_parts)
+                    logger.info(f"Prompt length: {len(full_prompt)} chars")
+
+                    chunk_count = 0
+                    async for chunk in ai_client.stream_completion(
+                        prompt=full_prompt,
+                        max_tokens=2000,
+                        temperature=0.7
+                    ):
+                        if chunk:
+                            chunk_count += 1
+                            # SSE 格式 - 返回 JSON
+                            json_data = json.dumps({'content': chunk})
+                            logger.debug(f"Sending chunk {chunk_count}: {len(chunk)} chars")
+                            yield f"data: {json_data}\n\n"
+                            await asyncio.sleep(0)  # 让出控制权
+
+                    logger.info(f"Stream completed. Total chunks: {chunk_count}")
+                    # 发送结束标记
+                    yield "data: [DONE]\n\n"
+
+                except Exception as e:
+                    logger.error(f"Stream generation error: {e}", exc_info=True)
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+            return StreamingResponse(
+                generate_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
+
+        # 非流式响应
+        else:
+            response = await ai_client.chat(
+                messages=messages,
+                max_tokens=2000,
+                temperature=0.7
+            )
+
+            if response is None:
+                raise HTTPException(
+                    status_code=503,
+                    detail="AI service unavailable"
+                )
+
+            return {
+                "message": response,
+                "model": request.model
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Reports chat error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"对话失败: {str(e)}"
+        )
+
+
 # YouTube报告相关模型
 class YoutubeReportRequest(BaseModel):
     """YouTube报告生成请求"""

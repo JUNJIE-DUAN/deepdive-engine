@@ -1,55 +1,59 @@
 @echo off
 chcp 65001 >nul
 echo ========================================
-echo   DeepDive Engine - 启动所有服务
+echo Starting all DeepDive services...
 echo ========================================
-echo.
-
-REM 检查Docker是否运行
-docker version >nul 2>&1
-if errorlevel 1 (
-    echo [错误] Docker未运行，请先启动Docker Desktop
-    pause
-    exit /b 1
-)
-
-echo [1/4] 启动数据库服务...
-cd /d "%~dp0"
-docker-compose up -d
-if errorlevel 1 (
-    echo [错误] 数据库服务启动失败
-    pause
-    exit /b 1
-)
 
 echo.
-echo [2/4] 等待数据库准备就绪...
+echo Step 1: Stopping any running services...
+call "%~dp0stop-all.bat"
+
+echo.
+echo ========================================
+echo Step 2: Starting services...
+echo ========================================
+
+echo.
+echo [1/4] Starting Frontend (port 3000)...
+cd /d "%~dp0frontend"
+start "DeepDive Frontend" cmd /k "npm run dev"
+
+echo Waiting for frontend to initialize...
+timeout /t 3 /nobreak >nul
+
+echo.
+echo [2/4] Starting Backend (port 4000)...
+cd /d "%~dp0backend"
+start "DeepDive Backend" cmd /k "npm run dev"
+
+echo Waiting for backend to initialize...
+timeout /t 3 /nobreak >nul
+
+echo.
+echo [3/4] Starting AI Service (port 5000)...
+cd /d "%~dp0ai-service"
+start "DeepDive AI Service" cmd /k "python -m uvicorn main:app --host 127.0.0.1 --port 5000 --reload"
+
+echo Waiting for AI service to initialize...
 timeout /t 5 /nobreak >nul
 
 echo.
-echo [3/4] 启动后端服务 (端口 4000)...
-start "DeepDive Backend" cmd /k "cd /d %~dp0backend && npm run dev"
-
+echo [4/4] Verifying services...
 echo.
-echo [4/4] 启动AI服务 (端口 5000)...
-start "DeepDive AI Service" cmd /k "cd /d %~dp0ai-service && python -m uvicorn main:app --reload --host 0.0.0.0 --port 5000"
-
-echo.
-echo [5/5] 启动前端服务 (端口 3000)...
-start "DeepDive Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
+echo Checking ports:
+netstat -ano | findstr ":3000.*LISTENING" && echo   Frontend: http://localhost:3000 || echo   Frontend: FAILED
+netstat -ano | findstr ":4000.*LISTENING" && echo   Backend:  http://localhost:4000 || echo   Backend:  FAILED
+netstat -ano | findstr ":5000.*LISTENING" && echo   AI Service: http://localhost:5000 || echo   AI Service: FAILED
 
 echo.
 echo ========================================
-echo   All services started!
+echo Services started!
 echo ========================================
 echo.
-echo Service URLs:
-echo   Frontend:  http://localhost:3000
-echo   Backend:   http://localhost:4000/api/v1
-echo   AI:        http://localhost:5000/docs
-echo   Neo4j:     http://localhost:7474
+echo URLs:
+echo   Frontend:   http://localhost:3000
+echo   Backend:    http://localhost:4000/api/v1
+echo   AI Service: http://localhost:5000/docs
 echo.
-echo Note: Services run in separate windows
-echo       Close window to stop service
-echo.
-pause
+echo Press any key to close this window...
+pause >nul

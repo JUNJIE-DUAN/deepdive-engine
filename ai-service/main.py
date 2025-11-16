@@ -10,6 +10,7 @@ import sys
 # ⚠️ 关键：必须在导入 secret_manager 之前加载环境变量
 load_dotenv()
 
+# Import routers
 from routers import ai, report, workspace
 from services.grok_client import GrokClient
 from services.openai_client import OpenAIClient
@@ -19,6 +20,9 @@ from utils.feature_flags import is_workspace_ai_v2_enabled
 
 # 配置日志
 logger.remove()
+# Windows 环境下配置 UTF-8 输出以支持 emoji
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 logger.add(
     sys.stdout,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",

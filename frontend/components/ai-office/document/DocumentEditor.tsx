@@ -22,17 +22,22 @@ import {
   Edit3,
   Eye,
   Image as ImageIcon,
+  History,
 } from 'lucide-react';
+import VersionHistory from './VersionHistory';
+import { parseMarkdownToEnhancedSlides } from '@/lib/markdown-parser';
+import EnhancedSlideRenderer from './EnhancedSlideRenderer';
 
-// 解析markdown为幻灯片
+// 旧版 Slide 类型定义（仅供后备使用）
 interface Slide {
   title: string;
   content: string[];
-  images?: string[]; // 图片URL列表
-  layout?: 'title' | 'content' | 'image-left' | 'image-right' | 'image-full'; // 布局类型
+  images?: string[];
+  layout: 'content' | 'image-full' | 'image-left' | 'image-right';
 }
 
-function parseMarkdownToSlides(markdown: string): Slide[] {
+// 保留旧的解析函数作为后备
+function parseMarkdownToSlides_Legacy(markdown: string): Slide[] {
   const slides: Slide[] = [];
   const lines = markdown.split('\n');
   let currentSlide: Slide | null = null;
@@ -42,7 +47,9 @@ function parseMarkdownToSlides(markdown: string): Slide[] {
 
     // 检测幻灯片标题（支持多种格式）
     // ### Slide 1, ## 第X页, #### 第X页, ### 封面, ## Slide X: 标题
-    const slideHeaderMatch = trimmed.match(/^#{2,4}\s*(Slide\s*\d+|第\s*\d+\s*[页页]|封面|目录|.*页[:：])/i);
+    const slideHeaderMatch = trimmed.match(
+      /^#{2,4}\s*(Slide\s*\d+|第\s*\d+\s*[页页]|封面|目录|.*页[:：])/i
+    );
 
     if (slideHeaderMatch) {
       if (currentSlide) {
@@ -51,9 +58,12 @@ function parseMarkdownToSlides(markdown: string): Slide[] {
         slides.push(currentSlide);
       }
       // 提取标题（冒号后的内容，或整个标题）
-      const titleMatch = trimmed.match(/[:：]\s*(.+)/) || trimmed.match(/^#{2,4}\s*(.+)/);
+      const titleMatch =
+        trimmed.match(/[:：]\s*(.+)/) || trimmed.match(/^#{2,4}\s*(.+)/);
       currentSlide = {
-        title: titleMatch ? titleMatch[1].trim() : trimmed.replace(/^#{2,4}\s*/, ''),
+        title: titleMatch
+          ? titleMatch[1].trim()
+          : trimmed.replace(/^#{2,4}\s*/, ''),
         content: [],
         images: [],
         layout: 'content',
@@ -109,18 +119,21 @@ function finalizeSlideLayout(slide: Slide) {
   } else {
     // 既有图片又有文本，使用图文混排布局
     // 根据图片索引决定左右位置
-    slide.layout = (slide.images?.length || 0) % 2 === 1 ? 'image-left' : 'image-right';
+    slide.layout =
+      (slide.images?.length || 0) % 2 === 1 ? 'image-left' : 'image-right';
   }
 }
 
 export default function DocumentEditor() {
   const currentDocumentId = useDocumentStore(
-    (state) => state.currentDocumentId
+    (state: any) => state.currentDocumentId
   );
-  const documents = useDocumentStore((state) => state.documents);
-  const updateDocument = useDocumentStore((state) => state.updateDocument);
+  const documents = useDocumentStore((state: any) => state.documents);
+  const updateDocument = useDocumentStore((state: any) => state.updateDocument);
 
-  const currentDocument = documents.find((d) => d._id === currentDocumentId);
+  const currentDocument = documents.find(
+    (d: any) => d._id === currentDocumentId
+  );
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [exportLoading, setExportLoading] = useState<string | null>(null);
@@ -131,6 +144,7 @@ export default function DocumentEditor() {
   const [thumbnailsCollapsed, setThumbnailsCollapsed] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingContent, setEditingContent] = useState('');
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -189,7 +203,7 @@ export default function DocumentEditor() {
 
   // 点击外部关闭导出菜单
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: any) => {
       if (
         exportMenuRef.current &&
         !exportMenuRef.current.contains(event.target as Node)
@@ -265,6 +279,7 @@ export default function DocumentEditor() {
         professionalLevel: 3,
       },
       generationHistory: [],
+      versions: [],
       metadata: {
         wordCount: 0,
       },
@@ -312,15 +327,15 @@ export default function DocumentEditor() {
       <div className="flex-shrink-0 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between px-6 py-3">
           {/* 左侧：文档标题 */}
-          <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
+          <div className="flex min-w-0 flex-1 items-center space-x-3">
+            <FileText className="h-5 w-5 flex-shrink-0 text-gray-400" />
             <input
               ref={titleInputRef}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={currentDocument.status === 'generating'}
-              className="flex-1 text-base font-medium text-gray-900 bg-transparent border-none focus:outline-none focus:ring-0 px-2 py-1 rounded hover:bg-gray-50 focus:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              className="flex-1 rounded border-none bg-transparent px-2 py-1 text-base font-medium text-gray-900 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               placeholder="未命名文档"
             />
           </div>
@@ -347,6 +362,16 @@ export default function DocumentEditor() {
               {currentDocument.metadata?.wordCount || 0} 字
             </div>
 
+            {/* 版本历史按钮 */}
+            <button
+              onClick={() => setShowVersionHistory(true)}
+              className="flex items-center space-x-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
+              title="查看版本历史"
+            >
+              <History className="h-4 w-4" />
+              <span>版本</span>
+            </button>
+
             {/* 导出按钮（下拉菜单） */}
             <div className="relative" ref={exportMenuRef}>
               <button
@@ -361,7 +386,7 @@ export default function DocumentEditor() {
 
               {/* 下拉菜单 */}
               {showExportMenu && (
-                <div className="absolute right-0 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-10">
+                <div className="absolute right-0 z-10 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
                   <div className="py-1" role="menu">
                     <button
                       onClick={() => handleExport('word')}
@@ -421,35 +446,22 @@ export default function DocumentEditor() {
         {currentDocument?.type === 'ppt' ? (
           // PPT 幻灯片预览 - 左右布局
           (() => {
-            const slides = parseMarkdownToSlides(content);
+            const slides = parseMarkdownToEnhancedSlides(content);
             if (slides.length === 0) {
               return (
                 <div className="flex h-full items-center justify-center text-gray-400">
                   <div className="text-center">
-                    <Presentation className="h-16 w-16 mx-auto mb-4" />
+                    <Presentation className="mx-auto mb-4 h-16 w-16" />
                     <p>AI正在生成幻灯片内容...</p>
                   </div>
                 </div>
               );
             }
 
-            // 渲染单行内容（处理markdown格式）
-            const renderLine = (line: string) => {
-              // 移除markdown标记并渲染
-              let processed = line
-                .replace(/^\*\*(.+?)\*\*[:：]\s*\*\*/, '') // 移除 **标题**: **
-                .replace(/^\*\*(.+?)\*\*[:：]?/, '<strong>$1</strong>') // **粗体**:
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') // **粗体**
-                .replace(/^-\s+/, '• ') // 列表符号
-                .replace(/^\d+\.\s+/, (match) => match); // 数字列表
-
-              return processed;
-            };
-
             const currentSlide = slides[currentSlideIndex] || slides[0];
 
             return (
-              <div className="flex flex-col h-full">
+              <div className="flex h-full flex-col">
                 {/* 顶部缩略图区域 - 可折叠 */}
                 <div
                   className={`border-b border-gray-200 bg-white transition-all duration-300 ${
@@ -457,14 +469,18 @@ export default function DocumentEditor() {
                   }`}
                 >
                   <div className="p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-semibold text-gray-500 uppercase">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="text-xs font-semibold uppercase text-gray-500">
                         所有幻灯片 ({slides.length})
                       </div>
                       <button
-                        onClick={() => setThumbnailsCollapsed(!thumbnailsCollapsed)}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors"
-                        title={thumbnailsCollapsed ? '展开缩略图' : '收起缩略图'}
+                        onClick={() =>
+                          setThumbnailsCollapsed(!thumbnailsCollapsed)
+                        }
+                        className="rounded p-1 transition-colors hover:bg-gray-100"
+                        title={
+                          thumbnailsCollapsed ? '展开缩略图' : '收起缩略图'
+                        }
                       >
                         <ChevronUp className="h-4 w-4 text-gray-500" />
                       </button>
@@ -472,21 +488,21 @@ export default function DocumentEditor() {
 
                     {/* 水平滚动缩略图 */}
                     <div className="relative">
-                      <div className="overflow-x-auto flex space-x-2 pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                      <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex space-x-2 overflow-x-auto pb-2">
                         {slides.map((slide, idx) => (
                           <button
                             key={idx}
                             onClick={() => setCurrentSlideIndex(idx)}
-                            className={`flex-shrink-0 w-36 border-2 rounded-lg p-2 text-left transition-all hover:border-blue-500 ${
+                            className={`w-36 flex-shrink-0 rounded-lg border-2 p-2 text-left transition-all hover:border-blue-500 ${
                               idx === currentSlideIndex
                                 ? 'border-blue-500 bg-blue-50 shadow-md'
                                 : 'border-gray-200 hover:bg-gray-50'
                             }`}
                           >
-                            <div className="text-xs font-medium text-gray-500 mb-1">
+                            <div className="mb-1 text-xs font-medium text-gray-500">
                               第 {idx + 1} 页
                             </div>
-                            <div className="text-xs font-semibold text-gray-900 line-clamp-2 leading-tight">
+                            <div className="line-clamp-2 text-xs font-semibold leading-tight text-gray-900">
                               {slide.title}
                             </div>
                           </button>
@@ -501,7 +517,7 @@ export default function DocumentEditor() {
                   <div className="border-b border-gray-200 bg-white">
                     <button
                       onClick={() => setThumbnailsCollapsed(false)}
-                      className="w-full py-1.5 flex items-center justify-center space-x-2 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                      className="flex w-full items-center justify-center space-x-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-50"
                     >
                       <span>展开缩略图</span>
                       <ChevronDown className="h-3 w-3" />
@@ -510,9 +526,9 @@ export default function DocumentEditor() {
                 )}
 
                 {/* 主幻灯片预览区域 */}
-                <div className="flex-1 p-8 flex flex-col">
+                <div className="flex flex-1 flex-col p-8">
                   {/* 导航栏 */}
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="mb-6 flex items-center justify-between">
                     <div className="text-sm text-gray-500">
                       幻灯片 {currentSlideIndex + 1} / {slides.length}
                     </div>
@@ -530,7 +546,7 @@ export default function DocumentEditor() {
                           }
                           setIsEditMode(!isEditMode);
                         }}
-                        className={`flex items-center space-x-1 px-3 py-2 text-sm rounded-lg transition-colors ${
+                        className={`flex items-center space-x-1 rounded-lg px-3 py-2 text-sm transition-colors ${
                           isEditMode
                             ? 'bg-blue-600 text-white hover:bg-blue-700'
                             : 'border border-gray-300 hover:bg-white'
@@ -551,17 +567,25 @@ export default function DocumentEditor() {
 
                       {/* 翻页按钮 */}
                       <button
-                        onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
+                        onClick={() =>
+                          setCurrentSlideIndex(
+                            Math.max(0, currentSlideIndex - 1)
+                          )
+                        }
                         disabled={currentSlideIndex === 0}
-                        className="flex items-center space-x-1 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center space-x-1 rounded-lg border border-gray-300 px-4 py-2 text-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <ChevronLeft className="h-4 w-4" />
                         <span>上一页</span>
                       </button>
                       <button
-                        onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
+                        onClick={() =>
+                          setCurrentSlideIndex(
+                            Math.min(slides.length - 1, currentSlideIndex + 1)
+                          )
+                        }
                         disabled={currentSlideIndex === slides.length - 1}
-                        className="flex items-center space-x-1 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center space-x-1 rounded-lg border border-gray-300 px-4 py-2 text-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <span>下一页</span>
                         <ChevronRight className="h-4 w-4" />
@@ -570,263 +594,25 @@ export default function DocumentEditor() {
                   </div>
 
                   {/* 幻灯片预览/编辑 */}
-                  <div className="flex-1 flex items-center justify-center">
+                  <div className="flex flex-1 items-center justify-center">
                     {isEditMode ? (
                       // 编辑模式 - 显示markdown编辑器
-                      <div className="w-full max-w-5xl h-full flex flex-col">
-                        <div className="flex-1 bg-white rounded-2xl shadow-2xl p-6">
+                      <div className="flex h-full w-full max-w-5xl flex-col">
+                        <div className="flex-1 rounded-2xl bg-white p-6 shadow-2xl">
                           <textarea
                             value={editingContent}
                             onChange={(e) => setEditingContent(e.target.value)}
-                            className="w-full h-full resize-none border border-gray-200 rounded-lg p-4 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="h-full w-full resize-none rounded-lg border border-gray-200 p-4 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="在此编辑幻灯片内容（Markdown格式）&#x0A;&#x0A;示例：&#x0A;### Slide 1: 标题&#x0A;- 要点1&#x0A;- 要点2&#x0A;![图片](https://example.com/image.jpg)&#x0A;&#x0A;---&#x0A;&#x0A;### Slide 2: 下一页标题&#x0A;..."
                           />
                         </div>
                       </div>
                     ) : (
-                      // 预览模式 - 使用模板样式渲染
-                      <div
-                        className="rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden relative"
-                        style={{
-                          aspectRatio: '16/9',
-                          backgroundColor: template.colors.background,
-                          backgroundImage: template.colors.backgroundOverlay
-                            ? template.colors.backgroundOverlay.startsWith('linear')
-                              ? template.colors.backgroundOverlay
-                              : `linear-gradient(135deg, ${template.colors.background}, ${template.colors.background})`
-                            : undefined,
-                        }}
-                      >
-                        {/* 顶部装饰条 */}
-                        {template.decorations.showTopBar && (
-                          <div
-                            className="absolute top-0 left-0 right-0 h-2"
-                            style={{ backgroundColor: template.colors.decorative }}
-                          />
-                        )}
-
-                        {/* 半透明右侧覆盖层（Genspark风格） */}
-                        {template.style.layoutStyle === 'dark' && template.colors.backgroundOverlay && !template.colors.backgroundOverlay.startsWith('linear') && (
-                          <div
-                            className="absolute top-0 right-0 bottom-0 w-2/3"
-                            style={{
-                              background: template.colors.backgroundOverlay,
-                            }}
-                          />
-                        )}
-
-                        {/* 底部装饰条 */}
-                        {template.decorations.showBottomBar && (
-                          <div
-                            className="absolute bottom-0 left-0 right-0 h-1.5"
-                            style={{ backgroundColor: template.colors.decorative }}
-                          />
-                        )}
-
-                        {/* 主内容区 */}
-                        <div className="relative z-10 p-12 h-full flex flex-col">
-                          {/* 幻灯片标题 */}
-                          <div className="mb-6">
-                            <h1
-                              className="font-bold mb-2"
-                              style={{
-                                fontSize: `${template.typography.title}px`,
-                                color: template.style.layoutStyle === 'dark' ? template.colors.textLight : template.colors.primary,
-                                fontFamily: template.fonts.heading,
-                              }}
-                            >
-                              {currentSlide.title}
-                            </h1>
-                            {/* 标题下划线 */}
-                            {template.decorations.showTitleUnderline && (
-                              <div
-                                className="h-1 rounded-full"
-                                style={{
-                                  width: '80px',
-                                  backgroundColor: template.colors.decorative,
-                                }}
-                              />
-                            )}
-                          </div>
-
-                        {/* 根据布局渲染内容 */}
-                        {currentSlide.layout === 'image-full' && currentSlide.images && currentSlide.images.length > 0 ? (
-                          // 全图布局
-                          <div className="h-full flex items-center justify-center">
-                            <img
-                              src={currentSlide.images[0]}
-                              alt="Slide visual"
-                              className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-                            />
-                          </div>
-                        ) : (currentSlide.layout === 'image-left' || currentSlide.layout === 'image-right') && currentSlide.images && currentSlide.images.length > 0 ? (
-                          // 图文混排布局
-                          <div className={`grid grid-cols-2 gap-8 h-full ${
-                            currentSlide.layout === 'image-left' ? 'grid-flow-col-dense' : ''
-                          }`}>
-                            {currentSlide.layout === 'image-left' && (
-                              <div className="flex items-center justify-center">
-                                <img
-                                  src={currentSlide.images[0]}
-                                  alt="Slide visual"
-                                  className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-                                />
-                              </div>
-                            )}
-                            <div className="space-y-3 overflow-y-auto">
-                              {currentSlide.content.map((line, idx) => {
-                                const trimmed = line.trim();
-                                if (!trimmed) return null;
-
-                                if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
-                                  const text = trimmed.replace(/^[-•]\s*/, '');
-                                  return (
-                                    <div key={idx} className="flex items-start space-x-3">
-                                      <span
-                                        className="mt-1 font-bold"
-                                        style={{
-                                          color: template.colors.decorative,
-                                          fontSize: `${template.typography.body + 2}px`,
-                                        }}
-                                      >
-                                        •
-                                      </span>
-                                      <p
-                                        className="leading-relaxed flex-1"
-                                        style={{
-                                          fontSize: `${template.typography.body - 1}px`,
-                                          color: template.style.layoutStyle === 'dark' ? template.colors.text : template.colors.text,
-                                          fontFamily: template.fonts.body,
-                                        }}
-                                        dangerouslySetInnerHTML={{ __html: renderLine(text) }}
-                                      />
-                                    </div>
-                                  );
-                                }
-
-                                if (trimmed.match(/^\d+\./)) {
-                                  return (
-                                    <p
-                                      key={idx}
-                                      className="leading-relaxed pl-6"
-                                      style={{
-                                        fontSize: `${template.typography.body - 1}px`,
-                                        color: template.style.layoutStyle === 'dark' ? template.colors.text : template.colors.text,
-                                        fontFamily: template.fonts.body,
-                                      }}
-                                      dangerouslySetInnerHTML={{ __html: renderLine(trimmed) }}
-                                    />
-                                  );
-                                }
-
-                                return (
-                                  <p
-                                    key={idx}
-                                    className="leading-relaxed"
-                                    style={{
-                                      fontSize: `${template.typography.body - 1}px`,
-                                      color: template.style.layoutStyle === 'dark' ? template.colors.text : template.colors.text,
-                                      fontFamily: template.fonts.body,
-                                    }}
-                                    dangerouslySetInnerHTML={{ __html: renderLine(trimmed) }}
-                                  />
-                                );
-                              })}
-                            </div>
-                            {currentSlide.layout === 'image-right' && (
-                              <div className="flex items-center justify-center">
-                                <img
-                                  src={currentSlide.images[0]}
-                                  alt="Slide visual"
-                                  className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          // 纯文本布局 - 使用模板样式
-                          <div className="flex-1 space-y-3 overflow-y-auto">
-                            {currentSlide.content.map((line, idx) => {
-                              const trimmed = line.trim();
-                              if (!trimmed) return null;
-
-                              // 列表项
-                              if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
-                                const text = trimmed.replace(/^[-•]\s*/, '');
-                                return (
-                                  <div key={idx} className="flex items-start space-x-3">
-                                    <span
-                                      className="mt-1 font-bold"
-                                      style={{
-                                        color: template.colors.decorative,
-                                        fontSize: `${template.typography.body + 4}px`,
-                                      }}
-                                    >
-                                      •
-                                    </span>
-                                    <p
-                                      className="leading-relaxed flex-1"
-                                      style={{
-                                        fontSize: `${template.typography.body}px`,
-                                        color: template.style.layoutStyle === 'dark' ? template.colors.text : template.colors.text,
-                                        fontFamily: template.fonts.body,
-                                      }}
-                                      dangerouslySetInnerHTML={{ __html: renderLine(text) }}
-                                    />
-                                  </div>
-                                );
-                              }
-
-                              // 数字列表
-                              if (trimmed.match(/^\d+\./)) {
-                                return (
-                                  <p
-                                    key={idx}
-                                    className="leading-relaxed pl-6"
-                                    style={{
-                                      fontSize: `${template.typography.body}px`,
-                                      color: template.style.layoutStyle === 'dark' ? template.colors.text : template.colors.text,
-                                      fontFamily: template.fonts.body,
-                                    }}
-                                    dangerouslySetInnerHTML={{ __html: renderLine(trimmed) }}
-                                  />
-                                );
-                              }
-
-                              // 备注或说明
-                              if (trimmed.includes('备注') || trimmed.includes('说明')) {
-                                return (
-                                  <p
-                                    key={idx}
-                                    className="italic mt-6 pt-6"
-                                    style={{
-                                      fontSize: `${template.typography.caption}px`,
-                                      color: template.colors.textTertiary,
-                                      borderTop: `1px solid ${template.colors.textTertiary}20`,
-                                    }}
-                                    dangerouslySetInnerHTML={{ __html: renderLine(trimmed) }}
-                                  />
-                                );
-                              }
-
-                              // 普通段落
-                              return (
-                                <p
-                                  key={idx}
-                                  className="leading-relaxed"
-                                  style={{
-                                    fontSize: `${template.typography.body}px`,
-                                    color: template.style.layoutStyle === 'dark' ? template.colors.text : template.colors.text,
-                                    fontFamily: template.fonts.body,
-                                  }}
-                                  dangerouslySetInnerHTML={{ __html: renderLine(trimmed) }}
-                                />
-                              );
-                            })}
-                          </div>
-                        )}
-                        </div>
-                      </div>
+                      // 预览模式 - 使用增强渲染器
+                      <EnhancedSlideRenderer
+                        slide={currentSlide}
+                        template={template}
+                      />
                     )}
                   </div>
                 </div>
@@ -835,7 +621,7 @@ export default function DocumentEditor() {
           })()
         ) : (
           // 普通文档编辑器
-          <div className="mx-auto max-w-4xl bg-white shadow-sm rounded-lg">
+          <div className="mx-auto max-w-4xl rounded-lg bg-white shadow-sm">
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -853,6 +639,14 @@ export default function DocumentEditor() {
           </div>
         )}
       </div>
+
+      {/* Version History Modal */}
+      {showVersionHistory && currentDocumentId && (
+        <VersionHistory
+          documentId={currentDocumentId}
+          onClose={() => setShowVersionHistory(false)}
+        />
+      )}
     </div>
   );
 }

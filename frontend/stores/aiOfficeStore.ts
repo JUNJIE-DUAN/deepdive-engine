@@ -12,7 +12,9 @@ import type {
   UIState,
   ResourceType,
   DocumentType,
+  DocumentVersion,
 } from '@/types/ai-office';
+import { calculateSlideCount } from '@/lib/utils/ppt-utils';
 
 // ============================================================================
 // Resource Store (持久化 + 去重)
@@ -148,9 +150,20 @@ interface DocumentState {
   setResourcesFound: (count: number) => void;
   setEstimatedTime: (seconds: number | null) => void;
   setError: (error: string | null) => void;
+
+  // Version management actions
+  saveVersion: (
+    documentId: string,
+    type: 'auto' | 'manual',
+    trigger: 'ai_generation' | 'user_edit' | 'manual_save',
+    description?: string
+  ) => string; // 返回版本ID
+  getVersions: (documentId: string) => DocumentVersion[];
+  restoreVersion: (documentId: string, versionId: string) => void;
+  deleteVersion: (documentId: string, versionId: string) => void;
 }
 
-export const useDocumentStore = create<DocumentState>((set) => ({
+export const useDocumentStore: any = create<DocumentState>((set) => ({
   documents: [],
   currentDocumentId: null,
   isGenerating: false,
@@ -233,6 +246,105 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     set({
       error,
     }),
+
+  // Version management implementations
+  saveVersion: (documentId, type, trigger, description) => {
+    let versionId = '';
+    set((state) => {
+      const document = state.documents.find((d) => d._id === documentId);
+      if (!document) return state;
+
+      // 生成版本ID
+      versionId = `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // 计算 slideCount（如果是PPT文档）
+      let slideCount = document.metadata.slideCount;
+      if (document.type === 'ppt' && (document.content as any)?.markdown) {
+        slideCount = calculateSlideCount((document.content as any).markdown);
+      }
+
+      // 创建版本快照 - 深拷贝内容
+      const version: DocumentVersion = {
+        id: versionId,
+        timestamp: new Date(),
+        type,
+        trigger,
+        content: JSON.parse(JSON.stringify(document.content)), // 深拷贝当前内容
+        metadata: {
+          title: document.title,
+          wordCount: document.metadata.wordCount,
+          slideCount: slideCount,
+          description,
+        },
+      };
+
+      // 如果有AI配置，记录模型信息
+      if (document.aiConfig) {
+        version.aiModel = document.aiConfig.model;
+      }
+
+      return {
+        documents: state.documents.map((d) =>
+          d._id === documentId
+            ? {
+                ...d,
+                versions: [...(d.versions || []), version],
+                currentVersionId: versionId,
+                updatedAt: new Date(),
+              }
+            : d
+        ),
+      };
+    });
+    return versionId;
+  },
+
+  getVersions: (documentId: string) => {
+    const state: any = useDocumentStore.getState();
+    const document = state.documents.find((d: any) => d._id === documentId);
+    return document?.versions || [];
+  },
+
+  restoreVersion: (documentId, versionId) => {
+    set((state) => {
+      const document = state.documents.find((d) => d._id === documentId);
+      if (!document) return state;
+
+      const version = document.versions?.find((v) => v.id === versionId);
+      if (!version) return state;
+
+      // 恢复版本内容
+      return {
+        documents: state.documents.map((d) =>
+          d._id === documentId
+            ? {
+                ...d,
+                content: version.content,
+                currentVersionId: versionId,
+                metadata: {
+                  ...d.metadata,
+                  ...version.metadata,
+                },
+                updatedAt: new Date(),
+              }
+            : d
+        ),
+      };
+    });
+  },
+
+  deleteVersion: (documentId, versionId) => {
+    set((state) => ({
+      documents: state.documents.map((d) =>
+        d._id === documentId
+          ? {
+              ...d,
+              versions: d.versions?.filter((v) => v.id !== versionId) || [],
+            }
+          : d
+      ),
+    }));
+  },
 }));
 
 // ============================================================================
@@ -405,6 +517,8 @@ export interface Task {
   context: {
     resourceIds: string[]; // 关联的资源
     documentId?: string; // 生成的文档
+    documentContent?: any; // 文档内容快照 - 用于恢复文档状态
+    documentMetadata?: any; // 文档元数据快照 - 用于恢复 slideCount 等信息
     chatMessages: ChatMessage[]; // AI对话历史
     aiConfig?: any; // AI配置
     prompt?: string; // 原始用户提示词
@@ -464,7 +578,8 @@ export const useTaskStore = create<TaskState>()(
       deleteTask: (id) =>
         set((state) => ({
           tasks: state.tasks.filter((t) => t._id !== id),
-          currentTaskId: state.currentTaskId === id ? null : state.currentTaskId,
+          currentTaskId:
+            state.currentTaskId === id ? null : state.currentTaskId,
         })),
 
       setCurrentTask: (id) =>
@@ -498,21 +613,64 @@ export const useTaskStore = create<TaskState>()(
           ),
         })),
 
-      restoreTaskContext: (taskId) => {
-        const task = get().tasks.find((t) => t._id === taskId);
+      restoreTaskContext: (taskId: string) => {
+        const task = get().tasks.find((t: any) => t._id === taskId);
         if (!task) return;
 
         // 恢复资源选择
         const resourceStore = useResourceStore.getState();
         resourceStore.clearSelection();
-        task.context.resourceIds.forEach((id) => {
+        task.context.resourceIds.forEach((id: any) => {
           resourceStore.selectResource(id);
         });
 
-        // 恢复文档
+        // 恢复文档和文档内容
         if (task.context.documentId) {
           const documentStore = useDocumentStore.getState();
-          documentStore.setCurrentDocument(task.context.documentId);
+          const existingDoc = documentStore.documents.find(
+            (d: any) => d._id === task.context.documentId
+          );
+
+          // 只有当文档存在时才进行恢复和切换
+          if (existingDoc) {
+            // 如果有保存的内容，恢复内容和元数据
+            if (task.context.documentContent) {
+              // 计算 slideCount（如果是PPT文档）
+              let slideCount = task.context.documentMetadata?.slideCount;
+              if (
+                existingDoc.type === 'ppt' &&
+                task.context.documentContent?.markdown
+              ) {
+                slideCount = calculateSlideCount(
+                  task.context.documentContent.markdown
+                );
+              }
+
+              const updatePayload: any = {
+                content: task.context.documentContent, // 直接替换 content，不是合并
+                updatedAt: new Date(),
+              };
+
+              // 恢复 metadata，确保 slideCount 正确
+              if (task.context.documentMetadata) {
+                updatePayload.metadata = {
+                  ...task.context.documentMetadata,
+                  slideCount:
+                    slideCount || task.context.documentMetadata.slideCount,
+                };
+              }
+
+              documentStore.updateDocument(
+                task.context.documentId,
+                updatePayload
+              );
+            }
+
+            // 设置为当前文档（只有当文档存在时）
+            documentStore.setCurrentDocument(task.context.documentId);
+          } else {
+            console.warn(`任务关联的文档不存在: ${task.context.documentId}`);
+          }
         }
 
         // 恢复聊天历史
@@ -521,7 +679,7 @@ export const useTaskStore = create<TaskState>()(
           // 清空当前会话
           chatStore.clearSession(task.context.documentId);
           // 恢复历史消息
-          task.context.chatMessages.forEach((msg) => {
+          task.context.chatMessages.forEach((msg: any) => {
             chatStore.addMessage(task.context.documentId!, msg);
           });
         }
@@ -552,16 +710,16 @@ export const useSelectedResources = () => {
 };
 
 export const useCurrentDocument = () => {
-  const documents = useDocumentStore((state) => state.documents);
-  const currentId = useDocumentStore((state) => state.currentDocumentId);
+  const documents = useDocumentStore((state: any) => state.documents);
+  const currentId = useDocumentStore((state: any) => state.currentDocumentId);
 
-  return documents.find((d) => d._id === currentId);
+  return documents.find((d: any) => d._id === currentId);
 };
 
 export const useCurrentChatMessages = () => {
-  const sessions = useChatStore((state) => state.sessions);
+  const sessions = useChatStore((state: any) => state.sessions);
   const currentDocumentId = useDocumentStore(
-    (state) => state.currentDocumentId
+    (state: any) => state.currentDocumentId
   );
 
   return currentDocumentId ? sessions[currentDocumentId] || [] : [];
@@ -571,5 +729,5 @@ export const useCurrentTask = () => {
   const tasks = useTaskStore((state) => state.tasks);
   const currentId = useTaskStore((state) => state.currentTaskId);
 
-  return tasks.find((t) => t._id === currentId);
+  return tasks.find((t: any) => t._id === currentId);
 };

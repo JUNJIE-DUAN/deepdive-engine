@@ -246,6 +246,23 @@ export interface PPTContent {
   theme?: string;
 }
 
+// 文档版本快照
+export interface DocumentVersion {
+  id: string;
+  timestamp: Date;
+  type: 'auto' | 'manual'; // 自动保存 vs 手动保存
+  trigger: 'ai_generation' | 'user_edit' | 'manual_save'; // 触发方式
+  content: any; // 快照内容（根据文档类型不同而不同）
+  metadata: {
+    title: string;
+    wordCount?: number;
+    slideCount?: number;
+    description?: string; // 版本描述
+  };
+  aiModel?: string; // 如果是AI生成的，记录使用的模型
+  userPrompt?: string; // 如果是AI生成的，记录用户提示词
+}
+
 export interface BaseDocument {
   _id: string;
   userId: string;
@@ -265,6 +282,9 @@ export interface BaseDocument {
     userPrompt?: string;
     cost?: number;
   }>;
+  // 新增：版本历史
+  versions: DocumentVersion[];
+  currentVersionId?: string; // 当前激活的版本ID
   metadata: {
     wordCount?: number;
     pageCount?: number;

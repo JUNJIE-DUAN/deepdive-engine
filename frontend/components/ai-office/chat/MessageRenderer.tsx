@@ -15,73 +15,72 @@ interface MessageRendererProps {
   role: 'user' | 'assistant';
 }
 
-export default function MessageRenderer({ content, role }: MessageRendererProps) {
+export default function MessageRenderer({
+  content,
+  role,
+}: MessageRendererProps) {
   return (
-    <div className={`message-renderer prose prose-slate max-w-none ${role === 'assistant' ? 'ai-message' : 'user-message'}`}>
+    <div
+      className={`message-renderer prose prose-slate max-w-none ${role === 'assistant' ? 'ai-message' : 'user-message'}`}
+    >
       <ReactMarkdown
         components={{
           // 标题渲染 - Genspark风格
           h1: ({ node, ...props }) => (
             <h1
-              className="text-2xl font-bold mt-6 mb-4 pb-2 border-b-2 border-blue-500 text-gray-900"
+              className="mb-4 mt-6 border-b-2 border-blue-500 pb-2 text-2xl font-bold text-gray-900"
               {...props}
             />
           ),
           h2: ({ node, ...props }) => (
             <h2
-              className="text-xl font-bold mt-5 mb-3 text-gray-800 flex items-center gap-2 before:content-[''] before:w-1 before:h-6 before:bg-blue-500 before:rounded-full"
+              className="mb-3 mt-5 flex items-center gap-2 text-xl font-bold text-gray-800 before:h-6 before:w-1 before:rounded-full before:bg-blue-500 before:content-['']"
               {...props}
             />
           ),
           h3: ({ node, ...props }) => (
             <h3
-              className="text-lg font-semibold mt-4 mb-2 text-gray-700"
+              className="mb-2 mt-4 text-lg font-semibold text-gray-700"
               {...props}
             />
           ),
           h4: ({ node, ...props }) => (
             <h4
-              className="text-base font-semibold mt-3 mb-2 text-gray-700"
+              className="mb-2 mt-3 text-base font-semibold text-gray-700"
               {...props}
             />
           ),
 
           // 段落 - 增加行高和间距
           p: ({ node, ...props }) => (
-            <p
-              className="my-3 leading-relaxed text-gray-700"
-              {...props}
-            />
+            <p className="my-3 leading-relaxed text-gray-700" {...props} />
           ),
 
           // 列表 - Genspark风格的色块标记
           ul: ({ node, ...props }) => (
-            <ul
-              className="my-4 space-y-2 pl-6"
-              {...props}
-            />
+            <ul className="my-4 space-y-2 pl-6" {...props} />
           ),
           ol: ({ node, ...props }) => (
-            <ol
-              className="my-4 space-y-2 pl-6 list-decimal"
-              {...props}
-            />
+            <ol className="my-4 list-decimal space-y-2 pl-6" {...props} />
           ),
-          li: ({ node, ordered, ...props }) => (
-            <li
-              className={`
-                ${ordered ? 'list-decimal' : 'list-none'}
-                ${!ordered ? 'flex items-start gap-3 before:content-[""] before:w-2 before:h-2 before:bg-gradient-to-br before:from-blue-500 before:to-blue-600 before:rounded-full before:mt-2 before:flex-shrink-0' : ''}
-                text-gray-700
-              `}
-              {...props}
-            />
-          ),
+          li: ({ node, ...props }: any) => {
+            const isOrdered = node?.ordered || false;
+            return (
+              <li
+                className={`
+                  ${isOrdered ? 'list-decimal' : 'list-none'}
+                  ${!isOrdered ? 'flex items-start gap-3 before:mt-2 before:h-2 before:w-2 before:flex-shrink-0 before:rounded-full before:bg-gradient-to-br before:from-blue-500 before:to-blue-600 before:content-[""]' : ''}
+                  text-gray-700
+                `}
+                {...props}
+              />
+            );
+          },
 
           // 引用块 - 带左侧色条
           blockquote: ({ node, ...props }) => (
             <blockquote
-              className="my-4 pl-4 pr-4 py-3 border-l-4 border-blue-500 bg-blue-50 italic text-gray-700 rounded-r"
+              className="my-4 rounded-r border-l-4 border-blue-500 bg-blue-50 py-3 pl-4 pr-4 italic text-gray-700"
               {...props}
             />
           ),
@@ -92,14 +91,16 @@ export default function MessageRenderer({ content, role }: MessageRendererProps)
             const language = match ? match[1] : '';
 
             return !inline ? (
-              <div className="my-4 rounded-lg overflow-hidden shadow-md">
-                <div className="bg-gray-800 text-gray-300 px-4 py-2 text-xs font-mono flex items-center justify-between">
+              <div className="my-4 overflow-hidden rounded-lg shadow-md">
+                <div className="flex items-center justify-between bg-gray-800 px-4 py-2 font-mono text-xs text-gray-300">
                   <span>{language || 'code'}</span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
+                      navigator.clipboard.writeText(
+                        String(children).replace(/\n$/, '')
+                      );
                     }}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-gray-400 transition-colors hover:text-white"
                   >
                     复制
                   </button>
@@ -108,7 +109,7 @@ export default function MessageRenderer({ content, role }: MessageRendererProps)
                   style={vscDarkPlus}
                   language={language || 'text'}
                   PreTag="div"
-                  className="!mt-0 !mb-0"
+                  className="!mb-0 !mt-0"
                   {...props}
                 >
                   {String(children).replace(/\n$/, '')}
@@ -116,7 +117,7 @@ export default function MessageRenderer({ content, role }: MessageRendererProps)
               </div>
             ) : (
               <code
-                className="px-1.5 py-0.5 bg-gray-100 text-red-600 rounded text-sm font-mono"
+                className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-sm text-red-600"
                 {...props}
               >
                 {children}
@@ -128,28 +129,37 @@ export default function MessageRenderer({ content, role }: MessageRendererProps)
           table: ({ node, ...props }) => (
             <div className="my-4 overflow-x-auto">
               <table
-                className="min-w-full border-collapse bg-white shadow-sm rounded-lg overflow-hidden"
+                className="min-w-full border-collapse overflow-hidden rounded-lg bg-white shadow-sm"
                 {...props}
               />
             </div>
           ),
           thead: ({ node, ...props }) => (
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white" {...props} />
+            <thead
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+              {...props}
+            />
           ),
           th: ({ node, ...props }) => (
-            <th className="px-4 py-3 text-left text-sm font-semibold" {...props} />
+            <th
+              className="px-4 py-3 text-left text-sm font-semibold"
+              {...props}
+            />
           ),
           td: ({ node, ...props }) => (
-            <td className="px-4 py-3 border-t border-gray-200 text-sm text-gray-700" {...props} />
+            <td
+              className="border-t border-gray-200 px-4 py-3 text-sm text-gray-700"
+              {...props}
+            />
           ),
           tr: ({ node, ...props }) => (
-            <tr className="hover:bg-blue-50 transition-colors" {...props} />
+            <tr className="transition-colors hover:bg-blue-50" {...props} />
           ),
 
           // 链接 - 带下划线和悬停效果
           a: ({ node, ...props }) => (
             <a
-              className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 hover:decoration-blue-600 transition-colors"
+              className="text-blue-600 underline decoration-blue-300 transition-colors hover:text-blue-800 hover:decoration-blue-600"
               target="_blank"
               rel="noopener noreferrer"
               {...props}
@@ -175,11 +185,11 @@ export default function MessageRenderer({ content, role }: MessageRendererProps)
 
       <style jsx global>{`
         .message-renderer.ai-message {
-          @apply bg-gradient-to-br from-white to-blue-50/30 rounded-lg p-4 shadow-sm;
+          @apply rounded-lg bg-gradient-to-br from-white to-blue-50/30 p-4 shadow-sm;
         }
 
         .message-renderer.user-message {
-          @apply bg-white rounded-lg p-4;
+          @apply rounded-lg bg-white p-4;
         }
 
         /* 优化prose样式 */

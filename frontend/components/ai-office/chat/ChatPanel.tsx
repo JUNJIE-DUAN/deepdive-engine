@@ -18,6 +18,7 @@ import DocumentGenerationWizard, {
   type GenerationConfig,
 } from '../document/DocumentGenerationWizard';
 import GenerationProgress from '../document/GenerationProgress';
+import MessageRenderer from './MessageRenderer';
 
 export default function ChatPanel() {
   const [input, setInput] = useState('');
@@ -270,7 +271,7 @@ export default function ChatPanel() {
       taskId = newTaskId;
 
       // 解析 @ 提及，获取资源列表
-      const mentionedResourceIds = parseMentions(userInput);
+      const mentionedResourceIds = parseMentions(userInput || '');
       const resourceIdsToUse =
         mentionedResourceIds.length > 0
           ? mentionedResourceIds
@@ -281,7 +282,7 @@ export default function ChatPanel() {
       if (isDocumentGenerationRequest) {
         taskType = isPPTRequest ? 'ppt' : 'article';
       } else if (
-        /总结|摘要|summary/i.test(userInput) ||
+        /总结|摘要|summary/i.test(userInput || '') ||
         resourceIdsToUse.length > 0
       ) {
         taskType = 'summary';
@@ -291,41 +292,41 @@ export default function ChatPanel() {
       let taskTitle = '';
       if (isDocumentGenerationRequest) {
         taskTitle = `${isPPTRequest ? 'PPT演示' : '文档'} - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
-      } else if (userInput.length > 30) {
-        taskTitle = `${userInput.substring(0, 30)}... - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+      } else if ((userInput || '').length > 30) {
+        taskTitle = `${(userInput || '').substring(0, 30)}... - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
       } else {
-        taskTitle = `${userInput} - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+        taskTitle = `${userInput || ''} - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
       }
 
       const newTask: Task = {
         _id: newTaskId,
         title: taskTitle,
         type: taskType,
-        status: 'in_progress',
         createdAt: new Date(),
-        updatedAt: new Date(),
+        refreshedAt: new Date(),
         context: {
           resourceIds: resourceIdsToUse,
           documentId: targetDocumentId,
           chatMessages: [...messages, userMessage],
+          prompt: userInput,
         },
-        metadata: {
-          progress: 0,
-        },
+        metadata: {},
       };
 
       useTaskStore.getState().addTask(newTask);
       useTaskStore.getState().setCurrentTask(newTaskId);
     } else {
       // 更新现有任务的上下文
-      useTaskStore.getState().updateTask(taskId, {
+      // currentTaskId 在这里一定存在（因为上面的 if 条件检查了 !currentTaskId）
+      useTaskStore.getState().updateTask(currentTaskId!, {
         context: {
-          resourceIds: useTaskStore.getState().tasks.find((t) => t._id === taskId)?.context.resourceIds || selectedResourceIds,
+          resourceIds: useTaskStore.getState().tasks.find((t) => t._id === currentTaskId)?.context.resourceIds || selectedResourceIds,
           documentId: targetDocumentId,
           chatMessages: [...messages, userMessage],
         },
         updatedAt: new Date(),
       });
+      taskId = currentTaskId!;
     }
 
     // 设置为正在生成状态
@@ -510,17 +511,14 @@ export default function ChatPanel() {
       if (taskId) {
         const allMessages = useChatStore.getState().sessions[targetDocumentId] || [];
         useTaskStore.getState().updateTask(taskId, {
-          status: 'completed',
           context: {
             resourceIds: useTaskStore.getState().tasks.find((t) => t._id === taskId)?.context.resourceIds || selectedResourceIds,
             documentId: targetDocumentId,
             chatMessages: allMessages,
           },
           metadata: {
-            progress: 100,
             wordCount: aiContent.length,
           },
-          updatedAt: new Date(),
         });
       }
     } catch (error) {
@@ -539,11 +537,9 @@ export default function ChatPanel() {
       // 标记任务为失败
       if (taskId) {
         useTaskStore.getState().updateTask(taskId, {
-          status: 'failed',
           metadata: {
-            error: error instanceof Error ? error.message : 'AI服务暂时不可用',
+            description: `错误: ${error instanceof Error ? error.message : 'AI服务暂时不可用'}`,
           },
-          updatedAt: new Date(),
         });
       }
     }
@@ -562,16 +558,16 @@ export default function ChatPanel() {
       _id: taskId,
       title: `${config.template.name} - ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
       type: config.template.name.includes('PPT') || config.template.name.includes('演示') ? 'ppt' : 'article',
-      status: 'in_progress',
       createdAt: new Date(),
-      updatedAt: new Date(),
+      refreshedAt: new Date(),
       context: {
         resourceIds: selectedResourceIds,
         chatMessages: messages,
         aiConfig: config.options,
+        prompt: `生成${config.template.name}`,
       },
       metadata: {
-        progress: 0,
+        description: config.template.name,
       },
     };
     useTaskStore.getState().addTask(newTask);
@@ -899,20 +895,12 @@ export default function ChatPanel() {
                 key={message.id}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div
-                  className={`max-w-[85%] rounded-lg px-4 py-2 ${
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  <div className="whitespace-pre-wrap text-sm">
-                    {message.content}
-                  </div>
+                <div className="max-w-[85%]">
+                  <MessageRenderer content={message.content} role={message.role} />
                   <div
                     className={`mt-1 text-xs ${
                       message.role === 'user'
-                        ? 'text-blue-100'
+                        ? 'text-gray-500'
                         : 'text-gray-500'
                     }`}
                   >

@@ -15,7 +15,7 @@ import type {
 } from '@/types/ai-office';
 
 // ============================================================================
-// Resource Store
+// Resource Store (持久化 + 去重)
 // ============================================================================
 
 interface ResourceState {
@@ -35,61 +35,80 @@ interface ResourceState {
   setError: (error: string | null) => void;
 }
 
-export const useResourceStore = create<ResourceState>((set) => ({
-  resources: [],
-  selectedResourceIds: [],
-  isLoading: false,
-  error: null,
-
-  addResource: (resource) =>
-    set((state) => ({
-      resources: [...state.resources, resource],
-    })),
-
-  removeResource: (id) =>
-    set((state) => ({
-      resources: state.resources.filter((r) => r._id !== id),
-      selectedResourceIds: state.selectedResourceIds.filter(
-        (rid) => rid !== id
-      ),
-    })),
-
-  updateResource: (id, updates) =>
-    set((state) => ({
-      resources: state.resources.map((r) =>
-        r._id === id ? ({ ...r, ...updates } as Resource) : r
-      ),
-    })),
-
-  selectResource: (id) =>
-    set((state) => ({
-      selectedResourceIds: state.selectedResourceIds.includes(id)
-        ? state.selectedResourceIds
-        : [...state.selectedResourceIds, id],
-    })),
-
-  deselectResource: (id) =>
-    set((state) => ({
-      selectedResourceIds: state.selectedResourceIds.filter(
-        (rid) => rid !== id
-      ),
-    })),
-
-  clearSelection: () =>
-    set({
+export const useResourceStore = create<ResourceState>()(
+  persist(
+    (set) => ({
+      resources: [],
       selectedResourceIds: [],
-    }),
+      isLoading: false,
+      error: null,
 
-  setLoading: (loading) =>
-    set({
-      isLoading: loading,
-    }),
+      addResource: (resource) =>
+        set((state) => {
+          // 去重：检查资源是否已存在
+          const exists = state.resources.some((r) => r._id === resource._id);
+          if (exists) {
+            console.warn(`Resource ${resource._id} already exists, skipping`);
+            return state;
+          }
+          return {
+            resources: [...state.resources, resource],
+          };
+        }),
 
-  setError: (error) =>
-    set({
-      error,
+      removeResource: (id) =>
+        set((state) => ({
+          resources: state.resources.filter((r) => r._id !== id),
+          selectedResourceIds: state.selectedResourceIds.filter(
+            (rid) => rid !== id
+          ),
+        })),
+
+      updateResource: (id, updates) =>
+        set((state) => ({
+          resources: state.resources.map((r) =>
+            r._id === id ? ({ ...r, ...updates } as Resource) : r
+          ),
+        })),
+
+      selectResource: (id) =>
+        set((state) => ({
+          selectedResourceIds: state.selectedResourceIds.includes(id)
+            ? state.selectedResourceIds
+            : [...state.selectedResourceIds, id],
+        })),
+
+      deselectResource: (id) =>
+        set((state) => ({
+          selectedResourceIds: state.selectedResourceIds.filter(
+            (rid) => rid !== id
+          ),
+        })),
+
+      clearSelection: () =>
+        set({
+          selectedResourceIds: [],
+        }),
+
+      setLoading: (loading) =>
+        set({
+          isLoading: loading,
+        }),
+
+      setError: (error) =>
+        set({
+          error,
+        }),
     }),
-}));
+    {
+      name: 'ai-office-resource-storage',
+      partialize: (state) => ({
+        resources: state.resources,
+        selectedResourceIds: state.selectedResourceIds,
+      }),
+    }
+  )
+);
 
 // ============================================================================
 // Document Store
@@ -372,31 +391,30 @@ export const useUIStore = create<UIStoreState>()(
 );
 
 // ============================================================================
-// Task Store (Genspark风格任务管理)
+// Task Store (Genspark风格任务管理) - 优化版
 // ============================================================================
 
 export interface Task {
   _id: string;
   title: string;
   type: 'article' | 'ppt' | 'summary' | 'analysis';
-  status: 'in_progress' | 'completed' | 'failed';
   createdAt: Date;
-  updatedAt: Date;
+  refreshedAt: Date; // 最后一次更新/编辑时间
 
-  // 任务上下文
+  // 任务上下文 - 关键：用于恢复任务环境
   context: {
     resourceIds: string[]; // 关联的资源
     documentId?: string; // 生成的文档
     chatMessages: ChatMessage[]; // AI对话历史
     aiConfig?: any; // AI配置
+    prompt?: string; // 原始用户提示词
   };
 
   // 元数据
   metadata: {
-    progress?: number; // 生成进度
-    error?: string; // 错误信息
     thumbnail?: string; // 缩略图
     wordCount?: number; // 字数
+    description?: string; // 任务描述
   };
 }
 
@@ -437,7 +455,7 @@ export const useTaskStore = create<TaskState>()(
               ? {
                   ...t,
                   ...updates,
-                  updatedAt: new Date(),
+                  refreshedAt: new Date(),
                 }
               : t
           ),
@@ -474,7 +492,7 @@ export const useTaskStore = create<TaskState>()(
                     ...t.context,
                     ...context,
                   },
-                  updatedAt: new Date(),
+                  refreshedAt: new Date(),
                 }
               : t
           ),

@@ -14,9 +14,7 @@ import {
   FileSearch,
   BarChart,
   Clock,
-  CheckCircle2,
-  XCircle,
-  Loader2,
+  RefreshCw,
   Trash2,
   X,
   ChevronRight,
@@ -38,27 +36,6 @@ const TASK_TYPE_NAMES: Record<Task['type'], string> = {
   ppt: '演示文稿',
   summary: '摘要',
   analysis: '分析报告',
-};
-
-// 状态颜色
-const STATUS_COLORS: Record<Task['status'], string> = {
-  in_progress: 'text-blue-600 bg-blue-50',
-  completed: 'text-green-600 bg-green-50',
-  failed: 'text-red-600 bg-red-50',
-};
-
-// 状态图标
-const STATUS_ICONS: Record<Task['status'], React.ElementType> = {
-  in_progress: Loader2,
-  completed: CheckCircle2,
-  failed: XCircle,
-};
-
-// 状态中文名称
-const STATUS_NAMES: Record<Task['status'], string> = {
-  in_progress: '进行中',
-  completed: '已完成',
-  failed: '失败',
 };
 
 export default function TaskList() {
@@ -127,9 +104,13 @@ export default function TaskList() {
           <div className="p-4 space-y-3">
             {tasks.map((task) => {
               const TypeIcon = TASK_TYPE_ICONS[task.type];
-              const StatusIcon = STATUS_ICONS[task.status];
               const isHovered = hoveredTaskId === task._id;
               const isCurrent = currentTaskId === task._id;
+
+              // 计算是否最近刷新过（createdAt和refreshedAt不同）
+              const hasBeenRefreshed =
+                new Date(task.refreshedAt).getTime() !==
+                new Date(task.createdAt).getTime();
 
               return (
                 <div
@@ -180,31 +161,24 @@ export default function TaskList() {
                         {task.title}
                       </h3>
 
-                      {/* 类型和状态 */}
+                      {/* 类型标签 */}
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                           {TASK_TYPE_NAMES[task.type]}
                         </span>
-                        <div
-                          className={`
-                          flex items-center space-x-1 px-2 py-0.5 rounded text-xs font-medium
-                          ${STATUS_COLORS[task.status]}
-                        `}
-                        >
-                          <StatusIcon
-                            className={`h-3 w-3 ${
-                              task.status === 'in_progress' ? 'animate-spin' : ''
-                            }`}
-                          />
-                          <span>{STATUS_NAMES[task.status]}</span>
-                        </div>
+                        {task.metadata.description && (
+                          <span className="text-xs text-gray-400 truncate max-w-[150px]">
+                            {task.metadata.description}
+                          </span>
+                        )}
                       </div>
 
-                      {/* 元数据 */}
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center space-x-1">
+                      {/* 时间信息 */}
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-1 text-xs text-gray-500">
                           <Clock className="h-3 w-3" />
-                          <span>
+                          <span>创建于</span>
+                          <span className="font-medium">
                             {formatDistanceToNow(new Date(task.createdAt), {
                               addSuffix: true,
                               locale: zhCN,
@@ -212,10 +186,26 @@ export default function TaskList() {
                           </span>
                         </div>
 
-                        {task.metadata.wordCount && (
-                          <span>{task.metadata.wordCount} 字</span>
+                        {hasBeenRefreshed && (
+                          <div className="flex items-center space-x-1 text-xs text-blue-600">
+                            <RefreshCw className="h-3 w-3" />
+                            <span>刷新于</span>
+                            <span className="font-medium">
+                              {formatDistanceToNow(new Date(task.refreshedAt), {
+                                addSuffix: true,
+                                locale: zhCN,
+                              })}
+                            </span>
+                          </div>
                         )}
                       </div>
+
+                      {/* 元数据 */}
+                      {task.metadata.wordCount && (
+                        <div className="mt-2 text-xs text-gray-500">
+                          {task.metadata.wordCount} 字
+                        </div>
+                      )}
                     </div>
 
                     {/* 操作按钮 */}
@@ -235,32 +225,6 @@ export default function TaskList() {
                       </div>
                     )}
                   </div>
-
-                  {/* 进度条（仅进行中的任务） */}
-                  {task.status === 'in_progress' &&
-                    task.metadata.progress !== undefined && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                          <span>生成进度</span>
-                          <span>{Math.round(task.metadata.progress)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-600 transition-all duration-300 rounded-full"
-                            style={{ width: `${task.metadata.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                  {/* 错误信息 */}
-                  {task.status === 'failed' && task.metadata.error && (
-                    <div className="mt-3 pt-3 border-t border-red-200">
-                      <p className="text-xs text-red-600 line-clamp-2">
-                        {task.metadata.error}
-                      </p>
-                    </div>
-                  )}
                 </div>
               );
             })}

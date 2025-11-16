@@ -155,19 +155,32 @@ export default function DocumentEditor() {
 
   // 当文档切换时更新内容和标题
   useEffect(() => {
+    console.log('[DocumentEditor] useEffect triggered');
+    console.log('[DocumentEditor] currentDocument:', !!currentDocument);
+    console.log('[DocumentEditor] currentDocumentId:', currentDocumentId);
+
     if (currentDocument) {
+      const markdown = (currentDocument.content as any)?.markdown || '';
+      console.log(
+        '[DocumentEditor] Setting content from document, length:',
+        markdown.length
+      );
+      console.log('[DocumentEditor] Document type:', currentDocument.type);
+      console.log('[DocumentEditor] Document title:', currentDocument.title);
+
       if (currentDocument.type === 'article') {
-        setContent((currentDocument.content as any).markdown || '');
+        setContent(markdown);
       } else if (currentDocument.type === 'ppt') {
         // PPT类型也使用markdown字段存储内容
-        setContent((currentDocument.content as any).markdown || '');
+        setContent(markdown);
       }
       setTitle(currentDocument.title || '未命名演示文稿');
     } else {
+      console.log('[DocumentEditor] No current document, clearing content');
       setContent('');
       setTitle('');
     }
-  }, [currentDocument]);
+  }, [currentDocument, currentDocumentId]);
 
   // 自动保存（防抖） - 内容
   useEffect(() => {

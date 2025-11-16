@@ -60,186 +60,309 @@ export default function Sidebar({ className = '' }: SidebarProps) {
       <div
         className={`flex items-center p-4 ${isCollapsed ? 'justify-center' : ''}`}
       >
-        <div className="flex items-center gap-2">
-          <svg
-            className="h-8 w-8 flex-shrink-0"
-            viewBox="0 0 48 48"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Neural network nodes */}
-            <circle cx="24" cy="8" r="2.5" fill="url(#gradient1)" />
-            <circle cx="16" cy="16" r="2.5" fill="url(#gradient1)" />
-            <circle cx="32" cy="16" r="2.5" fill="url(#gradient1)" />
-            <circle cx="12" cy="24" r="2.5" fill="url(#gradient2)" />
-            <circle cx="24" cy="24" r="3" fill="url(#gradient2)" />
-            <circle cx="36" cy="24" r="2.5" fill="url(#gradient2)" />
-            <circle cx="16" cy="32" r="2.5" fill="url(#gradient3)" />
-            <circle cx="32" cy="32" r="2.5" fill="url(#gradient3)" />
-            <circle cx="24" cy="40" r="3" fill="url(#gradient3)" />
-
-            {/* Connecting lines with gradient */}
-            <line
-              x1="24"
-              y1="8"
-              x2="16"
-              y2="16"
-              stroke="url(#gradient1)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="24"
-              y1="8"
-              x2="32"
-              y2="16"
-              stroke="url(#gradient1)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="16"
-              y1="16"
-              x2="12"
-              y2="24"
-              stroke="url(#gradient2)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="16"
-              y1="16"
-              x2="24"
-              y2="24"
-              stroke="url(#gradient2)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="32"
-              y1="16"
-              x2="24"
-              y2="24"
-              stroke="url(#gradient2)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="32"
-              y1="16"
-              x2="36"
-              y2="24"
-              stroke="url(#gradient2)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="12"
-              y1="24"
-              x2="16"
-              y2="32"
-              stroke="url(#gradient3)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="24"
-              y1="24"
-              x2="16"
-              y2="32"
-              stroke="url(#gradient3)"
-              strokeWidth="2"
-              opacity="0.8"
-            />
-            <line
-              x1="24"
-              y1="24"
-              x2="32"
-              y2="32"
-              stroke="url(#gradient3)"
-              strokeWidth="2"
-              opacity="0.8"
-            />
-            <line
-              x1="24"
-              y1="24"
-              x2="24"
-              y2="40"
-              stroke="url(#gradient3)"
-              strokeWidth="2.5"
-              opacity="0.9"
-            />
-            <line
-              x1="36"
-              y1="24"
-              x2="32"
-              y2="32"
-              stroke="url(#gradient3)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="16"
-              y1="32"
-              x2="24"
-              y2="40"
-              stroke="url(#gradient3)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="32"
-              y1="32"
-              x2="24"
-              y2="40"
-              stroke="url(#gradient3)"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-
-            {/* Gradient definitions */}
-            <defs>
-              <linearGradient
-                id="gradient1"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="100%"
-              >
-                <stop offset="0%" stopColor="#3b82f6" />
-                <stop offset="100%" stopColor="#06b6d4" />
-              </linearGradient>
-              <linearGradient
-                id="gradient2"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="100%"
-              >
-                <stop offset="0%" stopColor="#06b6d4" />
-                <stop offset="100%" stopColor="#8b5cf6" />
-              </linearGradient>
-              <linearGradient
-                id="gradient3"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="100%"
-              >
-                <stop offset="0%" stopColor="#8b5cf6" />
-                <stop offset="100%" stopColor="#d946ef" />
-              </linearGradient>
-            </defs>
-          </svg>
-          {!isCollapsed && (
-            <Link
-              href="/"
-              className="bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 bg-clip-text text-lg font-bold text-transparent"
+        {isCollapsed ? (
+          /* Collapsed Logo - Clean Icon Only */
+          <Link href="/" className="group" title="DeepDive">
+            <svg
+              className="h-12 w-12 transition-transform duration-300 group-hover:scale-110"
+              viewBox="0 0 64 64"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
             >
+              {/* Outer circle with gradient */}
+              <circle
+                cx="32"
+                cy="32"
+                r="28"
+                fill="url(#bgCircle)"
+                opacity="0.15"
+              />
+
+              {/* Main dive arrow - bold and clear */}
+              <path
+                d="M 32 14 L 32 42"
+                stroke="url(#arrowGrad)"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 32 42 L 24 34"
+                stroke="url(#arrowGrad)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 32 42 L 40 34"
+                stroke="url(#arrowGrad)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Data ripples - concentric circles */}
+              <circle
+                cx="32"
+                cy="20"
+                r="6"
+                stroke="url(#ripple1)"
+                strokeWidth="2"
+                fill="none"
+                opacity="0.5"
+              >
+                <animate
+                  attributeName="r"
+                  values="6;12;6"
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0.5;0;0.5"
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+
+              <circle
+                cx="32"
+                cy="26"
+                r="8"
+                stroke="url(#ripple2)"
+                strokeWidth="2"
+                fill="none"
+                opacity="0.4"
+              >
+                <animate
+                  attributeName="r"
+                  values="8;14;8"
+                  dur="2.5s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0.4;0;0.4"
+                  dur="2.5s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+
+              {/* Floating data points */}
+              <circle cx="22" cy="18" r="2" fill="#3b82f6">
+                <animate
+                  attributeName="cy"
+                  values="18;44;18"
+                  dur="3s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="1;0;1"
+                  dur="3s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+              <circle cx="42" cy="22" r="2" fill="#8b5cf6">
+                <animate
+                  attributeName="cy"
+                  values="22;48;22"
+                  dur="3.5s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="1;0;1"
+                  dur="3.5s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+              <circle cx="38" cy="16" r="1.5" fill="#06b6d4">
+                <animate
+                  attributeName="cy"
+                  values="16;46;16"
+                  dur="4s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="1;0;1"
+                  dur="4s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+
+              <defs>
+                <linearGradient
+                  id="bgCircle"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="50%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+                <linearGradient
+                  id="arrowGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="0%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="50%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+                <linearGradient id="ripple1" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#06b6d4" />
+                </linearGradient>
+                <linearGradient id="ripple2" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </Link>
+        ) : (
+          /* Expanded Logo - Icon + Text */
+          <Link
+            href="/"
+            className="group flex items-center gap-3"
+            title="DeepDive"
+          >
+            <svg
+              className="h-12 w-12 flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+              viewBox="0 0 64 64"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Outer circle with gradient */}
+              <circle
+                cx="32"
+                cy="32"
+                r="28"
+                fill="url(#bgCircleExp)"
+                opacity="0.15"
+              />
+
+              {/* Main dive arrow */}
+              <path
+                d="M 32 14 L 32 42"
+                stroke="url(#arrowGradExp)"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 32 42 L 24 34"
+                stroke="url(#arrowGradExp)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 32 42 L 40 34"
+                stroke="url(#arrowGradExp)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Data ripples */}
+              <circle
+                cx="32"
+                cy="20"
+                r="6"
+                stroke="url(#ripple1Exp)"
+                strokeWidth="2"
+                fill="none"
+                opacity="0.5"
+              >
+                <animate
+                  attributeName="r"
+                  values="6;12;6"
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0.5;0;0.5"
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+
+              {/* Floating data points */}
+              <circle cx="22" cy="18" r="2" fill="#3b82f6">
+                <animate
+                  attributeName="cy"
+                  values="18;44;18"
+                  dur="3s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="1;0;1"
+                  dur="3s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+              <circle cx="42" cy="22" r="2" fill="#8b5cf6">
+                <animate
+                  attributeName="cy"
+                  values="22;48;22"
+                  dur="3.5s"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="1;0;1"
+                  dur="3.5s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+
+              <defs>
+                <linearGradient
+                  id="bgCircleExp"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="50%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+                <linearGradient
+                  id="arrowGradExp"
+                  x1="0%"
+                  y1="0%"
+                  x2="0%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="50%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+                <linearGradient
+                  id="ripple1Exp"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#06b6d4" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 bg-clip-text text-xl font-bold tracking-tight text-transparent">
               DeepDive
-            </Link>
-          )}
-        </div>
+            </span>
+          </Link>
+        )}
       </div>
 
       {/* Main Navigation */}

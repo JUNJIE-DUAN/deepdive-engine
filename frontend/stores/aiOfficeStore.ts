@@ -126,6 +126,7 @@ export interface GenerationStep {
 interface DocumentState {
   documents: Document[];
   currentDocumentId: string | null;
+  selectedSlideIndex: number | null; // 选中的幻灯片索引（用于页面级别编辑）
   isGenerating: boolean;
   generationProgress: number;
   generationSteps: GenerationStep[];
@@ -139,6 +140,7 @@ interface DocumentState {
   updateDocument: (id: string, updates: Partial<Document>) => void;
   deleteDocument: (id: string) => void;
   setCurrentDocument: (id: string | null) => void;
+  setSelectedSlideIndex: (index: number | null) => void; // 设置选中的幻灯片
   setGenerating: (generating: boolean) => void;
   setGenerationProgress: (progress: number) => void;
   setGenerationSteps: (steps: GenerationStep[]) => void;
@@ -163,189 +165,236 @@ interface DocumentState {
   deleteVersion: (documentId: string, versionId: string) => void;
 }
 
-export const useDocumentStore: any = create<DocumentState>((set) => ({
-  documents: [],
-  currentDocumentId: null,
-  isGenerating: false,
-  generationProgress: 0,
-  generationSteps: [],
-  currentStep: '',
-  resourcesFound: 0,
-  estimatedTime: null,
-  error: null,
+export const useDocumentStore: any = create<DocumentState>()(
+  persist(
+    (set) => ({
+      documents: [],
+      currentDocumentId: null,
+      selectedSlideIndex: null,
+      isGenerating: false,
+      generationProgress: 0,
+      generationSteps: [],
+      currentStep: '',
+      resourcesFound: 0,
+      estimatedTime: null,
+      error: null,
 
-  addDocument: (document) =>
-    set((state) => ({
-      documents: [...state.documents, document],
-    })),
+      addDocument: (document) =>
+        set((state) => ({
+          documents: [...state.documents, document],
+        })),
 
-  updateDocument: (id, updates) =>
-    set((state) => ({
-      documents: state.documents.map((d) =>
-        d._id === id ? ({ ...d, ...updates } as Document) : d
-      ),
-    })),
+      updateDocument: (id, updates) =>
+        set((state) => ({
+          documents: state.documents.map((d) =>
+            d._id === id ? ({ ...d, ...updates } as Document) : d
+          ),
+        })),
 
-  deleteDocument: (id) =>
-    set((state) => ({
-      documents: state.documents.filter((d) => d._id !== id),
-      currentDocumentId:
-        state.currentDocumentId === id ? null : state.currentDocumentId,
-    })),
+      deleteDocument: (id) =>
+        set((state) => ({
+          documents: state.documents.filter((d) => d._id !== id),
+          currentDocumentId:
+            state.currentDocumentId === id ? null : state.currentDocumentId,
+        })),
 
-  setCurrentDocument: (id) =>
-    set({
-      currentDocumentId: id,
-    }),
+      setCurrentDocument: (id) =>
+        set({
+          currentDocumentId: id,
+          selectedSlideIndex: null, // 切换文档时清除选中的幻灯片
+        }),
 
-  setGenerating: (generating) =>
-    set({
-      isGenerating: generating,
-      // 重置进度状态
-      ...(generating === false && {
-        generationSteps: [],
-        currentStep: '',
-        resourcesFound: 0,
-        estimatedTime: null,
-      }),
-    }),
+      setSelectedSlideIndex: (index) =>
+        set({
+          selectedSlideIndex: index,
+        }),
 
-  setGenerationProgress: (progress) =>
-    set({
-      generationProgress: progress,
-    }),
+      setGenerating: (generating) =>
+        set({
+          isGenerating: generating,
+          // 重置进度状态
+          ...(generating === false && {
+            generationSteps: [],
+            currentStep: '',
+            resourcesFound: 0,
+            estimatedTime: null,
+          }),
+        }),
 
-  setGenerationSteps: (steps) =>
-    set({
-      generationSteps: steps,
-    }),
+      setGenerationProgress: (progress) =>
+        set({
+          generationProgress: progress,
+        }),
 
-  updateGenerationStep: (stepId, updates) =>
-    set((state) => ({
-      generationSteps: state.generationSteps.map((step) =>
-        step.id === stepId ? { ...step, ...updates } : step
-      ),
-    })),
+      setGenerationSteps: (steps) =>
+        set({
+          generationSteps: steps,
+        }),
 
-  setCurrentStep: (stepId) =>
-    set({
-      currentStep: stepId,
-    }),
+      updateGenerationStep: (stepId, updates) =>
+        set((state) => ({
+          generationSteps: state.generationSteps.map((step) =>
+            step.id === stepId ? { ...step, ...updates } : step
+          ),
+        })),
 
-  setResourcesFound: (count) =>
-    set({
-      resourcesFound: count,
-    }),
+      setCurrentStep: (stepId) =>
+        set({
+          currentStep: stepId,
+        }),
 
-  setEstimatedTime: (seconds) =>
-    set({
-      estimatedTime: seconds,
-    }),
+      setResourcesFound: (count) =>
+        set({
+          resourcesFound: count,
+        }),
 
-  setError: (error) =>
-    set({
-      error,
-    }),
+      setEstimatedTime: (seconds) =>
+        set({
+          estimatedTime: seconds,
+        }),
 
-  // Version management implementations
-  saveVersion: (documentId, type, trigger, description) => {
-    let versionId = '';
-    set((state) => {
-      const document = state.documents.find((d) => d._id === documentId);
-      if (!document) return state;
+      setError: (error) =>
+        set({
+          error,
+        }),
 
-      // 生成版本ID
-      versionId = `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // 计算 slideCount（如果是PPT文档）
-      let slideCount = document.metadata.slideCount;
-      if (document.type === 'ppt' && (document.content as any)?.markdown) {
-        slideCount = calculateSlideCount((document.content as any).markdown);
-      }
-
-      // 创建版本快照 - 深拷贝内容
-      const version: DocumentVersion = {
-        id: versionId,
-        timestamp: new Date(),
-        type,
-        trigger,
-        content: JSON.parse(JSON.stringify(document.content)), // 深拷贝当前内容
-        metadata: {
-          title: document.title,
-          wordCount: document.metadata.wordCount,
-          slideCount: slideCount,
+      // Version management implementations
+      saveVersion: (documentId, type, trigger, description) => {
+        console.log('[saveVersion] Called with:', {
+          documentId,
+          type,
+          trigger,
           description,
-        },
-      };
+        });
+        let versionId = '';
+        set((state) => {
+          const document = state.documents.find((d) => d._id === documentId);
+          if (!document) {
+            console.warn('[saveVersion] Document not found:', documentId);
+            return state;
+          }
 
-      // 如果有AI配置，记录模型信息
-      if (document.aiConfig) {
-        version.aiModel = document.aiConfig.model;
-      }
+          // 生成版本ID
+          versionId = `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      return {
-        documents: state.documents.map((d) =>
-          d._id === documentId
-            ? {
-                ...d,
-                versions: [...(d.versions || []), version],
-                currentVersionId: versionId,
-                updatedAt: new Date(),
-              }
-            : d
-        ),
-      };
-    });
-    return versionId;
-  },
+          // 计算 slideCount（如果是PPT文档）
+          let slideCount = document.metadata.slideCount;
+          if (document.type === 'ppt' && (document.content as any)?.markdown) {
+            slideCount = calculateSlideCount(
+              (document.content as any).markdown
+            );
+          }
 
-  getVersions: (documentId: string) => {
-    const state: any = useDocumentStore.getState();
-    const document = state.documents.find((d: any) => d._id === documentId);
-    return document?.versions || [];
-  },
+          // 创建版本快照 - 深拷贝内容
+          const version: DocumentVersion = {
+            id: versionId,
+            timestamp: new Date(),
+            type,
+            trigger,
+            content: JSON.parse(JSON.stringify(document.content)), // 深拷贝当前内容
+            metadata: {
+              title: document.title,
+              wordCount: document.metadata.wordCount,
+              slideCount: slideCount,
+              description,
+            },
+          };
 
-  restoreVersion: (documentId, versionId) => {
-    set((state) => {
-      const document = state.documents.find((d) => d._id === documentId);
-      if (!document) return state;
+          // 如果有AI配置，记录模型信息
+          if (document.aiConfig) {
+            version.aiModel = document.aiConfig.model;
+          }
 
-      const version = document.versions?.find((v) => v.id === versionId);
-      if (!version) return state;
+          const currentVersionCount = document.versions?.length || 0;
+          console.log('[saveVersion] Creating version:', {
+            versionId,
+            slideCount,
+            currentVersionCount,
+            newVersionCount: currentVersionCount + 1,
+          });
 
-      // 恢复版本内容
-      return {
-        documents: state.documents.map((d) =>
-          d._id === documentId
-            ? {
-                ...d,
-                content: version.content,
-                currentVersionId: versionId,
-                metadata: {
-                  ...d.metadata,
-                  ...version.metadata,
-                },
-                updatedAt: new Date(),
-              }
-            : d
-        ),
-      };
-    });
-  },
+          return {
+            documents: state.documents.map((d) =>
+              d._id === documentId
+                ? {
+                    ...d,
+                    versions: [...(d.versions || []), version],
+                    currentVersionId: versionId,
+                    updatedAt: new Date(),
+                  }
+                : d
+            ),
+          };
+        });
 
-  deleteVersion: (documentId, versionId) => {
-    set((state) => ({
-      documents: state.documents.map((d) =>
-        d._id === documentId
-          ? {
-              ...d,
-              versions: d.versions?.filter((v) => v.id !== versionId) || [],
-            }
-          : d
-      ),
-    }));
-  },
-}));
+        // 验证版本是否被正确保存
+        const updatedDoc = useDocumentStore
+          .getState()
+          .documents.find((d: any) => d._id === documentId);
+        console.log(
+          '[saveVersion] Version saved successfully. Total versions:',
+          updatedDoc?.versions?.length || 0
+        );
+
+        return versionId;
+      },
+
+      getVersions: (documentId: string) => {
+        const state: any = useDocumentStore.getState();
+        const document = state.documents.find((d: any) => d._id === documentId);
+        return document?.versions || [];
+      },
+
+      restoreVersion: (documentId, versionId) => {
+        set((state) => {
+          const document = state.documents.find((d) => d._id === documentId);
+          if (!document) return state;
+
+          const version = document.versions?.find((v) => v.id === versionId);
+          if (!version) return state;
+
+          // 恢复版本内容
+          return {
+            documents: state.documents.map((d) =>
+              d._id === documentId
+                ? {
+                    ...d,
+                    content: version.content,
+                    currentVersionId: versionId,
+                    metadata: {
+                      ...d.metadata,
+                      ...version.metadata,
+                    },
+                    updatedAt: new Date(),
+                  }
+                : d
+            ),
+          };
+        });
+      },
+
+      deleteVersion: (documentId, versionId) => {
+        set((state) => ({
+          documents: state.documents.map((d) =>
+            d._id === documentId
+              ? {
+                  ...d,
+                  versions: d.versions?.filter((v) => v.id !== versionId) || [],
+                }
+              : d
+          ),
+        }));
+      },
+    }),
+    {
+      name: 'ai-office-document-storage',
+      partialize: (state) => ({
+        documents: state.documents,
+        currentDocumentId: state.currentDocumentId,
+      }),
+    }
+  )
+);
 
 // ============================================================================
 // Chat Store
@@ -519,6 +568,7 @@ export interface Task {
     documentId?: string; // 生成的文档
     documentContent?: any; // 文档内容快照 - 用于恢复文档状态
     documentMetadata?: any; // 文档元数据快照 - 用于恢复 slideCount 等信息
+    documentVersions?: DocumentVersion[]; // 文档版本历史快照 - 用于恢复版本管理
     chatMessages: ChatMessage[]; // AI对话历史
     aiConfig?: any; // AI配置
     prompt?: string; // 原始用户提示词
@@ -569,6 +619,13 @@ export const useTaskStore = create<TaskState>()(
               ? {
                   ...t,
                   ...updates,
+                  // 深度合并 context 对象，而不是替换
+                  context: updates.context
+                    ? {
+                        ...t.context,
+                        ...updates.context,
+                      }
+                    : t.context,
                   refreshedAt: new Date(),
                 }
               : t
@@ -627,9 +684,79 @@ export const useTaskStore = create<TaskState>()(
         // 恢复文档和文档内容
         if (task.context.documentId) {
           const documentStore = useDocumentStore.getState();
-          const existingDoc = documentStore.documents.find(
+          let existingDoc = documentStore.documents.find(
             (d: any) => d._id === task.context.documentId
           );
+
+          console.log(
+            '[restoreTaskContext] Document ID:',
+            task.context.documentId
+          );
+          console.log('[restoreTaskContext] Found document:', !!existingDoc);
+          console.log(
+            '[restoreTaskContext] Has saved content:',
+            !!task.context.documentContent
+          );
+
+          // 如果文档不存在，但任务有保存的内容快照，从快照重建文档
+          if (
+            !existingDoc &&
+            task.context.documentContent &&
+            task.context.documentMetadata
+          ) {
+            console.log(
+              '[restoreTaskContext] Document not found, recreating from snapshot'
+            );
+
+            // 转换task type到document type (summary/analysis映射为article)
+            const documentType: Document['type'] =
+              task.type === 'summary' || task.type === 'analysis'
+                ? 'article'
+                : task.type;
+
+            const restoredDocument: Document = {
+              _id: task.context.documentId,
+              userId: 'local', // 本地用户ID
+              title: task.context.documentMetadata.title || task.title,
+              type: documentType,
+              content: task.context.documentContent,
+              metadata: task.context.documentMetadata,
+              status: 'completed',
+              resources: [], // 从task恢复的文档没有resources关联
+              aiConfig: {
+                model: 'grok',
+                temperature: 0.7,
+                maxTokens: 4000,
+                language: 'zh-CN',
+                detailLevel: 3,
+                professionalLevel: 3,
+              },
+              generationHistory: [
+                {
+                  timestamp: task.createdAt,
+                  action: 'create',
+                  aiModel: 'grok',
+                },
+              ],
+              createdAt: task.createdAt,
+              updatedAt: new Date(),
+              versions: task.context.documentVersions || [], // 恢复版本历史
+              currentVersionId:
+                task.context.documentVersions &&
+                task.context.documentVersions.length > 0
+                  ? task.context.documentVersions[
+                      task.context.documentVersions.length - 1
+                    ].id
+                  : undefined,
+            } as Document;
+            documentStore.addDocument(restoredDocument);
+            existingDoc = restoredDocument;
+            console.log(
+              '[restoreTaskContext] Document recreated with',
+              restoredDocument.versions?.length || 0,
+              'versions'
+            );
+          }
 
           // 只有当文档存在时才进行恢复和切换
           if (existingDoc) {
@@ -660,14 +787,42 @@ export const useTaskStore = create<TaskState>()(
                 };
               }
 
+              console.log(
+                '[restoreTaskContext] Updating document with payload:',
+                {
+                  documentId: task.context.documentId,
+                  hasContent: !!updatePayload.content,
+                  hasMarkdown: !!updatePayload.content?.markdown,
+                  markdownLength: updatePayload.content?.markdown?.length || 0,
+                  slideCount: updatePayload.metadata?.slideCount,
+                }
+              );
+
               documentStore.updateDocument(
                 task.context.documentId,
                 updatePayload
+              );
+
+              // 验证更新是否成功
+              const updatedDoc = documentStore.documents.find(
+                (d: any) => d._id === task.context.documentId
+              );
+              console.log(
+                '[restoreTaskContext] After update - document content length:',
+                (updatedDoc?.content as any)?.markdown?.length || 0
+              );
+            } else {
+              console.warn(
+                '[restoreTaskContext] Task has no saved documentContent'
               );
             }
 
             // 设置为当前文档（只有当文档存在时）
             documentStore.setCurrentDocument(task.context.documentId);
+            console.log(
+              '[restoreTaskContext] Set current document to:',
+              task.context.documentId
+            );
           } else {
             console.warn(`任务关联的文档不存在: ${task.context.documentId}`);
           }

@@ -190,36 +190,75 @@ export default function ChatPanel() {
         userInput
       );
 
+    // 中文数字转阿拉伯数字
+    const chineseToNumber = (chinese: string): number => {
+      const map: Record<string, number> = {
+        一: 1,
+        二: 2,
+        三: 3,
+        四: 4,
+        五: 5,
+        六: 6,
+        七: 7,
+        八: 8,
+        九: 9,
+        十: 10,
+      };
+      return map[chinese] || 0;
+    };
+
     // 检测是否指定了要更新的页码
-    const specificPageMatch = userInput.match(
-      /第\s*(\d+)\s*页|第\s*(\d+)\s*[-到至]\s*(\d+)\s*页|slide\s*(\d+)|slides?\s*(\d+)\s*[-to]\s*(\d+)/i
-    );
     let targetPages: number[] | null = null;
 
-    if (specificPageMatch) {
-      if (specificPageMatch[1]) {
-        // 单页：第X页
-        targetPages = [parseInt(specificPageMatch[1])];
-      } else if (specificPageMatch[2] && specificPageMatch[3]) {
-        // 范围：第X-Y页
-        const start = parseInt(specificPageMatch[2]);
-        const end = parseInt(specificPageMatch[3]);
+    // 匹配阿拉伯数字：第1页、第1-3页
+    const arabicMatch = userInput.match(
+      /第\s*(\d+)\s*页|第\s*(\d+)\s*[-到至]\s*(\d+)\s*页|slide\s*(\d+)|slides?\s*(\d+)\s*[-to]\s*(\d+)/i
+    );
+
+    // 匹配中文数字：第一页、第二页、第一到第三页
+    const chineseMatch = userInput.match(
+      /第\s*([一二三四五六七八九十]+)\s*页|第\s*([一二三四五六七八九十]+)\s*[-到至]\s*第?\s*([一二三四五六七八九十]+)\s*页/i
+    );
+
+    if (arabicMatch) {
+      console.log('[ChatPanel] Arabic number page match:', arabicMatch);
+      if (arabicMatch[1]) {
+        targetPages = [parseInt(arabicMatch[1])];
+      } else if (arabicMatch[2] && arabicMatch[3]) {
+        const start = parseInt(arabicMatch[2]);
+        const end = parseInt(arabicMatch[3]);
         targetPages = Array.from(
           { length: end - start + 1 },
           (_, i) => start + i
         );
-      } else if (specificPageMatch[4]) {
-        // 英文单页
-        targetPages = [parseInt(specificPageMatch[4])];
-      } else if (specificPageMatch[5] && specificPageMatch[6]) {
-        // 英文范围
-        const start = parseInt(specificPageMatch[5]);
-        const end = parseInt(specificPageMatch[6]);
+      } else if (arabicMatch[4]) {
+        targetPages = [parseInt(arabicMatch[4])];
+      } else if (arabicMatch[5] && arabicMatch[6]) {
+        const start = parseInt(arabicMatch[5]);
+        const end = parseInt(arabicMatch[6]);
         targetPages = Array.from(
           { length: end - start + 1 },
           (_, i) => start + i
         );
       }
+    } else if (chineseMatch) {
+      console.log('[ChatPanel] Chinese number page match:', chineseMatch);
+      if (chineseMatch[1]) {
+        // 单页：第一页
+        targetPages = [chineseToNumber(chineseMatch[1])];
+      } else if (chineseMatch[2] && chineseMatch[3]) {
+        // 范围：第一到第三页
+        const start = chineseToNumber(chineseMatch[2]);
+        const end = chineseToNumber(chineseMatch[3]);
+        targetPages = Array.from(
+          { length: end - start + 1 },
+          (_, i) => start + i
+        );
+      }
+    }
+
+    if (targetPages) {
+      console.log('[ChatPanel] Target pages detected:', targetPages);
     }
 
     // 检测文档类型
@@ -496,9 +535,20 @@ ${targetSlides.join('\n---\n')}
 ${userInput || ''}
 
 【任务说明】
-请只更新指定的第 ${targetPages.join(', ')} 页内容，保持其他页面不变。只输出更新后的这几页内容，严格遵循以下格式：
+请只更新指定的第 ${targetPages.join(', ')} 页内容，保持其他页面不变。
 
-【重要格式要求】请严格按照以下Markdown格式输出PPT内容，使用智能可视化传达信息：
+【重要】请按以下格式输出：
+
+第一部分：简要确认（1-2行）
+格式：✅ 已更新第X页：[简要说明修改内容]
+
+第二部分：分隔符
+---UPDATE_CONTENT---
+
+第三部分：更新后的幻灯片内容
+只输出更新后的这几页完整内容，严格遵循Markdown格式。
+
+【重要格式要求】幻灯片内容请严格按照以下Markdown格式，使用智能可视化传达信息：
 `;
             } else {
               // 全文更新
@@ -676,6 +726,9 @@ ${userInput || ''}
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let aiContent = '';
+      let isPartialUpdateWithSeparator = false; // 标记是否是带分隔符的局部更新
+      let confirmationPart = ''; // 确认消息部分
+      let contentPart = ''; // 实际内容部分
 
       // 创建AI消息
       const aiMessageId = (Date.now() + 1).toString();
@@ -711,11 +764,38 @@ ${userInput || ''}
                 const parsed = JSON.parse(data);
                 if (parsed.content) {
                   aiContent += parsed.content;
-                  // 更新消息内容
+
+                  // 检查是否包含分隔符（局部更新模式）
+                  const separatorIndex = aiContent.indexOf(
+                    '---UPDATE_CONTENT---'
+                  );
+                  if (separatorIndex !== -1 && !isPartialUpdateWithSeparator) {
+                    // 检测到分隔符，切换到局部更新模式
+                    isPartialUpdateWithSeparator = true;
+                    console.log(
+                      '[ChatPanel] Detected partial update separator'
+                    );
+                  }
+
+                  // 根据模式更新消息内容
+                  let displayContent = aiContent;
+                  if (isPartialUpdateWithSeparator) {
+                    const parts = aiContent.split('---UPDATE_CONTENT---');
+                    confirmationPart = parts[0].trim();
+                    contentPart = parts[1] ? parts[1].trim() : '';
+                    displayContent = confirmationPart; // 只显示确认消息
+                    console.log('[ChatPanel] Confirmation:', confirmationPart);
+                    console.log(
+                      '[ChatPanel] Content length:',
+                      contentPart.length
+                    );
+                  }
+
+                  // 更新消息内容（显示确认消息或完整内容）
                   useChatStore
                     .getState()
                     .updateMessage(targetDocumentId, aiMessageId, {
-                      content: aiContent,
+                      content: displayContent,
                     });
 
                   // 实时同步到文档
@@ -724,20 +804,38 @@ ${userInput || ''}
                     .documents.find((d: any) => d._id === targetDocumentId);
                   if (currentDoc) {
                     // 判断是局部更新还是全文更新
-                    let finalContent = aiContent;
+                    // 如果是带分隔符的局部更新，使用 contentPart；否则使用 aiContent
+                    let contentForMerge = isPartialUpdateWithSeparator
+                      ? contentPart
+                      : aiContent;
+                    let finalContent = contentForMerge;
 
                     if (
                       targetPages &&
                       targetPages.length > 0 &&
                       existingContent
                     ) {
+                      console.log('[ChatPanel] Performing partial page update');
                       // 局部页面更新：合并页面
                       const existingSlides = existingContent
                         .split(/^---$/m)
                         .filter((s: any) => s.trim());
-                      const newSlides = aiContent
+                      const newSlides = contentForMerge
                         .split(/^---$/m)
                         .filter((s: any) => s.trim());
+
+                      console.log(
+                        '[ChatPanel] Existing slides:',
+                        existingSlides.length
+                      );
+                      console.log(
+                        '[ChatPanel] New slides from AI:',
+                        newSlides.length
+                      );
+                      console.log(
+                        '[ChatPanel] Target pages to update:',
+                        targetPages
+                      );
 
                       // 替换指定页面
                       const mergedSlides = [...existingSlides];
@@ -746,11 +844,26 @@ ${userInput || ''}
                           newSlides[index] &&
                           pageNum <= mergedSlides.length
                         ) {
+                          console.log(
+                            `[ChatPanel] Replacing slide ${pageNum} with new content`
+                          );
                           mergedSlides[pageNum - 1] = newSlides[index];
+                        } else {
+                          console.warn(
+                            `[ChatPanel] Cannot replace slide ${pageNum}: out of range or no new content`
+                          );
                         }
                       });
 
                       finalContent = mergedSlides.join('\n\n---\n\n');
+                      console.log(
+                        '[ChatPanel] Merge complete. Total slides:',
+                        mergedSlides.length
+                      );
+                    } else {
+                      console.log(
+                        '[ChatPanel] Full document update (no targetPages or no existingContent)'
+                      );
                     }
 
                     // 计算 slideCount（如果是PPT文档）
@@ -831,13 +944,26 @@ ${userInput || ''}
         const allMessages =
           useChatStore.getState().sessions[targetDocumentId] || [];
 
-        // 深拷贝文档内容和元数据，避免引用问题
+        // 深拷贝文档内容、元数据和版本历史，避免引用问题
         const documentContentSnapshot = JSON.parse(
           JSON.stringify(finalDocument.content)
         );
         const documentMetadataSnapshot = JSON.parse(
           JSON.stringify(finalDocument.metadata)
         );
+        const documentVersionsSnapshot = JSON.parse(
+          JSON.stringify(finalDocument.versions || [])
+        );
+
+        console.log('[ChatPanel] Updating task with document snapshot:', {
+          taskId,
+          documentId: targetDocumentId,
+          hasContent: !!documentContentSnapshot,
+          hasMarkdown: !!documentContentSnapshot?.markdown,
+          markdownLength: documentContentSnapshot?.markdown?.length || 0,
+          slideCount: documentMetadataSnapshot?.slideCount,
+          versionCount: documentVersionsSnapshot.length,
+        });
 
         useTaskStore.getState().updateTask(taskId, {
           context: {
@@ -847,11 +973,23 @@ ${userInput || ''}
             documentId: targetDocumentId,
             documentContent: documentContentSnapshot, // 保存文档内容快照
             documentMetadata: documentMetadataSnapshot, // 保存文档元数据快照
+            documentVersions: documentVersionsSnapshot, // 保存文档版本历史快照
             chatMessages: allMessages,
           },
           metadata: {
             wordCount: aiContent.length,
           } as any,
+        });
+
+        // 验证任务是否正确保存
+        const savedTask = useTaskStore
+          .getState()
+          .tasks.find((t: any) => t._id === taskId);
+        console.log('[ChatPanel] Task saved verification:', {
+          taskId,
+          hasDocumentContent: !!savedTask?.context.documentContent,
+          contentMarkdownLength:
+            savedTask?.context.documentContent?.markdown?.length || 0,
         });
       }
     } catch (error) {

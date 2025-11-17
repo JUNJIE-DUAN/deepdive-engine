@@ -63,7 +63,9 @@ export default function PDFViewer({
         }
 
         const pdfBlob = await response.blob();
-        console.log(`PDF loaded successfully: ${pdfBlob.size} bytes from ${url}`);
+        console.log(
+          `PDF loaded successfully: ${pdfBlob.size} bytes from ${url}`
+        );
 
         // 创建Blob URL - 同时保存到ref和state
         const newBlobUrl = URL.createObjectURL(pdfBlob);
@@ -97,14 +99,19 @@ export default function PDFViewer({
   return (
     <div className={`relative flex h-full flex-col ${className}`}>
       {/* 紧凑控制栏 - 移除标题显示，最大化阅读区域 */}
-      <div className="flex items-center justify-end gap-1 border-b bg-gray-50 px-2 py-1">
+      <div className="flex items-center justify-end gap-0.5 border-b bg-gray-50 px-1 py-0.5">
         {/* 刷新按钮 */}
         <button
           onClick={handleRetry}
-          className="rounded p-1.5 hover:bg-gray-200 transition-colors"
+          className="rounded p-1 transition-colors hover:bg-gray-200"
           title="刷新"
         >
-          <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-3.5 w-3.5 text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -117,10 +124,15 @@ export default function PDFViewer({
         {/* 新标签页打开 */}
         <button
           onClick={handleOpenInNewTab}
-          className="rounded p-1.5 hover:bg-gray-200 transition-colors"
+          className="rounded p-1 transition-colors hover:bg-gray-200"
           title="在新标签页打开"
         >
-          <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-3.5 w-3.5 text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -139,7 +151,9 @@ export default function PDFViewer({
             <div className="text-center">
               <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
               <p className="mt-4 text-sm text-gray-600">Loading PDF...</p>
-              <p className="mt-2 text-xs text-gray-500">This may take a few seconds</p>
+              <p className="mt-2 text-xs text-gray-500">
+                This may take a few seconds
+              </p>
             </div>
           </div>
         )}

@@ -358,13 +358,25 @@ export class GithubService {
     // 计算质量评分（基于 stars, forks, 活跃度）
     const qualityScore = this.calculateQualityScore(rawData);
 
+    // 提取README：完整保留，不截断
+    // 如果README过大（>500KB），则截断以避免性能问题
+    // 但对大多数项目，README通常在50-200KB之间
+    const MAX_README_SIZE = 500 * 1024; // 500KB限制
+    let readmeContent = rawData.readme || null;
+    if (readmeContent && readmeContent.length > MAX_README_SIZE) {
+      this.logger.warn(
+        `README for ${rawData.fullName} exceeds size limit (${readmeContent.length}/${MAX_README_SIZE} bytes), truncating`,
+      );
+      readmeContent = readmeContent.substring(0, MAX_README_SIZE);
+    }
+
     return {
       type: "PROJECT",
 
       // 基础信息
       title: rawData.fullName,
       abstract: rawData.description || "",
-      content: rawData.readme ? rawData.readme.substring(0, 10000) : null, // 截取前10000字符
+      content: readmeContent, // 完整README内容（无10KB限制）
       sourceUrl: rawData.htmlUrl,
       codeUrl: rawData.cloneUrl,
 

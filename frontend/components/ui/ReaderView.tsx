@@ -1,0 +1,327 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
+
+interface ReaderViewProps {
+  url: string;
+  title?: string;
+  className?: string;
+  onArticleLoaded?: (article: Article) => void;
+}
+
+interface Article {
+  success: boolean;
+  title: string;
+  content: string;
+  textContent: string;
+  excerpt?: string;
+  byline?: string;
+  siteName?: string;
+  length?: number;
+  sourceUrl: string;
+}
+
+/**
+ * Reader View组件 - 使用Mozilla Readability提取清洁内容
+ *
+ * 功能特性:
+ * - 完美规避X-Frame-Options、CSP等安全限制
+ * - 提取网页主要内容，去除广告和干扰元素
+ * - 统一的阅读样式，优秀的阅读体验
+ * - 支持AI完整分析内容
+ * - 快速加载，节省流量
+ */
+export default function ReaderView({
+  url,
+  title: propTitle,
+  className = '',
+  onArticleLoaded,
+}: ReaderViewProps) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [article, setArticle] = useState<Article | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // 加载文章内容
+  useEffect(() => {
+    const loadArticle = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const readerUrl = `${config.apiUrl}/proxy/html-reader?url=${encodeURIComponent(url)}`;
+        console.log(`Fetching article via Reader Mode: ${readerUrl}`);
+
+        const response = await fetch(readerUrl);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.message ||
+              `HTTP ${response.status}: ${response.statusText}`
+          );
+        }
+
+        const data: Article = await response.json();
+
+        if (!data.success || !data.content) {
+          throw new Error('Failed to extract readable content from this page');
+        }
+
+        console.log(
+          `Article loaded successfully: "${data.title}" (${data.length} characters)`
+        );
+        setArticle(data);
+        onArticleLoaded?.(data);
+        setLoading(false);
+        setError(null);
+      } catch (err) {
+        console.error(`Failed to load article from ${url}:`, err);
+        setLoading(false);
+        setError(
+          err instanceof Error
+            ? `无法提取内容: ${err.message}`
+            : '无法提取可读内容。该网页可能不支持阅读模式。'
+        );
+      }
+    };
+
+    loadArticle();
+  }, [url, retryCount]);
+
+  const handleRetry = () => {
+    setRetryCount((prev) => prev + 1);
+  };
+
+  const handleOpenInNewTab = () => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className={`relative flex h-full flex-col ${className}`}>
+      {/* 控制栏 - 提大了字号和按钮大小 */}
+      <div className="flex items-center justify-between gap-2 border-b bg-gray-50 px-3 py-2">
+        {/* 阅读模式标识 */}
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+          </svg>
+          <span>阅读模式</span>
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleRetry}
+            className="rounded-lg p-1.5 transition-colors hover:bg-gray-200"
+            title="刷新"
+          >
+            <svg
+              className="h-4 w-4 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+
+          <button
+            onClick={handleOpenInNewTab}
+            className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            title="在新标签页打开原始页面"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
+            </svg>
+            打开原始
+          </button>
+        </div>
+      </div>
+
+      {/* 文章内容区域 */}
+      <div className="relative flex-1 overflow-y-auto bg-white">
+        {/* Loading State */}
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white">
+            <div className="text-center">
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
+              <p className="mt-4 text-sm text-gray-600">正在提取内容...</p>
+              <p className="mt-2 text-xs text-gray-500">
+                使用 Reader Mode 解析网页
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50">
+            <div className="max-w-md px-4 text-center">
+              <svg
+                className="mx-auto h-16 w-16 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">
+                无法提取内容
+              </h3>
+              <p className="mt-2 text-sm text-gray-600">{error}</p>
+              <div className="mt-6 flex justify-center gap-3">
+                <button
+                  onClick={handleRetry}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  重试{retryCount > 0 && ` (${retryCount})`}
+                </button>
+                <button
+                  onClick={handleOpenInNewTab}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
+                  打开原始页面
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 文章内容 - 优化的阅读样式 */}
+        {article && !loading && !error && (
+          <article className="mx-auto max-w-4xl px-6 py-8">
+            {/* 文章元信息 */}
+            <header className="mb-8 border-b pb-6">
+              <h1 className="mb-4 text-3xl font-bold leading-tight text-gray-900">
+                {article.title || propTitle || '无标题'}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                {article.byline && (
+                  <div className="flex items-center gap-1">
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{article.byline}</span>
+                  </div>
+                )}
+
+                {article.siteName && (
+                  <div className="flex items-center gap-1">
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{article.siteName}</span>
+                  </div>
+                )}
+
+                {article.length && (
+                  <div className="flex items-center gap-1">
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{Math.ceil(article.length / 1000)} 分钟阅读</span>
+                  </div>
+                )}
+              </div>
+
+              {article.excerpt && (
+                <p className="mt-4 text-lg leading-relaxed text-gray-700">
+                  {article.excerpt}
+                </p>
+              )}
+            </header>
+
+            {/* 文章正文 - 使用 prose 样式 */}
+            <div
+              className="prose prose-lg prose-headings:font-bold
+                prose-headings:text-gray-900 prose-p:text-gray-700
+                prose-p:leading-relaxed prose-a:text-blue-600
+                prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900
+                prose-strong:font-semibold prose-code:bg-gray-100
+                prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-900
+                prose-pre:text-gray-100 prose-img:rounded-lg
+                prose-img:shadow-md prose-blockquote:border-l-4
+                prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic prose-ul:list-disc
+                prose-ol:list-decimal prose-li:text-gray-700
+                max-w-none"
+              dangerouslySetInnerHTML={{ __html: article.content }}
+            />
+          </article>
+        )}
+      </div>
+    </div>
+  );
+}

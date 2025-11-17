@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import PDFThumbnail from '@/components/ui/PDFThumbnail';
 import PDFViewer from '@/components/ui/PDFViewer';
 import HTMLViewer from '@/components/ui/HTMLViewer';
+import ReaderView from '@/components/ui/ReaderView';
 import NotesList from '@/components/features/NotesList';
 import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
@@ -138,6 +139,9 @@ export default function Home() {
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const [htmlViewMode, setHtmlViewMode] = useState<'reader' | 'original'>(
+    'reader'
+  );
 
   // AI interaction states
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
@@ -165,6 +169,9 @@ export default function Home() {
 
   // PDF text extraction state
   const [pdfText, setPdfText] = useState<string>('');
+
+  // Article content from ReaderView for AI analysis
+  const [articleTextContent, setArticleTextContent] = useState<string>('');
 
   // Attachment upload states for AI chat
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -637,10 +644,11 @@ export default function Home() {
 
     setSelectedResource(resource);
     setViewMode('detail');
-    // Clear previous AI data
+    // Clear previous AI data and article content
     setAiMessages([]);
     setAiSummary(null);
     setAiInsights([]);
+    setArticleTextContent('');
     // Auto-generate summary and insights
     generateSummary(resource);
     generateInsights(resource);
@@ -765,7 +773,9 @@ export default function Home() {
 
     try {
       setAiLoading(true);
-      const content = resource.abstract || resource.title;
+      // Use extracted article content if available, otherwise fallback to abstract/title
+      const content = articleTextContent || resource.abstract || resource.title;
+      console.log('Generating summary with content length:', content.length);
 
       const res = await fetch('/api/ai-service/ai/summary', {
         method: 'POST',
@@ -805,7 +815,9 @@ export default function Home() {
     if (!resource) return;
 
     try {
-      const content = resource.abstract || resource.title;
+      // Use extracted article content if available, otherwise fallback to abstract/title
+      const content = articleTextContent || resource.abstract || resource.title;
+      console.log('Generating insights with content length:', content.length);
 
       const res = await fetch('/api/ai-service/ai/insights', {
         method: 'POST',
@@ -821,6 +833,27 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to generate insights:', error);
     }
+  };
+
+  // Handle article loaded from ReaderView
+  const handleArticleLoaded = (article: {
+    success: boolean;
+    title: string;
+    content: string;
+    textContent: string;
+    excerpt?: string;
+    byline?: string;
+    siteName?: string;
+    length?: number;
+    sourceUrl: string;
+  }) => {
+    console.log('Article loaded from ReaderView:', {
+      title: article.title,
+      textLength: article.textContent.length,
+      siteName: article.siteName,
+    });
+    // Store the extracted text content for AI analysis
+    setArticleTextContent(article.textContent);
   };
 
   // Handle context menu for adding to notes
@@ -1288,7 +1321,9 @@ export default function Home() {
       <Sidebar />
 
       {/* Center Content Area */}
-      <main className="flex-1 overflow-y-auto bg-gray-50">
+      <main
+        className={`flex-1 bg-gray-50 ${viewMode === 'detail' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
+      >
         {/* Sticky Search Bar Container - Only show in list view */}
         {viewMode === 'list' && (
           <div className="sticky top-0 z-10 bg-gray-50 pb-4 pt-6">
@@ -1667,7 +1702,9 @@ export default function Home() {
         )}
 
         {/* Content Area */}
-        <div className={`mx-auto max-w-5xl px-8 ${viewMode === 'detail' ? 'h-[calc(100vh-80px)]' : 'pb-6'}`}>
+        <div
+          className={`${viewMode === 'detail' ? 'flex w-full flex-1 flex-col overflow-hidden px-2 pt-2' : 'mx-auto max-w-5xl px-8 pb-6'}`}
+        >
           {/* List View */}
           {viewMode === 'list' && (
             <>
@@ -1932,25 +1969,28 @@ export default function Home() {
 
           {/* Detail View */}
           {viewMode === 'detail' && selectedResource && (
-            <div className="flex h-full flex-col space-y-4">
+            <div className="flex min-h-0 flex-1 flex-col space-y-2">
               {/* Collapsible Header - 紧凑优化 */}
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
                 {/* Collapsed View - Always Visible */}
-                <div className="px-4 py-3">
+                <div className="px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       {/* Title - 单行显示，自动省略号 */}
-                      <h1 className="truncate text-lg font-semibold text-gray-900" title={selectedResource.title}>
+                      <h1
+                        className="truncate text-base font-semibold text-gray-900"
+                        title={selectedResource.title}
+                      >
                         {selectedResource.title}
                       </h1>
 
                       {/* Back to list link - 紧凑排版 */}
                       <button
                         onClick={handleBackToList}
-                        className="mt-1 inline-flex items-center gap-1 text-xs text-gray-600 transition-colors hover:text-gray-900"
+                        className="mt-0.5 inline-flex items-center gap-0.5 text-xs text-gray-600 transition-colors hover:text-gray-900"
                       >
                         <svg
-                          className="h-4 w-4"
+                          className="h-3 w-3"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1966,7 +2006,56 @@ export default function Home() {
                       </button>
                     </div>
 
-                    {/* Toggle Button */}
+                    {/* View Mode Toggle - Only show for HTML content */}
+                    {selectedResource.type !== 'PAPER' &&
+                      selectedResource.sourceUrl && (
+                        <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5">
+                          <button
+                            onClick={() => setHtmlViewMode('reader')}
+                            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                              htmlViewMode === 'reader'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                            title="阅读模式 - 清洁、易读的内容展示"
+                          >
+                            <svg
+                              className="mr-1 inline h-3.5 w-3.5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                            </svg>
+                            阅读
+                          </button>
+                          <button
+                            onClick={() => setHtmlViewMode('original')}
+                            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                              htmlViewMode === 'original'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                            title="原始模式 - 完整的网页显示"
+                          >
+                            <svg
+                              className="mr-1 inline h-3.5 w-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                              />
+                            </svg>
+                            原始
+                          </button>
+                        </div>
+                      )}
+
+                    {/* Header Toggle Button */}
                     <button
                       onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
                       className="flex-shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
@@ -2175,7 +2264,7 @@ export default function Home() {
               </div>
 
               {/* Embedded Content - 移除Preview头部，直接显示内容以最大化阅读区域 */}
-              <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
                 {/* Display preview - 使用客户端渲染避免浏览器阻止iframe */}
                 {selectedResource.type === 'PAPER' &&
                 selectedResource.pdfUrl ? (
@@ -2185,11 +2274,20 @@ export default function Home() {
                     className="h-full w-full"
                   />
                 ) : selectedResource.sourceUrl ? (
-                  <HTMLViewer
-                    url={selectedResource.sourceUrl}
-                    title={selectedResource.title}
-                    className="h-full w-full"
-                  />
+                  htmlViewMode === 'reader' ? (
+                    <ReaderView
+                      url={selectedResource.sourceUrl}
+                      title={selectedResource.title}
+                      className="h-full w-full"
+                      onArticleLoaded={handleArticleLoaded}
+                    />
+                  ) : (
+                    <HTMLViewer
+                      url={selectedResource.sourceUrl}
+                      title={selectedResource.title}
+                      className="h-full w-full"
+                    />
+                  )
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gray-50">
                     <div className="text-center">
@@ -2206,7 +2304,9 @@ export default function Home() {
                           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
-                      <p className="mt-4 text-lg font-medium text-gray-600">预览不可用</p>
+                      <p className="mt-4 text-lg font-medium text-gray-600">
+                        预览不可用
+                      </p>
                       <p className="mt-2 text-sm text-gray-500">
                         该资源暂无可用的PDF或HTML预览
                       </p>

@@ -3,6 +3,7 @@ import { CrawlerController } from "./crawler.controller";
 import { ArxivService } from "./arxiv.service";
 import { GithubService } from "./github.service";
 import { HackernewsService } from "./hackernews.service";
+import { HackernewsCommentsService } from "./hackernews-comments.service";
 import { DeduplicationService } from "./deduplication.service";
 import { ResourcesModule } from "../resources/resources.module";
 
@@ -16,12 +17,14 @@ import { ResourcesModule } from "../resources/resources.module";
     ArxivService,
     GithubService,
     HackernewsService,
+    HackernewsCommentsService,
     DeduplicationService,
   ],
   exports: [
     ArxivService,
     GithubService,
     HackernewsService,
+    HackernewsCommentsService,
     DeduplicationService,
   ],
 })

@@ -3,6 +3,7 @@ import { PrismaService } from "../../common/prisma/prisma.service";
 import { MongoDBService } from "../../common/mongodb/mongodb.service";
 import { DeduplicationService } from "./deduplication.service";
 import { AIEnrichmentService } from "../resources/ai-enrichment.service";
+import { HackernewsCommentsService } from "./hackernews-comments.service";
 import { getErrorStack, getErrorMessage } from "../../common/utils/error.utils";
 import axios from "axios";
 
@@ -14,6 +15,7 @@ import axios from "axios";
  * 2. 建立 raw_data ↔ resource 的引用关系
  * 3. 实现去重逻辑（基于 HN item ID）
  * 4. 解析所有字段（标题、作者、评论、URL等）
+ * 5. 获取并整合热门评论
  */
 @Injectable()
 export class HackernewsService {
@@ -25,6 +27,7 @@ export class HackernewsService {
     private mongodb: MongoDBService,
     private dedup: DeduplicationService,
     private aiEnrichment: AIEnrichmentService,
+    private commentsService: HackernewsCommentsService,
   ) {}
 
   /**
@@ -161,6 +164,34 @@ export class HackernewsService {
 
     // 解析完整的原始数据
     const rawData = this.parseRawData(storyData, externalId);
+
+    // 获取热门评论（非阻塞，如果失败不影响主流程）
+    try {
+      if (rawData.kids && rawData.kids.length > 0) {
+        this.logger.log(`Fetching top comments for story ${itemId}`);
+        const comments = await this.commentsService.fetchTopComments(
+          itemId,
+          20, // 获取前20条热评
+          2, // 递归深度2层
+        );
+
+        if (comments && comments.length > 0) {
+          // 生成评论摘要并添加到rawData
+          const commentsSummary =
+            await this.commentsService.generateCommentsSummary(comments);
+          rawData.commentsSummary = commentsSummary;
+          rawData.topComments = comments;
+          this.logger.log(
+            `Fetched ${comments.length} comments for story ${itemId}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to fetch comments for story ${itemId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      // 继续处理故事，不中断流程
+    }
 
     // 1. 存储完整原始数据到 MongoDB
     const rawDataId = await this.mongodb.insertRawData("hackernews", rawData);

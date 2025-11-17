@@ -206,11 +206,27 @@ export class HackernewsService {
     });
 
     this.logger.log(
-      `Created resource in PostgreSQL with rawDataId: ${rawDataId}`,
+      `Created resource in PostgreSQL: ${resource.id} with rawDataId: ${rawDataId}`,
     );
 
-    // 3. ⚠️ 关键：建立反向引用（MongoDB → PostgreSQL）
+    // 3. ⚠️ 关键：建立双向引用
+    // 3.1 MongoDB → PostgreSQL (resourceId)
     await this.mongodb.linkResourceToRawData(rawDataId, resource.id);
+
+    // 3.2 验证引用同步成功
+    const linkedRawData = await this.mongodb.findRawDataById(rawDataId);
+    if (linkedRawData?.resourceId !== resource.id) {
+      this.logger.error(
+        `Reference sync failed for story ${itemId}: MongoDB resourceId=${linkedRawData?.resourceId}, expected ${resource.id}`,
+      );
+      throw new Error(
+        `Failed to establish bi-directional reference for resource ${resource.id}`,
+      );
+    }
+
+    this.logger.log(
+      `✅ Reference sync completed: MongoDB(${rawDataId}) ↔ PostgreSQL(${resource.id})`,
+    );
 
     // 4. AI 增强处理（异步，不阻塞主流程）
     this.enrichResourceWithAI(

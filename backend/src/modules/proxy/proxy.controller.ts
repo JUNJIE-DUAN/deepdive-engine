@@ -9,6 +9,25 @@ import {
 } from "@nestjs/common";
 import { Response } from "express";
 import axios from "axios";
+import { Readability } from "@mozilla/readability";
+import { JSDOM } from "jsdom";
+import {
+  isDomainAllowed,
+  WHITELISTED_DOMAINS,
+} from "../../config/domain-whitelist.config";
+
+/**
+ * Article interface from Readability parsing
+ */
+interface Article {
+  title: string | null;
+  content: string | null;
+  textContent: string | null;
+  excerpt: string | null;
+  byline: string | null;
+  siteName: string | null;
+  length: number;
+}
 
 /**
  * 代理控制器 - 用于代理外部资源（如 PDF），绕过 CORS 和 X-Frame-Options 限制
@@ -41,48 +60,16 @@ export class ProxyController {
       );
     }
 
-    // 安全检查：只允许代理特定域名的 PDF
-    const allowedDomains = [
-      "arxiv.org",
-      "alphaxiv.org",
-      "www.alphaxiv.org",
-      "openreview.net",
-      "papers.nips.cc",
-      "proceedings.mlr.press",
-      "github.com",
-      "raw.githubusercontent.com",
-      "reddit.com",
-      "old.reddit.com",
-      "forbes.com",
-      "www.forbes.com",
-      "medium.com",
-      "towardsdatascience.com",
-      "blog.google",
-      "ai.googleblog.com",
-      "openai.com",
-      "blog.openai.com",
-      "deepmind.com",
-      "deepmind.google",
-      "techcrunch.com",
-      "venturebeat.com",
-      "wired.com",
-      "theverge.com",
-      "arstechnica.com",
-      "xslt.rip",
-      "news.ycombinator.com",
-    ];
-
+    // 安全检查：使用可配置的域名白名单
     try {
       const urlObj = new URL(url);
-      const isAllowed = allowedDomains.some(
-        (domain) =>
-          urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`),
-      );
 
-      if (!isAllowed) {
-        this.logger.warn(`PDF proxy blocked - domain not allowed: ${urlObj.hostname}`);
+      if (!isDomainAllowed(urlObj.hostname)) {
+        this.logger.warn(
+          `PDF proxy blocked - domain not allowed: ${urlObj.hostname}`,
+        );
         throw new HttpException(
-          `Domain ${urlObj.hostname} is not allowed. Allowed domains: ${allowedDomains.join(", ")}`,
+          `Domain ${urlObj.hostname} is not allowed. Allowed domains: ${WHITELISTED_DOMAINS.join(", ")}`,
           HttpStatus.FORBIDDEN,
         );
       }
@@ -118,7 +105,9 @@ export class ProxyController {
       res.removeHeader("Content-Security-Policy");
       res.removeHeader("X-Frame-Options");
 
-      this.logger.log(`Successfully fetched PDF (${Buffer.from(response.data).length} bytes)`);
+      this.logger.log(
+        `Successfully fetched PDF (${Buffer.from(response.data).length} bytes)`,
+      );
 
       // 发送 PDF 数据
       res.send(Buffer.from(response.data));
@@ -128,16 +117,23 @@ export class ProxyController {
       }
 
       if (axios.isAxiosError(error)) {
-        this.logger.error(`Failed to fetch PDF from ${url}: ${error.message}`, error.stack);
+        this.logger.error(
+          `Failed to fetch PDF from ${url}: ${error.message}`,
+          error.stack,
+        );
         throw new HttpException(
           `Failed to fetch PDF: ${error.message}`,
           error.response?.status || HttpStatus.BAD_GATEWAY,
         );
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Internal error while proxying PDF: ${errorMessage}`, errorStack);
+      this.logger.error(
+        `Internal error while proxying PDF: ${errorMessage}`,
+        errorStack,
+      );
       throw new HttpException(
         "Internal server error while proxying PDF",
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -170,50 +166,16 @@ export class ProxyController {
       );
     }
 
-    // 安全检查：只允许代理特定域名
-    const allowedDomains = [
-      "arxiv.org",
-      "alphaxiv.org",
-      "www.alphaxiv.org",
-      "openreview.net",
-      "papers.nips.cc",
-      "proceedings.mlr.press",
-      "github.com",
-      "raw.githubusercontent.com",
-      "reddit.com",
-      "old.reddit.com",
-      "forbes.com",
-      "www.forbes.com",
-      "medium.com",
-      "towardsdatascience.com",
-      "blog.google",
-      "ai.googleblog.com",
-      "openai.com",
-      "blog.openai.com",
-      "deepmind.com",
-      "deepmind.google",
-      "techcrunch.com",
-      "venturebeat.com",
-      "wired.com",
-      "theverge.com",
-      "arstechnica.com",
-      "xslt.rip",
-      "news.ycombinator.com",
-      "myticker.com",
-      "www.myticker.com",
-    ];
-
+    // 安全检查：使用可配置的域名白名单
     try {
       const urlObj = new URL(url);
-      const isAllowed = allowedDomains.some(
-        (domain) =>
-          urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`),
-      );
 
-      if (!isAllowed) {
-        this.logger.warn(`HTML proxy blocked - domain not allowed: ${urlObj.hostname}`);
+      if (!isDomainAllowed(urlObj.hostname)) {
+        this.logger.warn(
+          `HTML proxy blocked - domain not allowed: ${urlObj.hostname}`,
+        );
         throw new HttpException(
-          `Domain ${urlObj.hostname} is not allowed. Allowed domains: ${allowedDomains.join(", ")}`,
+          `Domain ${urlObj.hostname} is not allowed. Allowed domains: ${WHITELISTED_DOMAINS.join(", ")}`,
           HttpStatus.FORBIDDEN,
         );
       }
@@ -264,18 +226,18 @@ export class ProxyController {
       // 这些标签会阻止内容在 iframe 中显示，即使使用 Blob URL
       html = html.replace(
         /<meta\s+http-equiv=["']?Content-Security-Policy["']?\s+content=["'][^"']*["']\s*\/?>/gi,
-        ''
+        "",
       );
       html = html.replace(
         /<meta\s+http-equiv=["']?X-Frame-Options["']?\s+content=["'][^"']*["']\s*\/?>/gi,
-        ''
+        "",
       );
 
       // 在 <head> 标签后插入 <base> 标签以正确加载相对路径资源
-      if (html.includes('<head>')) {
-        html = html.replace('<head>', `<head><base href="${baseUrl}/">`);
-      } else if (html.includes('<HEAD>')) {
-        html = html.replace('<HEAD>', `<HEAD><base href="${baseUrl}/">`);
+      if (html.includes("<head>")) {
+        html = html.replace("<head>", `<head><base href="${baseUrl}/">`);
+      } else if (html.includes("<HEAD>")) {
+        html = html.replace("<HEAD>", `<HEAD><base href="${baseUrl}/">`);
       }
 
       this.logger.log(
@@ -290,18 +252,170 @@ export class ProxyController {
       }
 
       if (axios.isAxiosError(error)) {
-        this.logger.error(`Failed to fetch HTML from ${url}: ${error.message}`, error.stack);
+        this.logger.error(
+          `Failed to fetch HTML from ${url}: ${error.message}`,
+          error.stack,
+        );
         throw new HttpException(
           `Failed to fetch HTML: ${error.message}`,
           error.response?.status || HttpStatus.BAD_GATEWAY,
         );
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Internal error while proxying HTML: ${errorMessage}`, errorStack);
+      this.logger.error(
+        `Internal error while proxying HTML: ${errorMessage}`,
+        errorStack,
+      );
       throw new HttpException(
         "Internal server error while proxying HTML",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Reader Mode - 提取网页主要内容
+   *
+   * 使用Mozilla Readability提取清洁、易读的内容
+   * 完美解决X-Frame-Options、CSP等限制
+   * 支持AI完整分析内容
+   *
+   * 使用方式：
+   * http://localhost:4000/api/v1/proxy/html-reader?url=https://example.com
+   */
+  @Get("html-reader")
+  async proxyHtmlReader(@Query("url") url: string): Promise<any> {
+    this.logger.log(`Reader Mode request received for URL: ${url}`);
+
+    if (!url) {
+      this.logger.warn("Reader Mode request missing URL parameter");
+      throw new HttpException(
+        "URL parameter is required",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // 安全检查：使用可配置的域名白名单
+    try {
+      const urlObj = new URL(url);
+
+      if (!isDomainAllowed(urlObj.hostname)) {
+        this.logger.warn(
+          `Reader Mode blocked - domain not allowed: ${urlObj.hostname}`,
+        );
+        throw new HttpException(
+          `Domain ${urlObj.hostname} is not allowed. Allowed domains: ${WHITELISTED_DOMAINS.join(", ")}`,
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      this.logger.log(`Fetching HTML for Reader Mode from: ${urlObj.hostname}`);
+
+      // 从远程服务器获取 HTML
+      const response = await axios.get(url, {
+        responseType: "text",
+        timeout: 30000,
+        maxRedirects: 5,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+          "Accept-Encoding": "gzip, deflate, br",
+        },
+      });
+
+      // 使用 Readability 提取主要内容，设置超时防止卡死
+      let article: Article | null;
+      try {
+        // 使用Promise.race实现超时控制（30秒）
+        const parsingPromise = new Promise<Article | null>(
+          (resolve, reject) => {
+            try {
+              const dom = new JSDOM(response.data, {
+                url: url,
+                pretendToBeVisual: true,
+                storageQuota: 10 * 1024 * 1024, // 限制存储10MB
+              });
+
+              const reader = new Readability(dom.window.document);
+              const result = reader.parse();
+              resolve(result as Article | null);
+            } catch (err) {
+              reject(err);
+            }
+          },
+        );
+
+        const timeoutPromise = new Promise<Article | null>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Readability parsing timeout")),
+            30000,
+          ),
+        );
+
+        article = await Promise.race([parsingPromise, timeoutPromise]);
+      } catch (parsingErr) {
+        this.logger.warn(`Readability parsing error: ${parsingErr}`);
+        throw new HttpException(
+          "Failed to parse article content",
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        );
+      }
+
+      if (!article) {
+        this.logger.warn(`Readability failed to parse content from ${url}`);
+        throw new HttpException(
+          "Failed to extract readable content from this page",
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        );
+      }
+
+      this.logger.log(
+        `Successfully extracted article: "${article.title || "Untitled"}" (${(article.textContent || "").length} characters)`,
+      );
+
+      // 返回提取的内容
+      return {
+        success: true,
+        title: article.title || "",
+        content: article.content || "", // 清洁的HTML
+        textContent: article.textContent || "", // 纯文本供AI分析
+        excerpt: article.excerpt || "",
+        byline: article.byline || "",
+        siteName: article.siteName || "",
+        length: article.length || 0,
+        sourceUrl: url,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      if (axios.isAxiosError(error)) {
+        this.logger.error(
+          `Failed to fetch HTML from ${url}: ${error.message}`,
+          error.stack,
+        );
+        throw new HttpException(
+          `Failed to fetch HTML: ${error.message}`,
+          error.response?.status || HttpStatus.BAD_GATEWAY,
+        );
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Internal error in Reader Mode: ${errorMessage}`,
+        errorStack,
+      );
+      throw new HttpException(
+        "Internal server error while extracting content",
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

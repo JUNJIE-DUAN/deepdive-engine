@@ -1,0 +1,174 @@
+version: '3.8'
+
+# Staging environment configuration
+# Deploy Phase 1 MVP with production-like infrastructure
+
+services:
+  # PostgreSQL - 生产级数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: deepdive-postgres-staging
+    environment:
+      POSTGRES_USER: deepdive
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-staging_postgres_pwd}
+      POSTGRES_DB: deepdive_staging
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deepdive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - deepdive-staging
+    restart: unless-stopped
+
+  # MongoDB - 原始数据存储
+  mongo:
+    image: mongo:7
+    container_name: deepdive-mongo-staging
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: deepdive
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-staging_mongo_pwd}
+      MONGO_INITDB_DATABASE: deepdive_staging
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data_staging:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - deepdive-staging
+    restart: unless-stopped
+
+  # Redis - 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: deepdive-redis-staging
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_staging:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - deepdive-staging
+    restart: unless-stopped
+
+  # Backend NestJS API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: deepdive-backend-staging
+    environment:
+      NODE_ENV: staging
+      PORT: 4000
+      DATABASE_URL: "postgresql://deepdive:staging_postgres_pwd@postgres:5432/deepdive_staging"
+      MONGO_URI: "mongodb://deepdive:staging_mongo_pwd@mongo:27017/deepdive_staging?authSource=admin"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LOG_LEVEL: debug
+      CORS_ORIGIN: "http://localhost:3000"
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - deepdive-staging
+    restart: unless-stopped
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/logs:/app/logs
+
+  # Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: deepdive-frontend-staging
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:4000"
+      NODE_ENV: staging
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - deepdive-staging
+    restart: unless-stopped
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+
+  # Prometheus - 指标收集
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: deepdive-prometheus-staging
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-staging.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data_staging:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    networks:
+      - deepdive-staging
+    restart: unless-stopped
+
+  # Grafana - 可视化仪表板
+  grafana:
+    image: grafana/grafana:latest
+    container_name: deepdive-grafana-staging
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-staging_grafana_pwd}
+      GF_INSTALL_PLUGINS: "grafana-worldmap-panel"
+    volumes:
+      - grafana_data_staging:/var/lib/grafana
+      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./monitoring/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+    depends_on:
+      - prometheus
+    networks:
+      - deepdive-staging
+    restart: unless-stopped
+
+networks:
+  deepdive-staging:
+    driver: bridge
+
+volumes:
+  postgres_data_staging:
+  mongo_data_staging:
+  redis_data_staging:
+  prometheus_data_staging:
+  grafana_data_staging:

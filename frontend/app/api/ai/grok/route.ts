@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+const AI_SERVICE_URL = process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
+
+/**
+ * Grok AI API Proxy
+ * Proxies requests to backend Grok service
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Forward to backend AI service
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/ai/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...body,
+        model: body.model || 'grok-2',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Grok API error:', errorText);
+      throw new Error(`Grok API responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Grok proxy error:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to communicate with Grok API',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}

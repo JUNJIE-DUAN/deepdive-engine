@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CoordinatorAgent, ResourceAnalysisAgent } from '@/lib/ai-agents';
-import type { Resource } from '@/types/ai-office';
 
 const AI_SERVICE_URL =
   process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
 
 /**
- * AI Office Chat API with Multi-Agent Enhancement
+ * AI Office Chat API
  * Handles AI conversations with resource context for document generation
  */
 interface AIOfficeResource {
@@ -35,8 +33,6 @@ export async function POST(request: NextRequest) {
       generateDocument = false,
       isDocumentGeneration = false,
       conversationHistory = [],
-      agentMode = 'basic', // 🆕 Multi-Agent mode: 'basic' | 'enhanced'
-      documentId,
     } = body as {
       message: string;
       resources?: AIOfficeResource[];
@@ -46,77 +42,10 @@ export async function POST(request: NextRequest) {
       generateDocument?: boolean;
       isDocumentGeneration?: boolean;
       conversationHistory?: Array<{ role: string; content: string }>;
-      agentMode?: 'basic' | 'enhanced';
     };
 
-    // ============ 🆕 Multi-Agent Pre-processing ============
-    let enhancedContext = '';
-    let agentPlan;
-    let resourceAnalysis;
-
-    if (agentMode === 'enhanced' && resources.length > 0) {
-      try {
-        // Step 1: CoordinatorAgent分析意图
-        const coordinator = new CoordinatorAgent('grok');
-        const isPPT = /ppt|powerpoint|演示|幻灯片/i.test(message);
-        const isUpdate = /更新|修改|补充|重新生成/i.test(message);
-
-        agentPlan = await coordinator.analyze({
-          userMessage: message,
-          isPPT,
-          isUpdate,
-          resourceCount: resources.length,
-          existingDocumentId: documentId,
-        });
-
-        console.log('[Multi-Agent] Plan:', agentPlan);
-
-        // Step 2: ResourceAnalysisAgent深度分析资源（如果需要）
-        if (agentPlan.needsResourceAnalysis) {
-          const analyzer = new ResourceAnalysisAgent('grok');
-
-          // 转换资源格式
-          const convertedResources: Resource[] = resources.map((r) => ({
-            _id: '',
-            type: r.resourceType as any,
-            title: r.metadata?.title || '未命名资源',
-            url: r.metadata?.url || '',
-            status: 'collected' as const,
-            addedAt: new Date(),
-            abstract: r.metadata?.description,
-            authors: r.metadata?.authors?.split(','),
-            content: r.aiAnalysis?.summary,
-          }));
-
-          resourceAnalysis = await analyzer.analyze({
-            resources: convertedResources,
-            focus: agentPlan.focus,
-            analysisDepth: agentPlan.depth,
-          });
-
-          console.log('[Multi-Agent] Resource Analysis:', {
-            insights: resourceAnalysis.insights.length,
-            findings: resourceAnalysis.findings.length,
-            confidence: resourceAnalysis.confidence,
-          });
-
-          // 将分析结果转换为增强Context
-          enhancedContext = ResourceAnalysisAgent.toPromptEnhancement(resourceAnalysis);
-        }
-      } catch (error) {
-        console.error('[Multi-Agent] Pre-processing error:', error);
-        // 降级到basic模式
-      }
-    }
-
-    // ============ 原有逻辑：构建系统提示 ============
     // Build context from selected resources
-    const baseContext = buildResourceContext(resources);
-
-    // 合并基础context和Multi-Agent增强context
-    const finalContext = enhancedContext
-      ? `${baseContext}\n\n=== AI深度分析结果 ===\n${enhancedContext}`
-      : baseContext;
+    const context = buildResourceContext(resources);
 
     // 构建系统提示
     let systemPrompt = '';
@@ -256,7 +185,6 @@ export async function POST(request: NextRequest) {
 请基于用户资源和要求，深度理解内容的内在逻辑，生成具备咨询公司级别专业水准的PPT内容。`;
     }
 
-    // ============ 原有逻辑：转发到AI服务 ============
     // Forward request to AI service (using reports/chat endpoint)
     const response = await fetch(`${AI_SERVICE_URL}/api/v1/reports/chat`, {
       method: 'POST',
@@ -265,8 +193,8 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         message,
-        context: systemPrompt ? `${systemPrompt}\n\n${finalContext}` : finalContext,
-        model: agentPlan?.model || model, // 🆕 使用Agent推荐的模型
+        context: systemPrompt ? `${systemPrompt}\n\n${context}` : context,
+        model,
         stream,
         resources, // Pass resources array to backend
         conversationHistory, // Pass conversation history for context
@@ -277,11 +205,8 @@ export async function POST(request: NextRequest) {
       throw new Error(`AI service responded with status: ${response.status}`);
     }
 
-    // ============ 原有逻辑：流式响应 ============
     // If streaming, pass through the stream
     if (stream && response.body) {
-      // 🆕 TODO: 后续可以添加VerificationAgent post-processing
-      // 对于流式响应，验证可以在流结束后异步处理
       return new NextResponse(response.body, {
         headers: {
           'Content-Type': 'text/event-stream',

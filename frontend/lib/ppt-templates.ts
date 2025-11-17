@@ -353,6 +353,202 @@ export const PPT_TEMPLATES: Record<string, PPTTemplate> = {
       layoutStyle: 'light',
     },
   },
+
+  // 🆕 7. 文献综述模板 - 学术研究专用
+  'literature-review': {
+    id: 'literature-review',
+    name: 'Literature Review',
+    nameCn: '文献综述',
+    description: 'Academic literature review with citation focus',
+    descriptionCn: '学术文献综述专用，强调引用和证据链',
+    category: 'academic',
+    colors: {
+      primary: '#1E40AF', // 学术蓝
+      secondary: '#3B82F6', // 中蓝
+      accent: '#F59E0B', // 金色强调（重要发现）
+      background: '#FFFFFF', // 白色背景
+      backgroundOverlay: 'rgba(30, 64, 175, 0.03)',
+      text: '#1F2937', // 深灰
+      textLight: '#FFFFFF', // 白色
+      textSecondary: '#1E40AF', // 学术蓝
+      textTertiary: '#6B7280', // 灰色
+      decorative: '#F59E0B', // 金色装饰
+      cardBackground: 'rgba(59, 130, 246, 0.05)',
+    },
+    fonts: {
+      heading: 'Noto Serif SC, Georgia, serif', // 衬线字体更学术
+      body: 'Noto Sans SC, system-ui, sans-serif',
+    },
+    typography: {
+      title: 32,
+      subtitle: 20,
+      heading1: 16,
+      heading2: 14,
+      body: 11, // 略小，适合文献内容
+      caption: 10,
+      small: 9,
+    },
+    decorations: {
+      showTopBar: false,
+      showBottomBar: true, // 金色底部线
+      showTitleUnderline: true,
+      showCardBorder: true, // 左侧金色边框
+      useCardLayout: true,
+    },
+    style: {
+      borderRadius: '4px', // 较小圆角，更正式
+      spacing: 'compact', // 紧凑间距，容纳更多内容
+      imageStyle: 'sharp',
+      layoutStyle: 'light',
+    },
+  },
+
+  // 🆕 8. 学术会议模板 - 演讲展示
+  conference: {
+    id: 'conference',
+    name: 'Academic Conference',
+    nameCn: '学术会议',
+    description: 'Conference presentation with clear structure',
+    descriptionCn: '学术会议演讲，结构清晰、数据突出',
+    category: 'academic',
+    colors: {
+      primary: '#064E3B', // 深绿（严谨）
+      secondary: '#059669', // 翠绿
+      accent: '#DC2626', // 红色强调（关键数据）
+      background: '#F9FAFB', // 浅灰背景
+      backgroundOverlay: 'rgba(6, 78, 59, 0.03)',
+      text: '#111827', // 深黑
+      textLight: '#FFFFFF', // 白色
+      textSecondary: '#059669', // 绿色
+      textTertiary: '#6B7280', // 灰色
+      decorative: '#DC2626', // 红色装饰
+      cardBackground: '#FFFFFF',
+    },
+    fonts: {
+      heading: 'Noto Sans SC, Helvetica, sans-serif',
+      body: 'Noto Sans SC, Helvetica, sans-serif',
+    },
+    typography: {
+      title: 34,
+      subtitle: 21,
+      heading1: 17,
+      heading2: 15,
+      body: 12,
+      caption: 10,
+      small: 9,
+    },
+    decorations: {
+      showTopBar: true, // 绿色顶部线
+      showBottomBar: true, // 双线装饰
+      showTitleUnderline: false,
+      showCardBorder: true,
+      useCardLayout: true,
+    },
+    style: {
+      borderRadius: '6px',
+      spacing: 'normal',
+      imageStyle: 'rounded',
+      layoutStyle: 'light',
+    },
+  },
+
+  // 🆕 9. 系统架构设计模板 - 技术架构
+  architecture: {
+    id: 'architecture',
+    name: 'System Architecture',
+    nameCn: '系统架构',
+    description: 'Technical architecture design with diagrams',
+    descriptionCn: '系统架构设计，强调流程图和模块关系',
+    category: 'corporate',
+    colors: {
+      primary: '#1F2937', // 深灰（技术感）
+      secondary: '#374151', // 中灰
+      accent: '#8B5CF6', // 紫色强调（架构重点）
+      background: '#FFFFFF', // 白色背景
+      backgroundOverlay: 'rgba(31, 41, 55, 0.02)',
+      text: '#111827', // 深黑
+      textLight: '#FFFFFF', // 白色
+      textSecondary: '#8B5CF6', // 紫色
+      textTertiary: '#6B7280', // 灰色
+      decorative: '#8B5CF6', // 紫色装饰
+      cardBackground: 'rgba(139, 92, 246, 0.05)',
+    },
+    fonts: {
+      heading: 'Fira Code, Consolas, monospace', // 等宽字体（代码风格）
+      body: 'Roboto, system-ui, sans-serif',
+    },
+    typography: {
+      title: 32,
+      subtitle: 20,
+      heading1: 16,
+      heading2: 14,
+      body: 11,
+      caption: 10,
+      small: 9,
+    },
+    decorations: {
+      showTopBar: true, // 紫色顶部线
+      showBottomBar: false,
+      showTitleUnderline: true,
+      showCardBorder: true,
+      useCardLayout: true,
+    },
+    style: {
+      borderRadius: '8px',
+      spacing: 'spacious', // 宽松间距，适合图表
+      imageStyle: 'sharp', // 架构图用锐角
+      layoutStyle: 'light',
+    },
+  },
+
+  // 🆕 10. 代码审查模板 - 技术评审
+  'code-review': {
+    id: 'code-review',
+    name: 'Code Review',
+    nameCn: '代码审查',
+    description: 'Technical code review and analysis',
+    descriptionCn: '代码审查/技术评审，突出问题和建议',
+    category: 'corporate',
+    colors: {
+      primary: '#0F172A', // 深蓝黑（代码编辑器风格）
+      secondary: '#1E293B', // 中蓝黑
+      accent: '#F97316', // 橙色强调（问题标记）
+      background: '#F8FAFC', // 浅蓝灰
+      backgroundOverlay: 'rgba(15, 23, 42, 0.03)',
+      text: '#0F172A', // 深蓝黑
+      textLight: '#FFFFFF', // 白色
+      textSecondary: '#3B82F6', // 蓝色（代码）
+      textTertiary: '#64748B', // 灰蓝
+      decorative: '#F97316', // 橙色装饰
+      cardBackground: '#FFFFFF',
+    },
+    fonts: {
+      heading: 'JetBrains Mono, Fira Code, monospace',
+      body: 'Inter, system-ui, sans-serif',
+    },
+    typography: {
+      title: 30,
+      subtitle: 19,
+      heading1: 15,
+      heading2: 13,
+      body: 11,
+      caption: 10,
+      small: 9,
+    },
+    decorations: {
+      showTopBar: false,
+      showBottomBar: true, // 橙色底部线
+      showTitleUnderline: false,
+      showCardBorder: true, // 左侧橙色边框（问题标记）
+      useCardLayout: true,
+    },
+    style: {
+      borderRadius: '4px',
+      spacing: 'compact',
+      imageStyle: 'sharp',
+      layoutStyle: 'light',
+    },
+  },
 };
 
 /**

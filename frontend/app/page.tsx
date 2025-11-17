@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { config } from '@/lib/config';
 import Sidebar from '@/components/layout/Sidebar';
 import PDFThumbnail from '@/components/ui/PDFThumbnail';
+import PDFViewer from '@/components/ui/PDFViewer';
+import HTMLViewer from '@/components/ui/HTMLViewer';
 import NotesList from '@/components/features/NotesList';
 import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
@@ -1665,7 +1667,7 @@ export default function Home() {
         )}
 
         {/* Content Area */}
-        <div className="mx-auto max-w-5xl px-8 pb-6">
+        <div className={`mx-auto max-w-5xl px-8 ${viewMode === 'detail' ? 'h-[calc(100vh-80px)]' : 'pb-6'}`}>
           {/* List View */}
           {viewMode === 'list' && (
             <>
@@ -1930,22 +1932,22 @@ export default function Home() {
 
           {/* Detail View */}
           {viewMode === 'detail' && selectedResource && (
-            <div className="space-y-4">
-              {/* Collapsible Header */}
+            <div className="flex h-full flex-col space-y-4">
+              {/* Collapsible Header - 紧凑优化 */}
               <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                 {/* Collapsed View - Always Visible */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-4">
+                <div className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      {/* Title */}
-                      <h1 className="mb-2 text-2xl font-bold leading-tight text-gray-900">
+                      {/* Title - 单行显示，自动省略号 */}
+                      <h1 className="truncate text-lg font-semibold text-gray-900" title={selectedResource.title}>
                         {selectedResource.title}
                       </h1>
 
-                      {/* Back to list link - positioned below title */}
+                      {/* Back to list link - 紧凑排版 */}
                       <button
                         onClick={handleBackToList}
-                        className="inline-flex items-center gap-1.5 text-sm text-gray-600 transition-colors hover:text-gray-900"
+                        className="mt-1 inline-flex items-center gap-1 text-xs text-gray-600 transition-colors hover:text-gray-900"
                       >
                         <svg
                           className="h-4 w-4"
@@ -2172,64 +2174,44 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Embedded Content */}
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
-                  <span className="text-sm text-gray-600">Preview</span>
-                  <a
-                    href={
-                      selectedResource.type === 'PAPER' &&
-                      selectedResource.pdfUrl
-                        ? `${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`
-                        : selectedResource.sourceUrl
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                    Open in new tab
-                  </a>
-                </div>
-                {/* Display preview via proxy */}
+              {/* Embedded Content - 移除Preview头部，直接显示内容以最大化阅读区域 */}
+              <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
+                {/* Display preview - 使用客户端渲染避免浏览器阻止iframe */}
                 {selectedResource.type === 'PAPER' &&
                 selectedResource.pdfUrl ? (
-                  <object
-                    data={`${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`}
-                    type="application/pdf"
-                    className="h-[800px] w-full"
+                  <PDFViewer
+                    url={selectedResource.pdfUrl}
                     title={selectedResource.title}
-                  >
-                    <p className="p-4 text-center text-gray-500">
-                      PDF cannot be displayed.{' '}
-                      <a
-                        href={`${config.apiUrl}/proxy/pdf?url=${encodeURIComponent(selectedResource.pdfUrl)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Click here to download
-                      </a>
-                    </p>
-                  </object>
-                ) : (
-                  <iframe
-                    src={`${config.apiUrl}/proxy/html?url=${encodeURIComponent(selectedResource.sourceUrl)}`}
-                    className="h-[800px] w-full"
-                    title={selectedResource.title}
+                    className="h-full w-full"
                   />
+                ) : selectedResource.sourceUrl ? (
+                  <HTMLViewer
+                    url={selectedResource.sourceUrl}
+                    title={selectedResource.title}
+                    className="h-full w-full"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gray-50">
+                    <div className="text-center">
+                      <svg
+                        className="mx-auto h-16 w-16 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      <p className="mt-4 text-lg font-medium text-gray-600">预览不可用</p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        该资源暂无可用的PDF或HTML预览
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

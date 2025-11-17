@@ -438,12 +438,14 @@ export class ResourcesService {
     try {
       const urlObj = new URL(url);
 
-      // arXiv: https://arxiv.org/abs/2311.12345v1 -> https://arxiv.org/pdf/2311.12345v1.pdf
+      // arXiv: 支持 /abs/, /html/ 格式
+      // https://arxiv.org/abs/2311.12345v1 -> https://arxiv.org/pdf/2311.12345v1.pdf
+      // https://arxiv.org/html/2311.12345v1 -> https://arxiv.org/pdf/2311.12345v1.pdf
       if (
         urlObj.hostname === "arxiv.org" ||
         urlObj.hostname === "www.arxiv.org"
       ) {
-        const arxivIdMatch = url.match(/arxiv\.org\/abs\/(.+)/);
+        const arxivIdMatch = url.match(/arxiv\.org\/(?:abs|html)\/(.+?)(?:\.pdf)?$/);
         if (arxivIdMatch) {
           return `https://arxiv.org/pdf/${arxivIdMatch[1]}.pdf`;
         }
@@ -528,14 +530,17 @@ export class ResourcesService {
     try {
       const urlObj = new URL(url);
 
-      // arXiv论文
+      // arXiv论文（支持 /abs/, /html/, /pdf/ 格式）
       if (
         urlObj.hostname === "arxiv.org" ||
         urlObj.hostname === "www.arxiv.org"
       ) {
-        const arxivIdMatch = url.match(/arxiv\.org\/abs\/(.+)/);
+        // 匹配 /abs/, /html/, /pdf/ 格式的arXiv ID
+        const arxivIdMatch = url.match(/arxiv\.org\/(?:abs|html|pdf)\/(.+?)(?:\.pdf)?$/);
         if (arxivIdMatch) {
           const arxivId = arxivIdMatch[1];
+          this.logger.log(`Extracting arXiv paper info for ID: ${arxivId}`);
+
           const response = await fetch(
             `http://export.arxiv.org/api/query?id_list=${arxivId}`,
           );

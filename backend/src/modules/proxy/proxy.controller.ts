@@ -14,6 +14,7 @@ import {
   WHITELISTED_DOMAINS,
 } from "../../config/domain-whitelist.config";
 import { AdvancedExtractorService } from "./advanced-extractor.service";
+import { NewsExtractorService } from "./news-extractor.service";
 
 /**
  * 代理控制器 - 用于代理外部资源（如 PDF），绕过 CORS 和 X-Frame-Options 限制
@@ -22,7 +23,10 @@ import { AdvancedExtractorService } from "./advanced-extractor.service";
 export class ProxyController {
   private readonly logger = new Logger(ProxyController.name);
 
-  constructor(private advancedExtractor: AdvancedExtractorService) {}
+  constructor(
+    private advancedExtractor: AdvancedExtractorService,
+    private newsExtractor: NewsExtractorService,
+  ) {}
   /**
    * 代理 PDF 文件
    *
@@ -383,6 +387,135 @@ export class ProxyController {
       );
       throw new HttpException(
         "Internal server error while extracting content",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * 新闻内容专用提取器 - 优化提取新闻文章的元数据
+   *
+   * 实现4层元数据提取层级：
+   * 1. Schema.org JSON-LD (95% 置信度) - 最标准的新闻元数据格式
+   * 2. Open Graph meta标签 (75% 置信度) - 常见的社交媒体分享标准
+   * 3. Twitter Card meta标签 (60% 置信度) - 推特分享标准
+   * 4. 通用提取 (50% 置信度) - 启发式备选方案
+   *
+   * 增强功能：
+   * - 自动检测付费墙（subscription, membership, login required等）
+   * - 提取发布日期、修改日期、作者等关键元数据
+   * - 图片URL提取（og:image, twitter:image等）
+   * - 网站名称和域名识别
+   *
+   * 使用方式：
+   * http://localhost:4000/api/v1/proxy/html-reader-news?url=https://example.com/article
+   */
+  @Get("html-reader-news")
+  async proxyHtmlReaderNews(@Query("url") url: string): Promise<any> {
+    this.logger.log(`News Reader Mode request received for URL: ${url}`);
+
+    if (!url) {
+      this.logger.warn("News Reader Mode request missing URL parameter");
+      throw new HttpException(
+        "URL parameter is required",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // 安全检查：使用可配置的域名白名单
+    try {
+      const urlObj = new URL(url);
+
+      if (!isDomainAllowed(urlObj.hostname)) {
+        this.logger.warn(
+          `News Reader Mode blocked - domain not allowed: ${urlObj.hostname}`,
+        );
+        throw new HttpException(
+          `Domain ${urlObj.hostname} is not allowed. Allowed domains: ${WHITELISTED_DOMAINS.join(", ")}`,
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      this.logger.log(
+        `Fetching HTML for News Reader Mode from: ${urlObj.hostname}`,
+      );
+
+      // 从远程服务器获取 HTML
+      const response = await axios.get(url, {
+        responseType: "text",
+        timeout: 30000,
+        maxRedirects: 5,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+          "Accept-Encoding": "gzip, deflate, br",
+        },
+      });
+
+      // 使用专用新闻提取服务，实现4层元数据提取
+      const newsResult = await this.newsExtractor.extractNews(
+        response.data,
+        url,
+      );
+
+      // 验证提取结果
+      if (!newsResult.title || newsResult.title.length < 5) {
+        this.logger.warn(`Failed to extract valid news title from ${url}`);
+        throw new HttpException(
+          "Failed to extract valid news article from this page",
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        );
+      }
+
+      this.logger.log(
+        `Successfully extracted news via ${newsResult.source}: "${newsResult.title}" (confidence: ${newsResult.confidence}%)`,
+      );
+
+      // 返回新闻提取的完整结果
+      return {
+        success: true,
+        title: newsResult.title,
+        content: newsResult.content,
+        textContent: newsResult.textContent,
+        excerpt: newsResult.excerpt,
+        author: newsResult.author,
+        publishDate: newsResult.publishDate,
+        modifiedDate: newsResult.modifiedDate,
+        imageUrl: newsResult.imageUrl,
+        siteName: newsResult.siteName,
+        paywalledIndicators: newsResult.paywalledIndicators,
+        confidence: newsResult.confidence,
+        source: newsResult.source,
+        sourceUrl: url,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      if (axios.isAxiosError(error)) {
+        this.logger.error(
+          `Failed to fetch HTML from ${url}: ${error.message}`,
+          error.stack,
+        );
+        throw new HttpException(
+          `Failed to fetch HTML: ${error.message}`,
+          error.response?.status || HttpStatus.BAD_GATEWAY,
+        );
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Internal error in News Reader Mode: ${errorMessage}`,
+        errorStack,
+      );
+      throw new HttpException(
+        "Internal server error while extracting news content",
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

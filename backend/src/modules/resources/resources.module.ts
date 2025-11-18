@@ -5,12 +5,13 @@ import { AIEnrichmentService } from "./ai-enrichment.service";
 // import { PdfThumbnailService } from './pdf-thumbnail.service';
 import { PrismaModule } from "../../common/prisma/prisma.module";
 import { MongoDBModule } from "../../common/mongodb/mongodb.module";
+import { DataManagementModule } from "../data-management/data-management.module";
 
 /**
  * 资源管理模块
  */
 @Module({
-  imports: [PrismaModule, MongoDBModule],
+  imports: [PrismaModule, MongoDBModule, DataManagementModule],
   controllers: [ResourcesController],
   providers: [ResourcesService, AIEnrichmentService], // PdfThumbnailService requires complex native deps
   exports: [ResourcesService, AIEnrichmentService],

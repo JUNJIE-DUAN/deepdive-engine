@@ -1,8 +1,14 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { MongoDBService } from "../../common/mongodb/mongodb.service";
 import { ensureError } from "../../common/utils/error.utils";
 import { Prisma } from "@prisma/client";
+import { SourceWhitelistService } from "../data-management/services/source-whitelist.service";
 
 /**
  * 资源管理服务
@@ -14,6 +20,7 @@ export class ResourcesService {
   constructor(
     private prisma: PrismaService,
     private mongodb: MongoDBService,
+    private whitelistService: SourceWhitelistService,
   ) {}
 
   /**
@@ -316,6 +323,22 @@ export class ResourcesService {
     this.logger.log(`Importing resource from URL: ${url} (type: ${type})`);
 
     try {
+      // 第一步：验证URL域名是否在白名单中
+      const whitelistValidation = await this.whitelistService.validateUrl(
+        type as any,
+        url,
+      );
+
+      if (!whitelistValidation.isValid) {
+        const errorMsg = `Domain validation failed: ${whitelistValidation.reason || "Domain not in whitelist"}`;
+        this.logger.warn(errorMsg);
+        throw new BadRequestException(errorMsg);
+      }
+
+      this.logger.log(
+        `Domain validation passed for ${whitelistValidation.matchedDomain}`,
+      );
+
       // 解析URL
       const urlObj = new URL(url);
       let finalUrl = url;
@@ -363,6 +386,16 @@ export class ResourcesService {
         const newsInfo = await this.fetchWebPageInfo(finalUrl);
         title = newsInfo.title;
         abstract = newsInfo.abstract;
+      } else if (type === "BLOG") {
+        // 博客：从网页获取真实标题
+        const blogInfo = await this.fetchWebPageInfo(finalUrl);
+        title = blogInfo.title;
+        abstract = blogInfo.abstract;
+      } else if (type === "REPORT") {
+        // 行业报告：从网页获取真实标题
+        const reportInfo = await this.fetchWebPageInfo(finalUrl);
+        title = reportInfo.title;
+        abstract = reportInfo.abstract;
       } else {
         // 其他类型：从URL的最后部分提取标题
         const pathParts = urlObj.pathname
@@ -445,7 +478,9 @@ export class ResourcesService {
         urlObj.hostname === "arxiv.org" ||
         urlObj.hostname === "www.arxiv.org"
       ) {
-        const arxivIdMatch = url.match(/arxiv\.org\/(?:abs|html)\/(.+?)(?:\.pdf)?$/);
+        const arxivIdMatch = url.match(
+          /arxiv\.org\/(?:abs|html)\/(.+?)(?:\.pdf)?$/,
+        );
         if (arxivIdMatch) {
           return `https://arxiv.org/pdf/${arxivIdMatch[1]}.pdf`;
         }
@@ -536,7 +571,9 @@ export class ResourcesService {
         urlObj.hostname === "www.arxiv.org"
       ) {
         // 匹配 /abs/, /html/, /pdf/ 格式的arXiv ID
-        const arxivIdMatch = url.match(/arxiv\.org\/(?:abs|html|pdf)\/(.+?)(?:\.pdf)?$/);
+        const arxivIdMatch = url.match(
+          /arxiv\.org\/(?:abs|html|pdf)\/(.+?)(?:\.pdf)?$/,
+        );
         if (arxivIdMatch) {
           const arxivId = arxivIdMatch[1];
           this.logger.log(`Extracting arXiv paper info for ID: ${arxivId}`);

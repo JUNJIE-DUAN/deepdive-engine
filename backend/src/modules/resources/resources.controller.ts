@@ -136,7 +136,7 @@ export class ResourcesController {
   /**
    * 从URL导入资源
    * POST /api/v1/resources/import-url
-   * Body: { url: string, type: 'PAPER' | 'PROJECT' | 'NEWS' }
+   * Body: { url: string, type: 'PAPER' | 'BLOG' | 'REPORT' | 'NEWS' | 'YOUTUBE_VIDEO' }
    *
    * 注意：此路由必须在 @Post() 之前，否则会被通用POST路由捕获
    */
@@ -151,10 +151,10 @@ export class ResourcesController {
       );
     }
 
-    const validTypes = ["PAPER", "PROJECT", "NEWS", "YOUTUBE_VIDEO"];
+    const validTypes = ["PAPER", "BLOG", "REPORT", "NEWS", "YOUTUBE_VIDEO"];
     if (!validTypes.includes(type)) {
       throw new HttpException(
-        `Invalid type. Must be one of: ${validTypes.join(", ")}`,
+        `Invalid resource type. Supported types are: PAPER, BLOG, REPORT, NEWS, YOUTUBE_VIDEO. Received: ${type}`,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -164,6 +164,7 @@ export class ResourcesController {
     try {
       const resource = await this.resourcesService.importFromUrl(url, type);
       return {
+        success: true,
         message: "URL imported successfully",
         resource,
       };
@@ -265,16 +266,17 @@ export class ResourcesController {
     }
 
     // 调用结构化 AI 增强服务
-    const enrichment = await this.aiEnrichmentService.enrichResourceWithStructured(
-      {
-        title: resource.title,
-        abstract: resource.abstract ?? undefined,
-        content: resource.content ?? undefined,
-        sourceUrl: resource.sourceUrl,
-        type: resource.type,
-      },
-      resource.type,
-    );
+    const enrichment =
+      await this.aiEnrichmentService.enrichResourceWithStructured(
+        {
+          title: resource.title,
+          abstract: resource.abstract ?? undefined,
+          content: resource.content ?? undefined,
+          sourceUrl: resource.sourceUrl,
+          type: resource.type,
+        },
+        resource.type,
+      );
 
     // 更新资源（包含结构化摘要）
     const updated = await this.resourcesService.update(id, {
@@ -286,7 +288,9 @@ export class ResourcesController {
       structuredAISummary: enrichment.structuredAISummary as any,
     });
 
-    this.logger.log(`Resource ${id} enriched with structured data successfully`);
+    this.logger.log(
+      `Resource ${id} enriched with structured data successfully`,
+    );
 
     return {
       ...updated,

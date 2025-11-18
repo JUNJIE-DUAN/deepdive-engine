@@ -359,15 +359,18 @@ export class SourceWhitelistService {
 
   /**
    * 匹配域名与模式
-   * 支持通配符: * 匹配任意子域名
+   * 支持：
+   * 1. 精确匹配：domain.com 匹配 domain.com
+   * 2. 通配符匹配：*.domain.com 匹配 sub.domain.com
+   * 3. 子域名匹配：domain.com 也匹配 sub.domain.com（隐含的通配符）
    */
   private matchDomain(domain: string, pattern: string): boolean {
-    // 精确匹配
+    // 1. 精确匹配
     if (domain === pattern) {
       return true;
     }
 
-    // 通配符匹配 (*.example.com)
+    // 2. 通配符匹配 (*.example.com)
     if (pattern.startsWith("*.")) {
       const baseDomain = pattern.slice(2); // 移除 *.
       // 检查域名是否以 baseDomain 结尾且有一个子域名
@@ -376,7 +379,15 @@ export class SourceWhitelistService {
       }
     }
 
-    // 正则表达式匹配 (如果需要的话)
+    // 3. 隐含的通配符：example.com 也应该匹配 sub.example.com
+    // 这是常见的用法，用户通常期望父域名覆盖子域名
+    if (!pattern.startsWith("*.") && !pattern.startsWith("/")) {
+      if (domain.endsWith("." + pattern)) {
+        return true;
+      }
+    }
+
+    // 4. 正则表达式匹配 (如果需要的话)
     try {
       if (pattern.startsWith("/") && pattern.endsWith("/")) {
         const regexPattern = pattern.slice(1, -1);
@@ -441,7 +452,8 @@ export class SourceWhitelistService {
             "cell.com",
             "*.cell.com",
           ],
-          description: "Academic papers: arXiv, IEEE, ACM, Springer, ScienceDirect, Google Scholar, etc.",
+          description:
+            "Academic papers: arXiv, IEEE, ACM, Springer, ScienceDirect, Google Scholar, etc.",
         },
         {
           resourceType: "BLOG" as ResourceType,
@@ -510,7 +522,8 @@ export class SourceWhitelistService {
             "apple.com",
             "machinelearning.apple.com",
           ],
-          description: "Research blogs from: Google, Microsoft, NVIDIA, Intel, AMD, Cisco, Meta, OpenAI, DeepMind, Anthropic, etc.",
+          description:
+            "Research blogs from: Google, Microsoft, NVIDIA, Intel, AMD, Cisco, Meta, OpenAI, DeepMind, Anthropic, etc.",
         },
         {
           resourceType: "NEWS" as ResourceType,
@@ -547,7 +560,8 @@ export class SourceWhitelistService {
             "syntehtica.com",
             "labellerr.com",
           ],
-          description: "Tech news: TechCrunch, The Verge, Ars Technica, Wired, CNN, Bloomberg, WSJ, etc.",
+          description:
+            "Tech news: TechCrunch, The Verge, Ars Technica, Wired, CNN, Bloomberg, WSJ, etc.",
         },
         {
           resourceType: "YOUTUBE_VIDEO" as ResourceType,
@@ -627,7 +641,8 @@ export class SourceWhitelistService {
             "marketsandmarkets.com",
             "mrfresearch.com",
           ],
-          description: "Industry reports: Gartner, Forrester, IDC, McKinsey, BCG, Bain, Accenture, Deloitte, PwC, EY, Morgan Stanley, Goldman Sachs, SemiAnalysis, etc.",
+          description:
+            "Industry reports: Gartner, Forrester, IDC, McKinsey, BCG, Bain, Accenture, Deloitte, PwC, EY, Morgan Stanley, Goldman Sachs, SemiAnalysis, etc.",
         },
         {
           resourceType: "EVENT" as ResourceType,
@@ -660,7 +675,8 @@ export class SourceWhitelistService {
             "gdc.com",
             "sxsw.com",
           ],
-          description: "Events and conferences: Eventbrite, Meetup, NeurIPS, ICML, ICLR, CES, GDC, SXSW, etc.",
+          description:
+            "Events and conferences: Eventbrite, Meetup, NeurIPS, ICML, ICLR, CES, GDC, SXSW, etc.",
         },
       ];
 

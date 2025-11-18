@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import KeyMomentsPanel, {
   type KeyMoment,
 } from '@/components/youtube/KeyMomentsPanel';
+import { SubtitleExportButton } from '@/components/youtube';
 
 interface TranscriptSegment {
   text: string;
@@ -847,6 +848,12 @@ export default function YouTubeTLDW() {
                       />
                     </div>
                   </button>
+
+                  {/* Subtitle Export Button */}
+                  <SubtitleExportButton
+                    videoId={videoId}
+                    variant="icon"
+                  />
                 </div>
               </div>
             </div>

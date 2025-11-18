@@ -84,6 +84,7 @@ enum ResourceType {
   EVENT
   RSS
   YOUTUBE_VIDEO
+  REPORT
 }
 
 enum WorkspaceStatus {
@@ -515,4 +516,84 @@ model YouTubeVideo {
   @@index([userId])
   @@index([createdAt(sort: Desc)])
   @@map("youtube_videos")
+}
+
+// ============ 报告相关 (Reports TAB) ============
+
+model ReportPublisher {
+  id              String      @id @default(uuid())
+  name            String      @unique
+  displayName     String
+  description     String?     @db.Text
+  logoUrl         String?     @map("logo_url")
+  website         String?
+  category        String      // "enterprise", "analyst", "research", "security"
+  rssFeeds        Json?       @default("[]") @map("rss_feeds")  // RSS 源 URL 列表
+  isActive        Boolean     @default(true)
+
+  collectedReports CollectedReport[]
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([name])
+  @@map("report_publishers")
+}
+
+model CollectedReport {
+  id              String      @id @default(uuid())
+
+  // 基础信息
+  title           String      @db.VarChar(1000)
+  abstract        String?     @db.Text
+  sourceUrl       String      @map("source_url") @db.Text
+  publisherName   String      @map("publisher_name")  // "NVIDIA", "SemiAnalysis" 等
+  publishedAt     DateTime    @map("published_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // 报告属性
+  reportType      String      @map("report_type")  // "research", "market-analysis", "threat-report", "technical-whitepaper", "industry-insight"
+  category        String      // "AI", "Security", "Semiconductors", "Cloud", "Software"
+  subCategory     String?     @map("sub_category")
+
+  // 内容
+  pdfUrl          String?     @map("pdf_url") @db.Text
+  htmlUrl         String?     @map("html_url") @db.Text
+  documentContent String?     @map("document_content") @db.Text  // 原文内容（可选）
+
+  // AI 富化数据
+  aiSummary       String?     @map("ai_summary") @db.Text
+  structuredAISummary Json?   @map("structured_ai_summary")  // ReportAISummary 结构化数据
+
+  // 元数据
+  authors         Json?       @default("[]")  // [{ name, title, company }]
+  keyMetrics      Json?       @default("{}") @map("key_metrics")  // { "revenue": "50B", "marketShare": "35%" }
+  keyFindings     Json?       @default("[]") @map("key_findings")  // 核心发现列表
+
+  // 来源追踪
+  sourceType      String      @map("source_type")  // "official-blog", "rss-feed", "pdf-upload", "web-scrape"
+  rssSourceId     String?     @map("rss_source_id")  // 关联的 RSS 源
+
+  // 统计数据
+  viewCount       Int         @default(0) @map("view_count")
+  saveCount       Int         @default(0) @map("save_count")
+  upvoteCount     Int         @default(0) @map("upvote_count")
+  commentCount    Int         @default(0) @map("comment_count")
+  relevanceScore  Float       @default(0.0) @map("relevance_score")  // AI 相关性评分
+
+  // 元数据
+  tags            Json?       @default("[]")
+  metadata        Json?       @default("{}")
+
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  // 关系
+  publisherId     String?
+  publisher       ReportPublisher? @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+
+  @@index([publisherName])
+  @@index([reportType])
+  @@index([category])
+  @@index([publishedAt(sort: Desc)])
+  @@map("collected_reports")
 }

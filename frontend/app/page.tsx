@@ -130,9 +130,10 @@ export default function Home() {
     | 'papers'
     | 'projects'
     | 'news'
-    | 'youtube';
+    | 'youtube'
+    | 'reports';
   const [activeTab, setActiveTab] = useState<
-    'papers' | 'projects' | 'news' | 'youtube'
+    'papers' | 'projects' | 'news' | 'youtube' | 'reports'
   >(initialTab);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(
     null
@@ -217,6 +218,12 @@ export default function Home() {
       accept: '.srt,.vtt,text/plain',
       maxSize: 5 * 1024 * 1024,
       label: '字幕文件',
+    },
+    reports: {
+      accept:
+        '.pdf,.doc,.docx,.xlsx,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      maxSize: 100 * 1024 * 1024,
+      label: '报告文件 (PDF/Word/Excel/PPT)',
     },
   };
 
@@ -470,14 +477,18 @@ export default function Home() {
       });
 
       // Map tab to resource type
-      const typeMap: Record<'papers' | 'projects' | 'news', string> = {
+      const typeMap: Record<
+        'papers' | 'projects' | 'news' | 'reports',
+        string
+      > = {
         papers: 'PAPER',
         projects: 'PROJECT',
         news: 'NEWS',
+        reports: 'REPORT',
       };
       params.append(
         'type',
-        typeMap[activeTab as 'papers' | 'projects' | 'news']
+        typeMap[activeTab as 'papers' | 'projects' | 'news' | 'reports']
       );
 
       if (searchQuery) {
@@ -1631,6 +1642,32 @@ export default function Home() {
                     </svg>
                     <span>YouTube</span>
                     {activeTab === 'youtube' && (
+                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('reports')}
+                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                      activeTab === 'reports'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                    }`}
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span>Reports</span>
+                    {activeTab === 'reports' && (
                       <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
                     )}
                   </button>

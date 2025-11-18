@@ -256,6 +256,83 @@ export interface ProjectAISummary extends StructuredAISummary {
 }
 
 /**
+ * 报告专用摘要类型 (Reports TAB)
+ */
+export interface ReportAISummary extends StructuredAISummary {
+  // 报告特定字段
+  reportTitle: string;
+  publisherName: string;
+  publisherLogo?: string;
+  reportDate: Date;
+
+  // 核心内容
+  executiveSummary: string; // 100-150 字的核心摘要
+  keyFindings: string[]; // 3-5 个核心发现
+  mainThemes: string[]; // 报告的主要主题
+
+  // 数据洞察
+  metrics: Array<{
+    name: string;
+    value: string | number;
+    unit?: string;
+    trend?: 'up' | 'down' | 'stable';
+    yearOverYear?: number; // YoY 增长率
+  }>;
+
+  // 市场/行业分析
+  marketInsights: {
+    marketSize?: string;
+    growthRate?: number;
+    mainPlayers?: string[];
+    trendingTopics?: string[];
+  };
+
+  // 预测和建议
+  outlook: string; // 未来展望（300+ 字）
+  recommendations: Array<{
+    target: string; // "企业", "政策制定者", "投资者" 等
+    action: string;
+  }>;
+
+  // 风险和机遇
+  riskFactors?: Array<{
+    title: string;
+    description: string;
+    severity: 'high' | 'medium' | 'low';
+  }>;
+
+  opportunities?: Array<{
+    title: string;
+    description: string;
+    potential: 'high' | 'medium' | 'low';
+  }>;
+
+  // 报告质量指标
+  reportType:
+    | 'research'
+    | 'market-analysis'
+    | 'threat-report'
+    | 'whitepaper'
+    | 'industry-insight';
+  credibilityScore: number; // 0-1，基于发布商和内容质量
+  analysisDepth: 'surface' | 'moderate' | 'deep'; // 分析深度
+
+  // 关系数据
+  relatedReports?: Array<{
+    id: string;
+    title: string;
+    publisherName: string;
+  }>;
+
+  // 引用和出处
+  dataSource?: Array<{
+    name: string;
+    url?: string;
+    accessDate?: Date;
+  }>;
+}
+
+/**
  * 联合类型：所有资源的结构化摘要
  */
 export type ResourceAISummary =
@@ -263,7 +340,8 @@ export type ResourceAISummary =
   | PaperAISummary
   | NewsAISummary
   | VideoAISummary
-  | ProjectAISummary;
+  | ProjectAISummary
+  | ReportAISummary;
 
 export interface YouTubeResource extends BaseResource {
   resourceType: 'youtube_video';

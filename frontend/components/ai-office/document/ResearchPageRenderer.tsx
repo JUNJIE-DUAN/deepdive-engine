@@ -6,7 +6,14 @@
  */
 
 import React, { useState } from 'react';
-import { FileText, BookOpen, ChevronDown, ChevronRight, Search, Download } from 'lucide-react';
+import {
+  FileText,
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Search,
+  Download,
+} from 'lucide-react';
 import type { ResearchPageTemplate } from '@/lib/research-page-templates';
 
 interface ResearchPageRendererProps {
@@ -20,16 +27,33 @@ export default function ResearchPageRenderer({
   template,
   onEdit,
 }: ResearchPageRendererProps) {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set()
+  );
   const [showOutline, setShowOutline] = useState(true);
 
   // 解析Markdown内容为章节
-  const parseContentSections = (markdown: string): Array<{ id: string; title: string; content: string; level: number }> => {
-    const sections: Array<{ id: string; title: string; content: string; level: number }> = [];
-    const lines = markdown.split('\n');
-    let currentSection: { id: string; title: string; content: string[]; level: number } | null = null;
+  const parseContentSections = (
+    markdown: string
+  ): Array<{ id: string; title: string; content: string; level: number }> => {
+    interface Section {
+      id: string;
+      title: string;
+      content: string[];
+      level: number;
+    }
 
-    lines.forEach((line) => {
+    const sections: Array<{
+      id: string;
+      title: string;
+      content: string;
+      level: number;
+    }> = [];
+    const lines = markdown.split('\n');
+    let currentSection: Section | null = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const heading = line.match(/^(#{1,6})\s+(.+)$/);
       if (heading) {
         // 保存上一个section
@@ -45,7 +69,10 @@ export default function ResearchPageRenderer({
         // 创建新section
         const level = heading[1].length;
         const title = heading[2];
-        const id = title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+        const id = title
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^\w-]/g, '');
 
         currentSection = {
           id,
@@ -56,7 +83,7 @@ export default function ResearchPageRenderer({
       } else if (currentSection) {
         currentSection.content.push(line);
       }
-    });
+    }
 
     // 保存最后一个section
     if (currentSection) {
@@ -92,10 +119,16 @@ export default function ResearchPageRenderer({
     // 斜体
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
     // 代码
-    html = html.replace(/`(.+?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>');
+    html = html.replace(
+      /`(.+?)`/g,
+      '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>'
+    );
     // 列表
     html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul class="list-disc ml-6 my-2 space-y-1">$&</ul>');
+    html = html.replace(
+      /(<li>.*<\/li>\n?)+/g,
+      '<ul class="list-disc ml-6 my-2 space-y-1">$&</ul>'
+    );
 
     return html;
   };
@@ -126,10 +159,15 @@ export default function ResearchPageRenderer({
                 <button
                   key={section.id}
                   onClick={() => {
-                    const element = document.getElementById(`section-${section.id}`);
-                    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const element = document.getElementById(
+                      `section-${section.id}`
+                    );
+                    element?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start',
+                    });
                   }}
-                  className={`w-full text-left rounded px-2 py-1.5 text-sm transition-colors hover:bg-gray-200 ${ 
+                  className={`w-full rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-gray-200 ${
                     section.level === 1
                       ? 'font-semibold text-gray-900'
                       : 'ml-4 text-gray-600'
@@ -173,7 +211,9 @@ export default function ResearchPageRenderer({
                 </button>
               )}
               <FileText className="h-5 w-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Research Page</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Research Page
+              </h2>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -199,10 +239,8 @@ export default function ResearchPageRenderer({
             >
               {/* 章节标题 */}
               <div
-                className={`mb-4 flex items-center ${ 
-                  section.level === 1
-                    ? 'border-b-2 border-gray-200 pb-2'
-                    : ''
+                className={`mb-4 flex items-center ${
+                  section.level === 1 ? 'border-b-2 border-gray-200 pb-2' : ''
                 }`}
               >
                 {section.level === 1 ? (

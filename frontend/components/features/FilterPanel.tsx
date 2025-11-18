@@ -5,7 +5,7 @@ import { useState } from 'react';
 interface FilterPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'papers' | 'projects' | 'news' | 'youtube';
+  activeTab: 'papers' | 'projects' | 'news' | 'youtube' | 'reports';
   selectedCategories: string[];
   setSelectedCategories: (categories: string[]) => void;
   dateRange: 'all' | '24h' | '7d' | '30d' | '90d';
@@ -49,6 +49,16 @@ const FILTER_CONFIGS = {
       'Demo',
       'Review',
       'Lecture',
+    ],
+  },
+  reports: {
+    categories: [
+      'AI',
+      'Security',
+      'Semiconductors',
+      'Cloud',
+      'Software',
+      'Enterprise',
     ],
   },
 };

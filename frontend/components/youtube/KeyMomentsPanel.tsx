@@ -120,9 +120,9 @@ export default function KeyMomentsPanel({
   }
 
   return (
-    <div className="absolute bottom-4 left-4 z-10 w-96 rounded-xl border border-gray-200 bg-white shadow-2xl">
+    <div className="absolute bottom-4 left-4 z-10 flex h-96 w-96 flex-col rounded-xl border border-gray-200 bg-white shadow-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-sm">
             <svg
@@ -167,7 +167,7 @@ export default function KeyMomentsPanel({
       </div>
 
       {/* Filters */}
-      <div className="flex gap-1 border-b border-gray-100 bg-gray-50 px-4 py-2">
+      <div className="flex flex-shrink-0 gap-1 border-b border-gray-100 bg-gray-50 px-4 py-2">
         {(['all', 'high', 'medium', 'low'] as const).map((level) => (
           <button
             key={level}
@@ -192,7 +192,7 @@ export default function KeyMomentsPanel({
 
       {/* Current Playing Moment */}
       {currentMoment && (
-        <div className="border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3">
+        <div className="flex-shrink-0 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3">
           <div className="mb-1 text-xs font-medium text-blue-600">
             ▶ 正在播放
           </div>
@@ -217,7 +217,7 @@ export default function KeyMomentsPanel({
       {/* Moments List */}
       <div
         ref={scrollContainerRef}
-        className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+        className="scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-50 min-h-0 flex-1 overflow-y-auto"
       >
         {filteredMoments.length === 0 ? (
           <div className="py-12 text-center">
@@ -342,7 +342,7 @@ export default function KeyMomentsPanel({
       </div>
 
       {/* Footer Stats */}
-      <div className="border-t border-gray-100 bg-gray-50 px-4 py-2">
+      <div className="flex-shrink-0 border-t border-gray-100 bg-gray-50 px-4 py-2">
         <div className="flex items-center justify-between text-xs text-gray-600">
           <div className="flex items-center gap-3">
             <span>

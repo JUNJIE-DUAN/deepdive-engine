@@ -7,6 +7,7 @@ import type {
   NewsAISummary,
   VideoAISummary,
   ProjectAISummary,
+  ReportAISummary,
   StructuredAISummary,
 } from '@/types/ai-office';
 import { StructuredAISummaryBase } from './StructuredAISummaryBase';
@@ -14,6 +15,7 @@ import { PaperAISummaryComponent } from './PaperAISummary';
 import { NewsAISummaryComponent } from './NewsAISummary';
 import { VideoAISummaryComponent } from './VideoAISummary';
 import { ProjectAISummaryComponent } from './ProjectAISummary';
+import { ReportAISummaryComponent } from './ReportAISummary';
 
 /**
  * 结构化AI摘要路由组件
@@ -68,12 +70,20 @@ const isProjectSummary = (
   return 'projectName' in summary && 'techStack' in summary;
 };
 
+const isReportSummary = (
+  summary: ResourceAISummary
+): summary is ReportAISummary => {
+  return (
+    'reportTitle' in summary &&
+    'publisherName' in summary &&
+    'keyFindings' in summary
+  );
+};
+
 /**
  * 主路由组件
  */
-export const StructuredAISummaryRouter: React.FC<
-  StructuredAISummaryProps
-> = ({
+export const StructuredAISummaryRouter: React.FC<StructuredAISummaryProps> = ({
   summary,
   compact = false,
   expandable = true,
@@ -125,6 +135,17 @@ export const StructuredAISummaryRouter: React.FC<
     );
   }
 
+  // 报告摘要
+  if (isReportSummary(summary)) {
+    return (
+      <ReportAISummaryComponent
+        summary={summary}
+        compact={compact}
+        expandable={expandable}
+      />
+    );
+  }
+
   // 通用摘要（默认）
   return (
     <StructuredAISummaryBase
@@ -159,13 +180,14 @@ export function isStructuredAISummary(
 export function convertToStructuredSummary(
   plainSummary: string,
   category: string = 'General',
-  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert' = 'intermediate'
+  difficulty:
+    | 'beginner'
+    | 'intermediate'
+    | 'advanced'
+    | 'expert' = 'intermediate'
 ): StructuredAISummary {
   // 估算阅读时间（中文约100字/分钟，英文约200字/分钟）
-  const estimatedReadTime = Math.max(
-    1,
-    Math.ceil(plainSummary.length / 150)
-  );
+  const estimatedReadTime = Math.max(1, Math.ceil(plainSummary.length / 150));
 
   return {
     overview: plainSummary,

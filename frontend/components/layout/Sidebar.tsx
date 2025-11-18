@@ -537,6 +537,38 @@ export default function Sidebar({ className = '' }: SidebarProps) {
             </div>
             {!isCollapsed && <span>Profile</span>}
           </Link>
+
+          <Link
+            href="/data-management"
+            onClick={(e) => {
+              // Force navigation even if already on data-management page
+              if (pathname === '/data-management') {
+                e.preventDefault();
+                window.location.href = '/data-management';
+              }
+            }}
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
+              isActive('/data-management')
+                ? 'bg-emerald-50 text-gray-900'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+            title="Data Management"
+          >
+            <svg
+              className="h-5 w-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+              />
+            </svg>
+            {!isCollapsed && <span>Data Management</span>}
+          </Link>
         </div>
       </nav>
 

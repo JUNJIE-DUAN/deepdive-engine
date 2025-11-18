@@ -1,23 +1,24 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import helmet from 'helmet';
-import express, { Request, Response, NextFunction } from 'express';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { isWorkspaceAiV2Enabled } from './common/utils/feature-flags';
+import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
+import helmet from "helmet";
+import { Request, Response, NextFunction } from "express";
+import * as express from "express";
+import { AppModule } from "./app.module";
+import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import { isWorkspaceAiV2Enabled } from "./common/utils/feature-flags";
 // Force reload after CORS fix
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // 增加请求体大小限制，支持大型字幕数据
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // 启用安全头 (Helmet) - 但对代理路由禁用CSP
   app.use((req: Request, res: Response, next: NextFunction) => {
     // 对代理路由禁用CSP和X-Frame-Options
-    if (req.path.startsWith('/api/v1/proxy/')) {
+    if (req.path.startsWith("/api/v1/proxy/")) {
       helmet({
         contentSecurityPolicy: false, // 完全禁用CSP
         frameguard: false, // 禁用X-Frame-Options
@@ -30,9 +31,9 @@ async function bootstrap() {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
             scriptSrc: ["'self'"],
-            imgSrc: ["'self'", 'data:', 'https:'],
-            frameSrc: ["'self'", 'http://localhost:*'], // 允许localhost的iframe
-            frameAncestors: ["'self'", 'http://localhost:*'], // 允许被localhost的页面嵌入
+            imgSrc: ["'self'", "data:", "https:"],
+            frameSrc: ["'self'", "http://localhost:*"], // 允许localhost的iframe
+            frameAncestors: ["'self'", "http://localhost:*"], // 允许被localhost的页面嵌入
             upgradeInsecureRequests: null, // 开发环境禁用HTTPS升级
           },
         },
@@ -45,7 +46,7 @@ async function bootstrap() {
   // 启用CORS - 允许所有localhost端口（开发环境）
   app.enableCors({
     origin: (origin, callback) => {
-      console.log('CORS origin check:', origin);
+      console.log("CORS origin check:", origin);
       // 允许所有localhost端口、127.0.0.1、IPv6 localhost和undefined（同源请求）
       if (
         !origin ||
@@ -55,8 +56,8 @@ async function bootstrap() {
       ) {
         callback(null, true);
       } else {
-        console.error('CORS rejected origin:', origin);
-        callback(new Error('Not allowed by CORS'));
+        console.error("CORS rejected origin:", origin);
+        callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
@@ -67,14 +68,14 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
-    })
+    }),
   );
 
   // 启用全局异常过滤器
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // API前缀
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix("api/v1");
 
   const port = process.env.BACKEND_PORT || 4000;
   await app.listen(port);

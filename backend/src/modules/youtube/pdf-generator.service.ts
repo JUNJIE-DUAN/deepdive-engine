@@ -1,9 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-import * as PDFDocument from 'pdfkit';
-import { TranscriptSegment } from './youtube.service';
+import { Injectable, Logger } from "@nestjs/common";
+import * as PDFDocument from "pdfkit";
+import { TranscriptSegment } from "./youtube.service";
 
 export interface SubtitleExportOptions {
-  format: 'bilingual-side' | 'bilingual-stack' | 'english-only' | 'chinese-only';
+  format:
+    | "bilingual-side"
+    | "bilingual-stack"
+    | "english-only"
+    | "chinese-only";
   includeTimestamps: boolean;
   includeVideoUrl: boolean;
   includeMetadata: boolean;
@@ -40,7 +44,7 @@ export class PdfGeneratorService {
     this.logger.log(`Generating PDF for video: ${metadata.videoId}`);
 
     const doc = new PDFDocument({
-      size: 'A4',
+      size: "A4",
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       bufferPages: true,
     });
@@ -53,17 +57,27 @@ export class PdfGeneratorService {
 
     // Add subtitles based on format
     switch (options.format) {
-      case 'bilingual-side':
+      case "bilingual-side":
         this.addBilingualSideBySide(doc, transcript, options.includeTimestamps);
         break;
-      case 'bilingual-stack':
+      case "bilingual-stack":
         this.addBilingualStacked(doc, transcript, options.includeTimestamps);
         break;
-      case 'english-only':
-        this.addSingleLanguage(doc, transcript.english, 'English', options.includeTimestamps);
+      case "english-only":
+        this.addSingleLanguage(
+          doc,
+          transcript.english,
+          "English",
+          options.includeTimestamps,
+        );
         break;
-      case 'chinese-only':
-        this.addSingleLanguage(doc, transcript.chinese, 'Chinese', options.includeTimestamps);
+      case "chinese-only":
+        this.addSingleLanguage(
+          doc,
+          transcript.chinese,
+          "Chinese",
+          options.includeTimestamps,
+        );
         break;
     }
 
@@ -86,35 +100,37 @@ export class PdfGeneratorService {
   ): void {
     doc
       .fontSize(18)
-      .font('Helvetica-Bold')
-      .text(metadata.title, { align: 'center' });
+      .font("Helvetica")
+      .text(metadata.title, { align: "center" });
 
     doc.moveDown(0.5);
 
     if (includeUrl) {
       doc
         .fontSize(10)
-        .font('Helvetica')
-        .fillColor('blue')
+        .font("Helvetica")
+        .fillColor("blue")
         .text(metadata.url, {
-          align: 'center',
+          align: "center",
           link: metadata.url,
           underline: true,
         })
-        .fillColor('black');
+        .fillColor("black");
 
       doc.moveDown(0.3);
     }
 
     doc
       .fontSize(9)
-      .font('Helvetica-Oblique')
-      .text(`Exported on: ${metadata.exportDate.toLocaleString()}`, { align: 'center' })
-      .text(`Video ID: ${metadata.videoId}`, { align: 'center' });
+      .font("Helvetica-Oblique")
+      .text(`Exported on: ${metadata.exportDate.toLocaleString()}`, {
+        align: "center",
+      })
+      .text(`Video ID: ${metadata.videoId}`, { align: "center" });
 
     doc.moveDown(0.5);
     doc
-      .strokeColor('#cccccc')
+      .strokeColor("#cccccc")
       .lineWidth(1)
       .moveTo(50, doc.y)
       .lineTo(doc.page.width - 50, doc.y)
@@ -129,7 +145,10 @@ export class PdfGeneratorService {
     transcript: BilingualTranscript,
     includeTimestamps: boolean,
   ): void {
-    doc.fontSize(12).font('Helvetica-Bold').text('Bilingual Transcript', { align: 'center' });
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .text("Bilingual Transcript", { align: "center" });
     doc.moveDown(1);
 
     const pageWidth = doc.page.width - 100; // Account for margins
@@ -140,13 +159,20 @@ export class PdfGeneratorService {
     // Header
     doc
       .fontSize(10)
-      .font('Helvetica-Bold')
-      .text('English', leftX, doc.y, { width: columnWidth, continued: false })
-      .text('中文', rightX, doc.y - 12, { width: columnWidth });
+      .font("Helvetica-Bold")
+      .text("English", leftX, doc.y, { width: columnWidth, continued: false });
+
+    // Chinese header - use separate line with Helvetica
+    doc
+      .font("Helvetica-Bold")
+      .text("Chinese", rightX, doc.y - 12, { width: columnWidth });
 
     doc.moveDown(0.5);
 
-    const maxLength = Math.max(transcript.english.length, transcript.chinese.length);
+    const maxLength = Math.max(
+      transcript.english.length,
+      transcript.chinese.length,
+    );
 
     for (let i = 0; i < maxLength; i++) {
       const english = transcript.english[i];
@@ -161,16 +187,16 @@ export class PdfGeneratorService {
 
       // English column
       if (english) {
-        doc.font('Helvetica').fontSize(9);
+        doc.font("Helvetica").fontSize(9);
         if (includeTimestamps) {
           doc
-            .fillColor('#666666')
+            .fillColor("#666666")
             .text(this.formatTimestamp(english.start), leftX, startY, {
               width: columnWidth,
             });
         }
         doc
-          .fillColor('black')
+          .fillColor("black")
           .fontSize(10)
           .text(english.text, leftX, doc.y, { width: columnWidth });
       }
@@ -179,18 +205,20 @@ export class PdfGeneratorService {
 
       // Chinese column
       if (chinese) {
-        doc.font('Helvetica').fontSize(9);
+        doc.font("Helvetica").fontSize(9);
         if (includeTimestamps) {
           doc
-            .fillColor('#666666')
+            .fillColor("#666666")
             .text(this.formatTimestamp(chinese.start), rightX, startY, {
               width: columnWidth,
             });
         }
         doc
-          .fillColor('black')
+          .fillColor("black")
           .fontSize(10)
-          .text(chinese.text, rightX, doc.y, { width: columnWidth });
+          .text(this.sanitizeTextForPdf(chinese.text), rightX, doc.y, {
+            width: columnWidth,
+          });
       }
 
       const chineseEndY = doc.y;
@@ -209,10 +237,16 @@ export class PdfGeneratorService {
     transcript: BilingualTranscript,
     includeTimestamps: boolean,
   ): void {
-    doc.fontSize(12).font('Helvetica-Bold').text('Bilingual Transcript', { align: 'center' });
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .text("Bilingual Transcript", { align: "center" });
     doc.moveDown(1);
 
-    const maxLength = Math.max(transcript.english.length, transcript.chinese.length);
+    const maxLength = Math.max(
+      transcript.english.length,
+      transcript.chinese.length,
+    );
 
     for (let i = 0; i < maxLength; i++) {
       const english = transcript.english[i];
@@ -227,25 +261,25 @@ export class PdfGeneratorService {
         const timestamp = english ? english.start : chinese.start;
         doc
           .fontSize(9)
-          .font('Helvetica-Bold')
-          .fillColor('#666666')
+          .font("Helvetica-Bold")
+          .fillColor("#666666")
           .text(this.formatTimestamp(timestamp));
       }
 
       if (english) {
         doc
           .fontSize(10)
-          .font('Helvetica')
-          .fillColor('black')
+          .font("Helvetica")
+          .fillColor("black")
           .text(`EN: ${english.text}`);
       }
 
       if (chinese) {
         doc
           .fontSize(10)
-          .font('Helvetica')
-          .fillColor('#333333')
-          .text(`中文: ${chinese.text}`);
+          .font("Helvetica")
+          .fillColor("#333333")
+          .text(`Chinese: ${this.sanitizeTextForPdf(chinese.text)}`);
       }
 
       doc.moveDown(0.8);
@@ -263,8 +297,8 @@ export class PdfGeneratorService {
   ): void {
     doc
       .fontSize(12)
-      .font('Helvetica-Bold')
-      .text(`${language} Transcript`, { align: 'center' });
+      .font("Helvetica-Bold")
+      .text(`${language} Transcript`, { align: "center" });
     doc.moveDown(1);
 
     for (const segment of segments) {
@@ -276,16 +310,20 @@ export class PdfGeneratorService {
       if (includeTimestamps) {
         doc
           .fontSize(9)
-          .font('Helvetica')
-          .fillColor('#666666')
+          .font("Helvetica")
+          .fillColor("#666666")
           .text(this.formatTimestamp(segment.start));
       }
 
       doc
         .fontSize(10)
-        .font('Helvetica')
-        .fillColor('black')
-        .text(segment.text);
+        .font("Helvetica")
+        .fillColor("black")
+        .text(
+          language === "Chinese"
+            ? this.sanitizeTextForPdf(segment.text)
+            : segment.text,
+        );
 
       doc.moveDown(0.5);
     }
@@ -305,14 +343,11 @@ export class PdfGeneratorService {
 
       doc
         .fontSize(9)
-        .font('Helvetica')
-        .fillColor('#999999')
-        .text(
-          `Page ${pageNumber} of ${totalPages}`,
-          50,
-          doc.page.height - 30,
-          { align: 'center' }
-        );
+        .font("Helvetica")
+        .fillColor("#999999")
+        .text(`Page ${pageNumber} of ${totalPages}`, 50, doc.page.height - 30, {
+          align: "center",
+        });
     }
   }
 
@@ -325,9 +360,29 @@ export class PdfGeneratorService {
     const secs = Math.floor(seconds % 60);
 
     if (hours > 0) {
-      return `[${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}]`;
+      return `[${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}]`;
     }
-    return `[${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}]`;
+    return `[${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}]`;
+  }
+
+  /**
+   * Sanitize text for PDF rendering with limited font support
+   * PDFKit standard fonts don't support Chinese/CJK characters
+   * Replace them with a placeholder to prevent garbled output
+   */
+  private sanitizeTextForPdf(text: string): string {
+    if (!text) return text;
+
+    // Check if text contains non-ASCII characters
+    const hasNonAscii = /[^\x00-\x7F]/.test(text);
+
+    if (hasNonAscii) {
+      // Text contains non-ASCII characters (likely Chinese/CJK)
+      // PDFKit standard fonts don't support these, so return placeholder
+      return "[Chinese text - Font not supported in PDF]";
+    }
+
+    return text;
   }
 
   /**
@@ -340,7 +395,9 @@ export class PdfGeneratorService {
     english: TranscriptSegment[],
     chinese: TranscriptSegment[],
   ): BilingualTranscript {
-    this.logger.log(`Aligning transcripts: EN=${english.length}, ZH=${chinese.length}`);
+    this.logger.log(
+      `Aligning transcripts: EN=${english.length}, ZH=${chinese.length}`,
+    );
 
     // Simple alignment based on timestamps
     const aligned: BilingualTranscript = {
@@ -357,13 +414,21 @@ export class PdfGeneratorService {
 
       if (!enSeg && zhSeg) {
         // Only Chinese left
-        aligned.english.push({ text: '', start: zhSeg.start, duration: zhSeg.duration });
+        aligned.english.push({
+          text: "",
+          start: zhSeg.start,
+          duration: zhSeg.duration,
+        });
         aligned.chinese.push(zhSeg);
         zhIndex++;
       } else if (enSeg && !zhSeg) {
         // Only English left
         aligned.english.push(enSeg);
-        aligned.chinese.push({ text: '', start: enSeg.start, duration: enSeg.duration });
+        aligned.chinese.push({
+          text: "",
+          start: enSeg.start,
+          duration: enSeg.duration,
+        });
         enIndex++;
       } else if (enSeg && zhSeg) {
         // Both available - align by closest timestamp
@@ -378,11 +443,19 @@ export class PdfGeneratorService {
         } else if (enSeg.start < zhSeg.start) {
           // English comes first
           aligned.english.push(enSeg);
-          aligned.chinese.push({ text: '', start: enSeg.start, duration: enSeg.duration });
+          aligned.chinese.push({
+            text: "",
+            start: enSeg.start,
+            duration: enSeg.duration,
+          });
           enIndex++;
         } else {
           // Chinese comes first
-          aligned.english.push({ text: '', start: zhSeg.start, duration: zhSeg.duration });
+          aligned.english.push({
+            text: "",
+            start: zhSeg.start,
+            duration: zhSeg.duration,
+          });
           aligned.chinese.push(zhSeg);
           zhIndex++;
         }

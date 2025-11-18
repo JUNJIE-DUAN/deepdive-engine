@@ -267,7 +267,7 @@ export class AIEnrichmentService {
       sourceUrl?: string;
       type?: ResourceType;
     },
-    resourceType: ResourceType = 'PAPER',
+    resourceType: ResourceType = "PAPER",
   ): Promise<ResourceAISummary | null> {
     try {
       this.logger.log(
@@ -285,7 +285,7 @@ export class AIEnrichmentService {
           resourceType: resourceType,
           title: resource.title,
           abstract: resource.abstract,
-          language: 'zh',
+          language: "zh",
         },
       );
 
@@ -297,10 +297,16 @@ export class AIEnrichmentService {
         return response.data.summary;
       }
 
-      this.logger.warn(`Invalid structured summary response, falling back to conversion`);
+      this.logger.warn(
+        `Invalid structured summary response, falling back to conversion`,
+      );
       // 降级方案：如果返回无效，转换为结构化格式
-      const plainSummary = response.data.summary?.overview || contentForAI.substring(0, 300);
-      return convertToStructuredSummary(plainSummary, this.mapResourceTypeToCategory(resourceType));
+      const plainSummary =
+        response.data.summary?.overview || contentForAI.substring(0, 300);
+      return convertToStructuredSummary(
+        plainSummary,
+        this.mapResourceTypeToCategory(resourceType),
+      );
     } catch (error) {
       this.logger.error(
         `Failed to generate structured summary: ${getErrorMessage(error)}`,
@@ -315,14 +321,15 @@ export class AIEnrichmentService {
    */
   private mapResourceTypeToCategory(resourceType: ResourceType): string {
     const mapping: Record<ResourceType, string> = {
-      PAPER: 'Academic',
-      NEWS: 'News',
-      YOUTUBE_VIDEO: 'Video',
-      PROJECT: 'Technology',
-      EVENT: 'Event',
-      RSS: 'Feed',
+      PAPER: "Academic",
+      NEWS: "News",
+      YOUTUBE_VIDEO: "Video",
+      PROJECT: "Technology",
+      EVENT: "Event",
+      RSS: "Feed",
+      REPORT: "Report",
     };
-    return mapping[resourceType] || 'General';
+    return mapping[resourceType] || "General";
   }
 
   /**
@@ -337,7 +344,7 @@ export class AIEnrichmentService {
       sourceUrl?: string;
       type?: ResourceType;
     },
-    resourceType: ResourceType = 'PAPER',
+    resourceType: ResourceType = "PAPER",
   ): Promise<{
     aiSummary: string | null;
     keyInsights: any[];
@@ -348,20 +355,28 @@ export class AIEnrichmentService {
   }> {
     const contentForAI = this.buildContentForAI(resource);
 
-    this.logger.log(`Enriching resource with structured data: ${resource.title}`);
+    this.logger.log(
+      `Enriching resource with structured data: ${resource.title}`,
+    );
 
     // 并行调用三个 AI 服务
-    const [summary, insights, classification, structuredSummary] = await Promise.all([
-      this.generateSummary(contentForAI, 200, 'zh'),
-      this.extractInsights(contentForAI, 'zh'),
-      this.classifyContent(contentForAI),
-      this.generateStructuredSummary(resource, resourceType),
-    ]);
+    const [summary, insights, classification, structuredSummary] =
+      await Promise.all([
+        this.generateSummary(contentForAI, 200, "zh"),
+        this.extractInsights(contentForAI, "zh"),
+        this.classifyContent(contentForAI),
+        this.generateStructuredSummary(resource, resourceType),
+      ]);
 
     // 如果结构化摘要生成失败，尝试从普通摘要降级转换
     const finalStructuredSummary =
       structuredSummary ||
-      (summary ? convertToStructuredSummary(summary, classification?.category || 'General') : null);
+      (summary
+        ? convertToStructuredSummary(
+            summary,
+            classification?.category || "General",
+          )
+        : null);
 
     const difficultyLevelNum = classification?.difficultyLevel
       ? this.mapDifficultyToNumber(classification.difficultyLevel)
@@ -377,7 +392,7 @@ export class AIEnrichmentService {
     };
 
     this.logger.log(
-      `Resource enrichment completed: summary ✓, ${result.keyInsights.length} insights, structured summary ${finalStructuredSummary ? '✓' : '✗'}`,
+      `Resource enrichment completed: summary ✓, ${result.keyInsights.length} insights, structured summary ${finalStructuredSummary ? "✓" : "✗"}`,
     );
 
     return result;

@@ -320,8 +320,9 @@ export class AIEnrichmentService {
    * 映射资源类型到分类
    */
   private mapResourceTypeToCategory(resourceType: ResourceType): string {
-    const mapping: Record<ResourceType, string> = {
+    const mapping: Record<string, string> = {
       PAPER: "Academic",
+      BLOG: "Blog",
       NEWS: "News",
       YOUTUBE_VIDEO: "Video",
       PROJECT: "Technology",

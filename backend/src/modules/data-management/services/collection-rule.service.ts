@@ -283,16 +283,16 @@ export class CollectionRuleService {
    */
   getFilters(resourceType: ResourceType) {
     // 返回预定义的过滤条件，可以被规则覆盖
-    const defaultFilters: Record<ResourceType, Record<string, any>> = {
+    const defaultFilters: Record<string, Record<string, any>> = {
       PAPER: {
         minCitations: 0,
         keywords: [],
         excludeKeywords: [],
       },
-      PROJECT: {
-        minStars: 0,
-        languages: [],
-        topics: [],
+      BLOG: {
+        keywords: [],
+        excludeKeywords: [],
+        domains: [],
       },
       NEWS: {
         keywords: [],
@@ -319,6 +319,11 @@ export class CollectionRuleService {
         locations: [],
         dateRange: { start: new Date(), end: null },
       },
+      PROJECT: {
+        minStars: 0,
+        languages: [],
+        topics: [],
+      },
     };
 
     return defaultFilters[resourceType] || {};
@@ -341,14 +346,14 @@ export class CollectionRuleService {
           description: "Academic papers collection rule",
         },
         {
-          resourceType: "PROJECT" as ResourceType,
-          cronExpression: "0 */12 * * *", // 每12小时
+          resourceType: "BLOG" as ResourceType,
+          cronExpression: "0 */6 * * *", // 每6小时
           maxConcurrent: 3,
           timeout: 300,
-          deduplicationStrategy: "URL_ONLY",
-          minimumQualityScore: 0.5,
-          priority: 1,
-          description: "GitHub/GitLab projects collection rule",
+          deduplicationStrategy: "CONTENT_HASH",
+          minimumQualityScore: 0.6,
+          priority: 2,
+          description: "Tech research blogs collection rule",
         },
         {
           resourceType: "NEWS" as ResourceType,

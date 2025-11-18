@@ -79,12 +79,13 @@ model UserInterest {
 
 enum ResourceType {
   PAPER
-  PROJECT
+  BLOG
+  REPORT
+  YOUTUBE_VIDEO
   NEWS
+  PROJECT
   EVENT
   RSS
-  YOUTUBE_VIDEO
-  REPORT
 }
 
 enum WorkspaceStatus {
@@ -796,4 +797,42 @@ model CollectionStatistics {
   @@unique([resourceType])
   @@index([period])
   @@map("collection_statistics")
+}
+
+// ============================================================================
+// Collection Configuration - 专业采集器配置
+// ============================================================================
+
+model CollectionConfiguration {
+  id        String   @id @default(cuid())
+
+  resourceType ResourceType
+  name         String   @db.VarChar(255)
+  description  String?  @db.Text
+
+  // 关键词和过滤
+  keywords          Json?   // Array<string> - 包含关键词
+  excludeKeywords   Json?   // Array<string> - 排除关键词
+  urlPatterns       Json?   // Array<string> - URL匹配模式，支持*通配符
+
+  // 采集调度
+  cronExpression    String   @default("0 */6 * * *") // Cron表达式
+  maxConcurrent     Int      @default(3)  // 最大并发
+  timeout           Int      @default(300) // 超时时间（秒）
+
+  // 状态
+  isActive          Boolean  @default(true)
+
+  // 统计
+  totalCollected    Int      @default(0)
+  lastCollectedAt   DateTime?
+
+  // 时间戳
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([resourceType, name])
+  @@index([resourceType])
+  @@index([isActive])
+  @@map("collection_configurations")
 }

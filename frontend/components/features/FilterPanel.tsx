@@ -5,7 +5,7 @@ import { useState } from 'react';
 interface FilterPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'papers' | 'projects' | 'news' | 'youtube' | 'reports';
+  activeTab: 'papers' | 'blogs' | 'reports' | 'youtube' | 'news';
   selectedCategories: string[];
   setSelectedCategories: (categories: string[]) => void;
   dateRange: 'all' | '24h' | '7d' | '30d' | '90d';

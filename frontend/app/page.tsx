@@ -128,12 +128,12 @@ export default function Home() {
   // Initialize activeTab from URL query parameter if present
   const initialTab = (searchParams?.get('tab') || 'papers') as
     | 'papers'
-    | 'projects'
-    | 'news'
+    | 'blogs'
+    | 'reports'
     | 'youtube'
-    | 'reports';
+    | 'news';
   const [activeTab, setActiveTab] = useState<
-    'papers' | 'projects' | 'news' | 'youtube' | 'reports'
+    'papers' | 'blogs' | 'reports' | 'youtube' | 'news'
   >(initialTab);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(
     null
@@ -208,16 +208,10 @@ export default function Home() {
       maxSize: 50 * 1024 * 1024,
       label: 'PDF文件',
     },
-    projects: {
-      accept: '.zip,.tar.gz,application/zip,application/gzip',
-      maxSize: 100 * 1024 * 1024,
-      label: '压缩文件',
-    },
-    news: { accept: 'image/*', maxSize: 10 * 1024 * 1024, label: '图片' },
-    youtube: {
-      accept: '.srt,.vtt,text/plain',
-      maxSize: 5 * 1024 * 1024,
-      label: '字幕文件',
+    blogs: {
+      accept: 'image/*',
+      maxSize: 10 * 1024 * 1024,
+      label: '图片',
     },
     reports: {
       accept:
@@ -225,6 +219,12 @@ export default function Home() {
       maxSize: 100 * 1024 * 1024,
       label: '报告文件 (PDF/Word/Excel/PPT)',
     },
+    youtube: {
+      accept: '.srt,.vtt,text/plain',
+      maxSize: 5 * 1024 * 1024,
+      label: '字幕文件',
+    },
+    news: { accept: 'image/*', maxSize: 10 * 1024 * 1024, label: '图片' },
   };
 
   // Search suggestions states
@@ -478,17 +478,18 @@ export default function Home() {
 
       // Map tab to resource type
       const typeMap: Record<
-        'papers' | 'projects' | 'news' | 'reports',
+        'papers' | 'blogs' | 'reports' | 'youtube' | 'news',
         string
       > = {
         papers: 'PAPER',
-        projects: 'PROJECT',
-        news: 'NEWS',
+        blogs: 'BLOG',
         reports: 'REPORT',
+        youtube: 'YOUTUBE_VIDEO',
+        news: 'NEWS',
       };
       params.append(
         'type',
-        typeMap[activeTab as 'papers' | 'projects' | 'news' | 'reports']
+        typeMap[activeTab as 'papers' | 'blogs' | 'reports' | 'youtube' | 'news']
       );
 
       if (searchQuery) {
@@ -583,9 +584,10 @@ export default function Home() {
       // Map tab to resource type
       const typeMap: Record<string, string> = {
         papers: 'PAPER',
-        projects: 'PROJECT',
-        news: 'NEWS',
+        blogs: 'BLOG',
+        reports: 'REPORT',
         youtube: 'YOUTUBE_VIDEO',
+        news: 'NEWS',
       };
 
       const resourceType = typeMap[activeTab];
@@ -1280,9 +1282,10 @@ export default function Home() {
       // Map current tab to resource type
       const typeMap: Record<string, string> = {
         papers: 'PAPER',
-        projects: 'PROJECT',
-        news: 'NEWS',
+        blogs: 'BLOG',
+        reports: 'REPORT',
         youtube: 'YOUTUBE_VIDEO',
+        news: 'NEWS',
       };
 
       const type = typeMap[activeTab] || 'PAPER';
@@ -1574,9 +1577,9 @@ export default function Home() {
                     )}
                   </button>
                   <button
-                    onClick={() => setActiveTab('projects')}
+                    onClick={() => setActiveTab('blogs')}
                     className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'projects'
+                      activeTab === 'blogs'
                         ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
                         : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
                     }`}
@@ -1591,57 +1594,11 @@ export default function Home() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                        d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"
                       />
                     </svg>
-                    <span>Projects</span>
-                    {activeTab === 'projects' && (
-                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('news')}
-                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'news'
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                      />
-                    </svg>
-                    <span>News</span>
-                    {activeTab === 'news' && (
-                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('youtube')}
-                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'youtube'
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                    </svg>
-                    <span>YouTube</span>
-                    {activeTab === 'youtube' && (
+                    <span>Blogs</span>
+                    {activeTab === 'blogs' && (
                       <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
                     )}
                   </button>
@@ -1668,6 +1625,52 @@ export default function Home() {
                     </svg>
                     <span>Reports</span>
                     {activeTab === 'reports' && (
+                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('youtube')}
+                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                      activeTab === 'youtube'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                    }`}
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                    </svg>
+                    <span>YouTube</span>
+                    {activeTab === 'youtube' && (
+                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('news')}
+                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                      activeTab === 'news'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                    }`}
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                      />
+                    </svg>
+                    <span>News</span>
+                    {activeTab === 'news' && (
                       <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
                     )}
                   </button>
@@ -3073,11 +3076,13 @@ export default function Home() {
                 请输入
                 {activeTab === 'papers'
                   ? '论文'
-                  : activeTab === 'projects'
-                    ? '项目'
-                    : activeTab === 'youtube'
-                      ? 'YouTube视频'
-                      : '新闻'}
+                  : activeTab === 'blogs'
+                    ? '博客'
+                    : activeTab === 'reports'
+                      ? '报告'
+                      : activeTab === 'youtube'
+                        ? 'YouTube视频'
+                        : '新闻'}
                 的URL
               </label>
               <input

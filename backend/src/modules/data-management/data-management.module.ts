@@ -5,6 +5,10 @@ import { SourceWhitelistService } from "./services/source-whitelist.service";
 import { SourceWhitelistController } from "./controllers/source-whitelist.controller";
 import { CollectionRuleService } from "./services/collection-rule.service";
 import { CollectionRuleController } from "./controllers/collection-rule.controller";
+import { CollectionConfigurationService } from "./services/collection-configuration.service";
+import { CollectionConfigurationController } from "./controllers/collection-configuration.controller";
+import { ImportManagerService } from "./services/import-manager.service";
+import { ImportManagerController } from "./controllers/import-manager.controller";
 
 /**
  * Data Management Module
@@ -12,14 +16,31 @@ import { CollectionRuleController } from "./controllers/collection-rule.controll
  * 包括：
  * - 来源白名单管理
  * - 采集规则引擎
+ * - 采集配置管理（专业采集器）
  * - 采集任务监控
  * - 数据质量管理
+ * - 导入管理和URL解析
  */
 @Module({
   imports: [ConfigModule, PrismaModule],
-  providers: [SourceWhitelistService, CollectionRuleService],
-  controllers: [SourceWhitelistController, CollectionRuleController],
-  exports: [SourceWhitelistService, CollectionRuleService],
+  providers: [
+    SourceWhitelistService,
+    CollectionRuleService,
+    CollectionConfigurationService,
+    ImportManagerService,
+  ],
+  controllers: [
+    SourceWhitelistController,
+    CollectionRuleController,
+    CollectionConfigurationController,
+    ImportManagerController,
+  ],
+  exports: [
+    SourceWhitelistService,
+    CollectionRuleService,
+    CollectionConfigurationService,
+    ImportManagerService,
+  ],
 })
 export class DataManagementModule implements OnModuleInit {
   constructor(

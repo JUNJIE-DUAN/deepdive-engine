@@ -257,24 +257,30 @@ export function CollectionConfigurationPanel({
             {/* Configuration Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                配置名称
+                配置名称 <span className="text-xs text-gray-500">*必填</span>
               </label>
+              <p className="mt-1 text-xs text-gray-500">
+                给此采集配置起个有意义的名字
+              </p>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                placeholder="e.g. AI相关论文"
+                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                placeholder="例如: AI技术论文采集"
               />
             </div>
 
             {/* Keywords Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                包含关键词
+                包含关键词 <span className="text-xs text-gray-500">(可选)</span>
               </label>
+              <p className="mt-1 text-xs text-gray-500">
+                只采集包含这些关键词的内容
+              </p>
               <div className="mt-2 flex gap-2">
                 <input
                   type="text"
@@ -286,7 +292,7 @@ export function CollectionConfigurationPanel({
                     }
                   }}
                   className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  placeholder="输入关键词后按Enter"
+                  placeholder="输入关键词后按Enter (如: 人工智能)"
                 />
                 <button
                   onClick={handleAddKeyword}
@@ -316,8 +322,11 @@ export function CollectionConfigurationPanel({
             {/* Exclude Keywords Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                排除关键词
+                排除关键词 <span className="text-xs text-gray-500">(可选)</span>
               </label>
+              <p className="mt-1 text-xs text-gray-500">
+                排除包含这些关键词的内容，提高结果质量
+              </p>
               <div className="mt-2 flex gap-2">
                 <input
                   type="text"
@@ -329,7 +338,7 @@ export function CollectionConfigurationPanel({
                     }
                   }}
                   className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  placeholder="输入排除关键词后按Enter"
+                  placeholder="输入排除关键词后按Enter (如: 广告)"
                 />
                 <button
                   onClick={handleAddExcludeKeyword}
@@ -359,8 +368,11 @@ export function CollectionConfigurationPanel({
             {/* URL Patterns Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                URL模式 (支持*通配符)
+                数据源URL <span className="text-xs text-gray-500">(可选)</span>
               </label>
+              <p className="mt-1 text-xs text-gray-500">
+                只采集来自指定URL的内容，支持*通配符 (如: *.arxiv.org/*)
+              </p>
               <div className="mt-2 flex gap-2">
                 <input
                   type="text"
@@ -372,7 +384,7 @@ export function CollectionConfigurationPanel({
                     }
                   }}
                   className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  placeholder="e.g. *.arxiv.org/abs/*"
+                  placeholder="输入URL模式后按Enter (如: *.arxiv.org/abs/*)"
                 />
                 <button
                   onClick={handleAddUrlPattern}

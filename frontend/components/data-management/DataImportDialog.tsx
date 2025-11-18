@@ -8,6 +8,7 @@ interface DataImportDialogProps {
   onOpenChange: (open: boolean) => void;
   resourceType:
     | 'PAPER'
+    | 'BLOG'
     | 'PROJECT'
     | 'NEWS'
     | 'YOUTUBE_VIDEO'
@@ -32,6 +33,7 @@ interface URLParseResult {
 
 const RESOURCE_TYPE_DISPLAY = {
   PAPER: '学术论文',
+  BLOG: '研究博客',
   PROJECT: '开源项目',
   NEWS: '科技新闻',
   YOUTUBE_VIDEO: 'YouTube视频',
@@ -88,7 +90,7 @@ export function DataImportDialog({
 
   const handleValidateUrl = async () => {
     if (!url.trim()) {
-      setError('请输入URL');
+      setError('请输入有效的URL');
       return;
     }
 
@@ -104,7 +106,9 @@ export function DataImportDialog({
       setValidationResult(validationData.data);
 
       if (!validationData.data.isValid) {
-        setError(validationData.data.reason || '该URL不在允许列表中');
+        const reason = validationData.data.reason || '该URL来源不在允许列表中';
+        const friendlyError = `验证失败: ${reason}\n\n请检查:\n• URL是否正确\n• 网络连接是否正常\n• 该网站是否在${RESOURCE_TYPE_DISPLAY[resourceType]}支持列表中`;
+        setError(friendlyError);
         return;
       }
 
@@ -125,7 +129,7 @@ export function DataImportDialog({
 
       setStage('confirm-import');
     } catch (err) {
-      setError('解析URL失败，请重试');
+      setError('无法读取该URL的内容。请检查:\n• URL是否正确\n• 网络连接是否正常\n• 该网站是否支持');
       console.error(err);
     } finally {
       setLoading(false);
@@ -270,8 +274,8 @@ export function DataImportDialog({
               {error && (
                 <div className="mt-3 rounded bg-red-50 p-3 text-sm text-red-700">
                   <div className="flex gap-2">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                    <div>{error}</div>
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div className="whitespace-pre-wrap">{error}</div>
                   </div>
                 </div>
               )}
@@ -342,8 +346,8 @@ export function DataImportDialog({
               {error && (
                 <div className="mt-3 rounded bg-red-50 p-3 text-sm text-red-700">
                   <div className="flex gap-2">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                    <div>{error}</div>
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div className="whitespace-pre-wrap">{error}</div>
                   </div>
                 </div>
               )}

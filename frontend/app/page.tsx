@@ -1549,13 +1549,13 @@ export default function Home() {
 
               {/* Tabs and Filters */}
               <div className="flex items-center justify-between">
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   <button
                     onClick={() => setActiveTab('papers')}
-                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'papers'
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1572,16 +1572,13 @@ export default function Home() {
                       />
                     </svg>
                     <span>Papers</span>
-                    {activeTab === 'papers' && (
-                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
-                    )}
                   </button>
                   <button
                     onClick={() => setActiveTab('blogs')}
-                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'blogs'
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                        ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-sm'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1598,16 +1595,13 @@ export default function Home() {
                       />
                     </svg>
                     <span>Blogs</span>
-                    {activeTab === 'blogs' && (
-                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
-                    )}
                   </button>
                   <button
                     onClick={() => setActiveTab('reports')}
-                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'reports'
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200 shadow-sm'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1624,16 +1618,13 @@ export default function Home() {
                       />
                     </svg>
                     <span>Reports</span>
-                    {activeTab === 'reports' && (
-                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
-                    )}
                   </button>
                   <button
                     onClick={() => setActiveTab('youtube')}
-                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'youtube'
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                        ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1644,16 +1635,13 @@ export default function Home() {
                       <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                     </svg>
                     <span>YouTube</span>
-                    {activeTab === 'youtube' && (
-                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
-                    )}
                   </button>
                   <button
                     onClick={() => setActiveTab('news')}
-                    className={`group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'news'
-                        ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow-md'
+                        ? 'bg-green-50 text-green-700 border border-green-200 shadow-sm'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1670,9 +1658,6 @@ export default function Home() {
                       />
                     </svg>
                     <span>News</span>
-                    {activeTab === 'news' && (
-                      <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-3/4 -translate-x-1/2 rounded-full bg-white/60"></div>
-                    )}
                   </button>
                 </div>
 

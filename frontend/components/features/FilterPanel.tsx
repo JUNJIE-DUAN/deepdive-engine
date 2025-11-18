@@ -17,7 +17,10 @@ interface FilterPanelProps {
 }
 
 // 每个Tab的筛选配置
-const FILTER_CONFIGS = {
+const FILTER_CONFIGS: Record<
+  'papers' | 'blogs' | 'reports' | 'youtube' | 'news',
+  { categories: string[] }
+> = {
   papers: {
     categories: [
       'AI',
@@ -28,8 +31,15 @@ const FILTER_CONFIGS = {
       'Theory',
     ],
   },
-  projects: {
-    categories: ['Web', 'Mobile', 'AI/ML', 'DevOps', 'Security', 'Data'],
+  blogs: {
+    categories: [
+      'AI Research',
+      'Machine Learning',
+      'Engineering',
+      'Best Practices',
+      'Case Study',
+      'Tutorial',
+    ],
   },
   news: {
     categories: [

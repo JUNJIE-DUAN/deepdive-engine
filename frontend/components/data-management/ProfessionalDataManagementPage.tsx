@@ -68,7 +68,7 @@ const RESOURCE_TYPES: Array<{
 const MANAGEMENT_TABS: Array<{
   id: ManagementTab;
   name: string;
-  icon: React.ComponentType<{ className: string }>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   description: string;
 }> = [
   {
@@ -170,15 +170,15 @@ export function ProfessionalDataManagementPage() {
 
         {/* Resource Type TABs - Horizontal Tabs */}
         <div className="border-b border-gray-200 bg-white px-8">
-          <div className="flex gap-2 overflow-x-auto">
+          <div className="flex gap-1 overflow-x-auto">
             {RESOURCE_TYPES.map((type) => (
               <button
                 key={type.id}
                 onClick={() => setSelectedResourceType(type.id)}
-                className={`whitespace-nowrap px-4 py-4 text-sm font-medium border-b-2 transition-all ${
+                className={`whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-all ${
                   selectedResourceType === type.id
-                    ? `border-blue-600 ${type.color}`
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? `border-b-2 border-current ${type.color}`
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                 }`}
               >
                 <span className="mr-2">{type.icon}</span>

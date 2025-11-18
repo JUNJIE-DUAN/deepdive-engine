@@ -25,6 +25,7 @@ import { YoutubeModule } from "./modules/youtube/youtube.module";
 import { WorkspaceModule } from "./modules/workspace/workspace.module";
 import { AiModule } from "./modules/ai/ai.module";
 import { BlogCollectionModule } from "./modules/blog-collection/blog-collection.module";
+import { DataManagementModule } from "./modules/data-management/data-management.module";
 // import { AiOfficeModule } from "./ai-office/ai-office.module"; // Moved to backup - export handled by frontend
 // import { LearningPathsModule } from './modules/learning-paths/learning-paths.module'; // TODO: Enable later
 
@@ -72,6 +73,7 @@ import { BlogCollectionModule } from "./modules/blog-collection/blog-collection.
     WorkspaceModule,
     AiModule,
     BlogCollectionModule,
+    DataManagementModule,
     // AiOfficeModule, // Moved to backup - export handled by frontend
     // LearningPathsModule, // TODO: Enable later
   ],

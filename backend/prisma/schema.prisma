@@ -597,3 +597,203 @@ model CollectedReport {
   @@index([publishedAt(sort: Desc)])
   @@map("collected_reports")
 }
+
+// ============================================================================
+// Data Management Module - Source Whitelist, Collection Rules, and Monitoring
+// ============================================================================
+
+enum ImportTaskStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+model SourceWhitelist {
+  id        String   @id @default(cuid())
+  resourceType ResourceType
+
+  // 允许的域名或正则模式（存储为JSON数组）
+  allowedDomains Json // Array<string> 支持完整域名或通配符 (e.g., ["arxiv.org", "*.ieee.org"])
+  description    String?
+
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 字段用于跟踪验证统计
+  totalValidated Int @default(0)
+  totalRejected  Int @default(0)
+  lastValidatedAt DateTime?
+
+  @@unique([resourceType])
+  @@index([isActive])
+  @@map("source_whitelist")
+}
+
+model CollectionRule {
+  id        String   @id @default(cuid())
+  resourceType ResourceType
+
+  // 调度配置
+  cronExpression String @default("0 */6 * * *") // 默认每6小时
+  maxConcurrent  Int    @default(3)  // 最大并发任务数
+  timeout        Int    @default(300) // 超时时间（秒）
+
+  // 采集过滤条件（存储为JSON）
+  filters Json? // 包含 { keywords: string[], excludeKeywords: string[], domains: string[], etc. }
+
+  // 去重策略
+  deduplicationStrategy String @default("CONTENT_HASH") // CONTENT_HASH, URL_ONLY, TITLE_ONLY, CUSTOM
+
+  // 质量评分配置
+  minimumQualityScore Float @default(0.5) // 0-1 之间，低于此分数的数据将被过滤
+
+  // 启用状态和优先级
+  isActive Boolean @default(true)
+  priority Int    @default(0) // 更高的值表示更高的优先级
+
+  description String?
+  lastExecutedAt DateTime?
+  nextScheduledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关系
+  importTasks ImportTask[]
+
+  @@unique([resourceType])
+  @@index([isActive])
+  @@index([nextScheduledAt])
+  @@map("collection_rules")
+}
+
+model ImportTask {
+  id        String   @id @default(cuid())
+
+  resourceType ResourceType
+  ruleId       String?
+  rule         CollectionRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  // 源信息
+  sourceUrl    String
+  sourceDomain String? // 提取的域名，用于快速查询
+
+  // 任务状态
+  status       ImportTaskStatus @default(PENDING)
+  statusReason String?
+
+  // 处理统计
+  itemsFound   Int @default(0)
+  itemsProcessed Int @default(0)
+  itemsSaved   Int @default(0)
+  itemsRejected Int @default(0) // 被过滤或去重的项目
+
+  // 错误跟踪
+  errorMessage String?
+  errorDetails Json? // 详细的错误信息
+
+  // 去重信息
+  duplicatesFound Int @default(0)
+  deduplicationDetails Json? // 去重的详细信息
+
+  // 时间戳
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 性能指标
+  executionTimeMs Int? // 执行时间（毫秒）
+
+  // 元数据
+  metadata     Json?
+
+  @@index([resourceType])
+  @@index([status])
+  @@index([sourceDomain])
+  @@index([createdAt(sort: Desc)])
+  @@index([completedAt])
+  @@map("import_tasks")
+}
+
+model DataQualityMetric {
+  id        String   @id @default(cuid())
+
+  // 关联的资源
+  resourceType ResourceType
+  resourceId   String // 实际资源ID (paper.id, project.id, news.id, etc.)
+  sourceUrl    String? // 原始来源URL
+
+  // 质量评分（0-100）
+  qualityScore     Float @default(0)
+  completenessScore Float @default(0) // 完整性评分
+  relevanceScore    Float @default(0)  // 相关性评分
+
+  // 去重信息
+  duplicateScore   Float @default(0) // 相似度 (0 = 完全不同, 100 = 重复)
+  potentialDuplicateOf String? // 指向可能的重复项
+  isDuplicate      Boolean @default(false)
+
+  // 问题标记
+  issues Json? // Array of { type: string, severity: 'LOW'|'MEDIUM'|'HIGH', message: string }
+
+  // 标签和分类
+  tags     String[]
+  category String?
+
+  // 审核状态
+  reviewStatus String @default("PENDING") // PENDING, APPROVED, REJECTED, NEEDS_REVIEW
+  reviewedBy   String?
+  reviewNote   String?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([resourceType, resourceId])
+  @@index([resourceType])
+  @@index([isDuplicate])
+  @@index([qualityScore])
+  @@index([reviewStatus])
+  @@map("data_quality_metrics")
+}
+
+model CollectionStatistics {
+  id        String   @id @default(cuid())
+
+  resourceType ResourceType
+
+  // 统计数据
+  totalItems      Int @default(0)
+  totalCollected  Int @default(0)
+  totalSuccessful Int @default(0)
+  totalFailed     Int @default(0)
+  totalDuplicates Int @default(0)
+  totalRejected   Int @default(0)
+
+  // 质量统计
+  averageQualityScore Float @default(0)
+  itemsAboveQualityThreshold Int @default(0)
+  itemsBelowQualityThreshold Int @default(0)
+
+  // 时间统计
+  lastCollectionAt DateTime?
+  nextScheduledAt  DateTime?
+  averageCollectionDurationMs Int? // 平均采集耗时
+
+  // 成功率
+  successRate Float @default(0)
+
+  // 时间段统计
+  period String? // DAY, WEEK, MONTH (用于时间序列分析)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([resourceType])
+  @@index([period])
+  @@map("collection_statistics")
+}

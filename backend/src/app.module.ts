@@ -24,6 +24,7 @@ import { YoutubeVideosModule } from "./modules/youtube-videos/youtube-videos.mod
 import { YoutubeModule } from "./modules/youtube/youtube.module";
 import { WorkspaceModule } from "./modules/workspace/workspace.module";
 import { AiModule } from "./modules/ai/ai.module";
+import { BlogCollectionModule } from "./modules/blog-collection/blog-collection.module";
 // import { AiOfficeModule } from "./ai-office/ai-office.module"; // Moved to backup - export handled by frontend
 // import { LearningPathsModule } from './modules/learning-paths/learning-paths.module'; // TODO: Enable later
 
@@ -36,10 +37,12 @@ import { AiModule } from "./modules/ai/ai.module";
     }),
 
     // API限流保护 - 全局默认60请求/分钟
-    ThrottlerModule.forRoot([{
-      ttl: 60000, // 时间窗口：60秒
-      limit: 60,  // 限制：60次请求
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 时间窗口：60秒
+        limit: 60, // 限制：60次请求
+      },
+    ]),
 
     // 静态文件服务
     ServeStaticModule.forRoot({
@@ -68,6 +71,7 @@ import { AiModule } from "./modules/ai/ai.module";
     YoutubeVideosModule,
     WorkspaceModule,
     AiModule,
+    BlogCollectionModule,
     // AiOfficeModule, // Moved to backup - export handled by frontend
     // LearningPathsModule, // TODO: Enable later
   ],

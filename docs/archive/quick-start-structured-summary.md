@@ -5,6 +5,7 @@ Get up and running with the new structured AI summary system in 5 minutes.
 ## What's New?
 
 The system now provides **resource-type-specific structured AI output** with enhanced visual presentation:
+
 - Papers: Contributions, methodology, results
 - News: Headlines, impact, sentiment
 - Videos: Speakers, chapters, timestamps
@@ -13,6 +14,7 @@ The system now provides **resource-type-specific structured AI output** with enh
 ## Files to Know
 
 ### Frontend
+
 ```
 frontend/components/features/StructuredAISummary/
 ├── StructuredAISummaryRouter.tsx  ← Use this for smart routing
@@ -25,6 +27,7 @@ frontend/components/features/StructuredAISummary/
 **Types:** `frontend/types/ai-office.ts`
 
 ### Backend
+
 ```
 backend/src/modules/resources/
 ├── types/structured-ai-summary.types.ts  ← Type definitions
@@ -56,16 +59,19 @@ export function ResourceDetail({ resource }) {
 ## 2. Backend: Generate Structured Summary
 
 ### Endpoint
+
 ```http
 POST /api/v1/resources/:id/enrich-structured
 ```
 
 ### Example Request
+
 ```bash
 curl -X POST http://localhost:4000/api/v1/resources/abc123/enrich-structured
 ```
 
 ### Example Response
+
 ```json
 {
   "id": "abc123",
@@ -79,15 +85,22 @@ curl -X POST http://localhost:4000/api/v1/resources/abc123/enrich-structured
     "contributions": ["contrib1", "contrib2"],
     "methodology": "Research methodology..."
   },
-  "_structuredAISummary": { /* same as above */ }
+  "_structuredAISummary": {
+    /* same as above */
+  }
 }
 ```
 
 ## 3. Type Safety
 
 ### Check Summary Type
+
 ```typescript
-import { isPaperSummary, isNewsSummary, isVideoSummary } from '@/components/features/StructuredAISummary/StructuredAISummaryRouter';
+import {
+  isPaperSummary,
+  isNewsSummary,
+  isVideoSummary,
+} from "@/components/features/StructuredAISummary/StructuredAISummaryRouter";
 
 const summary = resource._structuredAISummary;
 
@@ -102,6 +115,7 @@ if (isPaperSummary(summary)) {
 ## 4. Database
 
 ### Migration
+
 ```bash
 # Create migration
 npx prisma migrate dev --name add_structured_ai_summary
@@ -111,6 +125,7 @@ cat prisma/migrations/*/migration.sql
 ```
 
 ### Field
+
 ```prisma
 // Added to Resource model
 structuredAISummary Json?    @map("structured_ai_summary")
@@ -119,11 +134,15 @@ structuredAISummary Json?    @map("structured_ai_summary")
 ## 5. AI Prompts
 
 ### Using Prompts
+
 ```typescript
-import { getPromptTemplate, validateStructuredResponse } from './config/ai-prompts.config';
+import {
+  getPromptTemplate,
+  validateStructuredResponse,
+} from "./config/ai-prompts.config";
 
 // Get template for resource type
-const template = getPromptTemplate('PAPER');
+const template = getPromptTemplate("PAPER");
 
 // Build messages
 const systemPrompt = template.system;
@@ -137,9 +156,9 @@ const userMessage = template.user({
 const response = await callAIService(systemPrompt, userMessage);
 
 // Validate response
-const validation = validateStructuredResponse(response, 'PAPER');
+const validation = validateStructuredResponse(response, "PAPER");
 if (!validation.valid) {
-  console.error('Errors:', validation.errors);
+  console.error("Errors:", validation.errors);
 }
 ```
 
@@ -150,13 +169,14 @@ The system automatically falls back if structured generation fails:
 ```typescript
 // If AI service fails:
 const plainSummary = "Original text summary...";
-const converted = convertToStructuredSummary(plainSummary, 'General');
+const converted = convertToStructuredSummary(plainSummary, "General");
 // Now you have a basic structured format
 ```
 
 ## 7. Testing Your Changes
 
 ### Test Frontend Component
+
 ```typescript
 // Quick test in browser console
 const mockSummary = {
@@ -178,6 +198,7 @@ ReactDOM.render(
 ```
 
 ### Test Backend Endpoint
+
 ```bash
 # With real resource
 curl -X POST http://localhost:4000/api/v1/resources/YOUR_ID/enrich-structured
@@ -191,6 +212,7 @@ tail -f backend/logs/app.log
 ### Add New Resource Type
 
 1. **Add type** in `structured-ai-summary.types.ts`:
+
 ```typescript
 interface BookAISummary extends StructuredAISummary {
   author: string;
@@ -204,6 +226,7 @@ type ResourceAISummary = BookAISummary | /* ... */;
 2. **Create component** in `frontend/components/features/StructuredAISummary/BookAISummary.tsx`
 
 3. **Add router logic** in `StructuredAISummaryRouter.tsx`:
+
 ```typescript
 const isBookSummary = (s: ResourceAISummary): s is BookAISummary => {
   return 'author' in s && 'publisher' in s;
@@ -214,9 +237,10 @@ if (isBookSummary(summary)) return <BookAISummary summary={summary} />;
 ```
 
 4. **Add prompt template** in `ai-prompts.config.ts`:
+
 ```typescript
 export const BookSummaryPrompt: AIPromptTemplate = {
-  name: 'book_summary',
+  name: "book_summary",
   // ...
 };
 ```
@@ -224,6 +248,7 @@ export const BookSummaryPrompt: AIPromptTemplate = {
 ### Customize UI Colors
 
 Edit component's Tailwind classes:
+
 ```typescript
 // In PaperAISummary.tsx
 <div className="bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -234,6 +259,7 @@ Edit component's Tailwind classes:
 ### Adjust Prompt
 
 Edit template in `ai-prompts.config.ts`:
+
 ```typescript
 export const PaperSummaryPrompt: AIPromptTemplate = {
   user: (paper) => `
@@ -246,6 +272,7 @@ export const PaperSummaryPrompt: AIPromptTemplate = {
 ## 9. Performance Tips
 
 ### Enable Caching
+
 ```typescript
 // In AIEnrichmentService
 const cacheKey = `summary:${resourceId}`;
@@ -253,10 +280,11 @@ const cached = await redis.get(cacheKey);
 if (cached) return JSON.parse(cached);
 
 // Generate...
-await redis.set(cacheKey, JSON.stringify(summary), 'EX', 86400); // 24h
+await redis.set(cacheKey, JSON.stringify(summary), "EX", 86400); // 24h
 ```
 
 ### Parallel Generation
+
 ```typescript
 // Already implemented in enrichResourceWithStructured()
 // Generates summary + insights + classification + structured in parallel
@@ -265,12 +293,12 @@ const [s1, s2, s3, s4] = await Promise.all([...]);
 
 ## 10. Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Component not rendering | Check if summary is null, verify structure matches type |
-| API returns plain summary | Check AI service is available, see error logs |
-| Type errors in frontend | Verify imports from `ai-office.ts`, check type guards |
-| Database migration fails | Check PostgreSQL, ensure no conflicts, see prisma logs |
+| Issue                     | Solution                                                |
+| ------------------------- | ------------------------------------------------------- |
+| Component not rendering   | Check if summary is null, verify structure matches type |
+| API returns plain summary | Check AI service is available, see error logs           |
+| Type errors in frontend   | Verify imports from `ai-office.ts`, check type guards   |
+| Database migration fails  | Check PostgreSQL, ensure no conflicts, see prisma logs  |
 
 ## Useful Commands
 

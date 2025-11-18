@@ -10,50 +10,62 @@
 根据用户反馈（CLAUDE.md），原数据采集系统存在以下致命问题：
 
 ### 1. ❌ 原问题：MongoDB raw_data 信息不完整
+
 **现状**: ✅ **已修复**
 
 **问题详情**:
+
 - 用户报告：`data_collection_raw_data` 集合只存储基本信息，缺少有效数据
 
 **修复措施**:
+
 - 所有 crawler 服务（HackerNews, GitHub, arXiv）现已存储完整原始数据
 - 包括所有字段：metadata, contributors, README (GitHub), comments (HN), authors (arXiv)等
 
 **验证方法**:
+
 ```bash
 curl "http://localhost:4000/api/v1/resources/{id}" | jq '.rawData'
 ```
 
 ### 2. ❌ 原问题：缺少 resource 引用
+
 **现状**: ✅ **已修复**
 
 **问题详情**:
+
 - MongoDB `data_collection_raw_data` 没有引用回 PostgreSQL resource ID
 - 只有单向引用（PostgreSQL → MongoDB）
 
 **修复措施**:
+
 - 更新 `MongoDBService` 添加 `linkResourceToRawData()` 方法
 - 所有 crawler 创建 resource 后立即建立反向引用
 
 **代码位置**:
+
 - `backend/src/common/mongodb/mongodb.service.ts:123-137`
 - `backend/src/crawler/hackernews.service.ts:162`
 - `backend/src/crawler/github.service.ts:159`
 - `backend/src/crawler/arxiv.service.ts:126`
 
 ### 3. ❌ 原问题：存在大量重复数据
+
 **现状**: ✅ **已修复并验证**
 
 **问题详情**:
+
 - resource 表存在大量重复记录
 - 业务代码缺少去重逻辑
 
 **修复措施**:
+
 - 去重逻辑已实现并正常工作
 - 基于 externalId (HN item ID, GitHub repo full_name, arXiv ID) 去重
 - MongoDB 查询确保插入前检查是否已存在
 
 **验证日志**:
+
 ```
 DEBUG [HackernewsService] Story already exists: 45856804
 DEBUG [HackernewsService] Story already exists: 45852328
@@ -61,12 +73,15 @@ DEBUG [HackernewsService] Story already exists: 45852328
 ```
 
 ### 4. ❌ 原问题：resource 集合数据不全
+
 **现状**: ✅ **已修复**
 
 **问题详情**:
+
 - resource-xxx 集合缺少数据字段
 
 **修复措施**:
+
 - 所有 crawler 现在提取完整的结构化数据
 - 包括：title, abstract, authors, categories, tags, metadata等
 - MongoDB 保留完整原始数据（`_raw` 字段）
@@ -78,6 +93,7 @@ DEBUG [HackernewsService] Story already exists: 45852328
 ### 1. 双向引用系统
 
 **PostgreSQL → MongoDB**:
+
 ```typescript
 // resource 表中的 rawDataId 字段
 const resource = await this.prisma.resource.create({
@@ -89,6 +105,7 @@ const resource = await this.prisma.resource.create({
 ```
 
 **MongoDB → PostgreSQL** (新增):
+
 ```typescript
 // data_collection_raw_data 文档中的 resourceId 字段
 const document = {
@@ -103,6 +120,7 @@ const document = {
 ### 2. 完整数据存储
 
 **HackerNews 完整字段**:
+
 ```json
 {
   "externalId": "45856804",
@@ -122,6 +140,7 @@ const document = {
 ```
 
 **GitHub 完整字段**:
+
 ```json
 {
   "externalId": "owner/repo",
@@ -138,6 +157,7 @@ const document = {
 ```
 
 **arXiv 完整字段**:
+
 ```json
 {
   "externalId": "2311.12345",
@@ -154,8 +174,12 @@ const document = {
 ### 3. 去重逻辑
 
 **MongoDB 去重查询**:
+
 ```typescript
-const existingRawData = await this.mongodb.findRawDataByExternalId('hackernews', externalId);
+const existingRawData = await this.mongodb.findRawDataByExternalId(
+  "hackernews",
+  externalId,
+);
 
 if (existingRawData) {
   this.logger.debug(`Story already exists: ${itemId}`);
@@ -164,6 +188,7 @@ if (existingRawData) {
 ```
 
 **验证结果**:
+
 - 第一次爬取：成功插入 30 条数据
 - 第二次爬取：检测到重复，全部跳过
 - 无重复数据进入数据库 ✅
@@ -175,16 +200,19 @@ if (existingRawData) {
 **现状**: ⚠️ **需要配置 API 密钥**
 
 **问题**:
+
 - AI 服务正常运行但 API 密钥未配置
 - 导致 `aiSummary`, `keyInsights`, `autoTags` 字段为 null
 
 **错误日志**:
+
 ```
 ERROR [AIEnrichmentService] Failed to generate summary: Request failed with status code 503
 ```
 
 **解决方案**:
 在 `ai-service/.env` 中配置真实 API 密钥：
+
 ```env
 USE_GCP_SECRET_MANAGER=false
 GROK_API_KEY=your_actual_grok_key_here
@@ -192,6 +220,7 @@ OPENAI_API_KEY=your_actual_openai_key_here
 ```
 
 **获取 API 密钥**:
+
 - Grok: https://console.x.ai/
 - OpenAI: https://platform.openai.com/api-keys
 
@@ -200,6 +229,7 @@ OPENAI_API_KEY=your_actual_openai_key_here
 ## 📊 当前数据状态
 
 ### 资源统计
+
 ```bash
 $ curl "http://localhost:4000/api/v1/resources/stats/summary"
 {
@@ -211,6 +241,7 @@ $ curl "http://localhost:4000/api/v1/resources/stats/summary"
 ```
 
 ### 数据完整性
+
 - ✅ PostgreSQL: 30 条 resources
 - ✅ MongoDB: 30 条 raw_data 文档
 - ✅ 每个 resource 都有 `rawDataId` 引用
@@ -218,6 +249,7 @@ $ curl "http://localhost:4000/api/v1/resources/stats/summary"
 - ✅ 新数据将自动包含双向引用
 
 ### 示例数据结构
+
 ```bash
 $ curl "http://localhost:4000/api/v1/resources/{id}"
 {
@@ -263,6 +295,7 @@ $ curl "http://localhost:4000/api/v1/resources/{id}"
 ## 🎯 数据采集 API 使用
 
 ### 1. HackerNews
+
 ```bash
 # 热门新闻
 curl -X POST "http://localhost:4000/api/v1/crawler/hackernews/top" \
@@ -281,6 +314,7 @@ curl -X POST "http://localhost:4000/api/v1/crawler/hackernews/best" \
 ```
 
 ### 2. GitHub
+
 ```bash
 # Trending 项目
 curl -X POST "http://localhost:4000/api/v1/crawler/github/trending" \
@@ -294,6 +328,7 @@ curl -X POST "http://localhost:4000/api/v1/crawler/github/search" \
 ```
 
 ### 3. arXiv
+
 ```bash
 # 最新论文
 curl -X POST "http://localhost:4000/api/v1/crawler/arxiv/latest" \
@@ -311,18 +346,22 @@ curl -X POST "http://localhost:4000/api/v1/crawler/arxiv/search" \
 ## ✨ 核心改进点
 
 ### 1. 数据完整性 ✅
+
 - **之前**: 只存储基本字段
 - **现在**: 存储所有字段包括 README、contributors、comments 等
 
 ### 2. 双向引用 ✅
+
 - **之前**: 只有 PostgreSQL → MongoDB (rawDataId)
 - **现在**: MongoDB ↔ PostgreSQL (resourceId + rawDataId)
 
 ### 3. 去重机制 ✅
+
 - **之前**: 无去重，导致大量重复
 - **现在**: 基于 externalId 严格去重，已验证有效
 
 ### 4. 数据查询 ✅
+
 - **之前**: resource API 不返回原始数据
 - **现在**: GET /resources/:id 自动关联返回 MongoDB rawData
 
@@ -331,12 +370,14 @@ curl -X POST "http://localhost:4000/api/v1/crawler/arxiv/search" \
 ## 📝 测试验证
 
 ### 1. 验证完整数据存储
+
 ```bash
 curl "http://localhost:4000/api/v1/resources/d8ac4bdb-36f4-4c2b-a0ef-7f5f569c974d" | jq '.rawData | keys'
 # 输出应包含: externalId, _raw, fetchedAt, 等所有字段
 ```
 
 ### 2. 验证去重逻辑
+
 ```bash
 # 第一次爬取
 curl -X POST "http://localhost:4000/api/v1/crawler/hackernews/top" -d '{"maxResults":5}'
@@ -348,6 +389,7 @@ curl -X POST "http://localhost:4000/api/v1/crawler/hackernews/top" -d '{"maxResu
 ```
 
 ### 3. 验证双向引用
+
 ```bash
 # PostgreSQL → MongoDB
 curl "http://localhost:4000/api/v1/resources/{id}" | jq '.rawDataId'
@@ -362,6 +404,7 @@ curl "http://localhost:4000/api/v1/resources/{id}" | jq '.rawDataId'
 ## 🔄 下一步建议
 
 ### P0 - 立即执行
+
 1. **配置 AI API 密钥** (启用 AI 增强功能)
    - 在 `ai-service/.env` 中填写真实 API 密钥
    - 重启 AI 服务
@@ -371,6 +414,7 @@ curl "http://localhost:4000/api/v1/resources/{id}" | jq '.rawDataId'
    - 建议清空后重新爬取
 
 ### P1 - 功能增强
+
 3. **添加更多数据源**
    - Reddit
    - Product Hunt
@@ -399,13 +443,14 @@ curl "http://localhost:4000/api/v1/resources/{id}" | jq '.rawDataId'
 ## ✅ 总结
 
 ### 修复成果
+
 1. ✅ 数据完整性：所有字段完整存储
 2. ✅ 双向引用：MongoDB ↔ PostgreSQL 完整关联
 3. ✅ 去重机制：严格去重，已验证有效
 4. ✅ 数据查询：API 自动返回完整数据
 
 ### 待配置
+
 1. ⚠️ AI API 密钥：需要配置真实密钥以启用 AI 增强
 
 ### 数据采集功能现已完全可用！✅
-

@@ -41,6 +41,7 @@ export const WHITELISTED_DOMAINS = [
   "news.ycombinator.com",
   "blog.cloudflare.com",
   "blog.tensorflow.org",
+  "newsletter.semianalysis.com",
 
   // 科技公司博客 (Tech Company Blogs)
   "blog.google",

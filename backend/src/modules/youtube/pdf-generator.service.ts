@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import * as PDFDocument from "pdfkit";
+import * as puppeteer from "puppeteer";
 import { TranscriptSegment } from "./youtube.service";
+import { Readable } from "stream";
 
 export interface SubtitleExportOptions {
   format:
@@ -30,324 +31,402 @@ export class PdfGeneratorService {
   private readonly logger = new Logger(PdfGeneratorService.name);
 
   /**
-   * Generate PDF from subtitles
+   * Generate PDF from subtitles using Puppeteer
    * @param transcript Bilingual transcript data
    * @param metadata Video metadata
    * @param options Export options
    * @returns PDF document stream
    */
-  generatePdf(
+  async generatePdf(
     transcript: BilingualTranscript,
     metadata: VideoMetadata,
     options: SubtitleExportOptions,
-  ): PDFKit.PDFDocument {
+  ): Promise<Readable> {
     this.logger.log(`Generating PDF for video: ${metadata.videoId}`);
 
-    const doc = new PDFDocument({
-      size: "A4",
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
-      bufferPages: true,
-    });
+    const html = this.generateHtml(transcript, metadata, options);
+    const pdfBuffer = await this.renderPdfFromHtml(html);
 
-    // Add metadata
-    if (options.includeMetadata) {
-      this.addMetadataSection(doc, metadata, options.includeVideoUrl);
-      doc.moveDown(2);
-    }
+    // Convert buffer to stream
+    const stream = new Readable();
+    stream.push(pdfBuffer);
+    stream.push(null);
 
-    // Add subtitles based on format
-    switch (options.format) {
-      case "bilingual-side":
-        this.addBilingualSideBySide(doc, transcript, options.includeTimestamps);
-        break;
-      case "bilingual-stack":
-        this.addBilingualStacked(doc, transcript, options.includeTimestamps);
-        break;
-      case "english-only":
-        this.addSingleLanguage(
-          doc,
-          transcript.english,
-          "English",
-          options.includeTimestamps,
-        );
-        break;
-      case "chinese-only":
-        this.addSingleLanguage(
-          doc,
-          transcript.chinese,
-          "Chinese",
-          options.includeTimestamps,
-        );
-        break;
-    }
-
-    // Add page numbers
-    this.addPageNumbers(doc);
-
-    // Finalize the PDF
-    doc.end();
-
-    return doc as PDFKit.PDFDocument;
+    return stream;
   }
 
   /**
-   * Add metadata section to PDF
+   * Generate HTML for PDF rendering
    */
-  private addMetadataSection(
-    doc: PDFKit.PDFDocument,
+  private generateHtml(
+    transcript: BilingualTranscript,
+    metadata: VideoMetadata,
+    options: SubtitleExportOptions,
+  ): string {
+    const styles = this.getCssStyles();
+    const contentHtml = this.generateContent(transcript, options);
+    const metadataHtml = options.includeMetadata
+      ? this.generateMetadata(metadata, options.includeVideoUrl)
+      : "";
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>${styles}</style>
+      </head>
+      <body>
+        ${metadataHtml}
+        ${contentHtml}
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Get CSS styles for PDF
+   */
+  private getCssStyles(): string {
+    return `
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+        line-height: 1.6;
+        color: #333;
+        padding: 50px;
+      }
+
+      .metadata {
+        border-bottom: 2px solid #ccc;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        text-align: center;
+      }
+
+      .metadata h1 {
+        font-size: 24px;
+        margin-bottom: 10px;
+        word-break: break-word;
+      }
+
+      .metadata a {
+        color: #0066cc;
+        text-decoration: none;
+        font-size: 12px;
+      }
+
+      .metadata a:hover {
+        text-decoration: underline;
+      }
+
+      .metadata .export-info {
+        font-size: 11px;
+        color: #666;
+        margin-top: 10px;
+        font-style: italic;
+      }
+
+      .content-section {
+        margin-bottom: 40px;
+      }
+
+      .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .transcript-container {
+        display: flex;
+        gap: 20px;
+      }
+
+      .transcript-column {
+        flex: 1;
+      }
+
+      .column-header {
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .segment {
+        margin-bottom: 15px;
+        page-break-inside: avoid;
+      }
+
+      .timestamp {
+        font-size: 10px;
+        color: #999;
+        display: block;
+        margin-bottom: 3px;
+      }
+
+      .text {
+        font-size: 11px;
+        line-height: 1.5;
+        color: #333;
+      }
+
+      .stacked .segment {
+        margin-bottom: 20px;
+      }
+
+      .stacked .timestamp {
+        font-weight: bold;
+      }
+
+      .stacked .segment-label {
+        font-size: 10px;
+        font-weight: bold;
+        margin-top: 5px;
+        color: #666;
+      }
+
+      .stacked .english {
+        color: #000;
+      }
+
+      .stacked .chinese {
+        color: #333;
+      }
+
+      .single-language {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .single-language .segment {
+        margin-bottom: 12px;
+      }
+
+      @media print {
+        body {
+          padding: 20px;
+        }
+
+        .page-break {
+          page-break-after: always;
+        }
+      }
+    `;
+  }
+
+  /**
+   * Generate metadata HTML
+   */
+  private generateMetadata(
     metadata: VideoMetadata,
     includeUrl: boolean,
-  ): void {
-    doc
-      .fontSize(18)
-      .font("Helvetica")
-      .text(metadata.title, { align: "center" });
+  ): string {
+    const exportDate = metadata.exportDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
 
-    doc.moveDown(0.5);
-
-    if (includeUrl) {
-      doc
-        .fontSize(10)
-        .font("Helvetica")
-        .fillColor("blue")
-        .text(metadata.url, {
-          align: "center",
-          link: metadata.url,
-          underline: true,
-        })
-        .fillColor("black");
-
-      doc.moveDown(0.3);
-    }
-
-    doc
-      .fontSize(9)
-      .font("Helvetica-Oblique")
-      .text(`Exported on: ${metadata.exportDate.toLocaleString()}`, {
-        align: "center",
-      })
-      .text(`Video ID: ${metadata.videoId}`, { align: "center" });
-
-    doc.moveDown(0.5);
-    doc
-      .strokeColor("#cccccc")
-      .lineWidth(1)
-      .moveTo(50, doc.y)
-      .lineTo(doc.page.width - 50, doc.y)
-      .stroke();
+    return `
+      <div class="metadata">
+        <h1>${this.escapeHtml(metadata.title)}</h1>
+        ${
+          includeUrl
+            ? `<a href="${metadata.url}" target="_blank">${metadata.url}</a>`
+            : ""
+        }
+        <div class="export-info">
+          Exported on: ${exportDate}
+          <br>
+          Video ID: ${metadata.videoId}
+        </div>
+      </div>
+    `;
   }
 
   /**
-   * Add bilingual subtitles side by side
+   * Generate content HTML based on format
    */
-  private addBilingualSideBySide(
-    doc: PDFKit.PDFDocument,
+  private generateContent(
+    transcript: BilingualTranscript,
+    options: SubtitleExportOptions,
+  ): string {
+    switch (options.format) {
+      case "bilingual-side":
+        return this.generateBilingualSideBySide(transcript, options.includeTimestamps);
+      case "bilingual-stack":
+        return this.generateBilingualStacked(transcript, options.includeTimestamps);
+      case "english-only":
+        return this.generateSingleLanguage(
+          transcript.english,
+          "EN",
+          options.includeTimestamps,
+        );
+      case "chinese-only":
+        return this.generateSingleLanguage(
+          transcript.chinese,
+          "CN",
+          options.includeTimestamps,
+        );
+      default:
+        return "";
+    }
+  }
+
+  /**
+   * Generate bilingual side-by-side HTML
+   */
+  private generateBilingualSideBySide(
     transcript: BilingualTranscript,
     includeTimestamps: boolean,
-  ): void {
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .text("Bilingual Transcript", { align: "center" });
-    doc.moveDown(1);
-
-    const pageWidth = doc.page.width - 100; // Account for margins
-    const columnWidth = pageWidth / 2 - 10;
-    const leftX = 50;
-    const rightX = 50 + columnWidth + 20;
-
-    // Header
-    doc
-      .fontSize(10)
-      .font("Helvetica-Bold")
-      .text("English", leftX, doc.y, { width: columnWidth, continued: false });
-
-    // Chinese header - use separate line with Helvetica
-    doc
-      .font("Helvetica-Bold")
-      .text("Chinese", rightX, doc.y - 12, { width: columnWidth });
-
-    doc.moveDown(0.5);
-
+  ): string {
     const maxLength = Math.max(
       transcript.english.length,
       transcript.chinese.length,
     );
 
+    let content = `<div class="content-section"><div class="section-title">Bilingual Transcript</div>`;
+    content += `<div class="transcript-container">`;
+    content += `<div class="transcript-column"><div class="column-header">EN</div>`;
+
     for (let i = 0; i < maxLength; i++) {
       const english = transcript.english[i];
-      const chinese = transcript.chinese[i];
-
-      // Check if we need a new page
-      if (doc.y > doc.page.height - 100) {
-        doc.addPage();
-      }
-
-      const startY = doc.y;
-
-      // English column
       if (english) {
-        doc.font("Helvetica").fontSize(9);
+        content += `<div class="segment">`;
         if (includeTimestamps) {
-          doc
-            .fillColor("#666666")
-            .text(this.formatTimestamp(english.start), leftX, startY, {
-              width: columnWidth,
-            });
+          content += `<span class="timestamp">${this.formatTimestamp(english.start)}</span>`;
         }
-        doc
-          .fillColor("black")
-          .fontSize(10)
-          .text(english.text, leftX, doc.y, { width: columnWidth });
+        content += `<div class="text">${this.escapeHtml(english.text)}</div>`;
+        content += `</div>`;
       }
-
-      const englishEndY = doc.y;
-
-      // Chinese column
-      if (chinese) {
-        doc.font("Helvetica").fontSize(9);
-        if (includeTimestamps) {
-          doc
-            .fillColor("#666666")
-            .text(this.formatTimestamp(chinese.start), rightX, startY, {
-              width: columnWidth,
-            });
-        }
-        doc
-          .fillColor("black")
-          .fontSize(10)
-          .text(this.sanitizeTextForPdf(chinese.text), rightX, doc.y, {
-            width: columnWidth,
-          });
-      }
-
-      const chineseEndY = doc.y;
-
-      // Move to the maximum Y position
-      doc.y = Math.max(englishEndY, chineseEndY);
-      doc.moveDown(0.5);
     }
+
+    content += `</div><div class="transcript-column"><div class="column-header">CN</div>`;
+
+    for (let i = 0; i < maxLength; i++) {
+      const chinese = transcript.chinese[i];
+      if (chinese) {
+        content += `<div class="segment">`;
+        if (includeTimestamps) {
+          content += `<span class="timestamp">${this.formatTimestamp(chinese.start)}</span>`;
+        }
+        content += `<div class="text">${this.escapeHtml(chinese.text)}</div>`;
+        content += `</div>`;
+      }
+    }
+
+    content += `</div></div></div>`;
+    return content;
   }
 
   /**
-   * Add bilingual subtitles stacked (one after another)
+   * Generate bilingual stacked HTML
    */
-  private addBilingualStacked(
-    doc: PDFKit.PDFDocument,
+  private generateBilingualStacked(
     transcript: BilingualTranscript,
     includeTimestamps: boolean,
-  ): void {
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .text("Bilingual Transcript", { align: "center" });
-    doc.moveDown(1);
-
+  ): string {
     const maxLength = Math.max(
       transcript.english.length,
       transcript.chinese.length,
     );
 
+    let content = `<div class="content-section stacked"><div class="section-title">Bilingual Transcript</div>`;
+
     for (let i = 0; i < maxLength; i++) {
       const english = transcript.english[i];
       const chinese = transcript.chinese[i];
 
-      // Check if we need a new page
-      if (doc.y > doc.page.height - 100) {
-        doc.addPage();
-      }
-
-      if (includeTimestamps && (english || chinese)) {
+      if (english || chinese) {
         const timestamp = english ? english.start : chinese.start;
-        doc
-          .fontSize(9)
-          .font("Helvetica-Bold")
-          .fillColor("#666666")
-          .text(this.formatTimestamp(timestamp));
-      }
+        content += `<div class="segment">`;
 
-      if (english) {
-        doc
-          .fontSize(10)
-          .font("Helvetica")
-          .fillColor("black")
-          .text(`EN: ${english.text}`);
-      }
+        if (includeTimestamps) {
+          content += `<span class="timestamp">${this.formatTimestamp(timestamp)}</span>`;
+        }
 
-      if (chinese) {
-        doc
-          .fontSize(10)
-          .font("Helvetica")
-          .fillColor("#333333")
-          .text(`Chinese: ${this.sanitizeTextForPdf(chinese.text)}`);
-      }
+        if (english) {
+          content += `<div class="text english">EN: ${this.escapeHtml(english.text)}</div>`;
+        }
 
-      doc.moveDown(0.8);
+        if (chinese) {
+          content += `<div class="text chinese">CN: ${this.escapeHtml(chinese.text)}</div>`;
+        }
+
+        content += `</div>`;
+      }
     }
+
+    content += `</div>`;
+    return content;
   }
 
   /**
-   * Add single language subtitles
+   * Generate single language HTML
    */
-  private addSingleLanguage(
-    doc: PDFKit.PDFDocument,
+  private generateSingleLanguage(
     segments: TranscriptSegment[],
     language: string,
     includeTimestamps: boolean,
-  ): void {
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .text(`${language} Transcript`, { align: "center" });
-    doc.moveDown(1);
+  ): string {
+    let content = `<div class="content-section single-language"><div class="section-title">${language} Transcript</div>`;
 
     for (const segment of segments) {
-      // Check if we need a new page
-      if (doc.y > doc.page.height - 100) {
-        doc.addPage();
-      }
-
+      content += `<div class="segment">`;
       if (includeTimestamps) {
-        doc
-          .fontSize(9)
-          .font("Helvetica")
-          .fillColor("#666666")
-          .text(this.formatTimestamp(segment.start));
+        content += `<span class="timestamp">${this.formatTimestamp(segment.start)}</span>`;
       }
-
-      doc
-        .fontSize(10)
-        .font("Helvetica")
-        .fillColor("black")
-        .text(
-          language === "Chinese"
-            ? this.sanitizeTextForPdf(segment.text)
-            : segment.text,
-        );
-
-      doc.moveDown(0.5);
+      content += `<div class="text">${this.escapeHtml(segment.text)}</div>`;
+      content += `</div>`;
     }
+
+    content += `</div>`;
+    return content;
   }
 
   /**
-   * Add page numbers to all pages
+   * Render HTML to PDF using Puppeteer
    */
-  private addPageNumbers(doc: PDFKit.PDFDocument): void {
-    const range = doc.bufferedPageRange();
+  private async renderPdfFromHtml(html: string): Promise<Buffer> {
+    let browser: puppeteer.Browser | null = null;
 
-    for (let i = range.start; i < range.start + range.count; i++) {
-      doc.switchToPage(i);
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+        ],
+      });
 
-      const pageNumber = i + 1;
-      const totalPages = range.count;
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "networkidle0" });
 
-      doc
-        .fontSize(9)
-        .font("Helvetica")
-        .fillColor("#999999")
-        .text(`Page ${pageNumber} of ${totalPages}`, 50, doc.page.height - 30, {
-          align: "center",
-        });
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        margin: { top: 0, bottom: 0, left: 0, right: 0 },
+        printBackground: true,
+      });
+
+      await page.close();
+      return Buffer.from(pdfBuffer);
+    } finally {
+      if (browser) {
+        await browser.close();
+      }
     }
   }
 
@@ -366,23 +445,17 @@ export class PdfGeneratorService {
   }
 
   /**
-   * Sanitize text for PDF rendering with limited font support
-   * PDFKit standard fonts don't support Chinese/CJK characters
-   * Replace them with a placeholder to prevent garbled output
+   * Escape HTML special characters
    */
-  private sanitizeTextForPdf(text: string): string {
-    if (!text) return text;
-
-    // Check if text contains non-ASCII characters
-    const hasNonAscii = /[^\x00-\x7F]/.test(text);
-
-    if (hasNonAscii) {
-      // Text contains non-ASCII characters (likely Chinese/CJK)
-      // PDFKit standard fonts don't support these, so return placeholder
-      return "[Chinese text - Font not supported in PDF]";
-    }
-
-    return text;
+  private escapeHtml(text: string): string {
+    const map: { [key: string]: string } = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    };
+    return text.replace(/[&<>"']/g, (char) => map[char]);
   }
 
   /**

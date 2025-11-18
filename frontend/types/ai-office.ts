@@ -94,6 +94,177 @@ export interface AIAnalysis {
   learningOutcomes: string[];
 }
 
+// ============================================================================
+// 结构化AI摘要 (新增)
+// ============================================================================
+
+/**
+ * 结构化摘要基础接口
+ * 用于统一不同资源类型的AI分析输出
+ */
+export interface StructuredAISummary {
+  // 核心摘要（必需）
+  overview: string; // 200-300字概览
+
+  // 分类信息
+  category: string;
+  subcategories: string[];
+
+  // 关键信息
+  keyPoints: string[]; // 3-5个要点
+  keywords: string[]; // 3-8个关键词
+
+  // 元信息
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  readingTime: number; // 分钟
+
+  // 可视化建议
+  visualizations?: Array<{
+    type: 'timeline' | 'flowchart' | 'diagram' | 'chart' | 'matrix';
+    description: string;
+    dataPoints?: string[];
+  }>;
+
+  // 质量评分
+  confidence: number; // 0-1
+
+  // 生成信息
+  generatedAt: Date;
+  model: string;
+}
+
+/**
+ * 学术论文专属结构化摘要
+ */
+export interface PaperAISummary extends StructuredAISummary {
+  // 论文特定字段
+  contributions: string[]; // 主要贡献
+  methodology: string; // 研究方法
+  results: string; // 主要结果
+  limitations: string[]; // 局限性
+  futureWork: string[]; // 后续工作方向
+
+  // 学术指标
+  citationContext?: {
+    citationCount: number;
+    h5Index?: number;
+    impactFactor?: number;
+  };
+
+  // 相关性
+  relatedTopics: string[];
+  field: string;
+  subfield: string;
+}
+
+/**
+ * 新闻文章专属结构化摘要
+ */
+export interface NewsAISummary extends StructuredAISummary {
+  // 新闻特定字段
+  headline: string;
+  coreNews: string; // 核心新闻事实
+  background: string; // 背景信息
+  impact: string; // 影响分析
+  quotes?: Array<{
+    text: string;
+    source: string;
+  }>;
+
+  // 新闻特性
+  newsFactor: 'breaking' | 'developing' | 'analysis' | 'feature';
+  sentiment: 'positive' | 'neutral' | 'negative';
+  urgency: 'high' | 'medium' | 'low';
+
+  // 关联信息
+  relatedEntities: Array<{
+    name: string;
+    type: 'person' | 'organization' | 'location' | 'event';
+    relevance: number;
+  }>;
+}
+
+/**
+ * 视频专属结构化摘要
+ */
+export interface VideoAISummary extends StructuredAISummary {
+  // 视频特定字段
+  speakers: Array<{
+    name: string;
+    role?: string;
+    expertise?: string;
+  }>;
+
+  chapters: Array<{
+    timestamp: number; // 秒数
+    title: string;
+    summary: string;
+  }>;
+
+  mainTopic: string;
+  subtopics: string[];
+
+  // 视频特性
+  videoType: 'lecture' | 'tutorial' | 'interview' | 'demo' | 'discussion';
+  pace: 'slow' | 'normal' | 'fast';
+  audience: 'beginner' | 'intermediate' | 'advanced';
+
+  // 可视化资源
+  keyFrames?: Array<{
+    timestamp: number;
+    description: string;
+    importance: number;
+  }>;
+
+  // 观看信息
+  estimatedWatchTime: number; // 分钟
+  keyTimestamps: Array<{
+    time: number;
+    label: string;
+  }>;
+}
+
+/**
+ * 开源项目专属结构化摘要
+ */
+export interface ProjectAISummary extends StructuredAISummary {
+  // 项目特定字段
+  projectName: string;
+  purpose: string; // 项目目的
+  mainFeatures: string[]; // 主要功能
+  techStack: string[]; // 技术栈
+
+  // 项目指标
+  activity: {
+    stars: number;
+    forks: number;
+    openIssues: number;
+    activeContributors: number;
+    lastUpdate: Date;
+    isActive: boolean;
+  };
+
+  // 项目特性
+  maturity: 'alpha' | 'beta' | 'stable' | 'mature';
+  license: string;
+  ecosystem: string;
+
+  // 使用指南
+  gettingStarted: string;
+  useCases: string[];
+  learningCurve: 'easy' | 'moderate' | 'steep';
+}
+
+/**
+ * 联合类型：所有资源的结构化摘要
+ */
+export type ResourceAISummary =
+  | StructuredAISummary
+  | PaperAISummary
+  | NewsAISummary
+  | VideoAISummary
+  | ProjectAISummary;
+
 export interface YouTubeResource extends BaseResource {
   resourceType: 'youtube_video';
   url: string;

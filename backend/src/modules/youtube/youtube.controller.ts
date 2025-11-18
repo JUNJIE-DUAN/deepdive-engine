@@ -65,12 +65,12 @@ export class YoutubeController {
 
     try {
       // Fetch English subtitles
-      const englishTranscript = await this.youtubeService.getTranscript(cleanVideoId);
+      const englishTranscript = await this.youtubeService.getTranscript(cleanVideoId, "en");
 
-      // Fetch Chinese subtitles (attempt multiple language codes)
+      // Fetch Chinese subtitles
       let chineseTranscript;
       try {
-        chineseTranscript = await this.youtubeService.getTranscript(cleanVideoId);
+        chineseTranscript = await this.youtubeService.getTranscript(cleanVideoId, "zh");
       } catch (error) {
         this.logger.warn(`Chinese subtitles not available for ${cleanVideoId}, using empty array`);
         chineseTranscript = {
@@ -131,7 +131,7 @@ export class YoutubeController {
         chinese: chineseSubtitles || [],
       };
 
-      const pdfStream = this.pdfGeneratorService.generatePdf(transcript, metadata, options);
+      const pdfStream = await this.pdfGeneratorService.generatePdf(transcript, metadata, options);
 
       // Set response headers
       const filename = `youtube-subtitles-${videoId}.pdf`;

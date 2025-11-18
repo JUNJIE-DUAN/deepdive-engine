@@ -124,6 +124,9 @@ model Resource {
   difficultyLevel Int?         @map("difficulty_level")
   prerequisites   Json?
 
+  // 结构化AI摘要（新增，为前端最新版本组件提供支持）
+  structuredAISummary Json?    @map("structured_ai_summary")
+
   // 分类
   primaryCategory String?      @map("primary_category")
   categories      Json?        @default("[]")

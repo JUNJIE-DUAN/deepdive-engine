@@ -24,7 +24,7 @@ export default function ResearchPageRenderer({
   const [showOutline, setShowOutline] = useState(true);
 
   // 解析Markdown内容为章节
-  const parseContentSections = (markdown: string) => {
+  const parseContentSections = (markdown: string): Array<{ id: string; title: string; content: string; level: number }> => {
     const sections: Array<{ id: string; title: string; content: string; level: number }> = [];
     const lines = markdown.split('\n');
     let currentSection: { id: string; title: string; content: string[]; level: number } | null = null;
@@ -35,7 +35,9 @@ export default function ResearchPageRenderer({
         // 保存上一个section
         if (currentSection) {
           sections.push({
-            ...currentSection,
+            id: currentSection.id,
+            title: currentSection.title,
+            level: currentSection.level,
             content: currentSection.content.join('\n'),
           });
         }
@@ -59,7 +61,9 @@ export default function ResearchPageRenderer({
     // 保存最后一个section
     if (currentSection) {
       sections.push({
-        ...currentSection,
+        id: currentSection.id,
+        title: currentSection.title,
+        level: currentSection.level,
         content: currentSection.content.join('\n'),
       });
     }
@@ -116,7 +120,7 @@ export default function ResearchPageRenderer({
           </div>
 
           <div className="space-y-1">
-            {sections
+            {(sections as Array<{ id: string; title: string; content: string; level: number }>)
               .filter((s) => s.level <= 2) // 只显示h1和h2
               .map((section) => (
                 <button

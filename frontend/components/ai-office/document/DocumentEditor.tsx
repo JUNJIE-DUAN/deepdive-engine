@@ -564,9 +564,12 @@ export default function DocumentEditor() {
                                 {slide.title}
                               </div>
                               {/* Content preview */}
-                              {slide.content && (
+                              {slide.content && slide.content.length > 0 && (
                                 <div className="line-clamp-2 text-xs leading-tight text-gray-600">
-                                  {slide.content.substring(0, 60)}...
+                                  {Array.isArray(slide.content)
+                                    ? slide.content.join(' ').substring(0, 60)
+                                    : String(slide.content).substring(0, 60)}
+                                  ...
                                 </div>
                               )}
                             </button>

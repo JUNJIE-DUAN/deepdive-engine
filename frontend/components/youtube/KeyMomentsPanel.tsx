@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export interface KeyMoment {
   id: string;
@@ -31,6 +31,18 @@ export default function KeyMomentsPanel({
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>(
     'all'
   );
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const activeMomentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to active moment
+  useEffect(() => {
+    if (activeMomentRef.current && scrollContainerRef.current) {
+      activeMomentRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [currentTime]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -203,7 +215,10 @@ export default function KeyMomentsPanel({
       )}
 
       {/* Moments List */}
-      <div className="max-h-80 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+      >
         {filteredMoments.length === 0 ? (
           <div className="py-12 text-center">
             <div className="text-4xl">🔍</div>
@@ -220,6 +235,7 @@ export default function KeyMomentsPanel({
               return (
                 <div
                   key={moment.id}
+                  ref={isActive ? activeMomentRef : null}
                   onClick={() => onSeek(moment.timestamp)}
                   className={`group cursor-pointer rounded-lg border-2 p-3 transition-all ${
                     isActive

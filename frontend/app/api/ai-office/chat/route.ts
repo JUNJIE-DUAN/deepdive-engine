@@ -75,18 +75,20 @@ export async function POST(request: NextRequest) {
         if (agentPlan.needsResourceAnalysis) {
           const analyzer = new ResourceAnalysisAgent('grok');
 
-          // 转换资源格式
-          const convertedResources: Resource[] = resources.map((r) => ({
+          // 转换资源格式 (简化版本用于分析)
+          const convertedResources = resources.map((r) => ({
             _id: '',
-            type: r.resourceType as any,
-            title: r.metadata?.title || '未命名资源',
-            url: r.metadata?.url || '',
+            userId: '',
+            resourceId: '',
+            resourceType: r.resourceType as any,
             status: 'collected' as const,
-            addedAt: new Date(),
-            abstract: r.metadata?.description,
-            authors: r.metadata?.authors?.split(','),
-            content: r.aiAnalysis?.summary,
-          }));
+            collectedAt: new Date(),
+            updatedAt: new Date(),
+            url: r.metadata?.url || '',
+            metadata: r.metadata || {},
+            content: {},
+            aiAnalysis: r.aiAnalysis || { summary: '', keyPoints: [] },
+          })) as any;
 
           resourceAnalysis = await analyzer.analyze({
             resources: convertedResources,

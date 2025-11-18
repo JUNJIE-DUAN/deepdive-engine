@@ -134,10 +134,10 @@ export class VerificationAgent {
   private buildPrompt(content: string, sources: Resource[], documentType?: string): string {
     const sourceSummaries = sources
       .map(
-        (s, i) => `
+        (s: any, i) => `
 资源 ${i + 1}: ${s.title}
-${s.abstract ? `摘要: ${s.abstract.substring(0, 300)}` : ''}
-${s.authors ? `作者: ${s.authors.join(', ')}` : ''}
+${s.abstract && typeof s.abstract === 'string' ? `摘要: ${s.abstract.substring(0, 300)}` : ''}
+${s.authors && Array.isArray(s.authors) ? `作者: ${s.authors.join(', ')}` : ''}
 `
       )
       .join('\n');

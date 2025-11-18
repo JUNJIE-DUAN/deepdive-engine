@@ -250,6 +250,52 @@ export class ResourcesController {
   }
 
   /**
+   * AI 增强资源 - 结构化版本（支持新版前端组件）
+   * POST /api/v1/resources/:id/enrich-structured
+   * 返回包含结构化 AI 摘要的完整数据
+   */
+  @Post(":id/enrich-structured")
+  async enrichResourceStructured(@Param("id") id: string) {
+    this.logger.log(`Enriching resource ${id} with structured AI data`);
+
+    // 获取资源
+    const resource = await this.resourcesService.findOne(id);
+    if (!resource) {
+      throw new HttpException(`Resource ${id} not found`, HttpStatus.NOT_FOUND);
+    }
+
+    // 调用结构化 AI 增强服务
+    const enrichment = await this.aiEnrichmentService.enrichResourceWithStructured(
+      {
+        title: resource.title,
+        abstract: resource.abstract ?? undefined,
+        content: resource.content ?? undefined,
+        sourceUrl: resource.sourceUrl,
+        type: resource.type,
+      },
+      resource.type,
+    );
+
+    // 更新资源（包含结构化摘要）
+    const updated = await this.resourcesService.update(id, {
+      aiSummary: enrichment.aiSummary,
+      keyInsights: enrichment.keyInsights as any,
+      primaryCategory: enrichment.primaryCategory,
+      autoTags: enrichment.autoTags,
+      difficultyLevel: enrichment.difficultyLevel,
+      structuredAISummary: enrichment.structuredAISummary as any,
+    });
+
+    this.logger.log(`Resource ${id} enriched with structured data successfully`);
+
+    return {
+      ...updated,
+      // 显式返回结构化摘要供前端使用
+      _structuredAISummary: enrichment.structuredAISummary,
+    };
+  }
+
+  /**
    * 上传并保存资源缩略图
    * POST /api/v1/resources/:id/thumbnail
    *

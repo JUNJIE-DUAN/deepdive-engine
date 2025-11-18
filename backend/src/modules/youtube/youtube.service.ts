@@ -37,13 +37,20 @@ export class YoutubeService {
   /**
    * Fetch YouTube video transcript
    * @param videoId YouTube video ID
+   * @param lang Language code (default: 'en')
    * @returns Transcript data
    */
-  async getTranscript(videoId: string): Promise<TranscriptResponse> {
+  async getTranscript(videoId: string, lang: string = "en"): Promise<TranscriptResponse> {
     let transcriptSegments: TranscriptSegment[] = [];
     let title: string | null = null;
     try {
-      this.logger.log(`Fetching transcript for video: ${videoId}`);
+      this.logger.log(`Fetching transcript for video: ${videoId} (lang: ${lang})`);
+
+      // If requesting Chinese, skip youtubei.js and go directly to fallback methods
+      if (lang.startsWith("zh")) {
+        this.logger.log(`Requesting Chinese transcript, using fallback methods`);
+        throw new Error("Force fallback for Chinese");
+      }
 
       await this.ensureClient();
       const info = await this.youtube!.getInfo(videoId);
@@ -85,24 +92,24 @@ export class YoutubeService {
         `Successfully fetched ${transcript.length} transcript segments for "${title ?? videoId}"`,
       );
     } catch (error: unknown) {
-      this.logger.error(`Failed to fetch transcript for ${videoId}:`, error);
+      this.logger.error(`Failed to fetch transcript for ${videoId} (lang: ${lang}):`, error);
 
       // Try youtube-transcript library first
-      const npmTranscript = await this.fetchTranscriptNpm(videoId);
+      const npmTranscript = await this.fetchTranscriptNpm(videoId, lang);
       if (npmTranscript) {
         transcriptSegments = npmTranscript.segments;
         title = title ?? npmTranscript.title;
         this.logger.log(
-          `Used youtube-transcript npm package for ${videoId}, segments=${transcriptSegments.length}`,
+          `Used youtube-transcript npm package for ${videoId} (lang: ${lang}), segments=${transcriptSegments.length}`,
         );
       } else {
         // Try external API fallback
-        const fallback = await this.fetchTranscriptFallback(videoId);
+        const fallback = await this.fetchTranscriptFallback(videoId, lang);
         if (fallback) {
           transcriptSegments = fallback.segments;
           title = title ?? fallback.title;
           this.logger.warn(
-            `Used fallback transcript provider for ${videoId}, segments=${transcriptSegments.length}`,
+            `Used fallback transcript provider for ${videoId} (lang: ${lang}), segments=${transcriptSegments.length}`,
           );
         } else {
           if (error instanceof NotFoundException) {
@@ -191,15 +198,23 @@ export class YoutubeService {
     }
   }
 
-  private async fetchTranscriptNpm(videoId: string): Promise<{
+  private async fetchTranscriptNpm(
+    videoId: string,
+    preferredLang: string = "en",
+  ): Promise<{
     segments: TranscriptSegment[];
     title: string | null;
   } | null> {
     try {
       const { YoutubeTranscript } = await import("youtube-transcript");
 
-      // Try with different language codes
-      const languages = ["zh-Hans", "zh-Hant", "zh", "en", "ja", "ko"];
+      // Build language list with preferred language first
+      let languages: string[];
+      if (preferredLang.startsWith("zh")) {
+        languages = ["zh-Hans", "zh-Hant", "zh", "en", "ja", "ko"];
+      } else {
+        languages = [preferredLang, "en", "zh-Hans", "zh-Hant", "zh", "ja", "ko"];
+      }
 
       for (const lang of languages) {
         try {
@@ -239,12 +254,20 @@ export class YoutubeService {
     }
   }
 
-  private async fetchTranscriptFallback(videoId: string): Promise<{
+  private async fetchTranscriptFallback(
+    videoId: string,
+    preferredLang: string = "en",
+  ): Promise<{
     segments: TranscriptSegment[];
     title: string | null;
   } | null> {
-    // Try multiple language codes
-    const languages = ["zh", "zh-CN", "zh-TW", "en", "ja", "ko"];
+    // Try multiple language codes with preferred language first
+    let languages: string[];
+    if (preferredLang.startsWith("zh")) {
+      languages = ["zh", "zh-CN", "zh-TW", "en", "ja", "ko"];
+    } else {
+      languages = [preferredLang, "en", "zh", "zh-CN", "zh-TW", "ja", "ko"];
+    }
 
     for (const lang of languages) {
       try {

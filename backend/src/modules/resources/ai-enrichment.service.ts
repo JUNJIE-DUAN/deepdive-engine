@@ -2,6 +2,12 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { getErrorMessage } from "../../common/utils/error.utils";
 import axios, { AxiosInstance } from "axios";
+import { ResourceType } from "@prisma/client";
+import {
+  ResourceAISummary,
+  convertToStructuredSummary,
+  isStructuredAISummary,
+} from "./types/structured-ai-summary.types";
 
 /**
  * AI 增强服务
@@ -247,5 +253,133 @@ export class AIEnrichmentService {
       );
       return false;
     }
+  }
+
+  /**
+   * 生成结构化AI摘要（支持不同资源类型）
+   * 针对论文、新闻、视频、项目等不同类型的资源优化输出格式
+   */
+  async generateStructuredSummary(
+    resource: {
+      title: string;
+      abstract?: string;
+      content?: string;
+      sourceUrl?: string;
+      type?: ResourceType;
+    },
+    resourceType: ResourceType = 'PAPER',
+  ): Promise<ResourceAISummary | null> {
+    try {
+      this.logger.log(
+        `Generating structured summary for ${resourceType}: ${resource.title}`,
+      );
+
+      // 构建用于 AI 分析的内容
+      const contentForAI = this.buildContentForAI(resource);
+
+      // 调用 AI 服务生成结构化摘要
+      const response = await this.httpClient.post(
+        "/api/v1/ai/generate-structured-summary",
+        {
+          content: contentForAI,
+          resourceType: resourceType,
+          title: resource.title,
+          abstract: resource.abstract,
+          language: 'zh',
+        },
+      );
+
+      // 验证响应是否为有效的结构化摘要
+      if (isStructuredAISummary(response.data.summary)) {
+        this.logger.log(
+          `Structured summary generated using ${response.data.model}`,
+        );
+        return response.data.summary;
+      }
+
+      this.logger.warn(`Invalid structured summary response, falling back to conversion`);
+      // 降级方案：如果返回无效，转换为结构化格式
+      const plainSummary = response.data.summary?.overview || contentForAI.substring(0, 300);
+      return convertToStructuredSummary(plainSummary, this.mapResourceTypeToCategory(resourceType));
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate structured summary: ${getErrorMessage(error)}`,
+      );
+      // 返回 null，让调用者决定是否使用降级方案
+      return null;
+    }
+  }
+
+  /**
+   * 映射资源类型到分类
+   */
+  private mapResourceTypeToCategory(resourceType: ResourceType): string {
+    const mapping: Record<ResourceType, string> = {
+      PAPER: 'Academic',
+      NEWS: 'News',
+      YOUTUBE_VIDEO: 'Video',
+      PROJECT: 'Technology',
+      EVENT: 'Event',
+      RSS: 'Feed',
+    };
+    return mapping[resourceType] || 'General';
+  }
+
+  /**
+   * 完整的结构化 AI 增强处理
+   * 结合传统字段和结构化摘要
+   */
+  async enrichResourceWithStructured(
+    resource: {
+      title: string;
+      abstract?: string;
+      content?: string;
+      sourceUrl?: string;
+      type?: ResourceType;
+    },
+    resourceType: ResourceType = 'PAPER',
+  ): Promise<{
+    aiSummary: string | null;
+    keyInsights: any[];
+    primaryCategory: string | null;
+    autoTags: string[];
+    difficultyLevel: number | null;
+    structuredAISummary: ResourceAISummary | null;
+  }> {
+    const contentForAI = this.buildContentForAI(resource);
+
+    this.logger.log(`Enriching resource with structured data: ${resource.title}`);
+
+    // 并行调用三个 AI 服务
+    const [summary, insights, classification, structuredSummary] = await Promise.all([
+      this.generateSummary(contentForAI, 200, 'zh'),
+      this.extractInsights(contentForAI, 'zh'),
+      this.classifyContent(contentForAI),
+      this.generateStructuredSummary(resource, resourceType),
+    ]);
+
+    // 如果结构化摘要生成失败，尝试从普通摘要降级转换
+    const finalStructuredSummary =
+      structuredSummary ||
+      (summary ? convertToStructuredSummary(summary, classification?.category || 'General') : null);
+
+    const difficultyLevelNum = classification?.difficultyLevel
+      ? this.mapDifficultyToNumber(classification.difficultyLevel)
+      : null;
+
+    const result = {
+      aiSummary: summary,
+      keyInsights: insights || [],
+      primaryCategory: classification?.category || null,
+      autoTags: classification?.tags || [],
+      difficultyLevel: difficultyLevelNum,
+      structuredAISummary: finalStructuredSummary,
+    };
+
+    this.logger.log(
+      `Resource enrichment completed: summary ✓, ${result.keyInsights.length} insights, structured summary ${finalStructuredSummary ? '✓' : '✗'}`,
+    );
+
+    return result;
   }
 }

@@ -136,13 +136,13 @@ export class ResourceAnalysisAgent {
   ): string {
     const resourceSummaries = resources
       .map(
-        (r, i) => `
+        (r: any, i) => `
 资源 ${i + 1}: ${r.title}
 类型: ${r.type}
 ${r.abstract ? `摘要: ${r.abstract}` : ''}
 ${r.authors ? `作者: ${r.authors.join(', ')}` : ''}
 ${r.metadata?.year ? `年份: ${r.metadata.year}` : ''}
-${r.content ? `内容片段: ${r.content.substring(0, 800)}...` : ''}
+${r.content && typeof r.content === 'string' ? `内容片段: ${r.content.substring(0, 800)}...` : ''}
 `
       )
       .join('\n---\n');
@@ -243,12 +243,12 @@ ${depthInstruction}
     const findings: ResourceAnalysis['findings'] = [];
 
     // 从资源标题和摘要提取基础信息
-    resources.forEach((resource) => {
+    resources.forEach((resource: any) => {
       if (resource.title) {
         insights.push(`研究主题：${resource.title}`);
       }
 
-      if (resource.abstract) {
+      if (resource.abstract && typeof resource.abstract === 'string') {
         findings.push({
           claim: `来自 ${resource.title} 的发现`,
           evidence: resource.abstract.substring(0, 200),

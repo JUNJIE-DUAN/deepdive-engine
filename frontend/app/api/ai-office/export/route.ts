@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证格式
-    const validFormats = ['word', 'ppt', 'pdf', 'markdown'];
+    const validFormats = ['word', 'ppt', 'pdf', 'markdown', 'html', 'latex'];
     if (!validFormats.includes(format)) {
       return NextResponse.json(
         { error: `Invalid format. Supported formats: ${validFormats.join(', ')}` },
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const buffer = await documentExportService.exportDocument({
       title,
       content,
-      format: format as 'word' | 'ppt' | 'pdf' | 'markdown',
+      format: format as 'word' | 'ppt' | 'pdf' | 'markdown' | 'html' | 'latex',
       template,
     });
 
@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
       ppt: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       pdf: 'application/pdf',
       markdown: 'text/markdown',
+      html: 'text/html',
+      latex: 'application/x-latex',
     };
 
     const extensions = {
@@ -55,6 +57,8 @@ export async function POST(request: NextRequest) {
       ppt: 'pptx',
       pdf: 'pdf',
       markdown: 'md',
+      html: 'html',
+      latex: 'tex',
     };
 
     const mimeType = mimeTypes[format as keyof typeof mimeTypes];

@@ -13,7 +13,7 @@ import {
   useTaskStore,
   Task,
 } from '@/stores/aiOfficeStore';
-import { Send, Paperclip, Sparkles, FileText, StopCircle } from 'lucide-react';
+import { Send, Paperclip, Sparkles, FileText, StopCircle, Bot, Zap } from 'lucide-react';
 import DocumentGenerationWizard, {
   type GenerationConfig,
 } from '../document/DocumentGenerationWizard';
@@ -36,6 +36,10 @@ export default function ChatPanel() {
     addMessage,
     stopGeneration,
     shouldStopGeneration,
+    agentMode,
+    setAgentMode,
+    agentStatus,
+    setAgentStatus,
   } = useChatStore();
   const currentDocumentId =
     useDocumentStore((state: any) => state.currentDocumentId) || 'default';
@@ -714,6 +718,7 @@ ${userInput || ''}
           documentId: targetDocumentId,
           stream: true,
           isDocumentGeneration: isDocumentGenerationRequest,
+          agentMode: agentMode, // Pass agent mode to API
           conversationHistory: conversationHistory, // 发送完整对话历史
         }),
       });
@@ -1162,6 +1167,7 @@ ${userInput || ''}
           resources: selectedResources,
           generateDocument: true,
           stream: true,
+          agentMode: agentMode, // Pass agent mode to API
         }),
       });
 
@@ -1393,15 +1399,48 @@ ${userInput || ''}
           <Sparkles className="h-5 w-5 text-purple-600" />
           <h3 className="text-sm font-semibold text-gray-700">AI 智能助手</h3>
         </div>
-        <div className="text-xs text-gray-500">
-          {isStreaming ? (
-            <span className="flex items-center space-x-1">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-              <span>生成中...</span>
-            </span>
-          ) : (
-            <span>就绪</span>
-          )}
+
+        <div className="flex items-center space-x-3">
+          {/* Agent Mode Toggle */}
+          <button
+            onClick={() => setAgentMode(agentMode === 'basic' ? 'enhanced' : 'basic')}
+            className={`group flex items-center space-x-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+              agentMode === 'enhanced'
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            title={agentMode === 'enhanced' ? 'Multi-Agent增强模式已启用' : '点击启用Multi-Agent增强模式'}
+          >
+            {agentMode === 'enhanced' ? (
+              <>
+                <Bot className="h-3.5 w-3.5" />
+                <span>增强</span>
+                <Zap className="h-3 w-3 text-yellow-500" />
+              </>
+            ) : (
+              <>
+                <Bot className="h-3.5 w-3.5" />
+                <span>基础</span>
+              </>
+            )}
+          </button>
+
+          {/* Status Display */}
+          <div className="text-xs text-gray-500">
+            {agentStatus ? (
+              <span className="flex items-center space-x-1">
+                <Bot className="h-3.5 w-3.5 animate-pulse text-blue-500" />
+                <span className="text-blue-700">{agentStatus}</span>
+              </span>
+            ) : isStreaming ? (
+              <span className="flex items-center space-x-1">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                <span>生成中...</span>
+              </span>
+            ) : (
+              <span>就绪</span>
+            )}
+          </div>
         </div>
       </div>
 

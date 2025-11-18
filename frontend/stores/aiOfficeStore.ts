@@ -406,6 +406,8 @@ interface ChatState {
   streamingMessage: string;
   shouldStopGeneration: boolean;
   error: string | null;
+  agentMode: 'basic' | 'enhanced'; // Multi-Agent mode toggle
+  agentStatus: string | null; // Current agent operation status (e.g., "Analyzing resources...", "Verifying content...")
 
   // Actions
   addMessage: (documentId: string, message: ChatMessage) => void;
@@ -419,6 +421,8 @@ interface ChatState {
   stopGeneration: () => void;
   clearSession: (documentId: string) => void;
   setError: (error: string | null) => void;
+  setAgentMode: (mode: 'basic' | 'enhanced') => void;
+  setAgentStatus: (status: string | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -427,6 +431,8 @@ export const useChatStore = create<ChatState>((set) => ({
   streamingMessage: '',
   shouldStopGeneration: false,
   error: null,
+  agentMode: 'basic', // Default to basic mode
+  agentStatus: null,
 
   addMessage: (documentId, message) =>
     set((state) => ({
@@ -474,6 +480,16 @@ export const useChatStore = create<ChatState>((set) => ({
   setError: (error) =>
     set({
       error,
+    }),
+
+  setAgentMode: (mode) =>
+    set({
+      agentMode: mode,
+    }),
+
+  setAgentStatus: (status) =>
+    set({
+      agentStatus: status,
     }),
 }));
 

@@ -19,7 +19,7 @@ import { PPTTemplate, getTemplateById } from '../ppt-templates';
 interface ExportOptions {
   title: string;
   content: string; // HTML 或 Markdown
-  format: 'word' | 'ppt' | 'pdf' | 'markdown';
+  format: 'word' | 'ppt' | 'pdf' | 'markdown' | 'html' | 'latex';
   template?: PPTTemplate; // 可选的模板配置
 }
 
@@ -48,6 +48,10 @@ class DocumentExportService {
         return this.exportToPDF(options);
       case 'markdown':
         return this.exportToMarkdown(options);
+      case 'html':
+        return this.exportToHTML(options);
+      case 'latex':
+        return this.exportToLaTeX(options);
       default:
         throw new Error(`Unsupported export format: ${options.format}`);
     }
@@ -366,6 +370,281 @@ class DocumentExportService {
   }
 
   /**
+   * 导出为 HTML - 专业学术风格
+   */
+  private async exportToHTML(options: ExportOptions): Promise<Buffer> {
+    const { title, content, template } = options;
+
+    // 获取模板配置用于样式
+    const templateConfig = template || getTemplateById('academic');
+
+    // 将Markdown转换为HTML（简单实现，可以用marked等库增强）
+    const htmlContent = this.markdownToHTML(content);
+
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="AI Office - DeepDive Engine">
+  <title>${this.escapeHTML(title)}</title>
+  <style>
+    /* 基础样式 - 学术风格 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: ${templateConfig.fonts.body}, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.8;
+      color: ${templateConfig.colors.text};
+      background: ${templateConfig.colors.background};
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 60px 40px;
+    }
+
+    /* 标题样式 */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: ${templateConfig.fonts.heading}, serif;
+      color: ${templateConfig.colors.primary};
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      text-align: center;
+      border-bottom: 3px solid ${templateConfig.colors.accent};
+      padding-bottom: 0.3em;
+      margin-top: 0;
+      margin-bottom: 1em;
+    }
+
+    h2 {
+      font-size: 1.8em;
+      border-bottom: 2px solid ${templateConfig.colors.decorative};
+      padding-bottom: 0.2em;
+    }
+
+    h3 {
+      font-size: 1.4em;
+      color: ${templateConfig.colors.secondary};
+    }
+
+    h4 {
+      font-size: 1.2em;
+    }
+
+    /* 段落样式 */
+    p {
+      margin-bottom: 1em;
+      text-align: justify;
+    }
+
+    /* 列表样式 */
+    ul, ol {
+      margin-left: 2em;
+      margin-bottom: 1em;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+    }
+
+    /* 代码样式 */
+    code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: "Fira Code", "Consolas", monospace;
+      font-size: 0.9em;
+    }
+
+    pre {
+      background: #f5f5f5;
+      border-left: 4px solid ${templateConfig.colors.accent};
+      padding: 15px;
+      overflow-x: auto;
+      margin-bottom: 1em;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    /* 引用样式 */
+    blockquote {
+      border-left: 4px solid ${templateConfig.colors.decorative};
+      padding-left: 20px;
+      margin: 1.5em 0;
+      color: ${templateConfig.colors.textSecondary};
+      font-style: italic;
+    }
+
+    /* 表格样式 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5em;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: ${templateConfig.colors.primary};
+      color: white;
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    /* 链接样式 */
+    a {
+      color: ${templateConfig.colors.accent};
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-bottom 0.2s;
+    }
+
+    a:hover {
+      border-bottom: 1px solid ${templateConfig.colors.accent};
+    }
+
+    /* 水平线 */
+    hr {
+      border: none;
+      border-top: 2px solid ${templateConfig.colors.decorative};
+      margin: 2em 0;
+    }
+
+    /* 页脚 */
+    .footer {
+      margin-top: 4em;
+      padding-top: 2em;
+      border-top: 1px solid #ddd;
+      text-align: center;
+      color: ${templateConfig.colors.textTertiary};
+      font-size: 0.9em;
+    }
+
+    /* 打印样式 */
+    @media print {
+      body {
+        max-width: 100%;
+        padding: 20px;
+      }
+
+      .footer {
+        page-break-before: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>${this.escapeHTML(title)}</h1>
+  ${htmlContent}
+  <div class="footer">
+    <p>由 AI Office 生成 · DeepDive Engine · ${new Date().toLocaleDateString('zh-CN')}</p>
+  </div>
+</body>
+</html>`;
+
+    return Buffer.from(htmlDocument, 'utf-8');
+  }
+
+  /**
+   * 导出为 LaTeX - 学术论文格式
+   */
+  private async exportToLaTeX(options: ExportOptions): Promise<Buffer> {
+    const { title, content } = options;
+
+    // 将Markdown转换为LaTeX
+    const latexContent = this.markdownToLaTeX(content);
+
+    const latexDocument = `\\documentclass[12pt,a4paper]{article}
+
+% 中文支持
+\\usepackage[UTF8]{ctex}
+
+% 页面设置
+\\usepackage[margin=2.5cm]{geometry}
+
+% 数学公式
+\\usepackage{amsmath, amssymb, amsthm}
+
+% 图片支持
+\\usepackage{graphicx}
+
+% 表格增强
+\\usepackage{booktabs}
+\\usepackage{longtable}
+
+% 代码高亮
+\\usepackage{listings}
+\\usepackage{xcolor}
+
+% 超链接
+\\usepackage{hyperref}
+\\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  filecolor=magenta,
+  urlcolor=cyan,
+  citecolor=green
+}
+
+% 列表设置
+\\usepackage{enumitem}
+
+% 代码样式设置
+\\lstset{
+  basicstyle=\\ttfamily\\small,
+  backgroundcolor=\\color{gray!10},
+  frame=single,
+  rulecolor=\\color{gray!30},
+  breaklines=true,
+  captionpos=b,
+  numbers=left,
+  numberstyle=\\tiny\\color{gray},
+  keywordstyle=\\color{blue},
+  commentstyle=\\color{green!50!black},
+  stringstyle=\\color{orange}
+}
+
+% 标题信息
+\\title{\\textbf{${this.escapeLaTeX(title)}}}
+\\author{AI Office}
+\\date{\\today}
+
+\\begin{document}
+
+\\maketitle
+
+\\tableofcontents
+\\newpage
+
+${latexContent}
+
+\\end{document}`;
+
+    return Buffer.from(latexDocument, 'utf-8');
+  }
+
+  /**
    * 将 HTML 转换为 Markdown
    */
   private htmlToMarkdown(html: string): string {
@@ -504,6 +783,125 @@ class DocumentExportService {
     }
 
     return slides;
+  }
+
+  /**
+   * 将 Markdown 转换为 HTML（简化版）
+   */
+  private markdownToHTML(markdown: string): string {
+    let html = markdown;
+
+    // 标题转换
+    html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+    // 粗体和斜体
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    // 代码
+    html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+
+    // 链接
+    html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+
+    // 图片
+    html = html.replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" />');
+
+    // 水平线
+    html = html.replace(/^---$/gm, '<hr>');
+
+    // 无序列表
+    html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+    // 段落（简化处理：非标签行视为段落）
+    html = html.replace(/^(?!<[^>]+>)(.+)$/gm, (match) => {
+      if (match.trim()) {
+        return `<p>${match}</p>`;
+      }
+      return match;
+    });
+
+    return html;
+  }
+
+  /**
+   * 将 Markdown 转换为 LaTeX
+   */
+  private markdownToLaTeX(markdown: string): string {
+    let latex = markdown;
+
+    // 标题转换
+    latex = latex.replace(/^#### (.+)$/gm, '\\subsubsection{$1}');
+    latex = latex.replace(/^### (.+)$/gm, '\\subsection{$1}');
+    latex = latex.replace(/^## (.+)$/gm, '\\section{$1}');
+    latex = latex.replace(/^# (.+)$/gm, '\\section*{$1}');
+
+    // 粗体和斜体
+    latex = latex.replace(/\*\*(.+?)\*\*/g, '\\textbf{$1}');
+    latex = latex.replace(/\*(.+?)\*/g, '\\textit{$1}');
+
+    // 代码
+    latex = latex.replace(/`(.+?)`/g, '\\texttt{$1}');
+
+    // 无序列表
+    const listItems: string[] = [];
+    latex = latex.replace(/^[-*] (.+)$/gm, (match, p1) => {
+      listItems.push(p1);
+      return `\\item ${this.escapeLaTeX(p1)}`;
+    });
+
+    // 包装列表
+    if (listItems.length > 0) {
+      latex = latex.replace(/(\\item .+\n)+/g, '\\begin{itemize}\n$&\\end{itemize}\n');
+    }
+
+    // 水平线
+    latex = latex.replace(/^---$/gm, '\\hrulefill');
+
+    // 转义特殊字符（LaTeX）
+    latex = this.escapeLaTeX(latex);
+
+    return latex;
+  }
+
+  /**
+   * HTML 转义
+   */
+  private escapeHTML(text: string): string {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return text.replace(/[&<>"']/g, (char) => map[char] || char);
+  }
+
+  /**
+   * LaTeX 转义
+   */
+  private escapeLaTeX(text: string): string {
+    // LaTeX特殊字符转义
+    const map: Record<string, string> = {
+      '\\': '\\textbackslash{}',
+      '&': '\\&',
+      '%': '\\%',
+      '$': '\\$',
+      '#': '\\#',
+      '_': '\\_',
+      '{': '\\{',
+      '}': '\\}',
+      '~': '\\textasciitilde{}',
+      '^': '\\textasciicircum{}',
+    };
+
+    // 避免重复转义
+    return text.replace(/[\\&%$#_{}~^]/g, (char) => map[char] || char);
   }
 }
 

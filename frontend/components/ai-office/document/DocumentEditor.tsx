@@ -27,6 +27,8 @@ import {
 import VersionHistory from './VersionHistory';
 import { parseMarkdownToEnhancedSlides } from '@/lib/markdown-parser';
 import EnhancedSlideRenderer from './EnhancedSlideRenderer';
+import ResearchPageRenderer from './ResearchPageRenderer';
+import { getResearchPageTemplateById } from '@/lib/research-page-templates';
 
 // 旧版 Slide 类型定义（仅供后备使用）
 interface Slide {
@@ -234,7 +236,7 @@ export default function DocumentEditor() {
   }, [showExportMenu]);
 
   // 导出文档
-  const handleExport = async (format: 'word' | 'pdf' | 'ppt' | 'markdown') => {
+  const handleExport = async (format: 'word' | 'pdf' | 'ppt' | 'markdown' | 'html' | 'latex') => {
     if (!currentDocument) return;
 
     setShowExportMenu(false); // 关闭菜单
@@ -263,7 +265,18 @@ export default function DocumentEditor() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${currentDocument.title}.${format === 'word' ? 'docx' : format === 'ppt' ? 'pptx' : format}`;
+
+      // 文件扩展名映射
+      const extensionMap: Record<typeof format, string> = {
+        word: 'docx',
+        ppt: 'pptx',
+        pdf: 'pdf',
+        markdown: 'md',
+        html: 'html',
+        latex: 'tex',
+      };
+
+      a.download = `${currentDocument.title}.${extensionMap[format]}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -446,6 +459,28 @@ export default function DocumentEditor() {
                         <div className="text-xs text-gray-400">.md</div>
                       </div>
                     </button>
+                    <button
+                      onClick={() => handleExport('html')}
+                      className="flex w-full items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                      role="menuitem"
+                    >
+                      <FileText className="h-4 w-4 text-green-600" />
+                      <div className="flex-1 text-left">
+                        <div className="font-medium">HTML 网页</div>
+                        <div className="text-xs text-gray-400">.html</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleExport('latex')}
+                      className="flex w-full items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                      role="menuitem"
+                    >
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      <div className="flex-1 text-left">
+                        <div className="font-medium">LaTeX 文档</div>
+                        <div className="text-xs text-gray-400">.tex</div>
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}
@@ -503,22 +538,52 @@ export default function DocumentEditor() {
                     <div className="relative">
                       <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex space-x-2 overflow-x-auto pb-2">
                         {slides.map((slide, idx) => (
-                          <button
+                          <div
                             key={idx}
-                            onClick={() => setCurrentSlideIndex(idx)}
-                            className={`w-36 flex-shrink-0 rounded-lg border-2 p-2 text-left transition-all hover:border-blue-500 ${
+                            className={`group relative w-40 flex-shrink-0 rounded-lg border-2 transition-all ${
                               idx === currentSlideIndex
                                 ? 'border-blue-500 bg-blue-50 shadow-md'
-                                : 'border-gray-200 hover:bg-gray-50'
+                                : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'
                             }`}
                           >
-                            <div className="mb-1 text-xs font-medium text-gray-500">
-                              第 {idx + 1} 页
-                            </div>
-                            <div className="line-clamp-2 text-xs font-semibold leading-tight text-gray-900">
-                              {slide.title}
-                            </div>
-                          </button>
+                            <button
+                              onClick={() => setCurrentSlideIndex(idx)}
+                              className="w-full p-2 text-left"
+                            >
+                              <div className="mb-1 flex items-center justify-between">
+                                <div className="text-xs font-medium text-gray-500">
+                                  第 {idx + 1} 页
+                                </div>
+                                {idx === currentSlideIndex && (
+                                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500">
+                                    <Check className="h-3 w-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mb-1 line-clamp-2 text-xs font-semibold leading-tight text-gray-900">
+                                {slide.title}
+                              </div>
+                              {/* Content preview */}
+                              {slide.content && (
+                                <div className="line-clamp-2 text-xs leading-tight text-gray-600">
+                                  {slide.content.substring(0, 60)}...
+                                </div>
+                              )}
+                            </button>
+
+                            {/* Quick edit button - appears on hover */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCurrentSlideIndex(idx);
+                                setIsEditMode(true);
+                              }}
+                              className="absolute bottom-1 right-1 hidden rounded bg-white px-2 py-1 text-xs font-medium text-blue-600 shadow-sm transition-all hover:bg-blue-50 group-hover:block"
+                              title="编辑此页"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -632,6 +697,17 @@ export default function DocumentEditor() {
               </div>
             );
           })()
+        ) : currentDocument?.type === 'research' ? (
+          // Research Page 专用渲染器
+          <ResearchPageRenderer
+            content={content}
+            template={
+              currentDocument?.template?.id
+                ? getResearchPageTemplateById(currentDocument.template.id)
+                : undefined
+            }
+            onEdit={() => setIsEditMode(true)}
+          />
         ) : (
           // 普通文档编辑器
           <div className="mx-auto max-w-4xl rounded-lg bg-white shadow-sm">

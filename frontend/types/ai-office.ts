@@ -192,7 +192,7 @@ export type Resource = YouTubeResource | PaperResource | WebResource;
 // 文档类型定义
 // ============================================================================
 
-export type DocumentType = 'word' | 'excel' | 'ppt' | 'article';
+export type DocumentType = 'word' | 'excel' | 'ppt' | 'article' | 'research';
 
 export type DocumentStatus = 'draft' | 'generating' | 'completed' | 'failed';
 

@@ -10,6 +10,7 @@ export type DocumentCategory =
   | 'business_proposal' // 商业提案
   | 'presentation' // PPT演示
   | 'blog_article' // 博客文章
+  | 'research_page' // Research Page结构化研究文档
   | 'custom'; // 自定义
 
 export interface TemplateSection {
@@ -77,6 +78,12 @@ export const DOCUMENT_CATEGORIES = [
     name: '✍️ 博客文章',
     description: '轻松的写作风格，适合传播',
     color: 'pink',
+  },
+  {
+    id: 'research_page' as const,
+    name: '🔬 Research Page',
+    description: '结构化研究文档，学术规范，可导出多格式',
+    color: 'indigo',
   },
 ];
 
@@ -529,6 +536,152 @@ export const DOCUMENT_TEMPLATES: Record<
       styleGuide: {
         headingStyle: 'unnumbered',
         tone: 'casual',
+      },
+      supportedExtensions: true,
+    },
+  ],
+
+  research_page: [
+    {
+      id: 'academic-research-page',
+      name: '学术研究Page',
+      category: 'research_page',
+      description: '标准学术研究格式，支持多种引用规范',
+      icon: '🔬',
+      estimatedTime: '8-12分钟',
+      sections: [
+        {
+          id: 'abstract',
+          title: 'Abstract',
+          aiPrompt: '生成研究摘要（150-250字），包含：研究背景、研究问题、主要方法、关键发现、结论意义',
+          required: true,
+          order: 1,
+          estimatedWords: 200,
+        },
+        {
+          id: 'introduction',
+          title: 'Introduction',
+          aiPrompt: '撰写引言部分：介绍研究领域背景、现有研究不足、本研究的动机和目标、研究问题定义',
+          required: true,
+          order: 2,
+          estimatedWords: 500,
+        },
+        {
+          id: 'literature-review',
+          title: 'Literature Review',
+          aiPrompt: '系统回顾相关文献：按主题分类总结现有研究、识别研究空白、分析理论框架',
+          required: true,
+          order: 3,
+          estimatedWords: 800,
+        },
+        {
+          id: 'methodology',
+          title: 'Methodology',
+          aiPrompt: '详细描述研究方法：研究设计、数据来源、分析方法、实验设置（如适用）、评估指标',
+          required: true,
+          order: 4,
+          estimatedWords: 600,
+        },
+        {
+          id: 'results',
+          title: 'Results',
+          aiPrompt: '呈现研究结果：数据分析结果、统计显著性、可视化图表、关键发现的客观描述',
+          required: true,
+          order: 5,
+          estimatedWords: 700,
+        },
+        {
+          id: 'discussion',
+          title: 'Discussion',
+          aiPrompt: '深入讨论：解释研究结果的意义、与现有文献的关系、研究局限性、未来研究方向',
+          required: true,
+          order: 6,
+          estimatedWords: 600,
+        },
+        {
+          id: 'conclusion',
+          title: 'Conclusion',
+          aiPrompt: '总结全文：重申研究问题、主要发现、理论贡献、实践意义',
+          required: true,
+          order: 7,
+          estimatedWords: 300,
+        },
+        {
+          id: 'references',
+          title: 'References',
+          aiPrompt: '列出所有引用的参考文献，按学术规范格式化',
+          required: true,
+          order: 8,
+          estimatedWords: 0,
+        },
+      ],
+      styleGuide: {
+        citationFormat: 'APA',
+        headingStyle: 'numbered',
+        tone: 'academic',
+      },
+      supportedExtensions: true,
+    },
+    {
+      id: 'industry-research-page',
+      name: '产业研究Page',
+      category: 'research_page',
+      description: '商业和产业分析报告格式',
+      icon: '📈',
+      estimatedTime: '6-10分钟',
+      sections: [
+        {
+          id: 'executive-summary',
+          title: 'Executive Summary',
+          aiPrompt: '生成高管摘要：核心发现、关键数据、战略建议、行动要点',
+          required: true,
+          order: 1,
+          estimatedWords: 300,
+        },
+        {
+          id: 'industry-overview',
+          title: 'Industry Overview',
+          aiPrompt: '概述行业现状：市场规模、增长趋势、主要参与者、价值链分析',
+          required: true,
+          order: 2,
+          estimatedWords: 600,
+        },
+        {
+          id: 'market-analysis',
+          title: 'Market Analysis',
+          aiPrompt: '深入市场分析：细分市场、目标客户、竞争格局、SWOT分析',
+          required: true,
+          order: 3,
+          estimatedWords: 700,
+        },
+        {
+          id: 'competitive-landscape',
+          title: 'Competitive Landscape',
+          aiPrompt: '分析竞争环境：主要竞争对手、市场份额、差异化策略、竞争优势',
+          required: true,
+          order: 4,
+          estimatedWords: 600,
+        },
+        {
+          id: 'trends-insights',
+          title: 'Trends & Insights',
+          aiPrompt: '识别关键趋势：技术创新、消费者行为变化、监管环境、未来机遇',
+          required: true,
+          order: 5,
+          estimatedWords: 500,
+        },
+        {
+          id: 'recommendations',
+          title: 'Strategic Recommendations',
+          aiPrompt: '提出战略建议：行动计划、投资建议、风险评估、实施路线图',
+          required: true,
+          order: 6,
+          estimatedWords: 400,
+        },
+      ],
+      styleGuide: {
+        headingStyle: 'numbered',
+        tone: 'business',
       },
       supportedExtensions: true,
     },

@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { DocumentVersion } from '@/types/ai-office';
 import { useDocumentStore } from '@/stores/aiOfficeStore';
+import VersionDiffViewer from './VersionDiffViewer';
 
 interface VersionHistoryProps {
   documentId: string;
@@ -252,7 +253,41 @@ export default function VersionHistory({
 
           {/* Preview Panel */}
           <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
-            {selectedVersionId ? (
+            {/* 版本对比模式 */}
+            {compareVersionId && selectedVersionId ? (
+              (() => {
+                const oldVersion = versions.find(
+                  (v: any) => v.id === compareVersionId
+                );
+                const newVersion = versions.find(
+                  (v: any) => v.id === selectedVersionId
+                );
+
+                if (!oldVersion || !newVersion) {
+                  return (
+                    <div className="rounded-lg bg-white p-6 shadow-sm">
+                      <p className="text-gray-500">无法加载版本对比数据</p>
+                    </div>
+                  );
+                }
+
+                // 确定文档类型
+                const documentType =
+                  newVersion.metadata.slideCount || oldVersion.metadata.slideCount
+                    ? 'ppt'
+                    : 'doc';
+
+                return (
+                  <VersionDiffViewer
+                    oldVersion={oldVersion}
+                    newVersion={newVersion}
+                    documentType={documentType as 'ppt' | 'doc'}
+                    onClose={() => setCompareVersionId(null)}
+                  />
+                );
+              })()
+            ) : selectedVersionId ? (
+              /* 单版本预览模式 */
               <div className="rounded-lg bg-white p-6 shadow-sm">
                 <div className="prose prose-slate max-w-none">
                   <h3 className="mb-4 text-lg font-bold text-gray-900">

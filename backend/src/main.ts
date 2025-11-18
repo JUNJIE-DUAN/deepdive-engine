@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
-import { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { isWorkspaceAiV2Enabled } from './common/utils/feature-flags';
@@ -9,6 +9,10 @@ import { isWorkspaceAiV2Enabled } from './common/utils/feature-flags';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // 增加请求体大小限制，支持大型字幕数据
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // 启用安全头 (Helmet) - 但对代理路由禁用CSP
   app.use((req: Request, res: Response, next: NextFunction) => {

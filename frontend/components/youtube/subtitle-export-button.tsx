@@ -90,28 +90,34 @@ export function SubtitleExportButton({
         >
           {variant === 'icon' ? (
             <svg
-              className="w-5 h-5 text-blue-600"
-              fill="currentColor"
+              className="w-5 h-5 text-slate-700"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
               viewBox="0 0 24 24"
             >
-              {/* Document with PDF indication */}
-              <path d="M9 12h6m-6 4h6M7 20h10a2 2 0 002-2V5a2 2 0 00-2-2h-5.586a1 1 0 00-.707.293L7.293 5.586A1 1 0 007 6.293V18a2 2 0 002 2z"
-                    fill="currentColor" stroke="none" />
-              {/* PDF accent */}
-              <circle cx="18" cy="6" r="3" fill="#FF5252" opacity="0.8" />
+              {/* Minimalist document icon */}
+              <path d="M7 8a2 2 0 012-2h6V4a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V8z"
+                    strokeLinecap="round" strokeLinejoin="round" />
+              {/* Download arrow */}
+              <path d="M12 12v6m0 0l-2-2m2 2l2-2"
+                    strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           ) : (
             <div className="flex items-center space-x-2">
               <svg
-                className="w-4 h-4 text-blue-600"
-                fill="currentColor"
+                className="w-4 h-4 text-slate-700"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
                 viewBox="0 0 24 24"
               >
-                {/* Document with PDF indication */}
-                <path d="M9 12h6m-6 4h6M7 20h10a2 2 0 002-2V5a2 2 0 00-2-2h-5.586a1 1 0 00-.707.293L7.293 5.586A1 1 0 007 6.293V18a2 2 0 002 2z"
-                      fill="currentColor" stroke="none" />
-                {/* PDF accent */}
-                <circle cx="18" cy="6" r="3" fill="#FF5252" opacity="0.8" />
+                {/* Minimalist document icon */}
+                <path d="M7 8a2 2 0 012-2h6V4a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V8z"
+                      strokeLinecap="round" strokeLinejoin="round" />
+                {/* Download arrow */}
+                <path d="M12 12v6m0 0l-2-2m2 2l2-2"
+                      strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <span>Export PDF</span>
             </div>

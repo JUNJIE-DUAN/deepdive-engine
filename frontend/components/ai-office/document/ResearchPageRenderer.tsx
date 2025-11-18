@@ -119,26 +119,27 @@ export default function ResearchPageRenderer({
             </button>
           </div>
 
-                              <div className="space-y-1">
-                                {sections
-                                  .filter((s) => s.level <= 2) // 只显示h1和h2
-                                  .map((section) => (
-                                    <button
-                                      key={section.id}
-                                      onClick={() => {
-                                        const element = document.getElementById(`section-${section.id}`);
-                                        element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                      }}
-                                      className={`w-full text-left rounded px-2 py-1.5 text-sm transition-colors hover:bg-gray-200 ${
-                                        section.level === 1
-                                          ? 'font-semibold text-gray-900'
-                                          : 'ml-4 text-gray-600'
-                                      }`}
-                                    >
-                                      {section.title}
-                                    </button>
-                                  ))}
-                              </div>          {/* 模板信息 */}
+          <div className="space-y-1">
+            {sections
+              .filter((s) => s.level <= 2) // 只显示h1和h2
+              .map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => {
+                    const element = document.getElementById(`section-${section.id}`);
+                    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`w-full text-left rounded px-2 py-1.5 text-sm transition-colors hover:bg-gray-200 ${ 
+                    section.level === 1
+                      ? 'font-semibold text-gray-900'
+                      : 'ml-4 text-gray-600'
+                  }`}
+                >
+                  {section.title}
+                </button>
+              ))}
+          </div>
+          {/* 模板信息 */}
           {template && (
             <div className="mt-6 rounded-lg border border-gray-200 bg-white p-3">
               <div className="mb-2 text-xs font-semibold uppercase text-gray-500">
@@ -190,7 +191,7 @@ export default function ResearchPageRenderer({
 
         {/* 文档内容 */}
         <div className="mx-auto max-w-4xl px-8 py-8">
-          {sections.map((section: { id: string; title: string; content: string; level: number }) => (
+          {sections.map((section) => (
             <div
               key={section.id}
               id={`section-${section.id}`}

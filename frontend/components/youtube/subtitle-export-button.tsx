@@ -90,34 +90,30 @@ export function SubtitleExportButton({
         >
           {variant === 'icon' ? (
             <svg
-              className="w-5 h-5 text-gray-600"
-              fill="none"
-              stroke="currentColor"
+              className="w-5 h-5 text-blue-600"
+              fill="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
+              {/* Document with PDF indication */}
+              <path d="M9 12h6m-6 4h6M7 20h10a2 2 0 002-2V5a2 2 0 00-2-2h-5.586a1 1 0 00-.707.293L7.293 5.586A1 1 0 007 6.293V18a2 2 0 002 2z"
+                    fill="currentColor" stroke="none" />
+              {/* PDF accent */}
+              <circle cx="18" cy="6" r="3" fill="#FF5252" opacity="0.8" />
             </svg>
           ) : (
             <div className="flex items-center space-x-2">
               <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
+                className="w-4 h-4 text-blue-600"
+                fill="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
+                {/* Document with PDF indication */}
+                <path d="M9 12h6m-6 4h6M7 20h10a2 2 0 002-2V5a2 2 0 00-2-2h-5.586a1 1 0 00-.707.293L7.293 5.586A1 1 0 007 6.293V18a2 2 0 002 2z"
+                      fill="currentColor" stroke="none" />
+                {/* PDF accent */}
+                <circle cx="18" cy="6" r="3" fill="#FF5252" opacity="0.8" />
               </svg>
-              <span>Export Subtitles</span>
+              <span>Export PDF</span>
             </div>
           )}
         </button>

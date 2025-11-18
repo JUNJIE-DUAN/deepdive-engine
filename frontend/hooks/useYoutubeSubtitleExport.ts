@@ -34,7 +34,11 @@ interface UseYoutubeSubtitleExportReturn {
   ) => Promise<void>;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = (() => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiVersion = process.env.NEXT_PUBLIC_API_VERSION || 'v1';
+  return `${apiUrl}/api/${apiVersion}`;
+})();
 
 export function useYoutubeSubtitleExport(): UseYoutubeSubtitleExportReturn {
   const [isLoading, setIsLoading] = useState(false);

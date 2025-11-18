@@ -400,46 +400,122 @@ export class SourceWhitelistService {
         {
           resourceType: "PAPER" as ResourceType,
           allowedDomains: [
+            // 学术库
             "arxiv.org",
             "*.arxiv.org",
+            "openreview.net",
+            "papers.nips.cc",
+            "proceedings.mlr.press",
+            "openaccess.thecvf.com",
+            // IEEE
             "ieee.org",
             "*.ieee.org",
+            "ieeexplore.ieee.org",
+            "*.ieeexplore.ieee.org",
+            // ACM
             "acm.org",
             "*.acm.org",
+            "dl.acm.org",
+            "*.dl.acm.org",
+            // Springer
             "springer.com",
             "*.springer.com",
+            "link.springer.com",
+            // ScienceDirect
             "sciencedirect.com",
+            "*.sciencedirect.com",
+            "scienceopen.com",
+            // Google Scholar
             "scholar.google.com",
+            "scholar.google.*",
+            // ResearchGate
             "researchgate.net",
+            "*.researchgate.net",
+            // PLOS
+            "plos.org",
+            "*.plos.org",
+            // Nature
+            "nature.com",
+            "*.nature.com",
+            // Cell
+            "cell.com",
+            "*.cell.com",
           ],
-          description: "Academic paper repositories and databases",
+          description: "Academic papers: arXiv, IEEE, ACM, Springer, ScienceDirect, Google Scholar, etc.",
         },
         {
           resourceType: "BLOG" as ResourceType,
           allowedDomains: [
+            // Google
+            "google.com",
             "googleblog.com",
             "*.googleblog.com",
+            "ai.googleblog.com",
+            "blog.google",
+            "developers.googleblog.com",
+            // Microsoft
+            "microsoft.com",
             "blogs.microsoft.com",
+            "*.blogs.microsoft.com",
+            "research.microsoft.com",
+            // NVIDIA
             "nvidia.com",
             "*.nvidia.com",
+            "nvidiablog.com",
+            "blog.nvidia.com",
+            // Intel
+            "intel.com",
+            "*.intel.com",
+            "newsroom.intel.com",
+            // AMD
+            "amd.com",
+            "*.amd.com",
+            // Cisco
             "cisco.com",
             "*.cisco.com",
+            "blogs.cisco.com",
+            // Fortinet
             "fortinet.com",
             "*.fortinet.com",
+            "blog.fortinet.com",
+            // Broadcom
             "broadcom.com",
             "*.broadcom.com",
+            // Meta/Facebook
+            "meta.com",
             "research.facebook.com",
             "ai.facebook.com",
+            "engineering.fb.com",
+            // OpenAI
             "openai.com",
             "*.openai.com",
+            "blog.openai.com",
+            // DeepMind
             "deepmind.com",
             "*.deepmind.com",
+            // Anthropic
+            "anthropic.com",
+            "*.anthropic.com",
+            // Medium
+            "medium.com",
+            "towardsdatascience.com",
+            // Hugging Face
+            "huggingface.co",
+            "*.huggingface.co",
+            // Amazon
+            "amazon.com",
+            "aws.amazon.com",
+            "*.aws.amazon.com",
+            // Apple
+            "apple.com",
+            "machinelearning.apple.com",
           ],
-          description: "Research and technical blog platforms from major tech companies",
+          description: "Research blogs from: Google, Microsoft, NVIDIA, Intel, AMD, Cisco, Meta, OpenAI, DeepMind, Anthropic, etc.",
         },
         {
           resourceType: "NEWS" as ResourceType,
           allowedDomains: [
+            // 科技新闻
             "techcrunch.com",
             "theverge.com",
             "arstechnica.com",
@@ -447,12 +523,31 @@ export class SourceWhitelistService {
             "engadget.com",
             "anandtech.com",
             "tomshardware.com",
+            "pcgamer.com",
+            "gamingonlinux.com",
+            // 通用新闻
             "cnbc.com",
             "reuters.com",
             "bbc.com",
+            "bbc.co.uk",
             "theguardian.com",
+            "forbes.com",
+            "bloomberg.com",
+            "wsj.com",
+            // 商业新闻
+            "venturebeat.com",
+            "crunchbase.com",
+            "siliconvalley.com",
+            // 安全新闻
+            "bleepingcomputer.com",
+            "krebsonsecurity.com",
+            "thehackernews.com",
+            // AI/ML新闻
+            "aiweekly.com",
+            "syntehtica.com",
+            "labellerr.com",
           ],
-          description: "Tech news and media outlets",
+          description: "Tech news: TechCrunch, The Verge, Ars Technica, Wired, CNN, Bloomberg, WSJ, etc.",
         },
         {
           resourceType: "YOUTUBE_VIDEO" as ResourceType,
@@ -461,6 +556,8 @@ export class SourceWhitelistService {
             "youtu.be",
             "www.youtube.com",
             "m.youtube.com",
+            "youtube-nocookie.com",
+            "*.youtube.com",
           ],
           description: "YouTube video platform",
         },
@@ -472,18 +569,65 @@ export class SourceWhitelistService {
         {
           resourceType: "REPORT" as ResourceType,
           allowedDomains: [
+            // Gartner
             "gartner.com",
-            "forrester.com",
-            "idc.com",
-            "mckinsey.com",
-            "bcg.com",
-            "bain.com",
-            "accenture.com",
-            "deloitte.com",
             "*.gartner.com",
+            // Forrester
+            "forrester.com",
             "*.forrester.com",
+            // IDC
+            "idc.com",
+            "*.idc.com",
+            // McKinsey
+            "mckinsey.com",
+            "*.mckinsey.com",
+            // Boston Consulting Group
+            "bcg.com",
+            "*.bcg.com",
+            // Bain
+            "bain.com",
+            "*.bain.com",
+            // Accenture
+            "accenture.com",
+            "*.accenture.com",
+            // Deloitte
+            "deloitte.com",
+            "*.deloitte.com",
+            // PwC
+            "pwc.com",
+            "*.pwc.com",
+            // EY
+            "ey.com",
+            "*.ey.com",
+            // Morgan Stanley
+            "morganstanley.com",
+            "*.morganstanley.com",
+            // Goldman Sachs
+            "goldmansachs.com",
+            "*.goldmansachs.com",
+            // Analyst firms
+            "jpm.com",
+            "*.jpm.com",
+            "barclays.com",
+            "*.barclays.com",
+            // 技术分析
+            "semianalysis.com",
+            "newsletter.semianalysis.com",
+            "stratechery.com",
+            // 芯片分析
+            "semiwiki.com",
+            "eenewseurope.com",
+            "eejournal.com",
+            "edn.com",
+            // 行业报告
+            "statista.com",
+            "markets.businessinsider.com",
+            "technavio.com",
+            "grandviewresearch.com",
+            "marketsandmarkets.com",
+            "mrfresearch.com",
           ],
-          description: "Industry analysis and research reports",
+          description: "Industry reports: Gartner, Forrester, IDC, McKinsey, BCG, Bain, Accenture, Deloitte, PwC, EY, Morgan Stanley, Goldman Sachs, SemiAnalysis, etc.",
         },
         {
           resourceType: "EVENT" as ResourceType,
@@ -491,13 +635,32 @@ export class SourceWhitelistService {
             "eventbrite.com",
             "meetup.com",
             "conference.com",
+            // 大型科技公司活动
             "nvidia.com",
             "intel.com",
             "amd.com",
             "*.nvidia.com",
             "*.intel.com",
+            "*.amd.com",
+            "microsoft.com",
+            "*.microsoft.com",
+            "google.com",
+            "*.google.com",
+            "apple.com",
+            "*.apple.com",
+            // 学术会议
+            "nips.cc",
+            "icml.cc",
+            "iclr.cc",
+            "acl-ijcnlp.org",
+            "cvpr2024.thecvf.com",
+            "iccv2023.thecvf.com",
+            // 行业会议
+            "ces.tech",
+            "gdc.com",
+            "sxsw.com",
           ],
-          description: "Event and conference platforms",
+          description: "Events and conferences: Eventbrite, Meetup, NeurIPS, ICML, ICLR, CES, GDC, SXSW, etc.",
         },
       ];
 

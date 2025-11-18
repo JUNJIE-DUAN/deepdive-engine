@@ -16,7 +16,7 @@ import { SchedulerConfig } from "../types/blog-collection.types";
  * Blog Collection Controller
  * 提供博客采集相关的API端点
  */
-@Controller("api/v1/blog")
+@Controller("blog")
 export class BlogCollectionController {
   private readonly logger = new Logger(BlogCollectionController.name);
 

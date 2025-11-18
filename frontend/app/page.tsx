@@ -13,7 +13,6 @@ import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
-import { BlogCollectionManager } from '@/components/features/BlogCollectionManager';
 import {
   AIContextBuilder,
   type Resource as AIResource,
@@ -1743,17 +1742,6 @@ export default function Home() {
         <div
           className={`${viewMode === 'detail' ? 'flex w-full flex-1 flex-col overflow-hidden px-2 pt-2' : 'mx-auto max-w-5xl px-8 pb-6'}`}
         >
-          {/* Blog Collection Manager - Reports Tab Only */}
-          {activeTab === 'reports' && viewMode === 'list' && (
-            <div className="mb-8">
-              <BlogCollectionManager
-                apiBaseUrl={`${config.apiUrl}/blog`}
-                autoRefresh={true}
-                refreshInterval={30000}
-              />
-            </div>
-          )}
-
           {/* List View */}
           {viewMode === 'list' && (
             <>

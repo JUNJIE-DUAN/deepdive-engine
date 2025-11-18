@@ -1,7 +1,7 @@
 'use client';
 
-import { NewDataManagementPage } from '@/components/data-management/NewDataManagementPage';
+import { ProfessionalDataManagementPage } from '@/components/data-management/ProfessionalDataManagementPage';
 
 export default function Page() {
-  return <NewDataManagementPage />;
+  return <ProfessionalDataManagementPage />;
 }

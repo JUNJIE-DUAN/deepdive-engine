@@ -35,6 +35,7 @@ export default defineConfig({
         statements: 50,
       },
     },
+
   },
 
   resolve: {

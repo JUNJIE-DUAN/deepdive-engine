@@ -674,7 +674,7 @@ model CollectionRule {
 model ImportTask {
   id        String   @id @default(cuid())
 
-  resourceType ResourceType
+  resourceType String  // Store as string to avoid PostgreSQL enum type casting issues
   ruleId       String?
   rule         CollectionRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
 
@@ -778,7 +778,7 @@ model DataQualityMetric {
   id        String   @id @default(cuid())
 
   // 关联的资源
-  resourceType ResourceType
+  resourceType String // Store as string to avoid PostgreSQL enum type casting issues
   resourceId   String // 实际资源ID (paper.id, project.id, news.id, etc.)
   sourceUrl    String? // 原始来源URL
 
@@ -819,7 +819,7 @@ model DataQualityMetric {
 model CollectionStatistics {
   id        String   @id @default(cuid())
 
-  resourceType ResourceType
+  resourceType String // Store as string to avoid PostgreSQL enum type casting issues
 
   // 统计数据
   totalItems      Int @default(0)
@@ -860,7 +860,7 @@ model CollectionStatistics {
 model CollectionConfiguration {
   id        String   @id @default(cuid())
 
-  resourceType ResourceType
+  resourceType String   @db.VarChar(255) // Store as string to avoid PostgreSQL enum type casting issues
   name         String   @db.VarChar(255)
   description  String?  @db.Text
 

@@ -43,7 +43,7 @@ export class CollectionRuleService {
   async createRule(dto: CreateCollectionRuleDto) {
     try {
       // 检查是否已存在该资源类型的规则
-      const existing = await this.prisma.collectionRule.findUnique({
+      const existing = await this.prisma.collectionRule.findFirst({
         where: { resourceType: dto.resourceType },
       });
 
@@ -96,7 +96,7 @@ export class CollectionRuleService {
    */
   async getRule(resourceType: ResourceType) {
     try {
-      const rule = await this.prisma.collectionRule.findUnique({
+      const rule = await this.prisma.collectionRule.findFirst({
         where: { resourceType },
         include: {
           importTasks: {
@@ -166,7 +166,7 @@ export class CollectionRuleService {
    */
   async updateRule(resourceType: ResourceType, dto: UpdateCollectionRuleDto) {
     try {
-      const rule = await this.prisma.collectionRule.update({
+      const rule = await this.prisma.collectionRule.updateMany({
         where: { resourceType },
         data: {
           ...(dto.cronExpression && { cronExpression: dto.cronExpression }),
@@ -203,7 +203,7 @@ export class CollectionRuleService {
    */
   async deleteRule(resourceType: ResourceType) {
     try {
-      await this.prisma.collectionRule.delete({
+      await this.prisma.collectionRule.deleteMany({
         where: { resourceType },
       });
 
@@ -238,7 +238,7 @@ export class CollectionRuleService {
     nextScheduledAt: Date,
   ) {
     try {
-      const rule = await this.prisma.collectionRule.update({
+      const rule = await this.prisma.collectionRule.updateMany({
         where: { resourceType },
         data: {
           nextScheduledAt,
@@ -262,7 +262,7 @@ export class CollectionRuleService {
     lastExecutedAt: Date,
   ) {
     try {
-      const rule = await this.prisma.collectionRule.update({
+      const rule = await this.prisma.collectionRule.updateMany({
         where: { resourceType },
         data: {
           lastExecutedAt,
@@ -409,7 +409,7 @@ export class CollectionRuleService {
 
       for (const defaultRule of defaults) {
         try {
-          const existing = await this.prisma.collectionRule.findUnique({
+          const existing = await this.prisma.collectionRule.findFirst({
             where: { resourceType: defaultRule.resourceType },
           });
 

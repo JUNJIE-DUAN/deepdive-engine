@@ -1,14 +1,15 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../../../common/prisma/prisma.service";
 import { ResourceType, ImportTaskStatus } from "@prisma/client";
 import { getErrorMessage } from "../../../common/utils/error.utils";
+import {
+  MetadataExtractorService,
+  ParsedUrlMetadata,
+} from "./metadata-extractor.service";
+import { DuplicateDetectorService } from "./duplicate-detector.service";
 
 export interface ParseUrlResult {
-  title?: string;
   domain: string;
-  description?: string;
-  language?: string;
-  charset?: string;
 }
 
 interface CreateImportTaskDto {
@@ -26,65 +27,27 @@ interface CreateImportTaskDto {
 export class ImportManagerService {
   private readonly logger = new Logger(ImportManagerService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private metadataExtractor: MetadataExtractorService,
+    private duplicateDetector: DuplicateDetectorService,
+  ) {}
 
   /**
-   * 解析URL提取元数据
+   * 简单解析URL，仅提取域名
    */
   async parseUrl(url: string): Promise<ParseUrlResult> {
     try {
-      // 验证URL格式
+      // 验证URL格式，只需提取域名即可
       const urlObj = new URL(url);
-      const domain = urlObj.hostname;
-
-      // 尝试获取页面元数据（简单实现）
-      // 在生产环境中应该使用专门的库如 cheerio、jsdom 或 open-graph-scraper
-      const title = this.extractTitleFromUrl(url);
-      const description = this.extractDescriptionFromUrl(url);
+      const domain = urlObj.hostname || "";
 
       return {
-        title,
         domain,
-        description,
-        language: "en",
-        charset: "utf-8",
       };
     } catch (error) {
       this.logger.error(`Failed to parse URL: ${getErrorMessage(error)}`);
-      throw new Error(`Invalid URL or unable to parse: ${getErrorMessage(error)}`);
-    }
-  }
-
-  /**
-   * 从URL提取标题（简单实现）
-   */
-  private extractTitleFromUrl(url: string): string {
-    try {
-      const urlObj = new URL(url);
-      const pathname = urlObj.pathname;
-      // 获取路径的最后部分作为标题
-      const parts = pathname.split("/").filter((p) => p);
-      const lastPart = parts[parts.length - 1] || urlObj.hostname;
-      return lastPart.replace(/[-_]/g, " ");
-    } catch {
-      return "Untitled";
-    }
-  }
-
-  /**
-   * 从URL提取描述（简单实现）
-   */
-  private extractDescriptionFromUrl(url: string): string | undefined {
-    try {
-      const urlObj = new URL(url);
-      const searchParams = new URLSearchParams(urlObj.search);
-      const query = searchParams.get("q") || searchParams.get("search");
-      if (query) {
-        return `Search or content related to: ${query}`;
-      }
-      return undefined;
-    } catch {
-      return undefined;
+      throw new Error(`Invalid URL format: ${getErrorMessage(error)}`);
     }
   }
 
@@ -113,12 +76,12 @@ export class ImportManagerService {
       });
 
       this.logger.log(
-        `Created import task: ${task.id} for ${dto.resourceType} from ${sourceDomain}`
+        `Created import task: ${task.id} for ${dto.resourceType} from ${sourceDomain}`,
       );
       return task;
     } catch (error) {
       this.logger.error(
-        `Failed to create import task: ${getErrorMessage(error)}`
+        `Failed to create import task: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -131,7 +94,7 @@ export class ImportManagerService {
     resourceType?: ResourceType,
     status?: ImportTaskStatus,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
   ) {
     try {
       const where: any = {};
@@ -162,7 +125,7 @@ export class ImportManagerService {
       };
     } catch (error) {
       this.logger.error(
-        `Failed to fetch import tasks: ${getErrorMessage(error)}`
+        `Failed to fetch import tasks: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -185,7 +148,7 @@ export class ImportManagerService {
       return task;
     } catch (error) {
       this.logger.error(
-        `Failed to fetch import task: ${getErrorMessage(error)}`
+        `Failed to fetch import task: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -204,7 +167,7 @@ export class ImportManagerService {
       duplicatesFound?: number;
       errorMessage?: string;
       executionTimeMs?: number;
-    }
+    },
   ) {
     try {
       const now = new Date();
@@ -213,7 +176,11 @@ export class ImportManagerService {
         updatedAt: now,
       };
 
-      if (status === "SUCCESS" || status === "FAILED" || status === "CANCELLED") {
+      if (
+        status === "SUCCESS" ||
+        status === "FAILED" ||
+        status === "CANCELLED"
+      ) {
         data.completedAt = now;
       }
 
@@ -231,13 +198,11 @@ export class ImportManagerService {
         data,
       });
 
-      this.logger.log(
-        `Updated import task ${taskId} status to ${status}`
-      );
+      this.logger.log(`Updated import task ${taskId} status to ${status}`);
       return task;
     } catch (error) {
       this.logger.error(
-        `Failed to update import task: ${getErrorMessage(error)}`
+        `Failed to update import task: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -269,7 +234,7 @@ export class ImportManagerService {
       };
     } catch (error) {
       this.logger.error(
-        `Failed to fetch quality metrics: ${getErrorMessage(error)}`
+        `Failed to fetch quality metrics: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -303,7 +268,7 @@ export class ImportManagerService {
       const avgQuality =
         metrics.reduce((sum, m) => sum + m.qualityScore, 0) / metrics.length;
       const needsReview = metrics.filter(
-        (m) => m.reviewStatus === "NEEDS_REVIEW"
+        (m) => m.reviewStatus === "NEEDS_REVIEW",
       ).length;
 
       return {
@@ -314,7 +279,7 @@ export class ImportManagerService {
       };
     } catch (error) {
       this.logger.error(
-        `Failed to calculate quality stats: ${getErrorMessage(error)}`
+        `Failed to calculate quality stats: ${getErrorMessage(error)}`,
       );
       return {
         totalItems: 0,
@@ -340,25 +305,21 @@ export class ImportManagerService {
       reviewStatus?: string;
       sourceUrl?: string;
       tags?: string[];
-    }
+    },
   ) {
     try {
-      const existing = await this.prisma.dataQualityMetric.findUnique({
+      const existing = await this.prisma.dataQualityMetric.findFirst({
         where: {
-          resourceType_resourceId: {
-            resourceType,
-            resourceId,
-          },
+          resourceType,
+          resourceId,
         },
       });
 
       if (existing) {
-        return await this.prisma.dataQualityMetric.update({
+        return await this.prisma.dataQualityMetric.updateMany({
           where: {
-            resourceType_resourceId: {
-              resourceType,
-              resourceId,
-            },
+            resourceType,
+            resourceId,
           },
           data: {
             ...qualityData,
@@ -376,7 +337,76 @@ export class ImportManagerService {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to create/update quality metric: ${getErrorMessage(error)}`
+        `Failed to create/update quality metric: ${getErrorMessage(error)}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 解析URL并提取完整的元数据（包含重复检测）
+   */
+  async parseUrlFull(url: string, resourceType: ResourceType) {
+    try {
+      // 使用MetadataExtractor服务提取元数据
+      const metadata = await this.metadataExtractor.extractMetadata(url);
+
+      // 验证元数据的有效性
+      const validation = this.metadataExtractor.validateMetadata(metadata);
+      if (!validation.isValid) {
+        throw new BadRequestException(
+          `元数据验证失败: ${validation.errors?.join("; ")}`,
+        );
+      }
+
+      // 使用DuplicateDetector服务检测重复
+      const duplicateDetection = await this.duplicateDetector.detectDuplicates(
+        resourceType,
+        metadata,
+      );
+
+      this.logger.debug(
+        `Successfully parsed URL and detected duplicates: ${url}`,
+      );
+
+      return { metadata, duplicateDetection };
+    } catch (error) {
+      this.logger.error(`Failed to parse URL full: ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 导入带有编辑后的元数据（用户可编辑）
+   */
+  async importWithMetadata(
+    url: string,
+    resourceType: ResourceType,
+    metadata: ParsedUrlMetadata,
+    _skipDuplicateWarning?: boolean,
+  ) {
+    try {
+      // 创建ImportTask
+      const importTask = await this.createImportTask({
+        resourceType,
+        sourceUrl: url,
+        title: metadata.title,
+      });
+
+      // 将编辑后的完整元数据存储到ImportTask的metadata字段
+      const updated = await this.prisma.importTask.update({
+        where: { id: importTask.id },
+        data: {
+          metadata: metadata as any, // 存储完整的编辑后的元数据
+        },
+      });
+
+      this.logger.log(`Successfully created import task: ${updated.id}`);
+
+      return updated;
+    } catch (error) {
+      this.logger.error(
+        `Failed to import with metadata: ${getErrorMessage(error)}`,
       );
       throw error;
     }

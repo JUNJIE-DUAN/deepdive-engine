@@ -147,10 +147,10 @@ export default function NotesList({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Tag filter chips - Only show in Notes tab */}
       {allTags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           <span className="text-xs font-semibold text-gray-600 uppercase">Tags:</span>
           <button
             onClick={() => setSelectedTag(null)}

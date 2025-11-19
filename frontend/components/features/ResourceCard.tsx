@@ -30,6 +30,9 @@ interface ResourceCardProps {
   onClick: () => void;
   onToggleBookmark: (e: React.MouseEvent) => void;
   isBookmarked: boolean;
+  onUpvote?: (e: React.MouseEvent) => void;
+  onCommentClick?: (e: React.MouseEvent) => void;
+  hasUpvoted?: boolean;
 }
 
 export default function ResourceCard({
@@ -37,6 +40,9 @@ export default function ResourceCard({
   onClick,
   onToggleBookmark,
   isBookmarked,
+  onUpvote,
+  onCommentClick,
+  hasUpvoted = false,
 }: ResourceCardProps) {
   const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(
     resource.thumbnailUrl || null
@@ -260,6 +266,54 @@ export default function ResourceCard({
                 />
               </svg>
               {isBookmarked ? 'Saved' : 'Save'}
+            </button>
+
+            {/* Upvote Button */}
+            <button
+              onClick={onUpvote}
+              className={`flex items-center gap-2 text-sm transition-colors ${
+                hasUpvoted
+                  ? 'font-medium text-red-600'
+                  : 'text-gray-600 hover:text-red-600'
+              }`}
+              title="点赞"
+            >
+              <svg
+                className={`h-4 w-4 ${hasUpvoted ? 'fill-current' : ''}`}
+                fill={hasUpvoted ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14 10h4.764a2 2 0 011.789 2.894l-3.646 7.23a2 2 0 01-1.788 1.106H7a2 2 0 01-2-2v-8a2 2 0 012-2h3.764a2 2 0 012 2v4m-4-8l.305.06l2.582-2.468a2 2 0 112.827 2.827L14 10l-4.695-4.695a2 2 0 00-2.827 2.827L9.5 10v6"
+                />
+              </svg>
+              {resource.upvoteCount || 0}
+            </button>
+
+            {/* Comment Button */}
+            <button
+              onClick={onCommentClick}
+              className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-green-600"
+              title="评论"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+              {resource.commentCount || 0}
             </button>
 
             {resource.pdfUrl && (

@@ -20,6 +20,7 @@ import {
 } from '@/lib/ai-context-builder';
 import { useResourceStore } from '@/stores/aiOfficeStore';
 import type { Resource as AIOfficeResource } from '@/types/ai-office';
+import { ThumbsUp } from 'lucide-react';
 
 interface Resource {
   id: string;
@@ -242,6 +243,9 @@ function HomeContent() {
     null
   );
 
+  // Upvote states
+  const [upvotes, setUpvotes] = useState<Set<string>>(new Set());
+
   // Report workspace (legacy - for /workspace page)
   const { addResource, hasResource, canAddMore } = useReportWorkspace();
 
@@ -377,6 +381,18 @@ function HomeContent() {
   useEffect(() => {
     fetchResources();
   }, [activeTab, searchQuery, sortBy, sortOrder, filterCategory]);
+
+  // Handle opening resource from URL parameter (from library page)
+  useEffect(() => {
+    const resourceId = searchParams?.get('id');
+    if (resourceId && resources.length > 0) {
+      const resource = resources.find((r) => r.id === resourceId);
+      if (resource) {
+        setSelectedResource(resource);
+        setViewMode('detail');
+      }
+    }
+  }, [searchParams, resources]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -1276,6 +1292,67 @@ function HomeContent() {
     return bookmarks.has(resourceId);
   };
 
+  // Upvote function
+  const toggleUpvote = (resourceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    const newUpvotes = new Set(upvotes);
+    if (newUpvotes.has(resourceId)) {
+      newUpvotes.delete(resourceId);
+      // 减少点赞数
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === resourceId
+            ? { ...r, upvoteCount: Math.max(0, (r.upvoteCount || 0) - 1) }
+            : r
+        )
+      );
+      if (selectedResource?.id === resourceId) {
+        setSelectedResource((prev) =>
+          prev
+            ? {
+                ...prev,
+                upvoteCount: Math.max(0, (prev.upvoteCount || 0) - 1),
+              }
+            : null
+        );
+      }
+    } else {
+      newUpvotes.add(resourceId);
+      // 增加点赞数
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === resourceId
+            ? { ...r, upvoteCount: (r.upvoteCount || 0) + 1 }
+            : r
+        )
+      );
+      if (selectedResource?.id === resourceId) {
+        setSelectedResource((prev) =>
+          prev
+            ? {
+                ...prev,
+                upvoteCount: (prev.upvoteCount || 0) + 1,
+              }
+            : null
+        );
+      }
+    }
+    setUpvotes(newUpvotes);
+  };
+
+  const hasUpvoted = (resourceId: string) => {
+    return upvotes.has(resourceId);
+  };
+
+  // Comment click handler - opens comment section
+  const handleCommentClick = (resource: Resource, e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleResourceClick(resource);
+    // Switch to comments tab in detail view
+    setAiRightTab('comments');
+  };
+
   return (
     <div className="relative flex h-screen bg-gray-50">
       <ReportWorkspace />
@@ -1328,21 +1405,6 @@ function HomeContent() {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2 px-4">
-                      <button className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                        <svg
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </button>
                       {/* File Upload Button */}
                       <input
                         ref={fileInputRef}
@@ -1371,7 +1433,12 @@ function HomeContent() {
                           />
                         </svg>
                       </button>
-                      <button className="rounded-lg bg-red-500 p-2 text-white hover:bg-red-600">
+                      {/* Advanced Search / Filter Button */}
+                      <button
+                        onClick={() => setShowFilterPanel(!showFilterPanel)}
+                        className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                        title="高级搜索和过滤"
+                      >
                         <svg
                           className="h-5 w-5"
                           fill="none"
@@ -1382,7 +1449,7 @@ function HomeContent() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M5 10l7-7m0 0l7 7m-7-7v18"
+                            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                           />
                         </svg>
                       </button>
@@ -1804,12 +1871,13 @@ function HomeContent() {
 
                           {/* Bottom Actions */}
                           <div className="flex items-center gap-6 border-t border-gray-100 pt-3">
+                            {/* Bookmark Button - Simple version */}
                             <button
                               onClick={(e) => toggleBookmark(resource.id, e)}
                               className={`flex items-center gap-2 text-sm transition-colors ${
                                 isBookmarked(resource.id)
-                                  ? 'text-red-600 hover:text-red-700'
-                                  : 'text-gray-600 hover:text-red-600'
+                                  ? 'text-blue-600 hover:text-blue-700'
+                                  : 'text-gray-600 hover:text-blue-600'
                               }`}
                             >
                               <svg
@@ -1833,10 +1901,35 @@ function HomeContent() {
                                 ? 'Bookmarked'
                                 : 'Bookmark'}
                             </button>
+                            {/* Upvote Button */}
+                            {resource.upvoteCount !== undefined && (
+                              <button
+                                className={`flex items-center gap-2 text-sm transition-colors ${
+                                  hasUpvoted(resource.id)
+                                    ? 'font-medium text-blue-600'
+                                    : 'text-gray-600 hover:text-blue-600'
+                                }`}
+                                onClick={(e) => toggleUpvote(resource.id, e)}
+                                title="点赞"
+                              >
+                                <ThumbsUp
+                                  className={`h-4 w-4 ${
+                                    hasUpvoted(resource.id)
+                                      ? 'fill-current'
+                                      : ''
+                                  }`}
+                                />
+                                {resource.upvoteCount}
+                              </button>
+                            )}
+                            {/* Comment Button */}
                             {resource.commentCount !== undefined && (
                               <button
-                                className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600"
-                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-green-600"
+                                onClick={(e) =>
+                                  handleCommentClick(resource, e)
+                                }
+                                title="评论"
                               >
                                 <svg
                                   className="h-4 w-4"
@@ -1852,27 +1945,6 @@ function HomeContent() {
                                   />
                                 </svg>
                                 {resource.commentCount}
-                              </button>
-                            )}
-                            {resource.upvoteCount !== undefined && (
-                              <button
-                                className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                                  />
-                                </svg>
-                                {resource.upvoteCount}
                               </button>
                             )}
                             <button
@@ -2200,22 +2272,26 @@ function HomeContent() {
                       </a>
                       <div className="ml-auto flex items-center gap-3 text-xs text-gray-600">
                         {selectedResource.upvoteCount !== undefined && (
-                          <span className="flex items-center gap-1">
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 15l7-7 7 7"
-                              />
-                            </svg>
+                          <button
+                            onClick={(e) =>
+                              toggleUpvote(selectedResource.id, e)
+                            }
+                            className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-colors ${
+                              hasUpvoted(selectedResource.id)
+                                ? 'bg-blue-50 font-medium text-blue-600'
+                                : 'hover:bg-gray-100'
+                            }`}
+                            title="点赞"
+                          >
+                            <ThumbsUp
+                              className={`h-4 w-4 ${
+                                hasUpvoted(selectedResource.id)
+                                  ? 'fill-current'
+                                  : ''
+                              }`}
+                            />
                             {selectedResource.upvoteCount}
-                          </span>
+                          </button>
                         )}
                         {selectedResource.viewCount !== undefined && (
                           <span className="flex items-center gap-1">

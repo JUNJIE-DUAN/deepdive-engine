@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '@/components/layout/Sidebar';
 
-export default function Profile() {
+function ProfileContent() {
   const [activeTab, setActiveTab] = useState<'profile' | 'settings' | 'stats'>(
     'profile'
   );
@@ -429,4 +429,19 @@ export default function Profile() {
       </div>
     </div>
   );
+}
+
+export default function Profile() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Avoid hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return null;
+  }
+
+  return <ProfileContent />;
 }

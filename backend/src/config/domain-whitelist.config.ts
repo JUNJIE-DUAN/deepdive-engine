@@ -42,6 +42,9 @@ export const WHITELISTED_DOMAINS = [
   "blog.cloudflare.com",
   "blog.tensorflow.org",
   "newsletter.semianalysis.com",
+  "dev.to",
+  "hashnode.com",
+  "substack.com",
 
   // 科技公司博客 (Tech Company Blogs)
   "blog.google",
@@ -50,6 +53,7 @@ export const WHITELISTED_DOMAINS = [
   "blog.openai.com",
   "deepmind.com",
   "deepmind.google",
+  "blogs.nvidia.com",
 
   // 主流媒体 (Mainstream Media)
   "forbes.com",

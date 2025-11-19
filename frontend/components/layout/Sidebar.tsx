@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useResourceStore } from '@/stores/aiOfficeStore';
+import { UserCircle } from 'lucide-react';
 
 interface SidebarProps {
   className?: string;
@@ -61,168 +62,26 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         className={`flex items-center p-4 ${isCollapsed ? 'justify-center' : ''}`}
       >
         {isCollapsed ? (
-          /* Collapsed Logo - Clean Icon Only */
-          <Link href="/" className="group" title="DeepDive">
+          /* Collapsed Logo - Abstract nested circles suggesting depth */
+          <Link href="/" className="group" title="DeepDive Engine">
             <svg
-              className="h-12 w-12 transition-transform duration-300 group-hover:scale-110"
-              viewBox="0 0 64 64"
+              className="h-10 w-10 transition-transform duration-300 group-hover:scale-110"
               fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {/* Outer circle with gradient */}
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                fill="url(#bgCircle)"
-                opacity="0.15"
-              />
-
-              {/* Main dive arrow - bold and clear */}
-              <path
-                d="M 32 14 L 32 42"
-                stroke="url(#arrowGrad)"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 32 42 L 24 34"
-                stroke="url(#arrowGrad)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 32 42 L 40 34"
-                stroke="url(#arrowGrad)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {/* Data ripples - concentric circles */}
-              <circle
-                cx="32"
-                cy="20"
-                r="6"
-                stroke="url(#ripple1)"
-                strokeWidth="2"
-                fill="none"
-                opacity="0.5"
-              >
-                <animate
-                  attributeName="r"
-                  values="6;12;6"
-                  dur="2s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="0.5;0;0.5"
-                  dur="2s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-
-              <circle
-                cx="32"
-                cy="26"
-                r="8"
-                stroke="url(#ripple2)"
-                strokeWidth="2"
-                fill="none"
-                opacity="0.4"
-              >
-                <animate
-                  attributeName="r"
-                  values="8;14;8"
-                  dur="2.5s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="0.4;0;0.4"
-                  dur="2.5s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-
-              {/* Floating data points */}
-              <circle cx="22" cy="18" r="2" fill="#3b82f6">
-                <animate
-                  attributeName="cy"
-                  values="18;44;18"
-                  dur="3s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="1;0;1"
-                  dur="3s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-              <circle cx="42" cy="22" r="2" fill="#8b5cf6">
-                <animate
-                  attributeName="cy"
-                  values="22;48;22"
-                  dur="3.5s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="1;0;1"
-                  dur="3.5s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-              <circle cx="38" cy="16" r="1.5" fill="#06b6d4">
-                <animate
-                  attributeName="cy"
-                  values="16;46;16"
-                  dur="4s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="1;0;1"
-                  dur="4s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-
               <defs>
-                <linearGradient
-                  id="bgCircle"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stopColor="#3b82f6" />
+                <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#2563eb" />
                   <stop offset="50%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-                <linearGradient
-                  id="arrowGrad"
-                  x1="0%"
-                  y1="0%"
-                  x2="0%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="50%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-                <linearGradient id="ripple1" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#06b6d4" />
-                </linearGradient>
-                <linearGradient id="ripple2" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
+                  <stop offset="100%" stopColor="#9333ea" />
                 </linearGradient>
               </defs>
+              {/* Abstract nested circles - represents depth layers */}
+              <circle cx="12" cy="12" r="9" stroke="url(#logoBg)" strokeWidth="1.5" />
+              <circle cx="12" cy="12" r="6" stroke="url(#logoBg)" strokeWidth="1" opacity="0.6" />
+              <circle cx="12" cy="12" r="3" fill="url(#logoBg)" opacity="0.8" />
             </svg>
           </Link>
         ) : (
@@ -230,133 +89,26 @@ export default function Sidebar({ className = '' }: SidebarProps) {
           <Link
             href="/"
             className="group flex items-center gap-3"
-            title="DeepDive"
+            title="DeepDive Engine"
           >
             <svg
-              className="h-12 w-12 flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
-              viewBox="0 0 64 64"
+              className="h-10 w-10 flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
               fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {/* Outer circle with gradient */}
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                fill="url(#bgCircleExp)"
-                opacity="0.15"
-              />
-
-              {/* Main dive arrow */}
-              <path
-                d="M 32 14 L 32 42"
-                stroke="url(#arrowGradExp)"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 32 42 L 24 34"
-                stroke="url(#arrowGradExp)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 32 42 L 40 34"
-                stroke="url(#arrowGradExp)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {/* Data ripples */}
-              <circle
-                cx="32"
-                cy="20"
-                r="6"
-                stroke="url(#ripple1Exp)"
-                strokeWidth="2"
-                fill="none"
-                opacity="0.5"
-              >
-                <animate
-                  attributeName="r"
-                  values="6;12;6"
-                  dur="2s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="0.5;0;0.5"
-                  dur="2s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-
-              {/* Floating data points */}
-              <circle cx="22" cy="18" r="2" fill="#3b82f6">
-                <animate
-                  attributeName="cy"
-                  values="18;44;18"
-                  dur="3s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="1;0;1"
-                  dur="3s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-              <circle cx="42" cy="22" r="2" fill="#8b5cf6">
-                <animate
-                  attributeName="cy"
-                  values="22;48;22"
-                  dur="3.5s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="1;0;1"
-                  dur="3.5s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-
               <defs>
-                <linearGradient
-                  id="bgCircleExp"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stopColor="#3b82f6" />
+                <linearGradient id="logoBg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#2563eb" />
                   <stop offset="50%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-                <linearGradient
-                  id="arrowGradExp"
-                  x1="0%"
-                  y1="0%"
-                  x2="0%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="50%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-                <linearGradient
-                  id="ripple1Exp"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="0%"
-                >
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#9333ea" />
                 </linearGradient>
               </defs>
+              {/* Abstract nested circles - represents depth layers */}
+              <circle cx="12" cy="12" r="9" stroke="url(#logoBg2)" strokeWidth="1.5" />
+              <circle cx="12" cy="12" r="6" stroke="url(#logoBg2)" strokeWidth="1" opacity="0.6" />
+              <circle cx="12" cy="12" r="3" fill="url(#logoBg2)" opacity="0.8" />
             </svg>
             <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 bg-clip-text text-xl font-bold tracking-tight text-transparent">
               DeepDive
@@ -452,87 +204,21 @@ export default function Sidebar({ className = '' }: SidebarProps) {
             )}
           </Link>
 
-          <div className="space-y-1">
-            <Link
-              href="/library"
-              onClick={(e) => {
-                // Force navigation even if already on library page
-                if (pathname === '/library') {
-                  e.preventDefault();
-                  window.location.href = '/library';
-                }
-              }}
-              className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
-                isActive('/library')
-                  ? 'bg-pink-50 text-gray-900'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
-              title="My Library"
-            >
-              <svg
-                className="h-5 w-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                />
-              </svg>
-              {!isCollapsed && <span>My Library</span>}
-            </Link>
-
-            <Link
-              href="/data-management"
-              onClick={(e) => {
-                // Force navigation even if already on data-management page
-                if (pathname === '/data-management') {
-                  e.preventDefault();
-                  window.location.href = '/data-management';
-                }
-              }}
-              className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
-                isActive('/data-management')
-                  ? 'bg-emerald-50 text-gray-900'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
-              title="Data Management"
-            >
-              <svg
-                className="h-5 w-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                />
-              </svg>
-              {!isCollapsed && <span>Data Management</span>}
-            </Link>
-          </div>
-
           <Link
-            href="/notifications"
+            href="/data-management"
             onClick={(e) => {
-              // Force navigation even if already on notifications page
-              if (pathname === '/notifications') {
+              // Force navigation even if already on data-management page
+              if (pathname === '/data-management') {
                 e.preventDefault();
-                window.location.href = '/notifications';
+                window.location.href = '/data-management';
               }
             }}
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
-              isActive('/notifications')
-                ? 'bg-pink-50 text-gray-900'
+              isActive('/data-management')
+                ? 'bg-emerald-50 text-gray-900'
                 : 'text-gray-700 hover:bg-gray-50'
             }`}
-            title="Notifications"
+            title="Collection"
           >
             <svg
               className="h-5 w-5 flex-shrink-0"
@@ -544,39 +230,100 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
               />
             </svg>
-            {!isCollapsed && <span>Notifications</span>}
+            {!isCollapsed && <span>Collection</span>}
           </Link>
 
           <Link
-            href="/profile"
+            href="/library"
             onClick={(e) => {
-              // Force navigation even if already on profile page
-              if (pathname === '/profile') {
+              // Force navigation even if already on library page
+              if (pathname === '/library') {
                 e.preventDefault();
-                window.location.href = '/profile';
+                window.location.href = '/library';
               }
             }}
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
-              isActive('/profile')
+              isActive('/library')
                 ? 'bg-pink-50 text-gray-900'
                 : 'text-gray-700 hover:bg-gray-50'
             }`}
-            title="Profile"
+            title="My Library"
           >
-            <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-cyan-400 text-xs font-bold text-white">
-              P
-            </div>
-            {!isCollapsed && <span>Profile</span>}
+            <svg
+              className="h-5 w-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+              />
+            </svg>
+            {!isCollapsed && <span>My Library</span>}
           </Link>
-
         </div>
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="flex flex-1 flex-col space-y-1 border-t border-gray-200 p-3">
+      <div className="flex flex-1 flex-col justify-end space-y-1 border-t border-gray-200 p-3">
+        <Link
+          href="/notifications"
+          onClick={(e) => {
+            // Force navigation even if already on notifications page
+            if (pathname === '/notifications') {
+              e.preventDefault();
+              window.location.href = '/notifications';
+            }
+          }}
+          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2 text-sm ${
+            isActive('/notifications')
+              ? 'bg-pink-50 text-gray-900'
+              : 'text-gray-700 hover:bg-gray-50'
+          }`}
+          title="Notifications"
+        >
+          <svg
+            className="h-5 w-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+            />
+          </svg>
+          {!isCollapsed && <span>Notifications</span>}
+        </Link>
+
+        <Link
+          href="/profile"
+          onClick={(e) => {
+            // Force navigation even if already on profile page
+            if (pathname === '/profile') {
+              e.preventDefault();
+              window.location.href = '/profile';
+            }
+          }}
+          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2 text-sm ${
+            isActive('/profile')
+              ? 'bg-pink-50 text-gray-900'
+              : 'text-gray-700 hover:bg-gray-50'
+          }`}
+          title="Profile"
+        >
+          <UserCircle className="h-5 w-5 flex-shrink-0" />
+          {!isCollapsed && <span>Profile</span>}
+        </Link>
+
         <Link
           href="/labs"
           onClick={(e) => {

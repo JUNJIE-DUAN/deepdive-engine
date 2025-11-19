@@ -23,6 +23,7 @@ interface Note {
 
 interface NotesListProps {
   resourceId?: string;
+  searchQuery?: string;
   onNoteClick?: (note: Note) => void;
   onEditNote?: (note: Note) => void;
   onDeleteNote?: (noteId: string) => void;
@@ -30,6 +31,7 @@ interface NotesListProps {
 
 export default function NotesList({
   resourceId,
+  searchQuery = '',
   onNoteClick,
   onEditNote,
   onDeleteNote,
@@ -38,7 +40,6 @@ export default function NotesList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadNotes();

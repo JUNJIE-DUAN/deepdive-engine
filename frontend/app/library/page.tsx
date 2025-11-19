@@ -154,6 +154,11 @@ export default function LibraryPage() {
       }
     });
 
+  // Filter videos by search query
+  const filteredVideos = videos.filter((video) =>
+    video.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Get unique resource types for filtering
   const resourceTypes = Array.from(new Set(bookmarks.map((item) => item.type)));
 
@@ -465,7 +470,7 @@ export default function LibraryPage() {
               ))}
 
             {/* Notes Tab */}
-            {activeTab === 'notes' && <NotesList />}
+            {activeTab === 'notes' && <NotesList searchQuery={searchQuery} />}
 
             {/* Videos Tab */}
             {activeTab === 'videos' &&
@@ -482,10 +487,19 @@ export default function LibraryPage() {
                     Save videos from the YouTube page after parsing
                   </p>
                 </div>
+              ) : filteredVideos.length === 0 ? (
+                <div className="py-12 text-center">
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">
+                    No videos match your search
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Try adjusting your search terms
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {videos.map((video) => (
+                    {filteredVideos.map((video) => (
                       <Link
                         key={video.id}
                         href={`/youtube?saved=${video.id}`}

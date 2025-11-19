@@ -245,8 +245,14 @@ export default function Home() {
   // Report workspace (legacy - for /workspace page)
   const { addResource, hasResource, canAddMore } = useReportWorkspace();
 
-  // AI Office resource store
+  // AI Office resource store - defer initialization to avoid hydration mismatch
+  const [isHydrated, setIsHydrated] = useState(false);
   const aiOfficeStore = useResourceStore();
+
+  useEffect(() => {
+    // Mark as hydrated to prevent hydration mismatches
+    setIsHydrated(true);
+  }, []);
 
   // Helper function to convert page Resource to AI Office Resource
   const convertToAIOfficeResource = (

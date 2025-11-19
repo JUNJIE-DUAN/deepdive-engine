@@ -108,6 +108,14 @@ export const useResourceStore = create<ResourceState>()(
         resources: state.resources,
         selectedResourceIds: state.selectedResourceIds,
       }),
+      onRehydrateStorage: () => {
+        return (state, action) => {
+          // Prevent hydration errors during server-side rendering
+          if (typeof window === 'undefined') {
+            return;
+          }
+        };
+      },
     }
   )
 );

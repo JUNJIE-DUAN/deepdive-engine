@@ -48,6 +48,11 @@ export class MetadataExtractorService {
       const urlObj = new URL(url);
       const domain = urlObj.hostname || "";
 
+      // YouTube特殊处理
+      if (this.isYouTubeUrl(url)) {
+        return await this.extractYouTubeMetadata(url);
+      }
+
       // 获取页面HTML
       const html = await this.fetchPageContent(url);
 
@@ -353,5 +358,167 @@ export class MetadataExtractorService {
     }
     if (error.message.includes("Invalid URL")) return "URL格式无效";
     return error.message || "未知错误";
+  }
+
+  /**
+   * 检查是否为YouTube URL
+   */
+  private isYouTubeUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname || "";
+      return (
+        hostname.includes("youtube.com") ||
+        hostname.includes("youtu.be")
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 提取YouTube视频ID
+   */
+  private extractYouTubeVideoId(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+
+      // youtube.com/watch?v=xxxxx
+      if (urlObj.hostname?.includes("youtube.com")) {
+        const videoId = urlObj.searchParams.get("v");
+        return videoId;
+      }
+
+      // youtu.be/xxxxx
+      if (urlObj.hostname?.includes("youtu.be")) {
+        const videoId = urlObj.pathname.substring(1);
+        return videoId || null;
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * YouTube元数据提取
+   * 使用noembed API获取YouTube视频元数据（无需API密钥）
+   */
+  private async extractYouTubeMetadata(url: string): Promise<ParsedUrlMetadata> {
+    try {
+      const videoId = this.extractYouTubeVideoId(url);
+
+      if (!videoId) {
+        throw new Error("无法提取YouTube视频ID");
+      }
+
+      // 使用noembed API（免费，无需密钥）
+      const response = await axios.get(
+        `https://noembed.com/embed?url=${encodeURIComponent(url)}`,
+        {
+          timeout: this.REQUEST_TIMEOUT,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+          },
+        }
+      );
+
+      const embedData = response.data;
+
+      return {
+        url,
+        domain: "youtube.com",
+        title: embedData.title || `YouTube Video - ${videoId}`,
+        description: embedData.description || `Enjoy this YouTube video. Video ID: ${videoId}`,
+        imageUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        language: "en",
+        contentType: "video",
+        siteName: "YouTube",
+        authors: embedData.author_name ? [embedData.author_name] : undefined,
+        contentHash: crypto
+          .createHash("sha256")
+          .update(`youtube:${videoId}`)
+          .digest("hex"),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to extract YouTube metadata from ${url}:`, error);
+
+      // Fallback: 使用正则表达式从HTML提取信息
+      try {
+        return await this.extractYouTubeMetadataFallback(url);
+      } catch (fallbackError) {
+        throw new BadRequestException(
+          `无法提取YouTube视频元数据: ${this.getErrorMessage(fallbackError)}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * YouTube元数据提取（备选方案）
+   * 当noembed API失败时，尝试从HTML中提取og:tags
+   */
+  private async extractYouTubeMetadataFallback(url: string): Promise<ParsedUrlMetadata> {
+    const videoId = this.extractYouTubeVideoId(url);
+
+    if (!videoId) {
+      throw new Error("无法提取YouTube视频ID");
+    }
+
+    try {
+      const html = await this.fetchPageContent(url);
+      const $ = cheerio.load(html);
+
+      // 尝试从og:tags提取
+      const title =
+        $('meta[property="og:title"]').attr("content") ||
+        $("title").text() ||
+        `YouTube Video - ${videoId}`;
+
+      const description =
+        $('meta[property="og:description"]').attr("content") ||
+        `Enjoy this YouTube video. Video ID: ${videoId}`;
+
+      const imageUrl =
+        $('meta[property="og:image"]').attr("content") ||
+        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+      // 从script标签提取作者信息
+      let author: string | undefined;
+      try {
+        const jsonLd = $('script[type="application/ld+json"]').html();
+        if (jsonLd) {
+          const parsed = JSON.parse(jsonLd);
+          if (parsed.itemListElement && Array.isArray(parsed.itemListElement)) {
+            const uploadedBy = parsed.itemListElement.find(
+              (item: any) => item["@type"] === "VideoObject"
+            );
+            if (uploadedBy?.uploadDate) {
+              author = uploadedBy.name || undefined;
+            }
+          }
+        }
+      } catch {}
+
+      return {
+        url,
+        domain: "youtube.com",
+        title: this.cleanText(title),
+        description: this.cleanText(description),
+        imageUrl,
+        language: "en",
+        contentType: "video",
+        siteName: "YouTube",
+        authors: author ? [author] : undefined,
+        contentHash: crypto
+          .createHash("sha256")
+          .update(`youtube:${videoId}`)
+          .digest("hex"),
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }

@@ -114,6 +114,7 @@ export const WHITELISTED_DOMAINS = [
   "myticker.com",
   "www.myticker.com",
   "xslt.rip",
+  "epoch.ai",
 ];
 
 /**

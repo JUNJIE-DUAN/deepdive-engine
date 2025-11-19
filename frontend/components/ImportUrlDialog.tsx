@@ -150,7 +150,7 @@ export function ImportUrlDialog({
         throw new Error(data.error || '导入失败');
       }
 
-      alert('导入成功！');
+      // 导入成功 - 直接关闭对话框，无需弹窗提示
       handleClose();
       onImportSuccess();
     } catch (err) {

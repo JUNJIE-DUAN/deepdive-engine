@@ -1,7 +1,13 @@
 'use client';
 
-import { ProfessionalDataManagementPage } from '@/components/data-management/ProfessionalDataManagementPage';
+import Sidebar from '@/components/layout/Sidebar';
+import { DataManagementDashboard } from '@/components/data-management/DataManagementDashboard';
 
 export default function Page() {
-  return <ProfessionalDataManagementPage />;
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+      <DataManagementDashboard />
+    </div>
+  );
 }

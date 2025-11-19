@@ -1,13 +1,20 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
 import { config } from '@/lib/config';
 
-// Configure PDF.js worker
-if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-}
+// Lazy load PDF.js only in browser context
+let pdfjsLib: typeof import('pdfjs-dist') | null = null;
+
+const initPdfJs = async () => {
+  if (pdfjsLib || typeof window === 'undefined') {
+    return;
+  }
+  pdfjsLib = await import('pdfjs-dist');
+  if (pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  }
+};
 
 interface ThumbnailGeneratorOptions {
   scale?: number;
@@ -65,6 +72,13 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
       setError(null);
 
       try {
+        // Initialize PDF.js if not already done
+        await initPdfJs();
+
+        if (!pdfjsLib) {
+          throw new Error('PDF.js library failed to load');
+        }
+
         const resolvedPdfUrl = resolveUrl(pdfUrl);
 
         // Load PDF document

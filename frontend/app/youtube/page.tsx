@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { config } from '@/lib/config';
 import Sidebar from '@/components/layout/Sidebar';
@@ -59,7 +59,7 @@ declare global {
   }
 }
 
-export default function YouTubeTLDW() {
+function YouTubeTLDWContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const videoId = searchParams?.get('videoId') || '';
@@ -532,7 +532,7 @@ export default function YouTubeTLDW() {
       <Sidebar />
 
       {/* Main Content - 2 Column Layout */}
-      <main className="flex flex-1 overflow-hidden">
+      <main className="flex flex-1 overflow-hidden overflow-x-hidden">
         {/* Left Column - Video & Topics */}
         <div
           className={`flex flex-col border-r border-gray-200 p-6 transition-all duration-300 ${
@@ -1071,6 +1071,26 @@ export default function YouTubeTLDW() {
           </svg>
         </button>
       </main>
+    </div>
+  );
+}
+
+export default function YouTubeTLDW() {
+  return (
+    <Suspense fallback={<YouTubeLoadingFallback />}>
+      <YouTubeTLDWContent />
+    </Suspense>
+  );
+}
+
+function YouTubeLoadingFallback() {
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <div className="flex w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-gray-600">加载中...</p>
+        </div>
+      </div>
     </div>
   );
 }

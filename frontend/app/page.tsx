@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { config } from '@/lib/config';
 import Sidebar from '@/components/layout/Sidebar';
@@ -120,7 +120,7 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
   return insights.length > 0 ? insights : [];
 }
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [resources, setResources] = useState<Resource[]>([]);
@@ -3037,6 +3037,26 @@ export default function Home() {
         onApply={handleApplyFilters}
         onReset={handleResetFilters}
       />
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<HomeLoadingFallback />}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeLoadingFallback() {
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <div className="flex w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-gray-600">加载中...</p>
+        </div>
+      </div>
     </div>
   );
 }

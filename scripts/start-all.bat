@@ -15,7 +15,7 @@ echo ========================================
 
 echo.
 echo [1/4] Starting Frontend (port 3000)...
-cd /d "%~dp0frontend"
+cd /d "%~dp0..\frontend"
 start "DeepDive Frontend" cmd /k "npm run dev"
 
 echo Waiting for frontend to initialize...
@@ -23,7 +23,7 @@ timeout /t 3 /nobreak >nul
 
 echo.
 echo [2/4] Starting Backend (port 4000)...
-cd /d "%~dp0backend"
+cd /d "%~dp0..\backend"
 start "DeepDive Backend" cmd /k "npm run dev"
 
 echo Waiting for backend to initialize...
@@ -31,7 +31,7 @@ timeout /t 3 /nobreak >nul
 
 echo.
 echo [3/4] Starting AI Service (port 5000)...
-cd /d "%~dp0ai-service"
+cd /d "%~dp0..\ai-service"
 start "DeepDive AI Service" cmd /k "python -m uvicorn main:app --host 127.0.0.1 --port 5000 --reload"
 
 echo Waiting for AI service to initialize...

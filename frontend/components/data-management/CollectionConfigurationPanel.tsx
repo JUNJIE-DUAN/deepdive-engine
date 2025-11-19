@@ -27,10 +27,7 @@ const fetchConfigs = async (
   const response = await fetch(
     `/api/data-management/configurations?resourceType=${resourceType}`
   );
-  if (!response.ok) {
-    throw new Error('Failed to fetch configurations');
-  }
-  return response.json();
+  return response.json() as Promise<CollectionConfig[]>;
 };
 
 const updateConfigStatus = async ({
@@ -83,7 +80,7 @@ export function CollectionConfigurationPanel({
   const statusMutation = useMutation({
     mutationFn: updateConfigStatus,
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['collectionConfigs', resourceType],
       });
     },
@@ -92,7 +89,7 @@ export function CollectionConfigurationPanel({
   const deleteMutation = useMutation({
     mutationFn: deleteConfig,
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['collectionConfigs', resourceType],
       });
     },
@@ -103,9 +100,7 @@ export function CollectionConfigurationPanel({
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this configuration?')) {
-      deleteMutation.mutate(id);
-    }
+    deleteMutation.mutate(id);
   };
 
   if (isLoading) {

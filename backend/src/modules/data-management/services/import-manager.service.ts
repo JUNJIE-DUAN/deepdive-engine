@@ -424,31 +424,20 @@ export class ImportManagerService {
         this.logger.log(`Created resource: ${resourceId} for URL ${url}`);
       }
 
-      // 创建ImportTask记录以跟踪导入历史
-      const importTask = await this.createImportTask({
-        resourceType,
-        sourceUrl: url,
-        title: metadata.title,
-      });
-
-      // 将编辑后的完整元数据存储到ImportTask的metadata字段
-      const updated = await this.prisma.importTask.update({
-        where: { id: importTask.id },
-        data: {
-          metadata: metadata as any, // 存储完整的编辑后的元数据
-          status: "SUCCESS" as any, // 标记为成功
-          resourceId, // 关联Resource
-          itemsProcessed: 1,
-          itemsSaved: 1,
-          completedAt: new Date(),
-        },
-      });
-
+      // 直接返回成功响应，不创建ImportTask
+      // Resource已经创建，可以立即在Explore中查看
       this.logger.log(
         `Successfully imported and created resource: ${resourceId}`,
       );
 
-      return updated;
+      return {
+        id: resourceId,
+        status: "SUCCESS",
+        resourceId,
+        sourceUrl: url,
+        itemsProcessed: 1,
+        itemsSaved: 1,
+      } as any;
     } catch (error) {
       this.logger.error(
         `Failed to import with metadata: ${getErrorMessage(error)}`,

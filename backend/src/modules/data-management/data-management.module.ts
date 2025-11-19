@@ -9,6 +9,13 @@ import { CollectionConfigurationService } from "./services/collection-configurat
 import { CollectionConfigurationController } from "./controllers/collection-configuration.controller";
 import { ImportManagerService } from "./services/import-manager.service";
 import { ImportManagerController } from "./controllers/import-manager.controller";
+import { ImportTaskProcessorService } from "./services/import-task-processor.service";
+import { MetadataExtractorService } from "./services/metadata-extractor.service";
+import { DuplicateDetectorService } from "./services/duplicate-detector.service";
+import { DashboardService } from "./services/dashboard.service";
+import { DashboardController } from "./controllers/dashboard.controller";
+import { ConfigurationController } from "./controllers/configuration.controller";
+import { ConfigurationService } from "./services/configuration.service";
 
 /**
  * Data Management Module
@@ -28,18 +35,27 @@ import { ImportManagerController } from "./controllers/import-manager.controller
     CollectionRuleService,
     CollectionConfigurationService,
     ImportManagerService,
+    ImportTaskProcessorService,
+    MetadataExtractorService,
+    DuplicateDetectorService,
+    DashboardService,
+    ConfigurationService,
   ],
   controllers: [
     SourceWhitelistController,
     CollectionRuleController,
     CollectionConfigurationController,
     ImportManagerController,
+    DashboardController,
+    ConfigurationController,
   ],
   exports: [
     SourceWhitelistService,
     CollectionRuleService,
     CollectionConfigurationService,
     ImportManagerService,
+    MetadataExtractorService,
+    DuplicateDetectorService,
   ],
 })
 export class DataManagementModule implements OnModuleInit {

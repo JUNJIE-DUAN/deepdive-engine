@@ -1,5 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, Logger } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Logger,
+} from "@nestjs/common";
 import { ImportManagerService } from "../services/import-manager.service";
+import { ImportTaskProcessorService } from "../services/import-task-processor.service";
 import { SourceWhitelistService } from "../services/source-whitelist.service";
 import { ResourceType } from "@prisma/client";
 
@@ -13,7 +22,8 @@ export class ImportManagerController {
 
   constructor(
     private readonly importManagerService: ImportManagerService,
-    private readonly whitelistService: SourceWhitelistService
+    private readonly importTaskProcessorService: ImportTaskProcessorService,
+    private readonly whitelistService: SourceWhitelistService,
   ) {}
 
   /**
@@ -26,7 +36,7 @@ export class ImportManagerController {
     body: {
       url: string;
       resourceType?: ResourceType;
-    }
+    },
   ) {
     try {
       if (!body.url) {
@@ -39,12 +49,14 @@ export class ImportManagerController {
       // 如果提供了资源类型，验证URL是否在白名单中
       if (body.resourceType) {
         const whitelist = await this.whitelistService.getWhitelist(
-          body.resourceType
+          body.resourceType,
         );
 
         if (whitelist && whitelist.isActive) {
           const allowedDomains = Array.isArray(whitelist.allowedDomains)
-            ? whitelist.allowedDomains.filter((d): d is string => typeof d === 'string')
+            ? whitelist.allowedDomains.filter(
+                (d): d is string => typeof d === "string",
+              )
             : [];
           const isAllowed = this.validateDomain(body.url, allowedDomains);
           if (!isAllowed) {
@@ -84,7 +96,7 @@ export class ImportManagerController {
       sourceUrl: string;
       title?: string;
       ruleId?: string;
-    }
+    },
   ) {
     try {
       if (!body.resourceType || !body.sourceUrl) {
@@ -96,17 +108,16 @@ export class ImportManagerController {
 
       // 验证URL在白名单中
       const whitelist = await this.whitelistService.getWhitelist(
-        body.resourceType
+        body.resourceType,
       );
 
       if (whitelist && whitelist.isActive) {
         const allowedDomains = Array.isArray(whitelist.allowedDomains)
-          ? whitelist.allowedDomains.filter((d): d is string => typeof d === 'string')
+          ? whitelist.allowedDomains.filter(
+              (d): d is string => typeof d === "string",
+            )
           : [];
-        const isAllowed = this.validateDomain(
-          body.sourceUrl,
-          allowedDomains
-        );
+        const isAllowed = this.validateDomain(body.sourceUrl, allowedDomains);
 
         if (!isAllowed) {
           return {
@@ -134,7 +145,8 @@ export class ImportManagerController {
       this.logger.error(`Error submitting import: ${error}`);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to submit import",
+        error:
+          error instanceof Error ? error.message : "Failed to submit import",
       };
     }
   }
@@ -148,7 +160,7 @@ export class ImportManagerController {
     @Query("resourceType") resourceType?: ResourceType,
     @Query("status") status?: string,
     @Query("limit") limit: string = "50",
-    @Query("offset") offset: string = "0"
+    @Query("offset") offset: string = "0",
   ) {
     try {
       const limitNum = Math.min(Math.max(1, parseInt(limit) || 50), 200);
@@ -158,7 +170,7 @@ export class ImportManagerController {
         resourceType,
         status as any,
         limitNum,
-        offsetNum
+        offsetNum,
       );
 
       return {
@@ -217,9 +229,8 @@ export class ImportManagerController {
   @Get("quality-metrics")
   async getQualityMetrics(@Query("resourceType") resourceType?: ResourceType) {
     try {
-      const result = await this.importManagerService.getDataQualityMetrics(
-        resourceType
-      );
+      const result =
+        await this.importManagerService.getDataQualityMetrics(resourceType);
 
       return {
         success: true,
@@ -238,6 +249,201 @@ export class ImportManagerController {
           avgQuality: 0,
           needsReview: 0,
         },
+      };
+    }
+  }
+
+  /**
+   * 解析URL并提取完整的元数据（包含重复检测）
+   * POST /api/v1/data-management/parse-url-full
+   */
+  @Post("parse-url-full")
+  async parseUrlFull(
+    @Body()
+    body: {
+      url: string;
+      resourceType: ResourceType;
+    },
+  ) {
+    try {
+      if (!body.url || !body.resourceType) {
+        return {
+          success: false,
+          error: "Missing required fields: url, resourceType",
+        };
+      }
+
+      // 验证URL是否在白名单中
+      const whitelist = await this.whitelistService.getWhitelist(
+        body.resourceType,
+      );
+
+      if (!whitelist || !whitelist.isActive) {
+        return {
+          success: false,
+          error: "Whitelist not found or inactive for this resource type",
+        };
+      }
+
+      const allowedDomains = Array.isArray(whitelist.allowedDomains)
+        ? whitelist.allowedDomains.filter(
+            (d): d is string => typeof d === "string",
+          )
+        : [];
+
+      const isAllowed = this.validateDomain(body.url, allowedDomains);
+      if (!isAllowed) {
+        return {
+          success: false,
+          error: "URL domain not in whitelist for this resource type",
+          code: "DOMAIN_NOT_WHITELISTED",
+        };
+      }
+
+      // 使用ImportManagerService的新方法
+      const result = await this.importManagerService.parseUrlFull(
+        body.url,
+        body.resourceType,
+      );
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Error parsing URL full: ${error}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to parse URL",
+      };
+    }
+  }
+
+  /**
+   * 导入带有编辑后的元数据
+   * POST /api/v1/data-management/import-with-metadata
+   */
+  @Post("import-with-metadata")
+  async importWithMetadata(
+    @Body()
+    body: {
+      url: string;
+      resourceType: ResourceType;
+      metadata: any;
+      skipDuplicateWarning?: boolean;
+    },
+  ) {
+    try {
+      if (!body.url || !body.resourceType || !body.metadata) {
+        return {
+          success: false,
+          error: "Missing required fields: url, resourceType, metadata",
+        };
+      }
+
+      // 验证URL是否在白名单中
+      const whitelist = await this.whitelistService.getWhitelist(
+        body.resourceType,
+      );
+
+      if (!whitelist || !whitelist.isActive) {
+        return {
+          success: false,
+          error: "Whitelist not found or inactive for this resource type",
+        };
+      }
+
+      const allowedDomains = Array.isArray(whitelist.allowedDomains)
+        ? whitelist.allowedDomains.filter(
+            (d): d is string => typeof d === "string",
+          )
+        : [];
+
+      const isAllowed = this.validateDomain(body.url, allowedDomains);
+      if (!isAllowed) {
+        return {
+          success: false,
+          error: "URL domain not in whitelist for this resource type",
+          code: "DOMAIN_NOT_WHITELISTED",
+        };
+      }
+
+      // 使用ImportManagerService的新方法
+      const importTask = await this.importManagerService.importWithMetadata(
+        body.url,
+        body.resourceType,
+        body.metadata,
+        body.skipDuplicateWarning,
+      );
+
+      return {
+        success: true,
+        data: {
+          taskId: importTask.id,
+          status: importTask.status,
+          sourceUrl: importTask.sourceUrl,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error importing with metadata: ${error}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to import",
+      };
+    }
+  }
+
+  /**
+   * 处理所有待处理的导入任务
+   * POST /api/v1/data-management/process-pending
+   *
+   * 将PENDING状态的ImportTask转换为实际的Resource记录
+   */
+  @Post("process-pending")
+  async processPendingImports(@Query("limit") limit?: string) {
+    try {
+      const limitNum = limit ? parseInt(limit, 10) : 50;
+
+      const result =
+        await this.importTaskProcessorService.processPendingTasks(limitNum);
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Error processing pending imports: ${error}`);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to process pending imports",
+      };
+    }
+  }
+
+  /**
+   * 获取导入任务统计
+   * GET /api/v1/data-management/task-stats
+   *
+   * 返回各种状态的ImportTask数量统计
+   */
+  @Get("task-stats")
+  async getTaskStats() {
+    try {
+      const stats = await this.importTaskProcessorService.getTaskStats();
+
+      return {
+        success: true,
+        data: stats,
+      };
+    } catch (error) {
+      this.logger.error(`Error getting task stats: ${error}`);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to get task stats",
       };
     }
   }

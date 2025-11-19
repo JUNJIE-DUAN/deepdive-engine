@@ -13,6 +13,7 @@ import CommentsList from '@/components/features/CommentsList';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
+import { ImportUrlDialog } from '@/components/ImportUrlDialog';
 import {
   AIContextBuilder,
   type Resource as AIResource,
@@ -307,12 +308,6 @@ export default function Home() {
 
   // Import URL states
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [importUrl, setImportUrl] = useState('');
-  const [importLoading, setImportLoading] = useState(false);
-  const [importMessage, setImportMessage] = useState<{
-    type: 'success' | 'error';
-    text: string;
-  } | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -489,7 +484,9 @@ export default function Home() {
       };
       params.append(
         'type',
-        typeMap[activeTab as 'papers' | 'blogs' | 'reports' | 'youtube' | 'news']
+        typeMap[
+          activeTab as 'papers' | 'blogs' | 'reports' | 'youtube' | 'news'
+        ]
       );
 
       if (searchQuery) {
@@ -1269,62 +1266,6 @@ export default function Home() {
     }
   };
 
-  const handleImportUrl = async () => {
-    if (!importUrl.trim()) {
-      setImportMessage({ type: 'error', text: '请输入URL' });
-      return;
-    }
-
-    setImportLoading(true);
-    setImportMessage(null);
-
-    try {
-      // Map current tab to resource type
-      const typeMap: Record<string, string> = {
-        papers: 'PAPER',
-        blogs: 'BLOG',
-        reports: 'REPORT',
-        youtube: 'YOUTUBE_VIDEO',
-        news: 'NEWS',
-      };
-
-      const type = typeMap[activeTab] || 'PAPER';
-
-      const response = await fetch(
-        `${config.apiBaseUrl}/api/v1/resources/import-url`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: importUrl, type }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setImportMessage({ type: 'success', text: '导入成功！' });
-        setImportUrl('');
-        setTimeout(() => {
-          setShowImportDialog(false);
-          setImportMessage(null);
-          fetchResources(); // Refresh the list
-        }, 1500);
-      } else {
-        setImportMessage({
-          type: 'error',
-          text: data.message || '导入失败',
-        });
-      }
-    } catch (error) {
-      setImportMessage({
-        type: 'error',
-        text: '网络错误，请重试',
-      });
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
   const isBookmarked = (resourceId: string) => {
     return bookmarks.has(resourceId);
   };
@@ -1554,8 +1495,8 @@ export default function Home() {
                     onClick={() => setActiveTab('papers')}
                     className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'papers'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border border-blue-200 bg-blue-50 text-blue-700 shadow-sm'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1577,8 +1518,8 @@ export default function Home() {
                     onClick={() => setActiveTab('blogs')}
                     className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'blogs'
-                        ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-sm'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border border-purple-200 bg-purple-50 text-purple-700 shadow-sm'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1600,8 +1541,8 @@ export default function Home() {
                     onClick={() => setActiveTab('reports')}
                     className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'reports'
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200 shadow-sm'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border border-amber-200 bg-amber-50 text-amber-700 shadow-sm'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1623,8 +1564,8 @@ export default function Home() {
                     onClick={() => setActiveTab('youtube')}
                     className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'youtube'
-                        ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border border-red-200 bg-red-50 text-red-700 shadow-sm'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -1640,8 +1581,8 @@ export default function Home() {
                     onClick={() => setActiveTab('news')}
                     className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       activeTab === 'news'
-                        ? 'bg-green-50 text-green-700 border border-green-200 shadow-sm'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border border-green-200 bg-green-50 text-green-700 shadow-sm'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <svg
@@ -3023,104 +2964,18 @@ export default function Home() {
         </button>
       )}
 
-      {/* Import URL Dialog */}
-      {showImportDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Import</h3>
-              <button
-                onClick={() => {
-                  setShowImportDialog(false);
-                  setImportUrl('');
-                  setImportMessage(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <label
-                htmlFor="import-url"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                请输入
-                {activeTab === 'papers'
-                  ? '论文'
-                  : activeTab === 'blogs'
-                    ? '博客'
-                    : activeTab === 'reports'
-                      ? '报告'
-                      : activeTab === 'youtube'
-                        ? 'YouTube视频'
-                        : '新闻'}
-                的URL
-              </label>
-              <input
-                id="import-url"
-                type="url"
-                value={importUrl}
-                onChange={(e) => setImportUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !importLoading) {
-                    handleImportUrl();
-                  }
-                }}
-                placeholder="https://example.com/..."
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={importLoading}
-              />
-            </div>
-
-            {importMessage && (
-              <div
-                className={`mb-4 rounded-lg p-3 text-sm ${
-                  importMessage.type === 'success'
-                    ? 'bg-green-50 text-green-800'
-                    : 'bg-red-50 text-red-800'
-                }`}
-              >
-                {importMessage.text}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowImportDialog(false);
-                  setImportUrl('');
-                  setImportMessage(null);
-                }}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                disabled={importLoading}
-              >
-                取消
-              </button>
-              <button
-                onClick={handleImportUrl}
-                disabled={importLoading || !importUrl.trim()}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {importLoading ? '导入中...' : '导入'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Import URL Dialog - Using Professional Component */}
+      <ImportUrlDialog
+        isOpen={showImportDialog}
+        onClose={() => {
+          setShowImportDialog(false);
+        }}
+        activeTab={activeTab}
+        onImportSuccess={() => {
+          fetchResources();
+        }}
+        apiBaseUrl={config.apiBaseUrl}
+      />
 
       {/* Context Menu for Adding to Notes */}
       {contextMenu && (

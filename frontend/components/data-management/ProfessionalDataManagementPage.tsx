@@ -8,12 +8,48 @@ import {
   ChevronRight,
   TrendingUp,
   Activity,
+  Loader2,
+  XCircle,
 } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
 import { CollectionConfigurationPanel } from './CollectionConfigurationPanel';
+import { useQuery } from '@tanstack/react-query';
+import { RecentTasksTimeline } from './RecentTasksTimeline';
 
 type ResourceType = 'PAPER' | 'BLOG' | 'REPORT' | 'YOUTUBE_VIDEO' | 'NEWS';
-type ManagementTab = 'configuration' | 'monitoring' | 'quality';
+type ManagementTab = 'dashboard' | 'configuration' | 'monitoring' | 'quality';
+
+interface DashboardSummary {
+  totalResources: number;
+  newToday: number;
+  successRate: number;
+  errorTasks: number;
+  pendingTasks: number;
+}
+
+interface RecentTask {
+  id: string;
+  url: string;
+  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  createdAt: string;
+  error: string | null;
+}
+
+const fetchDashboardSummary = async (): Promise<DashboardSummary> => {
+  const response = await fetch('/api/data-management/dashboard/summary');
+  if (!response.ok) {
+    throw new Error('Failed to fetch dashboard summary');
+  }
+  return response.json() as Promise<DashboardSummary>;
+};
+
+const fetchRecentTasks = async (): Promise<RecentTask[]> => {
+  const response = await fetch('/api/data-management/dashboard/recent-tasks');
+  if (!response.ok) {
+    throw new Error('Failed to fetch recent tasks');
+  }
+  return response.json() as Promise<RecentTask[]>;
+};
 
 const RESOURCE_TYPES: Array<{
   id: ResourceType;
@@ -71,6 +107,12 @@ const MANAGEMENT_TABS: Array<{
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   description: string;
 }> = [
+  {
+    id: 'dashboard',
+    name: '仪表盘',
+    icon: BarChart3,
+    description: '全局数据采集概览和健康状态',
+  },
   {
     id: 'configuration',
     name: '采集配置',
@@ -143,10 +185,31 @@ const MOCK_STATS = {
 export function ProfessionalDataManagementPage() {
   const [selectedResourceType, setSelectedResourceType] =
     useState<ResourceType>('PAPER');
-  const [activeTab, setActiveTab] = useState<ManagementTab>('configuration');
+  const [activeTab, setActiveTab] = useState<ManagementTab>('dashboard');
+
+  const {
+    data: dashboardSummary,
+    isLoading: isSummaryLoading,
+    isError: isSummaryError,
+    error: summaryError,
+  } = useQuery<DashboardSummary, Error>({
+    queryKey: ['dashboardSummary'],
+    queryFn: fetchDashboardSummary,
+  });
+
+  const {
+    data: recentTasks,
+    isLoading: areTasksLoading,
+    isError: areTasksError,
+  } = useQuery<RecentTask[], Error>({
+    queryKey: ['recentTasks'],
+    queryFn: fetchRecentTasks,
+  });
 
   const stats = MOCK_STATS[selectedResourceType];
-  const resourceTypeInfo = RESOURCE_TYPES.find((t) => t.id === selectedResourceType)!;
+  const resourceTypeInfo = RESOURCE_TYPES.find(
+    (t) => t.id === selectedResourceType
+  )!;
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -154,10 +217,10 @@ export function ProfessionalDataManagementPage() {
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header with Title and Breadcrumb */}
         <div className="border-b border-gray-200 bg-white px-8 py-6">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="mb-4 flex items-center gap-3">
             <span className="text-3xl">⚙️</span>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">数据采集管理</h1>
@@ -175,10 +238,10 @@ export function ProfessionalDataManagementPage() {
               <button
                 key={type.id}
                 onClick={() => setSelectedResourceType(type.id)}
-                className={`whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-all ${
+                className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-all ${
                   selectedResourceType === type.id
                     ? `border-b-2 border-current ${type.color}`
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    : 'border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900'
                 }`}
               >
                 <span className="mr-2">{type.icon}</span>
@@ -189,7 +252,7 @@ export function ProfessionalDataManagementPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto flex flex-col">
+        <div className="flex flex-1 flex-col overflow-auto">
           {/* Management TABs */}
           <div className="border-b border-gray-200 bg-white px-8 py-4">
             <div className="flex gap-4">
@@ -197,10 +260,10 @@ export function ProfessionalDataManagementPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                     activeTab === tab.id
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border border-blue-200 bg-blue-50 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
                   <tab.icon className="h-4 w-4" />
@@ -214,9 +277,89 @@ export function ProfessionalDataManagementPage() {
           </div>
 
           {/* Content Area with Statistics Sidebar */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
             {/* Main Content Panel */}
             <div className="flex-1 overflow-auto p-8">
+              {activeTab === 'dashboard' && (
+                <div className="max-w-6xl">
+                  <h2 className="mb-6 text-xl font-semibold text-gray-900">
+                    全局数据采集概览
+                  </h2>
+                  {isSummaryLoading && (
+                    <div className="flex h-48 items-center justify-center text-gray-500">
+                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                      加载中...
+                    </div>
+                  )}
+                  {isSummaryError && (
+                    <div className="flex h-48 items-center justify-center text-red-500">
+                      <XCircle className="mr-2 h-6 w-6" />
+                      加载失败: {summaryError?.message}
+                    </div>
+                  )}
+                  {dashboardSummary && (
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {/* Total Resources Card */}
+                      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <p className="text-sm text-gray-600">总数据量</p>
+                        <p className="mt-2 text-3xl font-bold text-gray-900">
+                          {dashboardSummary.totalResources.toLocaleString()}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          今日新增: +{dashboardSummary.newToday}
+                        </p>
+                      </div>
+
+                      {/* Success Rate Card */}
+                      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <p className="text-sm text-gray-600">采集成功率</p>
+                        <p className="mt-2 text-3xl font-bold text-green-600">
+                          {dashboardSummary.successRate}%
+                        </p>
+                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-green-200">
+                          <div
+                            className="h-full bg-gradient-to-r from-green-400 to-emerald-500"
+                            style={{
+                              width: `${dashboardSummary.successRate}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Error Tasks Card */}
+                      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <p className="text-sm text-gray-600">失败任务</p>
+                        <p className="mt-2 text-3xl font-bold text-red-600">
+                          {dashboardSummary.errorTasks.toLocaleString()}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">需人工介入</p>
+                      </div>
+
+                      {/* Pending Tasks Card */}
+                      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <p className="text-sm text-gray-600">待处理任务</p>
+                        <p className="mt-2 text-3xl font-bold text-blue-600">
+                          {dashboardSummary.pendingTasks.toLocaleString()}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          等待系统处理
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-8">
+                    <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                      最近任务
+                    </h3>
+                    <RecentTasksTimeline
+                      tasks={recentTasks || []}
+                      isLoading={areTasksLoading}
+                      isError={areTasksError}
+                    />
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'configuration' && (
                 <div className="max-w-6xl">
                   <div className="mb-6">
@@ -245,9 +388,9 @@ export function ProfessionalDataManagementPage() {
                   </div>
 
                   {/* Monitoring Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Success Rate */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-shadow">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">成功率</p>
@@ -260,7 +403,7 @@ export function ProfessionalDataManagementPage() {
                     </div>
 
                     {/* Today Collected */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-shadow">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">今日采集</p>
@@ -273,7 +416,7 @@ export function ProfessionalDataManagementPage() {
                     </div>
 
                     {/* Duplicates */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-shadow">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">重复项</p>
@@ -286,10 +429,10 @@ export function ProfessionalDataManagementPage() {
                     </div>
 
                     {/* Last Update */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-shadow">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md">
                       <div>
                         <p className="text-sm text-gray-600">最后更新</p>
-                        <p className="mt-2 text-sm font-mono text-gray-900">
+                        <p className="mt-2 font-mono text-sm text-gray-900">
                           {stats.lastUpdate}
                         </p>
                       </div>
@@ -310,7 +453,7 @@ export function ProfessionalDataManagementPage() {
                   </div>
 
                   {/* Quality Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {/* Quality Score */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                       <p className="text-sm text-gray-600">质量评分</p>
@@ -318,9 +461,9 @@ export function ProfessionalDataManagementPage() {
                         <p className="text-3xl font-bold text-blue-600">
                           {stats.qualityScore}
                         </p>
-                        <p className="text-sm text-gray-500 mb-1">/5.0</p>
+                        <p className="mb-1 text-sm text-gray-500">/5.0</p>
                       </div>
-                      <div className="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200">
                         <div
                           className="h-full bg-gradient-to-r from-blue-400 to-blue-600"
                           style={{
@@ -363,18 +506,20 @@ export function ProfessionalDataManagementPage() {
             </div>
 
             {/* Right Sidebar - Quick Stats */}
-            <div className="w-80 border-l border-gray-200 bg-white p-6 overflow-auto">
+            <div className="w-80 overflow-auto border-l border-gray-200 bg-white p-6">
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     {resourceTypeInfo.name}
                   </p>
                   <p className="mt-3 text-sm text-gray-600">采集概览</p>
                 </div>
 
                 {/* Quick Stats Cards */}
-                <div className={`rounded-xl ${resourceTypeInfo.lightBg} border ${resourceTypeInfo.borderColor} p-4`}>
-                  <p className="text-xs text-gray-600 uppercase tracking-wide">
+                <div
+                  className={`rounded-xl ${resourceTypeInfo.lightBg} border ${resourceTypeInfo.borderColor} p-4`}
+                >
+                  <p className="text-xs uppercase tracking-wide text-gray-600">
                     总数据量
                   </p>
                   <p className="mt-2 text-2xl font-bold text-gray-900">
@@ -385,14 +530,14 @@ export function ProfessionalDataManagementPage() {
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4">
-                  <p className="text-xs text-gray-600 uppercase tracking-wide">
+                <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-600">
                     成功率
                   </p>
                   <p className="mt-2 text-2xl font-bold text-green-700">
                     {stats.successRate}%
                   </p>
-                  <div className="mt-3 h-1.5 bg-green-200 rounded-full overflow-hidden">
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-green-200">
                     <div
                       className="h-full bg-gradient-to-r from-green-400 to-emerald-500"
                       style={{ width: `${stats.successRate}%` }}
@@ -400,14 +545,14 @@ export function ProfessionalDataManagementPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 p-4">
-                  <p className="text-xs text-gray-600 uppercase tracking-wide">
+                <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-600">
                     质量评分
                   </p>
                   <p className="mt-2 text-2xl font-bold text-blue-700">
                     {stats.qualityScore}/5.0
                   </p>
-                  <div className="mt-3 h-1.5 bg-blue-200 rounded-full overflow-hidden">
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-200">
                     <div
                       className="h-full bg-gradient-to-r from-blue-400 to-cyan-500"
                       style={{ width: `${(stats.qualityScore / 5) * 100}%` }}
@@ -415,32 +560,34 @@ export function ProfessionalDataManagementPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4">
-                  <p className="text-xs text-gray-600 uppercase tracking-wide">
+                <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-600">
                     重复项
                   </p>
                   <p className="mt-2 text-2xl font-bold text-orange-700">
                     {stats.duplicates}
                   </p>
                   <p className="mt-2 text-xs text-gray-500">
-                    重复率: {((stats.duplicates / stats.totalCollected) * 100).toFixed(2)}%
+                    重复率:{' '}
+                    {((stats.duplicates / stats.totalCollected) * 100).toFixed(
+                      2
+                    )}
+                    %
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 p-4">
-                  <p className="text-xs text-gray-600 uppercase tracking-wide">
+                <div className="rounded-xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-600">
                     待审核
                   </p>
                   <p className="mt-2 text-2xl font-bold text-yellow-700">
                     {stats.needsReview}
                   </p>
-                  <p className="mt-2 text-xs text-gray-500">
-                    需要人工审核
-                  </p>
+                  <p className="mt-2 text-xs text-gray-500">需要人工审核</p>
                 </div>
 
                 {/* Action Button */}
-                <button className="w-full mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-sm font-medium text-white hover:shadow-lg transition-shadow">
+                <button className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-sm font-medium text-white transition-shadow hover:shadow-lg">
                   <span>查看详细报告</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>

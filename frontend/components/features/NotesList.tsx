@@ -147,68 +147,35 @@ export default function NotesList({
 
   return (
     <div className="space-y-6">
-      {/* Search and Tag Filters */}
-      <div className="space-y-4">
-        {/* Search input */}
-        <div className="relative">
-          <div className="relative rounded-lg border border-gray-300 bg-white shadow-sm">
-            <div className="flex items-center">
-              <div className="flex items-center px-4 py-3">
-                <svg
-                  className="h-5 w-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 border-none px-4 py-3 text-sm focus:outline-none focus:ring-0"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Tag filter chips */}
-        {allTags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-gray-600 uppercase">Tags:</span>
+      {/* Tag filter chips - Only show in Notes tab */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-gray-600 uppercase">Tags:</span>
+          <button
+            onClick={() => setSelectedTag(null)}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
+              selectedTag === null
+                ? 'bg-blue-600 text-white'
+                : 'border border-gray-300 bg-white text-gray-700 hover:border-blue-300'
+            }`}
+          >
+            All
+          </button>
+          {allTags.map((tag) => (
             <button
-              onClick={() => setSelectedTag(null)}
+              key={tag}
+              onClick={() => setSelectedTag(tag)}
               className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                selectedTag === null
+                selectedTag === tag
                   ? 'bg-blue-600 text-white'
                   : 'border border-gray-300 bg-white text-gray-700 hover:border-blue-300'
               }`}
             >
-              All
+              {tag}
             </button>
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                  selectedTag === tag
-                    ? 'bg-blue-600 text-white'
-                    : 'border border-gray-300 bg-white text-gray-700 hover:border-blue-300'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Notes List */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

@@ -305,7 +305,7 @@ export default function LibraryPage() {
         {/* Sticky Search Bar Container - Similar to Explore */}
         <div className="sticky top-0 z-10 bg-gray-50 pb-4 pt-6">
           <div className="mx-auto max-w-7xl px-8">
-            {/* Large Search Bar */}
+            {/* Large Search Bar - Unified for all tabs */}
             <div className="mb-6">
               <div className="relative rounded-lg border border-gray-300 bg-white shadow-sm">
                 <div className="flex items-center">
@@ -327,22 +327,36 @@ export default function LibraryPage() {
                   </div>
                   <input
                     type="text"
-                    placeholder="Search all resources..."
+                    placeholder={activeTab === 'notes' ? 'Search notes...' : 'Search all resources...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="flex-1 border-none px-4 py-3 text-sm focus:outline-none focus:ring-0"
                   />
-                  {/* Sort dropdown */}
+                  {/* Clear and Sort controls */}
                   <div className="flex items-center gap-2 px-4">
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
-                      className="rounded border border-gray-300 bg-white px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
-                    >
-                      <option value="date">Latest First</option>
-                      <option value="title">By Title</option>
-                      <option value="type">By Type</option>
-                    </select>
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="rounded p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                        title="Clear search"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                    {/* Sort dropdown - Only for Bookmarks/All tabs */}
+                    {(activeTab === 'all' || activeTab === 'bookmarks') && (
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="rounded border border-gray-300 bg-white px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+                      >
+                        <option value="date">Latest First</option>
+                        <option value="title">By Title</option>
+                        <option value="type">By Type</option>
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>

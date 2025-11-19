@@ -1872,25 +1872,31 @@ export default function Home() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const aiResource =
-                                  convertToAIOfficeResource(resource);
-                                aiOfficeStore.addResource(aiResource as any);
+                                const isAdded = aiOfficeStore.resources.some(
+                                  (r) => r._id === resource.id
+                                );
+                                if (isAdded) {
+                                  // 移除资源
+                                  aiOfficeStore.removeResource(resource.id);
+                                } else {
+                                  // 添加资源
+                                  const aiResource =
+                                    convertToAIOfficeResource(resource);
+                                  aiOfficeStore.addResource(aiResource as any);
+                                }
                               }}
-                              disabled={aiOfficeStore.resources.some(
-                                (r) => r._id === resource.id
-                              )}
                               className={`flex items-center gap-2 text-sm transition-colors ${
                                 aiOfficeStore.resources.some(
                                   (r) => r._id === resource.id
                                 )
-                                  ? 'cursor-default text-green-600'
+                                  ? 'cursor-pointer text-green-600 hover:text-red-600'
                                   : 'text-gray-600 hover:text-blue-600'
                               }`}
                               title={
                                 aiOfficeStore.resources.some(
                                   (r) => r._id === resource.id
                                 )
-                                  ? '已添加到 AI Office'
+                                  ? '点击移除 AI Office'
                                   : '添加到 AI Office'
                               }
                             >

@@ -576,7 +576,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="space-y-1 border-t border-gray-200 p-3">
+      <div className="flex flex-1 flex-col space-y-1 border-t border-gray-200 p-3">
         <Link
           href="/labs"
           onClick={(e) => {

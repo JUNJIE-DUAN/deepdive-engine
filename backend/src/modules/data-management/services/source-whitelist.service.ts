@@ -31,7 +31,7 @@ export class SourceWhitelistService {
   async createWhitelist(dto: CreateWhitelistDto) {
     try {
       // 检查是否已存在
-      const existing = await this.prisma.sourceWhitelist.findUnique({
+      const existing = await this.prisma.sourceWhitelist.findFirst({
         where: { resourceType: dto.resourceType },
       });
 
@@ -71,8 +71,9 @@ export class SourceWhitelistService {
    */
   async getWhitelist(resourceType: ResourceType) {
     try {
-      const whitelist = await this.prisma.sourceWhitelist.findUnique({
-        where: { resourceType },
+      // Use findFirst instead of findUnique to avoid PostgreSQL type casting issues
+      const whitelist = await this.prisma.sourceWhitelist.findFirst({
+        where: { resourceType: resourceType },
       });
 
       if (!whitelist) {
@@ -110,8 +111,8 @@ export class SourceWhitelistService {
    */
   async updateWhitelist(resourceType: ResourceType, dto: UpdateWhitelistDto) {
     try {
-      const whitelist = await this.prisma.sourceWhitelist.update({
-        where: { resourceType },
+      const whitelist = await this.prisma.sourceWhitelist.updateMany({
+        where: { resourceType: resourceType },
         data: {
           ...(dto.allowedDomains && { allowedDomains: dto.allowedDomains }),
           ...(dto.description !== undefined && {
@@ -137,8 +138,8 @@ export class SourceWhitelistService {
    */
   async deleteWhitelist(resourceType: ResourceType) {
     try {
-      await this.prisma.sourceWhitelist.delete({
-        where: { resourceType },
+      await this.prisma.sourceWhitelist.deleteMany({
+        where: { resourceType: resourceType },
       });
 
       this.logger.log(`Deleted whitelist for ${resourceType}`);
@@ -187,8 +188,8 @@ export class SourceWhitelistService {
 
       if (isMatched) {
         // 更新验证统计
-        await this.prisma.sourceWhitelist.update({
-          where: { resourceType },
+        await this.prisma.sourceWhitelist.updateMany({
+          where: { resourceType: resourceType },
           data: {
             totalValidated: { increment: 1 },
             lastValidatedAt: new Date(),
@@ -201,8 +202,8 @@ export class SourceWhitelistService {
         };
       } else {
         // 更新被拒绝的统计
-        await this.prisma.sourceWhitelist.update({
-          where: { resourceType },
+        await this.prisma.sourceWhitelist.updateMany({
+          where: { resourceType: resourceType },
           data: {
             totalRejected: { increment: 1 },
             lastValidatedAt: new Date(),
@@ -271,13 +272,20 @@ export class SourceWhitelistService {
         return whitelist;
       }
 
-      const updated = await this.prisma.sourceWhitelist.update({
-        where: { resourceType },
-        data: {
-          allowedDomains: [...allowedDomains, domain],
-          updatedAt: new Date(),
-        },
+      // Use findFirst + updateMany to avoid enum type casting issues
+      const updated = await this.prisma.sourceWhitelist.findFirst({
+        where: { resourceType: resourceType },
       });
+
+      if (updated) {
+        await this.prisma.sourceWhitelist.updateMany({
+          where: { resourceType: resourceType },
+          data: {
+            allowedDomains: [...allowedDomains, domain],
+            updatedAt: new Date(),
+          },
+        });
+      }
 
       this.logger.log(
         `Added domain ${domain} to whitelist for ${resourceType}`,
@@ -305,8 +313,8 @@ export class SourceWhitelistService {
       const allowedDomains = (whitelist.allowedDomains as string[]) || [];
       const filtered = allowedDomains.filter((d) => d !== domain);
 
-      const updated = await this.prisma.sourceWhitelist.update({
-        where: { resourceType },
+      await this.prisma.sourceWhitelist.updateMany({
+        where: { resourceType: resourceType },
         data: {
           allowedDomains: filtered,
           updatedAt: new Date(),
@@ -316,7 +324,7 @@ export class SourceWhitelistService {
       this.logger.log(
         `Removed domain ${domain} from whitelist for ${resourceType}`,
       );
-      return updated;
+      return whitelist;
     } catch (error) {
       this.logger.error(
         `Failed to remove allowed domain: ${getErrorMessage(error)}`,
@@ -681,7 +689,7 @@ export class SourceWhitelistService {
       ];
 
       for (const defaultWhitelist of defaults) {
-        const existing = await this.prisma.sourceWhitelist.findUnique({
+        const existing = await this.prisma.sourceWhitelist.findFirst({
           where: { resourceType: defaultWhitelist.resourceType },
         });
 

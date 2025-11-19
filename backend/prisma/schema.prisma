@@ -613,7 +613,7 @@ enum ImportTaskStatus {
 
 model SourceWhitelist {
   id        String   @id @default(cuid())
-  resourceType ResourceType
+  resourceType String  // Store as string to avoid PostgreSQL enum type casting issues
 
   // 允许的域名或正则模式（存储为JSON数组）
   allowedDomains Json // Array<string> 支持完整域名或通配符 (e.g., ["arxiv.org", "*.ieee.org"])
@@ -635,7 +635,7 @@ model SourceWhitelist {
 
 model CollectionRule {
   id        String   @id @default(cuid())
-  resourceType ResourceType
+  resourceType String  // Store as string to avoid PostgreSQL enum type casting issues
 
   // 调度配置
   cronExpression String @default("0 */6 * * *") // 默认每6小时
@@ -682,6 +682,14 @@ model ImportTask {
   sourceUrl    String
   sourceDomain String? // 提取的域名，用于快速查询
 
+  // 新增：关联到实际创建的资源
+  resourceId   String?         // 关联到实际资源 (Paper.id, Blog.id等)
+  resourceModel String?        // 资源类型表名 (papers, blogs等)
+
+  // 新增：关联到ParsedMetadata
+  parsedMetadataId String?
+  parsedMetadata ParsedMetadata? @relation(fields: [parsedMetadataId], references: [id], onDelete: SetNull)
+
   // 任务状态
   status       ImportTaskStatus @default(PENDING)
   statusReason String?
@@ -709,15 +717,61 @@ model ImportTask {
   // 性能指标
   executionTimeMs Int? // 执行时间（毫秒）
 
-  // 元数据
+  // 元数据 - 存储用户编辑后的完整元数据
   metadata     Json?
 
   @@index([resourceType])
   @@index([status])
   @@index([sourceDomain])
+  @@index([resourceId])
   @@index([createdAt(sort: Desc)])
   @@index([completedAt])
   @@map("import_tasks")
+}
+
+// ============ 元数据提取与缓存 ============
+
+model ParsedMetadata {
+  id              String    @id @default(cuid())
+
+  // URL信息
+  sourceUrl       String    @unique  // 唯一的源URL
+  domain          String              // 提取的域名，用于快速查询
+
+  // 页面元数据
+  title           String              // HTML <title> 或 Open Graph title
+  description     String?  @db.Text   // 页面描述
+  imageUrl        String?             // Open Graph image URL
+  authors         Json?               // 作者列表 (string[])
+  publishedDate   DateTime?           // 发布日期
+
+  // 页面信息
+  language        String  @default("en")  // 页面语言代码 (en, zh, ja等)
+  contentType     String  @default("html") // html, pdf, video等
+  siteName        String?             // 网站名称
+  canonicalUrl    String?             // 规范URL
+  favicon         String?             // 网站favicon URL
+  wordCount       Int?                // 文章字数（仅适用于文本内容）
+
+  // 内容识别
+  contentHash     String?             // SHA256 hash for duplicate detection
+
+  // 解析元数据
+  parseError      String?             // 解析错误消息
+  parseSuccess    Boolean @default(true)
+
+  // 缓存管理
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  expiresAt       DateTime? @default(dbgenerated("(now() + interval '7 days')"))  // 7天过期
+
+  // 关系
+  importTasks     ImportTask[]
+
+  @@index([domain])
+  @@index([sourceUrl])
+  @@index([expiresAt])
+  @@map("parsed_metadata")
 }
 
 model DataQualityMetric {

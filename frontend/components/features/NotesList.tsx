@@ -28,15 +28,6 @@ interface NotesListProps {
   onDeleteNote?: (noteId: string) => void;
 }
 
-/**
- * 笔记列表组件
- *
- * 功能：
- * - 显示用户的所有笔记
- * - 或显示特定资源的笔记
- * - 支持编辑和删除
- * - 显示标签和元数据
- */
 export default function NotesList({
   resourceId,
   onNoteClick,
@@ -46,6 +37,8 @@ export default function NotesList({
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadNotes();
@@ -77,7 +70,7 @@ export default function NotesList({
   };
 
   const handleDelete = async (noteId: string) => {
-    if (!confirm('确定要删除这条笔记吗？')) return;
+    if (!confirm('Are you sure you want to delete this note?')) return;
 
     try {
       const response = await fetch(
@@ -98,6 +91,21 @@ export default function NotesList({
       console.error(err);
     }
   };
+
+  // Get all unique tags
+  const allTags = Array.from(
+    new Set(notes.flatMap((note) => note.tags))
+  ).sort();
+
+  // Filter and search notes
+  const filteredNotes = notes.filter((note) => {
+    const matchesTag = !selectedTag || note.tags.includes(selectedTag);
+    const matchesSearch =
+      !searchQuery ||
+      note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      note.resource?.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTag && matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -131,102 +139,163 @@ export default function NotesList({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-semibold text-gray-900">暂无笔记</h3>
-        <p className="mt-1 text-xs text-gray-600">开始创建笔记来记录您的想法</p>
+        <h3 className="mt-2 text-sm font-semibold text-gray-900">No notes yet</h3>
+        <p className="mt-1 text-xs text-gray-600">Start creating notes to save your thoughts</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {notes.map((note) => (
-        <div
-          key={note.id}
-          className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md"
-          onClick={() => onNoteClick?.(note)}
-        >
-          {/* Resource info */}
-          {!resourceId && note.resource && (
-            <div className="mb-2 flex items-center gap-2">
-              {note.resource.thumbnailUrl && (
-                <img
-                  src={`${config.apiBaseUrl}${note.resource.thumbnailUrl}`}
-                  alt=""
-                  className="h-8 w-8 rounded object-cover"
-                />
-              )}
-              <span className="text-sm font-semibold text-gray-900">
-                {note.resource.title}
-              </span>
-              <span className="text-xs uppercase text-gray-500">
-                {note.resource.type}
-              </span>
-            </div>
-          )}
-
-          {/* Content */}
-          <div className="prose prose-sm mb-3 max-w-none text-sm leading-relaxed text-gray-700">
-            <ReactMarkdown>{note.content}</ReactMarkdown>
-          </div>
-
-          {/* Tags */}
-          {note.tags && note.tags.length > 0 && (
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              {note.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+    <div className="space-y-6">
+      {/* Search and Tag Filters */}
+      <div className="space-y-4">
+        {/* Search input */}
+        <div className="relative">
+          <div className="relative rounded-lg border border-gray-300 bg-white shadow-sm">
+            <div className="flex items-center">
+              <div className="flex items-center px-4 py-3">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Metadata */}
-          <div className="flex items-center justify-between text-xs text-gray-600">
-            <div className="flex items-center gap-3">
-              <span>{new Date(note.createdAt).toLocaleDateString()}</span>
-              {note.updatedAt !== note.createdAt && (
-                <span className="text-gray-500">
-                  更新于 {new Date(note.updatedAt).toLocaleDateString()}
-                </span>
-              )}
-              {note.isPublic && (
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                  公开
-                </span>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              {onEditNote && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditNote(note);
-                  }}
-                  className="text-xs font-medium text-blue-600 hover:text-blue-800"
-                >
-                  编辑
-                </button>
-              )}
-              {onDeleteNote && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(note.id);
-                  }}
-                  className="text-xs font-medium text-red-600 hover:text-red-800"
-                >
-                  删除
-                </button>
-              )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 border-none px-4 py-3 text-sm focus:outline-none focus:ring-0"
+              />
             </div>
           </div>
         </div>
-      ))}
+
+        {/* Tag filter chips */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-gray-600 uppercase">Tags:</span>
+            <button
+              onClick={() => setSelectedTag(null)}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                selectedTag === null
+                  ? 'bg-blue-600 text-white'
+                  : 'border border-gray-300 bg-white text-gray-700 hover:border-blue-300'
+              }`}
+            >
+              All
+            </button>
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(tag)}
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                  selectedTag === tag
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-300 bg-white text-gray-700 hover:border-blue-300'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Notes List */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredNotes.map((note) => (
+          <div
+            key={note.id}
+            className="cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:shadow-lg"
+            onClick={() => onNoteClick?.(note)}
+          >
+            <div className="p-4">
+              {/* Resource info header */}
+              {!resourceId && note.resource && (
+                <div className="mb-3 flex items-center gap-2 pb-3 border-b border-gray-100">
+                  <span className="text-xs font-semibold text-gray-500 uppercase">
+                    From: {note.resource.type}
+                  </span>
+                  <span className="truncate text-xs font-medium text-gray-700 hover:text-blue-600">
+                    {note.resource.title}
+                  </span>
+                </div>
+              )}
+
+              {/* Content preview */}
+              <div className="prose prose-sm mb-3 max-w-none text-sm leading-relaxed text-gray-700 line-clamp-3">
+                <ReactMarkdown>{note.content}</ReactMarkdown>
+              </div>
+
+              {/* Tags */}
+              {note.tags && note.tags.length > 0 && (
+                <div className="mb-3 flex flex-wrap items-center gap-1">
+                  {note.tags.slice(0, 2).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {note.tags.length > 2 && (
+                    <span className="text-xs text-gray-500">
+                      +{note.tags.length - 2} more
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Metadata footer */}
+              <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2">
+                  <span>{new Date(note.createdAt).toLocaleDateString('en-US')}</span>
+                  {note.isPublic && (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800">
+                      Public
+                    </span>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                  {onEditNote && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditNote(note);
+                      }}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {onDeleteNote && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(note.id);
+                      }}
+                      className="text-xs font-medium text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

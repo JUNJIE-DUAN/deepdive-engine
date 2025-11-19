@@ -3042,6 +3042,18 @@ function HomeContent() {
 }
 
 export default function Home() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // On server, render nothing to avoid hydration mismatch
+  // On client, render the actual content immediately
+  if (!isMounted) {
+    return null;
+  }
+
   return (
     <Suspense fallback={<HomeLoadingFallback />}>
       <HomeContent />

@@ -7,6 +7,7 @@ import {
   ParsedUrlMetadata,
 } from "./metadata-extractor.service";
 import { DuplicateDetectorService } from "./duplicate-detector.service";
+import { ImportTaskProcessorService } from "./import-task-processor.service";
 
 export interface ParseUrlResult {
   domain: string;
@@ -31,6 +32,7 @@ export class ImportManagerService {
     private prisma: PrismaService,
     private metadataExtractor: MetadataExtractorService,
     private duplicateDetector: DuplicateDetectorService,
+    private importTaskProcessor: ImportTaskProcessorService,
   ) {}
 
   /**
@@ -402,6 +404,18 @@ export class ImportManagerService {
       });
 
       this.logger.log(`Successfully created import task: ${updated.id}`);
+
+      // 自动处理ImportTask以创建Resource
+      // 这样用户就能立即在Explore中看到导入的数据
+      try {
+        await this.importTaskProcessor.processPendingTasks(1);
+        this.logger.log(`Auto-processed import task: ${updated.id}`);
+      } catch (processingError) {
+        this.logger.warn(
+          `Failed to auto-process task ${updated.id}: ${getErrorMessage(processingError)}`,
+        );
+        // 不抛出错误，因为用户已经看到导入成功，处理可以稍后进行
+      }
 
       return updated;
     } catch (error) {

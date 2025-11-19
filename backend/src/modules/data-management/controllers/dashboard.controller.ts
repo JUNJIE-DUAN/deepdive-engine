@@ -1,12 +1,11 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Controller, Get } from "@nestjs/common";
 import { DashboardService } from "../services/dashboard.service";
-import { AuthGuard } from "@nestjs/passport";
 
 @Controller("data-management/dashboard")
-@UseGuards(AuthGuard("jwt"))
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
+  // 移除JWT认证以支持公开访问数据统计
   @Get("summary")
   async getSummary() {
     return this.dashboardService.getDashboardSummary();

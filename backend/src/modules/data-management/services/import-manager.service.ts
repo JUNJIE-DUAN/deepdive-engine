@@ -7,7 +7,6 @@ import {
   ParsedUrlMetadata,
 } from "./metadata-extractor.service";
 import { DuplicateDetectorService } from "./duplicate-detector.service";
-import { ImportTaskProcessorService } from "./import-task-processor.service";
 
 export interface ParseUrlResult {
   domain: string;
@@ -32,7 +31,6 @@ export class ImportManagerService {
     private prisma: PrismaService,
     private metadataExtractor: MetadataExtractorService,
     private duplicateDetector: DuplicateDetectorService,
-    private importTaskProcessor: ImportTaskProcessorService,
   ) {}
 
   /**
@@ -380,6 +378,7 @@ export class ImportManagerService {
 
   /**
    * 导入带有编辑后的元数据（用户可编辑）
+   * 直接创建Resource记录以确保导入的数据立即可见
    */
   async importWithMetadata(
     url: string,
@@ -388,7 +387,44 @@ export class ImportManagerService {
     _skipDuplicateWarning?: boolean,
   ) {
     try {
-      // 创建ImportTask
+      // 直接创建Resource记录
+      // 这样确保导入的数据立即在Explore中显示
+      const title = metadata.title || url;
+      const abstract = metadata.description || null;
+
+      // 检查Resource是否已存在
+      const existingResource = await this.prisma.resource.findFirst({
+        where: { sourceUrl: url },
+      });
+
+      let resourceId: string;
+
+      if (existingResource) {
+        this.logger.log(`Resource already exists for URL ${url}`);
+        resourceId = existingResource.id;
+      } else {
+        // 创建新的Resource
+        const resource = await this.prisma.resource.create({
+          data: {
+            type: resourceType,
+            title,
+            abstract,
+            sourceUrl: url,
+            publishedAt: new Date(),
+            // 默认值
+            upvoteCount: 0,
+            viewCount: 0,
+            commentCount: 0,
+            qualityScore: "0",
+            trendingScore: 0,
+          },
+        });
+
+        resourceId = resource.id;
+        this.logger.log(`Created resource: ${resourceId} for URL ${url}`);
+      }
+
+      // 创建ImportTask记录以跟踪导入历史
       const importTask = await this.createImportTask({
         resourceType,
         sourceUrl: url,
@@ -400,22 +436,17 @@ export class ImportManagerService {
         where: { id: importTask.id },
         data: {
           metadata: metadata as any, // 存储完整的编辑后的元数据
+          status: "SUCCESS" as any, // 标记为成功
+          resourceId, // 关联Resource
+          itemsProcessed: 1,
+          itemsSaved: 1,
+          completedAt: new Date(),
         },
       });
 
-      this.logger.log(`Successfully created import task: ${updated.id}`);
-
-      // 自动处理ImportTask以创建Resource
-      // 这样用户就能立即在Explore中看到导入的数据
-      try {
-        await this.importTaskProcessor.processPendingTasks(1);
-        this.logger.log(`Auto-processed import task: ${updated.id}`);
-      } catch (processingError) {
-        this.logger.warn(
-          `Failed to auto-process task ${updated.id}: ${getErrorMessage(processingError)}`,
-        );
-        // 不抛出错误，因为用户已经看到导入成功，处理可以稍后进行
-      }
+      this.logger.log(
+        `Successfully imported and created resource: ${resourceId}`,
+      );
 
       return updated;
     } catch (error) {

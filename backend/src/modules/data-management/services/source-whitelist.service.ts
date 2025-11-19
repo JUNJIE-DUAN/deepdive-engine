@@ -648,9 +648,12 @@ export class SourceWhitelistService {
             "grandviewresearch.com",
             "marketsandmarkets.com",
             "mrfresearch.com",
+            // 数据中心和基础设施报告
+            "epoch.ai",
+            "*.epoch.ai",
           ],
           description:
-            "Industry reports: Gartner, Forrester, IDC, McKinsey, BCG, Bain, Accenture, Deloitte, PwC, EY, Morgan Stanley, Goldman Sachs, SemiAnalysis, etc.",
+            "Industry reports: Gartner, Forrester, IDC, McKinsey, BCG, Bain, Accenture, Deloitte, PwC, EY, Morgan Stanley, Goldman Sachs, SemiAnalysis, Epoch.ai, etc.",
         },
         {
           resourceType: "EVENT" as ResourceType,

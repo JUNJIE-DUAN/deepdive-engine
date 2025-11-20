@@ -1,5 +1,14 @@
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
+
 export class QuickGenerateDto {
-    prompt!: string;
+    @IsString()
+    prompt: string = '';
+
+    @IsOptional()
+    @IsBoolean()
     autoResearch?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
     autoMedia?: boolean;
 }

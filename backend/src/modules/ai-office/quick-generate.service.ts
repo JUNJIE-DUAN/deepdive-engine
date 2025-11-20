@@ -26,7 +26,7 @@ export class QuickGenerateService {
             // 2. 调用AI服务生成文档
             const response = await firstValueFrom(
                 this.httpService.post(
-                    `${this.aiServiceUrl}/api/v1/ai-office/quick-generate`,
+                    `${this.aiServiceUrl}/api/v1/ai/quick-generate`,
                     {
                         prompt: params.prompt,
                         template: intent.template,

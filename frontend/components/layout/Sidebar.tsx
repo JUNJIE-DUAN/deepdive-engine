@@ -62,57 +62,65 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         className={`flex items-center p-4 ${isCollapsed ? 'justify-center' : ''}`}
       >
         {isCollapsed ? (
-          /* Collapsed Logo - Abstract nested circles suggesting depth */
+          /* Collapsed Logo - Minimalist geometric mark */
           <Link href="/" className="group" title="DeepDive Engine">
             <svg
               className="h-10 w-10 transition-transform duration-300 group-hover:scale-110"
+              viewBox="0 0 40 40"
               fill="none"
-              viewBox="0 0 24 24"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <defs>
-                <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#2563eb" />
-                  <stop offset="50%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#9333ea" />
-                </linearGradient>
-              </defs>
-              {/* Abstract nested circles - represents depth layers */}
-              <circle cx="12" cy="12" r="9" stroke="url(#logoBg)" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="6" stroke="url(#logoBg)" strokeWidth="1" opacity="0.6" />
-              <circle cx="12" cy="12" r="3" fill="url(#logoBg)" opacity="0.8" />
+              {/* Core geometric shape: stacked horizontal bars with depth perspective */}
+              {/* Top bar - brightest */}
+              <rect x="6" y="8" width="28" height="2.5" rx="1.25" fill="#1e40af" />
+
+              {/* Middle bar - center emphasis */}
+              <rect x="8" y="16" width="24" height="2.5" rx="1.25" fill="#1e40af" opacity="0.8" />
+
+              {/* Bottom bar - perspective fade */}
+              <rect x="10" y="24" width="20" height="2.5" rx="1.25" fill="#1e40af" opacity="0.6" />
+
+              {/* Optional: vertical accent line through center for tech feel */}
+              <line x1="20" y1="6" x2="20" y2="30" stroke="#1e40af" strokeWidth="1.2" opacity="0.4" strokeLinecap="round" />
             </svg>
           </Link>
         ) : (
-          /* Expanded Logo - Icon + Text */
+          /* Expanded Logo - Mark + Logotype */
           <Link
             href="/"
-            className="group flex items-center gap-3"
+            className="group flex items-center gap-2.5"
             title="DeepDive Engine"
           >
             <svg
-              className="h-10 w-10 flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+              className="h-9 w-9 flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+              viewBox="0 0 40 40"
               fill="none"
-              viewBox="0 0 24 24"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <defs>
-                <linearGradient id="logoBg2" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#2563eb" />
-                  <stop offset="50%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#9333ea" />
-                </linearGradient>
-              </defs>
-              {/* Abstract nested circles - represents depth layers */}
-              <circle cx="12" cy="12" r="9" stroke="url(#logoBg2)" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="6" stroke="url(#logoBg2)" strokeWidth="1" opacity="0.6" />
-              <circle cx="12" cy="12" r="3" fill="url(#logoBg2)" opacity="0.8" />
+              {/* Core geometric shape: stacked horizontal bars with depth perspective */}
+              {/* Top bar - brightest */}
+              <rect x="6" y="8" width="28" height="2.5" rx="1.25" fill="#1e40af" />
+
+              {/* Middle bar - center emphasis */}
+              <rect x="8" y="16" width="24" height="2.5" rx="1.25" fill="#1e40af" opacity="0.8" />
+
+              {/* Bottom bar - perspective fade */}
+              <rect x="10" y="24" width="20" height="2.5" rx="1.25" fill="#1e40af" opacity="0.6" />
+
+              {/* Optional: vertical accent line through center for tech feel */}
+              <line x1="20" y1="6" x2="20" y2="30" stroke="#1e40af" strokeWidth="1.2" opacity="0.4" strokeLinecap="round" />
             </svg>
-            <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 bg-clip-text text-xl font-bold tracking-tight text-transparent">
-              DeepDive
-            </span>
+
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center">
+                <span className="text-sm font-bold text-gray-900 tracking-tight">
+                  DeepDive
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-blue-700 tracking-wide">
+                ENGINE
+              </span>
+            </div>
           </Link>
         )}
       </div>

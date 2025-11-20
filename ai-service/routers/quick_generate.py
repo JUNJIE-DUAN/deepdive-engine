@@ -171,6 +171,7 @@ def parse_json_response(response_text: str) -> Dict[str, Any]:
         raise ValueError("No valid JSON found in response")
 
 
+# Endpoint for generating documents using AI
 @router.post("/api/v1/ai-office/quick-generate", response_model=QuickGenerateResponse)
 async def quick_generate(request: QuickGenerateRequest):
     """

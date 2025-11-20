@@ -53,10 +53,13 @@ export class QuickGenerateService {
         }
     }
 
-    private analyzeIntent(prompt: string): {
+    private analyzeIntent(prompt: string | undefined): {
         template: string;
         confidence: number;
     } {
+        if (!prompt) {
+            return { template: 'tech-blog', confidence: 0.5 };
+        }
         const promptLower = prompt.toLowerCase();
 
         // 商业计划

@@ -43,9 +43,14 @@ git checkout -b feature/001-your-feature
 
 ## 📖 本文档说明
 
-本文档（project-rules.md）包含项目的详细开发规范和最佳实践。
+本文档（project-rules.md）是项目的**入口级规范文档**。
 
-对于日常开发，建议优先查阅 `.claude/standards/` 目录下的规范文档，它们更加系统化和易于查找。本文档作为补充参考和历史记录保留。
+为了实现系统化管理，详细的开发规范已拆分为独立的标准文档，位于 `.claude/standards/` 目录下。
+
+**原则**：
+1. **日常开发**：请遵循 `.claude/standards/` 中的详细规范。
+2. **PRD 管理**：请遵循本文档第 3 节的 PRD 管理规范。
+3. **冲突解决**：如果本文档与 `.claude/standards/` 存在冲突，以 `.claude/standards/` 为准。
 
 ---
 
@@ -160,6 +165,52 @@ git commit -m "refactor: rename files to lowercase for consistency"
 find docs -name "*.md" | grep -E "[A-Z]"
 
 # 如果有输出，说明存在需要修复的文件
+```
+
+---
+
+## 2. PRD 管理规范 (PRD Management)
+
+### 2.1 核心原则
+
+*   **版本化**: 所有 PRD 必须有明确的版本号。
+*   **单一来源**: `docs/prd/README.md` 是所有有效 PRD 的索引。
+*   **生命周期**: 草稿 -> 进行中 -> 已完成 -> 归档。
+
+### 2.2 命名规范
+
+所有 PRD 文件必须遵循以下命名格式：
+
+`prd-<feature>-v<version>.md`
+
+**示例**:
+*   `prd-platform-v2.0.md` (平台总纲)
+*   `prd-ai-office-v2.0.md` (特定功能模块)
+*   `prd-youtube-export-v1.0.md` (独立工具)
+
+### 2.3 目录结构
+
+```
+docs/prd/
+├── README.md                  # PRD 索引（状态一览）
+├── prd-platform-v2.0.md       # 活跃 PRD
+├── prd-ai-office-v2.0.md      # 活跃 PRD
+└── archive/                   # 归档/废弃/草稿
+    ├── prd-data-collection-draft.md
+    └── prd-v1.0-old.md
+```
+
+### 2.4 编写模板
+
+每个 PRD 必须包含头部元数据：
+
+```markdown
+# 功能名称 - 产品需求文档
+
+> **版本**: v1.0
+> **状态**: Draft/Active/Completed
+> **负责人**: Name
+> **最后更新**: YYYY-MM-DD
 ```
 
 ---

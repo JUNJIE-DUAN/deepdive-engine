@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
@@ -26,8 +26,6 @@ import { WorkspaceModule } from "./modules/workspace/workspace.module";
 import { AiModule } from "./modules/ai/ai.module";
 import { BlogCollectionModule } from "./modules/blog-collection/blog-collection.module";
 import { DataManagementModule } from "./modules/data-management/data-management.module";
-// import { AiOfficeModule } from "./ai-office/ai-office.module"; // Moved to backup - export handled by frontend
-// import { LearningPathsModule } from './modules/learning-paths/learning-paths.module'; // TODO: Enable later
 
 @Module({
   imports: [
@@ -38,12 +36,16 @@ import { DataManagementModule } from "./modules/data-management/data-management.
     }),
 
     // API限流保护 - 全局默认60请求/分钟
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 时间窗口：60秒
-        limit: 60, // 限制：60次请求
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get("THROTTLE_TTL", 60000), // 时间窗口：60秒
+          limit: config.get("THROTTLE_LIMIT", 60), // 限制：60次请求
+        },
+      ],
+    }),
 
     // 静态文件服务
     ServeStaticModule.forRoot({
@@ -74,8 +76,6 @@ import { DataManagementModule } from "./modules/data-management/data-management.
     AiModule,
     BlogCollectionModule,
     DataManagementModule,
-    // AiOfficeModule, // Moved to backup - export handled by frontend
-    // LearningPathsModule, // TODO: Enable later
   ],
   controllers: [AppController],
   providers: [

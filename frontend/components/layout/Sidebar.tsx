@@ -72,16 +72,48 @@ export default function Sidebar({ className = '' }: SidebarProps) {
             >
               {/* Core geometric shape: stacked horizontal bars with depth perspective */}
               {/* Top bar - brightest */}
-              <rect x="6" y="8" width="28" height="2.5" rx="1.25" fill="#1e40af" />
+              <rect
+                x="6"
+                y="8"
+                width="28"
+                height="2.5"
+                rx="1.25"
+                fill="#1e40af"
+              />
 
               {/* Middle bar - center emphasis */}
-              <rect x="8" y="16" width="24" height="2.5" rx="1.25" fill="#1e40af" opacity="0.8" />
+              <rect
+                x="8"
+                y="16"
+                width="24"
+                height="2.5"
+                rx="1.25"
+                fill="#1e40af"
+                opacity="0.8"
+              />
 
               {/* Bottom bar - perspective fade */}
-              <rect x="10" y="24" width="20" height="2.5" rx="1.25" fill="#1e40af" opacity="0.6" />
+              <rect
+                x="10"
+                y="24"
+                width="20"
+                height="2.5"
+                rx="1.25"
+                fill="#1e40af"
+                opacity="0.6"
+              />
 
               {/* Optional: vertical accent line through center for tech feel */}
-              <line x1="20" y1="6" x2="20" y2="30" stroke="#1e40af" strokeWidth="1.2" opacity="0.4" strokeLinecap="round" />
+              <line
+                x1="20"
+                y1="6"
+                x2="20"
+                y2="30"
+                stroke="#1e40af"
+                strokeWidth="1.2"
+                opacity="0.4"
+                strokeLinecap="round"
+              />
             </svg>
           </Link>
         ) : (
@@ -99,25 +131,57 @@ export default function Sidebar({ className = '' }: SidebarProps) {
             >
               {/* Core geometric shape: stacked horizontal bars with depth perspective */}
               {/* Top bar - brightest */}
-              <rect x="6" y="8" width="28" height="2.5" rx="1.25" fill="#1e40af" />
+              <rect
+                x="6"
+                y="8"
+                width="28"
+                height="2.5"
+                rx="1.25"
+                fill="#1e40af"
+              />
 
               {/* Middle bar - center emphasis */}
-              <rect x="8" y="16" width="24" height="2.5" rx="1.25" fill="#1e40af" opacity="0.8" />
+              <rect
+                x="8"
+                y="16"
+                width="24"
+                height="2.5"
+                rx="1.25"
+                fill="#1e40af"
+                opacity="0.8"
+              />
 
               {/* Bottom bar - perspective fade */}
-              <rect x="10" y="24" width="20" height="2.5" rx="1.25" fill="#1e40af" opacity="0.6" />
+              <rect
+                x="10"
+                y="24"
+                width="20"
+                height="2.5"
+                rx="1.25"
+                fill="#1e40af"
+                opacity="0.6"
+              />
 
               {/* Optional: vertical accent line through center for tech feel */}
-              <line x1="20" y1="6" x2="20" y2="30" stroke="#1e40af" strokeWidth="1.2" opacity="0.4" strokeLinecap="round" />
+              <line
+                x1="20"
+                y1="6"
+                x2="20"
+                y2="30"
+                stroke="#1e40af"
+                strokeWidth="1.2"
+                opacity="0.4"
+                strokeLinecap="round"
+              />
             </svg>
 
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center">
-                <span className="text-sm font-bold text-gray-900 tracking-tight">
+                <span className="text-sm font-bold tracking-tight text-gray-900">
                   DeepDive
                 </span>
               </div>
-              <span className="text-xs font-semibold text-blue-700 tracking-wide">
+              <span className="text-xs font-semibold tracking-wide text-blue-700">
                 ENGINE
               </span>
             </div>
@@ -213,20 +277,20 @@ export default function Sidebar({ className = '' }: SidebarProps) {
           </Link>
 
           <Link
-            href="/data-management"
+            href="/admin/settings"
             onClick={(e) => {
-              // Force navigation even if already on data-management page
-              if (pathname === '/data-management') {
+              // Force navigation even if already on admin settings page
+              if (pathname === '/admin/settings') {
                 e.preventDefault();
-                window.location.href = '/data-management';
+                window.location.href = '/admin/settings';
               }
             }}
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2.5 text-sm font-medium ${
-              isActive('/data-management')
+              isActive('/admin/settings') || pathname?.startsWith('/admin')
                 ? 'bg-emerald-50 text-gray-900'
                 : 'text-gray-700 hover:bg-gray-50'
             }`}
-            title="Collection"
+            title="Settings"
           >
             <svg
               className="h-5 w-5 flex-shrink-0"
@@ -238,10 +302,16 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            {!isCollapsed && <span>Collection</span>}
+            {!isCollapsed && <span>Settings</span>}
           </Link>
 
           <Link

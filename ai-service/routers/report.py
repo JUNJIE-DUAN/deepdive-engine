@@ -286,6 +286,150 @@ IMPORTANT: Output ONLY valid JSON in this exact format:
 
 JSON output:
 """
+
+    ,"business-plan": """You are a business consultant. Create a professional business plan from these {count} resources.
+
+Resources:
+{resources_info}
+
+Generate a comprehensive business plan with these sections:
+
+1. **Executive Summary** (300-400 words)
+2. **Problem & Solution**
+3. **Market Analysis**
+4. **Business Model**
+5. **Financial Projections**
+
+IMPORTANT: Output ONLY valid JSON in this exact format:
+{{
+  "title": "Business Plan: [Company Name]",
+  "summary": "Executive summary text...",
+  "sections": [
+    {{"title": "Problem & Solution", "content": "markdown text"}},
+    {{"title": "Market Analysis", "content": "markdown with data"}},
+    {{"title": "Business Model", "content": "markdown text"}},
+    {{"title": "Financial Projections", "content": "markdown table"}}
+  ]
+}}
+
+JSON output:
+"""
+
+    ,"api-documentation": """You are a technical writer. Create clear API documentation from these {count} resources.
+
+Resources:
+{resources_info}
+
+Generate API documentation with these sections:
+
+1. **Overview** (200-300 words)
+2. **Authentication**
+3. **API Endpoints**
+4. **Error Handling**
+
+IMPORTANT: Output ONLY valid JSON in this exact format:
+{{
+  "title": "API Documentation: [API Name]",
+  "summary": "Overview text...",
+  "sections": [
+    {{"title": "Authentication", "content": "markdown with code"}},
+    {{"title": "API Endpoints", "content": "markdown tables"}},
+    {{"title": "Error Handling", "content": "markdown list"}}
+  ]
+}}
+
+JSON output:
+"""
+
+    ,"academic-presentation": """You are a presentation designer. Create academic slide content from these {count} resources.
+
+Resources:
+{resources_info}
+
+Generate presentation outline (15-20 slides):
+
+1. **Title Slide**
+2. **Introduction** (2-3 slides)
+3. **Methodology** (2-3 slides)
+4. **Results** (4-6 slides)
+5. **Conclusion** (1-2 slides)
+
+IMPORTANT: Output ONLY valid JSON in this exact format:
+{{
+  "title": "Presentation: [Research Title]",
+  "summary": "Research overview...",
+  "sections": [
+    {{"title": "Slides 1-3: Introduction", "content": "markdown bullets"}},
+    {{"title": "Slides 4-8: Methodology", "content": "markdown"}},
+    {{"title": "Slides 9-14: Results", "content": "markdown with data"}},
+    {{"title": "Slides 15-20: Conclusion", "content": "markdown summary"}}
+  ]
+}}
+
+JSON output:
+"""
+
+    ,"tech-blog": """You are a tech blogger. Write an engaging article from these {count} resources.
+
+Resources:
+{resources_info}
+
+Generate a blog article with these sections:
+
+1. **Introduction** (150-200 words)
+2. **Background** (200-300 words)
+3. **Main Content** (800-1200 words)
+4. **Practical Guide** (400-600 words)
+5. **Conclusion** (100-150 words)
+
+IMPORTANT: Output ONLY valid JSON in this exact format:
+{{
+  "title": "[Catchy Blog Title]",
+  "summary": "Introduction text...",
+  "sections": [
+    {{"title": "Background", "content": "markdown text"}},
+    {{"title": "Main Content", "content": "markdown with code"}},
+    {{"title": "Practical Guide", "content": "markdown steps"}},
+    {{"title": "Conclusion", "content": "summary"}}
+  ]
+}}
+
+JSON output:
+"""
+
+    ,"academic-research-page": """You are an academic researcher. Create a research paper from these {count} resources.
+
+Resources:
+{resources_info}
+
+Generate a complete research paper:
+
+1. **Abstract** (150-250 words)
+2. **Introduction** (400-600 words)
+3. **Literature Review** (600-800 words)
+4. **Methodology** (500-700 words)
+5. **Results** (600-800 words)
+6. **Discussion** (500-700 words)
+7. **Conclusion** (250-350 words)
+8. **References**
+
+IMPORTANT: Output ONLY valid JSON in this exact format:
+{{
+  "title": "[Research Paper Title]",
+  "summary": "Abstract text...",
+  "sections": [
+    {{"title": "Introduction", "content": "markdown text"}},
+    {{"title": "Literature Review", "content": "markdown with citations"}},
+    {{"title": "Methodology", "content": "markdown text"}},
+    {{"title": "Results", "content": "markdown with tables"}},
+    {{"title": "Discussion", "content": "markdown text"}},
+    {{"title": "Conclusion", "content": "markdown summary"}},
+    {{"title": "References", "content": "markdown citations"}}
+  ]
+}}
+
+JSON output:
+"""
 }
 
 

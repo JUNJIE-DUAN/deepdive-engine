@@ -11,7 +11,7 @@ import sys
 load_dotenv()
 
 # Import routers
-from routers import ai, report, workspace
+from routers import ai, report, workspace, quick_generate
 from services.grok_client import GrokClient
 from services.openai_client import OpenAIClient
 from services.ai_orchestrator import AIOrchestrator
@@ -63,9 +63,11 @@ orchestrator = AIOrchestrator(grok_client, openai_client)
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(report.router)
 app.include_router(workspace.router, prefix="/api/v1")
+app.include_router(quick_generate.router)
 
 # 将AI客户端注入到report路由中
 report.init_clients(grok_client, openai_client)
+quick_generate.init_clients(grok_client, openai_client)
 
 
 @app.get("/")

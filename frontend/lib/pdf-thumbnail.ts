@@ -4,6 +4,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
+import { config } from './config';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
@@ -110,7 +111,7 @@ export async function generateAndSaveThumbnail(
 
     // Upload to backend
     const uploadResponse = await fetch(
-      `http://localhost:4000/api/v1/resources/${resourceId}/thumbnail`,
+      `${config.apiUrl}/resources/${resourceId}/thumbnail`,
       {
         method: 'POST',
         body: formData,
@@ -179,10 +180,9 @@ export async function batchGenerateThumbnails(
  */
 export async function thumbnailExists(resourceId: string): Promise<boolean> {
   try {
-    const response = await fetch(
-      `http://localhost:4000/api/v1/resources/${resourceId}`,
-      { method: 'HEAD' }
-    );
+    const response = await fetch(`${config.apiUrl}/resources/${resourceId}`, {
+      method: 'HEAD',
+    });
     return response.ok;
   } catch {
     return false;

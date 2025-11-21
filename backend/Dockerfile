@@ -1,22 +1,22 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine3.18 AS builder
 
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev openssl openssl-dev
 
 COPY package.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 COPY . .
 RUN npm run prisma:generate
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-alpine3.18
 
 WORKDIR /app
 
-# Install OpenSSL 1.1 compatibility and other runtime deps
-RUN apk add --no-cache dumb-init curl cairo jpeg pango giflib 
+# Alpine 3.18 has OpenSSL 3.0, install runtime deps
+RUN apk add --no-cache dumb-init curl cairo jpeg pango giflib openssl 
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist

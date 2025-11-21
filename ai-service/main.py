@@ -41,10 +41,10 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# 配置 CORS - 使用正则表达式匹配所有localhost端口
+# 配置 CORS - 允许 localhost 和 Railway 域名
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://localhost:\d+",  # 允许所有localhost端口
+    allow_origin_regex=r"(http://localhost:\d+|https://.*\.railway\.app)",  # 允许 localhost 和 Railway 域名
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],

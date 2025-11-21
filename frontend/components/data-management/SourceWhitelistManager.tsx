@@ -58,7 +58,7 @@ export function SourceWhitelistManager() {
 
     try {
       const response = await fetch(
-        `/api/v1/data-management/whitelists/${resourceType}/domains`,
+        `${config.apiUrl}/data-management/whitelists/${resourceType}/domains`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ export function SourceWhitelistManager() {
   const handleRemoveDomain = async (resourceType: string, domain: string) => {
     try {
       const response = await fetch(
-        `/api/v1/data-management/whitelists/${resourceType}/domains/${encodeURIComponent(domain)}`,
+        `${config.apiUrl}/data-management/whitelists/${resourceType}/domains/${encodeURIComponent(domain)}`,
         { method: 'DELETE' }
       );
       const data = await response.json();
@@ -99,7 +99,7 @@ export function SourceWhitelistManager() {
   ) => {
     try {
       const response = await fetch(
-        `/api/v1/data-management/whitelists/${resourceType}`,
+        `${config.apiUrl}/data-management/whitelists/${resourceType}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

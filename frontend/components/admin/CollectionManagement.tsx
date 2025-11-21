@@ -183,7 +183,7 @@ export default function CollectionManagement() {
   const handleToggleRule = async (rule: CollectionRule) => {
     try {
       const res = await fetch(
-        `/api/v1/data-management/rules/${rule.resourceType}`,
+        `${config.apiUrl}/data-management/rules/${rule.resourceType}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -204,7 +204,7 @@ export default function CollectionManagement() {
   const handleExecuteRule = async (resourceType: string) => {
     try {
       const res = await fetch(
-        `/api/v1/data-management/rules/${resourceType}/execute`,
+        `${config.apiUrl}/data-management/rules/${resourceType}/execute`,
         {
           method: 'POST',
         }
@@ -221,9 +221,12 @@ export default function CollectionManagement() {
     if (!confirm('Are you sure you want to delete this rule?')) return;
 
     try {
-      const res = await fetch(`/api/v1/data-management/rules/${resourceType}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `${config.apiUrl}/data-management/rules/${resourceType}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (!res.ok) throw new Error('Failed to delete rule');
       setSelectedRule(null);

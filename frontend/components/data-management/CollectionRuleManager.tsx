@@ -57,7 +57,7 @@ export function CollectionRuleManager() {
     try {
       const endpoint = isActive ? 'disable' : 'enable';
       const response = await fetch(
-        `/api/v1/data-management/rules/${resourceType}/${endpoint}`,
+        `${config.apiUrl}/data-management/rules/${resourceType}/${endpoint}`,
         { method: 'POST' }
       );
       const data = await response.json();

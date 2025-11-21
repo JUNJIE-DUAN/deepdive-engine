@@ -1,5 +1,7 @@
 'use client';
 
+import { config } from '@/lib/config';
+
 /**
  * Blog Collection Manager Component
  * 用于管理博客采集的前端界面
@@ -52,7 +54,7 @@ interface BlogCollectionManagerProps {
 }
 
 export const BlogCollectionManager: React.FC<BlogCollectionManagerProps> = ({
-  apiBaseUrl = '/api/v1/blog',
+  apiBaseUrl = '${config.apiUrl}/blog',
   autoRefresh = true,
   refreshInterval = 30000,
 }) => {

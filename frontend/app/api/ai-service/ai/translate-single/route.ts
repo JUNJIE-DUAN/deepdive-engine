@@ -6,7 +6,7 @@ const AI_SERVICE_URL =
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { text, targetLanguage = 'zh-CN', model = 'openai' } = body;
+    const { text, targetLanguage = 'zh-CN', model = 'grok' } = body;
 
     // Forward request to AI service
     const response = await fetch(

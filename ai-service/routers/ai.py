@@ -663,7 +663,7 @@ class TranslateSingleRequest(BaseModel):
     """单句翻译请求"""
     text: str
     targetLanguage: str = "zh-CN"
-    model: Literal["grok", "openai"] = "openai"  # 默认使用 openai (gpt-4o-mini)
+    model: Literal["grok", "openai"] = "grok"  # 默认使用 grok (OpenAI在Railway上不可用)
 
 
 @router.post("/translate-single")

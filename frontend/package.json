@@ -12,7 +12,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --reporter=verbose"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.16",

@@ -3,12 +3,14 @@
 
 # 设置CI环境变量，使测试更稳定
 export CI=true
+export NODE_ENV=test
 
-# 运行测试，带超时保护
+# 运行测试，使用专门的CI配置
 echo "🧪 Running tests before push..."
-npm run test -- --run --reporter=verbose || {
+npm run test:ci || {
   echo "❌ Tests failed! Push aborted."
-  echo "💡 Tip: Run 'npm run test' locally to debug"
+  echo "💡 Tip: Run 'npm run test:ci' locally to debug"
+  echo "💡 Fix the tests before pushing - do NOT use --no-verify"
   exit 1
 }
 

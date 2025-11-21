@@ -10,8 +10,18 @@ export default defineConfig({
     setupFiles: './vitest.setup.ts',
 
     // 超时配置 - 修复pool timeout问题
-    testTimeout: 30000, // 30秒
-    hookTimeout: 30000, // 30秒
+    testTimeout: 60000, // 60秒
+    hookTimeout: 60000, // 60秒
+
+    // 使用threads pool而不是forks，更稳定
+    // 单线程模式避免pool timeout问题
+    pool: 'threads',
+    // @ts-expect-error - poolOptions exists at runtime but not in type definitions for vitest 4.0.8
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
 
     // 覆盖率配置
     coverage: {

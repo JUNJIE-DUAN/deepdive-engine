@@ -138,13 +138,7 @@ export default function ResponsiveNav({
         {/* Import Button - Icon only */}
         <button
           onClick={onImportClick}
-          className="
-            flex items-center justify-center
-            rounded-lg border border-gray-300
-            bg-white p-2 text-gray-700
-            transition-colors hover:bg-gray-50
-            sm:p-2.5
-          "
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 sm:h-10 sm:w-10"
           title="Import URL or file"
           aria-label="Import"
         >
@@ -154,16 +148,11 @@ export default function ResponsiveNav({
         {/* Filter Button - Icon only with active indicator */}
         <button
           onClick={onFilterClick}
-          className={`
-            relative flex items-center justify-center
-            rounded-lg border p-2
-            transition-colors sm:p-2.5
-            ${
-              filterActive
-                ? 'border-blue-300 bg-blue-50 text-blue-700'
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-            }
-          `}
+          className={`relative flex h-9 w-9 items-center justify-center rounded-lg border transition-colors sm:h-10 sm:w-10 ${
+            filterActive
+              ? 'border-blue-300 bg-blue-50 text-blue-700'
+              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+          }`}
           title="Advanced filters"
           aria-label="Filter"
         >

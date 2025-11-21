@@ -1581,7 +1581,7 @@ function HomeContent() {
                 <div className="relative flex-shrink-0">
                   <button
                     onClick={() => setShowSortMenu(!showSortMenu)}
-                    className="flex items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white p-2 text-gray-700 transition-colors hover:bg-gray-50 sm:p-2.5"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 sm:h-10 sm:w-10"
                     title={
                       sortBy === 'trendingScore'
                         ? 'Trending'
@@ -1596,7 +1596,6 @@ function HomeContent() {
                     )}
                     {sortBy === 'publishedAt' && <Clock className="h-4 w-4" />}
                     {sortBy === 'qualityScore' && <Star className="h-4 w-4" />}
-                    <ChevronDown className="h-3 w-3" />
                   </button>
 
                   {/* Sort Dropdown Menu */}

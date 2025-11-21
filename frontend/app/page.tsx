@@ -14,6 +14,7 @@ import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
 import { ImportUrlDialog } from '@/components/ImportUrlDialog';
+import ResponsiveNav, { type TabType } from '@/components/layout/ResponsiveNav';
 import {
   AIContextBuilder,
   type Resource as AIResource,
@@ -1562,179 +1563,28 @@ function HomeContent() {
               </div>
 
               {/* Tabs and Filters */}
-              <div className="flex items-center justify-between">
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setActiveTab('papers')}
-                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'papers'
-                        ? 'border border-blue-200 bg-blue-50 text-blue-700 shadow-sm'
-                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    <span>Papers</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('blogs')}
-                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'blogs'
-                        ? 'border border-purple-200 bg-purple-50 text-purple-700 shadow-sm'
-                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"
-                      />
-                    </svg>
-                    <span>Blogs</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('reports')}
-                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'reports'
-                        ? 'border border-amber-200 bg-amber-50 text-amber-700 shadow-sm'
-                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    <span>Reports</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('youtube')}
-                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'youtube'
-                        ? 'border border-red-200 bg-red-50 text-red-700 shadow-sm'
-                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                    </svg>
-                    <span>YouTube</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('news')}
-                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      activeTab === 'news'
-                        ? 'border border-green-200 bg-green-50 text-green-700 shadow-sm'
-                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                      />
-                    </svg>
-                    <span>News</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {/* Import URL Button - Available for all tabs */}
-                  <button
-                    onClick={() => setShowImportDialog(true)}
-                    className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-                    title="Import"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Import
-                  </button>
-                  <button
-                    onClick={() => setShowFilterPanel(true)}
-                    className="relative flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                      />
-                    </svg>
-                    Filter
-                    {(selectedCategories.length > 0 ||
-                      dateRange !== 'all' ||
-                      minQualityScore > 0) && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-                        {selectedCategories.length +
-                          (dateRange !== 'all' ? 1 : 0) +
-                          (minQualityScore > 0 ? 1 : 0)}
-                      </span>
-                    )}
-                  </button>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-                  >
-                    <option value="trendingScore">Trending</option>
-                    <option value="publishedAt">Latest</option>
-                    <option value="qualityScore">Quality</option>
-                  </select>
-                </div>
+              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                <ResponsiveNav
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  onImportClick={() => setShowImportDialog(true)}
+                  onFilterClick={() => setShowFilterPanel(true)}
+                  filterActive={
+                    selectedCategories.length > 0 ||
+                    dateRange !== 'all' ||
+                    minQualityScore > 0
+                  }
+                  className="flex-1"
+                />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="flex-shrink-0 cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                >
+                  <option value="trendingScore">Trending</option>
+                  <option value="publishedAt">Latest</option>
+                  <option value="qualityScore">Quality</option>
+                </select>
               </div>
             </div>
           </div>

@@ -1354,13 +1354,13 @@ function HomeContent() {
   };
 
   return (
-    <div className="relative flex h-screen bg-gray-50">
+    <div className="relative flex h-screen w-screen overflow-hidden bg-gray-50">
       <ReportWorkspace />
       <Sidebar />
 
       {/* Center Content Area */}
       <main
-        className={`flex-1 bg-gray-50 ${viewMode === 'detail' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
+        className={`min-w-0 flex-1 bg-gray-50 ${viewMode === 'detail' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
       >
         {/* Sticky Search Bar Container - Only show in list view */}
         {viewMode === 'list' && (
@@ -1926,9 +1926,7 @@ function HomeContent() {
                             {resource.commentCount !== undefined && (
                               <button
                                 className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-green-600"
-                                onClick={(e) =>
-                                  handleCommentClick(resource, e)
-                                }
+                                onClick={(e) => handleCommentClick(resource, e)}
                                 title="评论"
                               >
                                 <svg
@@ -2375,7 +2373,7 @@ function HomeContent() {
 
       {/* Right AI Interaction Panel */}
       {!isAiPanelCollapsed && (
-        <aside className="relative flex w-96 flex-col border-l border-gray-200 bg-white">
+        <aside className="relative hidden w-80 flex-shrink-0 flex-col border-l border-gray-200 bg-white lg:flex lg:w-96">
           <button
             type="button"
             onClick={() => setIsAiPanelCollapsed(true)}

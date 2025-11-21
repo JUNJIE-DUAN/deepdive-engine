@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader2, CheckCircle, AlertCircle, Copy, X } from 'lucide-react';
+import { config } from '@/lib/config';
 
 interface DataImportDialogProps {
   open: boolean;
@@ -74,7 +75,7 @@ export function DataImportDialog({
     try {
       setLoading(true);
       const response = await fetch(
-        `/api/v1/data-management/whitelists/${resourceType}`
+        `${config.apiUrl}/data-management/whitelists/${resourceType}`
       );
       const data = await response.json();
       if (data.success) {
@@ -100,7 +101,7 @@ export function DataImportDialog({
 
       // 1. 验证URL合法性
       const validationResponse = await fetch(
-        `/api/v1/data-management/whitelists/${resourceType}/validate?url=${encodeURIComponent(url)}`
+        `${config.apiUrl}/data-management/whitelists/${resourceType}/validate?url=${encodeURIComponent(url)}`
       );
       const validationData = await validationResponse.json();
       setValidationResult(validationData.data);
@@ -113,11 +114,14 @@ export function DataImportDialog({
       }
 
       // 2. 解析URL获取标题
-      const parseResponse = await fetch('/api/v1/data-management/parse-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, resourceType }),
-      });
+      const parseResponse = await fetch(
+        `${config.apiUrl}/data-management/parse-url`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, resourceType }),
+        }
+      );
 
       if (parseResponse.ok) {
         const parseData = await parseResponse.json();
@@ -129,7 +133,9 @@ export function DataImportDialog({
 
       setStage('confirm-import');
     } catch (err) {
-      setError('无法读取该URL的内容。请检查:\n• URL是否正确\n• 网络连接是否正常\n• 该网站是否支持');
+      setError(
+        '无法读取该URL的内容。请检查:\n• URL是否正确\n• 网络连接是否正常\n• 该网站是否支持'
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -146,7 +152,7 @@ export function DataImportDialog({
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/v1/data-management/import', {
+      const response = await fetch(`${config.apiUrl}/data-management/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -274,7 +280,7 @@ export function DataImportDialog({
               {error && (
                 <div className="mt-3 rounded bg-red-50 p-3 text-sm text-red-700">
                   <div className="flex gap-2">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
                     <div className="whitespace-pre-wrap">{error}</div>
                   </div>
                 </div>
@@ -346,7 +352,7 @@ export function DataImportDialog({
               {error && (
                 <div className="mt-3 rounded bg-red-50 p-3 text-sm text-red-700">
                   <div className="flex gap-2">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
                     <div className="whitespace-pre-wrap">{error}</div>
                   </div>
                 </div>

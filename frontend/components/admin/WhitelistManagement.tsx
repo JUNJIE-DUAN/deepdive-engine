@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
 import {
   AlertCircle,
   Check,
@@ -96,7 +97,7 @@ export default function WhitelistManagement() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/v1/data-management/whitelists');
+      const res = await fetch(`${config.apiUrl}/data-management/whitelists`);
       if (!res.ok) throw new Error('Failed to fetch whitelists');
       const data = await res.json();
       setWhitelists(data.data || []);
@@ -126,7 +127,9 @@ export default function WhitelistManagement() {
       setNewDomain('');
       await fetchWhitelists();
       // Update selected whitelist
-      const updated = await fetch('/api/v1/data-management/whitelists');
+      const updated = await fetch(
+        `${config.apiUrl}/data-management/whitelists`
+      );
       const data = await updated.json();
       const updatedWhitelist = (data.data || []).find(
         (w: Whitelist) => w.resourceType === resourceType
@@ -147,7 +150,9 @@ export default function WhitelistManagement() {
       if (!res.ok) throw new Error('Failed to remove domain');
       await fetchWhitelists();
       // Update selected whitelist
-      const updated = await fetch('/api/v1/data-management/whitelists');
+      const updated = await fetch(
+        `${config.apiUrl}/data-management/whitelists`
+      );
       const data = await updated.json();
       const updatedWhitelist = (data.data || []).find(
         (w: Whitelist) => w.resourceType === resourceType

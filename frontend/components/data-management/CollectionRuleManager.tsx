@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 interface CollectionRule {
@@ -36,7 +37,7 @@ export function CollectionRuleManager() {
   const fetchRules = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/data-management/rules');
+      const response = await fetch(`${config.apiUrl}/data-management/rules`);
       const data = await response.json();
       if (data.success) {
         setRules(data.data);

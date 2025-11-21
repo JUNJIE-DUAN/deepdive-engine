@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 interface DataQualityMetric {
@@ -55,7 +56,9 @@ export function DataQualityManager() {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/data-management/quality-metrics');
+      const response = await fetch(
+        `${config.apiUrl}/data-management/quality-metrics`
+      );
       const data = await response.json();
       if (data.success) {
         setMetrics(data.data);

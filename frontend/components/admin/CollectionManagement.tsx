@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
 import {
   AlertCircle,
   Plus,
@@ -135,8 +136,8 @@ export default function CollectionManagement() {
       setError(null);
 
       const [rulesRes, statsRes] = await Promise.all([
-        fetch('/api/v1/data-management/rules'),
-        fetch('/api/v1/data-management/dashboard/summary'),
+        fetch(`${config.apiUrl}/data-management/rules`),
+        fetch(`${config.apiUrl}/data-management/dashboard/summary`),
       ]);
 
       if (!rulesRes.ok || !statsRes.ok) {
@@ -157,7 +158,7 @@ export default function CollectionManagement() {
 
   const handleAddRule = async () => {
     try {
-      const res = await fetch('/api/v1/data-management/rules', {
+      const res = await fetch(`${config.apiUrl}/data-management/rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRule),

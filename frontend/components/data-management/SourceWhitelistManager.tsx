@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
 import { Loader2, AlertCircle, Plus, Trash2 } from 'lucide-react';
 
 interface SourceWhitelist {
@@ -37,7 +38,9 @@ export function SourceWhitelistManager() {
   const fetchWhitelists = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/data-management/whitelists');
+      const response = await fetch(
+        `${config.apiUrl}/data-management/whitelists`
+      );
       const data = await response.json();
       if (data.success) {
         setWhitelists(data.data);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { config } from '@/lib/config';
 import {
   AlertCircle,
   RefreshCw,
@@ -53,14 +54,18 @@ export default function DataQualityManagement() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch('/api/v1/data-management/dashboard/summary');
+      const res = await fetch(
+        `${config.apiUrl}/data-management/dashboard/summary`
+      );
       if (!res.ok) throw new Error('Failed to fetch quality metrics');
 
       const data = await res.json();
       setStats(data.data?.statistics || []);
 
       // Fetch detailed metrics (in a real app, this would be paginated)
-      const metricsRes = await fetch('/api/v1/data-management/quality-metrics');
+      const metricsRes = await fetch(
+        `${config.apiUrl}/data-management/quality-metrics`
+      );
       if (metricsRes.ok) {
         const metricsData = await metricsRes.json();
         setMetrics(metricsData.data || []);

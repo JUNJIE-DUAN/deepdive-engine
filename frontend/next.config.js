@@ -27,6 +27,8 @@ const nextConfig = {
   },
   // 添加安全头部配置以支持iframe预览
   async headers() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const aiUrl = process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
     return [
       {
         source: '/:path*',
@@ -43,7 +45,7 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
-          // 允许iframe加载来自localhost:4000的内容(代理服务)
+          // 允许iframe加载来自API服务的内容
           {
             key: 'Content-Security-Policy',
             value: [
@@ -57,9 +59,9 @@ const nextConfig = {
               // 允许所有字体来源
               "font-src 'self' data: blob: https: http:",
               // 允许所有API连接
-              "connect-src 'self' http://localhost:4000 http://localhost:5000 ws://localhost:* wss://localhost:* blob: data: https: http: wss: ws:",
+              `connect-src 'self' ${apiUrl} ${aiUrl} ws://localhost:* wss://localhost:* blob: data: https: http: wss: ws:`,
               // 允许所有iframe来源（内容通过Blob URL加载）
-              "frame-src 'self' http://localhost:4000 blob: data: https: http:",
+              `frame-src 'self' ${apiUrl} blob: data: https: http:`,
               // 允许所有worker来源
               "worker-src 'self' blob: data: https: http:",
               // 允许所有object来源（PDF）

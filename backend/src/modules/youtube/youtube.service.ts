@@ -40,15 +40,22 @@ export class YoutubeService {
    * @param lang Language code (default: 'en')
    * @returns Transcript data
    */
-  async getTranscript(videoId: string, lang: string = "en"): Promise<TranscriptResponse> {
+  async getTranscript(
+    videoId: string,
+    lang: string = "en",
+  ): Promise<TranscriptResponse> {
     let transcriptSegments: TranscriptSegment[] = [];
     let title: string | null = null;
     try {
-      this.logger.log(`Fetching transcript for video: ${videoId} (lang: ${lang})`);
+      this.logger.log(
+        `Fetching transcript for video: ${videoId} (lang: ${lang})`,
+      );
 
       // If requesting Chinese, skip youtubei.js and go directly to fallback methods
       if (lang.startsWith("zh")) {
-        this.logger.log(`Requesting Chinese transcript, using fallback methods`);
+        this.logger.log(
+          `Requesting Chinese transcript, using fallback methods`,
+        );
         throw new Error("Force fallback for Chinese");
       }
 
@@ -92,7 +99,10 @@ export class YoutubeService {
         `Successfully fetched ${transcript.length} transcript segments for "${title ?? videoId}"`,
       );
     } catch (error: unknown) {
-      this.logger.error(`Failed to fetch transcript for ${videoId} (lang: ${lang}):`, error);
+      this.logger.error(
+        `Failed to fetch transcript for ${videoId} (lang: ${lang}):`,
+        error,
+      );
 
       // Try youtube-transcript library first
       const npmTranscript = await this.fetchTranscriptNpm(videoId, lang);
@@ -175,7 +185,15 @@ export class YoutubeService {
 
   private async ensureClient() {
     if (!this.youtube) {
-      const { Innertube } = (await import("youtubei.js")) as YoutubeModule;
+      // Use Function constructor to force true dynamic import at runtime
+      // This prevents TypeScript from converting import() to require() in CommonJS
+      const importDynamic = new Function(
+        "modulePath",
+        "return import(modulePath)",
+      );
+      const { Innertube } = (await importDynamic(
+        "youtubei.js",
+      )) as YoutubeModule;
       this.youtube = await Innertube.create();
     }
   }
@@ -213,7 +231,15 @@ export class YoutubeService {
       if (preferredLang.startsWith("zh")) {
         languages = ["zh-Hans", "zh-Hant", "zh", "en", "ja", "ko"];
       } else {
-        languages = [preferredLang, "en", "zh-Hans", "zh-Hant", "zh", "ja", "ko"];
+        languages = [
+          preferredLang,
+          "en",
+          "zh-Hans",
+          "zh-Hant",
+          "zh",
+          "ja",
+          "ko",
+        ];
       }
 
       for (const lang of languages) {

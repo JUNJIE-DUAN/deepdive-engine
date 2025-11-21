@@ -1,0 +1,75 @@
+name: Deploy Protection Check
+
+# 在部署前进行额外的安全检查
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pre-deploy-checks:
+    name: Pre-deployment Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for secrets
+        run: |
+          echo "🔍 Checking for potential secrets in code..."
+          # 检查是否有潜在的secrets被提交
+          if git diff --name-only HEAD~1 HEAD | grep -E '\.(env|key|pem|p12|pfx)$'; then
+            echo "❌ Environment or key files detected in commit!"
+            exit 1
+          fi
+
+          # 检查代码中的硬编码secrets
+          if grep -rE '(password|secret|api_key|apikey|token).*=.*["\'](?!process\.env)[^"\']{20,}["\']' --exclude-dir=node_modules --exclude-dir=.git .; then
+            echo "⚠️  Potential hardcoded secrets detected!"
+            echo "Please review the above matches"
+            exit 1
+          fi
+          echo "✅ No secrets detected"
+
+      - name: Verify environment variables
+        run: |
+          echo "🔍 Verifying required environment variables are documented..."
+          if [ ! -f ".env.example" ]; then
+            echo "❌ .env.example file not found!"
+            exit 1
+          fi
+          echo "✅ Environment template exists"
+
+      - name: Check for breaking changes
+        run: |
+          echo "🔍 Checking for potential breaking changes..."
+          # 检查prisma schema是否有变更
+          if git diff --name-only HEAD~1 HEAD | grep "prisma/schema.prisma"; then
+            echo "⚠️  Database schema changed - ensure migrations are ready!"
+          fi
+
+          # 检查API路由变更
+          if git diff HEAD~1 HEAD | grep -E '@(Get|Post|Put|Delete|Patch)\('; then
+            echo "⚠️  API routes changed - check for breaking changes!"
+          fi
+
+      - name: Build verification
+        run: |
+          echo "🏗️  Verifying build..."
+          npm run build
+          echo "✅ Build successful"
+
+      - name: Summary
+        run: |
+          echo "✅ All pre-deployment checks passed!"
+          echo "📦 Ready for deployment to production"

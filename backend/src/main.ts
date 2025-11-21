@@ -4,7 +4,7 @@ import helmet from "helmet";
 import { Request, Response, NextFunction } from "express";
 import * as express from "express";
 import { AppModule } from "./app.module";
-import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { isWorkspaceAiV2Enabled } from "./common/utils/feature-flags";
 // Force reload after CORS fix
 
@@ -80,8 +80,8 @@ async function bootstrap() {
     }),
   );
 
-  // 启用全局异常过滤器
-  app.useGlobalFilters(new HttpExceptionFilter());
+  // 启用全局异常过滤器（统一处理所有异常，包括Prisma错误）
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // 添加根路径健康检查（供Railway healthcheck使用，不受全局前缀影响）
   const httpAdapter = app.getHttpAdapter();

@@ -9,6 +9,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './vitest.setup.ts',
 
+    // 超时配置 - 修复pool timeout问题
+    testTimeout: 30000, // 30秒
+    hookTimeout: 30000, // 30秒
+
     // 覆盖率配置
     coverage: {
       provider: 'v8',
@@ -35,7 +39,6 @@ export default defineConfig({
         statements: 50,
       },
     },
-
   },
 
   resolve: {

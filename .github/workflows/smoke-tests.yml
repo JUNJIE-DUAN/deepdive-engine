@@ -1,0 +1,124 @@
+name: Smoke Tests
+
+# 部署后运行smoke tests验证系统是否正常
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to test"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+  schedule:
+    # 每小时运行一次（生产环境健康监控）
+    - cron: "0 * * * *"
+
+jobs:
+  smoke-test:
+    name: Smoke Tests - ${{ github.event.inputs.environment || 'production' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment URL
+        id: set-url
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            echo "API_URL=https://staging-api.deepdive.app" >> $GITHUB_OUTPUT
+            echo "WEB_URL=https://staging.deepdive.app" >> $GITHUB_OUTPUT
+          else
+            echo "API_URL=https://api.deepdive.app" >> $GITHUB_OUTPUT
+            echo "WEB_URL=https://deepdive.app" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Health Check - API
+        run: |
+          echo "🏥 Checking API health..."
+          response=$(curl -s -w "\n%{http_code}" ${{ steps.set-url.outputs.API_URL }}/api/v1/health)
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "Status Code: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "❌ Health check failed!"
+            exit 1
+          fi
+          echo "✅ API is healthy"
+
+      - name: Health Check - Frontend
+        run: |
+          echo "🏥 Checking frontend health..."
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.set-url.outputs.WEB_URL }})
+
+          echo "Status Code: $http_code"
+
+          if [ "$http_code" != "200" ]; then
+            echo "❌ Frontend health check failed!"
+            exit 1
+          fi
+          echo "✅ Frontend is healthy"
+
+      - name: API Endpoint Tests
+        run: |
+          echo "🧪 Testing API endpoints..."
+
+          # Test resources endpoint
+          echo "Testing GET /api/v1/resources..."
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.set-url.outputs.API_URL }}/api/v1/resources)
+          if [ "$http_code" != "200" ]; then
+            echo "❌ Resources endpoint failed!"
+            exit 1
+          fi
+
+          echo "✅ All API endpoints responding"
+
+      - name: Database Connectivity
+        run: |
+          echo "🗄️  Checking database connectivity..."
+          # Health endpoint应该包含database状态
+          response=$(curl -s ${{ steps.set-url.outputs.API_URL }}/api/v1/health)
+          echo "Response: $response"
+
+          if echo "$response" | grep -q "ok"; then
+            echo "✅ Database connection is healthy"
+          else
+            echo "❌ Database connection issue detected!"
+            exit 1
+          fi
+
+      - name: Performance Check
+        run: |
+          echo "⚡ Checking API response time..."
+          response_time=$(curl -s -o /dev/null -w "%{time_total}" ${{ steps.set-url.outputs.API_URL }}/api/v1/health)
+
+          echo "Response time: ${response_time}s"
+
+          # 如果响应时间超过5秒，发出警告
+          if (( $(echo "$response_time > 5" | bc -l) )); then
+            echo "⚠️  Response time is slow (>${response_time}s)"
+            exit 1
+          fi
+
+          echo "✅ Response time is acceptable"
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ All smoke tests passed!"
+          echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Smoke tests failed!"
+          echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
+          echo "Please investigate immediately!"
+          # TODO: 集成Slack/Discord通知

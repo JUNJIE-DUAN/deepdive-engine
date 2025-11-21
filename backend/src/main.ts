@@ -83,6 +83,17 @@ async function bootstrap() {
   // 启用全局异常过滤器
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  // 添加根路径健康检查（供Railway healthcheck使用，不受全局前缀影响）
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get("/health", (_req: Request, res: Response) => {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      service: "DeepDive Backend",
+      version: "1.0.0",
+    });
+  });
+
   // API前缀
   app.setGlobalPrefix("api/v1");
 

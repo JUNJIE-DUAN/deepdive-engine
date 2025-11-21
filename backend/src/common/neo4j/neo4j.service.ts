@@ -1,7 +1,12 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { getErrorMessage } from '../utils/error.utils';
-import neo4j, { Driver, Session } from 'neo4j-driver';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { getErrorMessage } from "../utils/error.utils";
+import neo4j, { Driver, Session } from "neo4j-driver";
 
 /**
  * Neo4j 数据库服务
@@ -14,24 +19,30 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    const uri = this.configService.get<string>('NEO4J_URI', 'bolt://localhost:7687');
-    const username = this.configService.get<string>('NEO4J_USERNAME', 'neo4j');
-    const password = this.configService.get<string>('NEO4J_PASSWORD', 'password');
+    const uri = this.configService.get<string>(
+      "NEO4J_URI",
+      "bolt://localhost:7687",
+    );
+    const username = this.configService.get<string>("NEO4J_USERNAME", "neo4j");
+    const password = this.configService.get<string>(
+      "NEO4J_PASSWORD",
+      "password",
+    );
 
     try {
       this.driver = neo4j.driver(uri, neo4j.auth.basic(username, password));
       await this.driver.verifyConnectivity();
-      this.logger.log('✅ Neo4j connected successfully');
+      this.logger.log("✅ Neo4j connected successfully");
     } catch (error) {
-      this.logger.error('❌ Neo4j connection failed:', getErrorMessage(error));
-      throw error;
+      this.logger.error("❌ Neo4j connection failed:", getErrorMessage(error));
+      // throw error; // 允许应用在Neo4j不可用时继续启动
     }
   }
 
   async onModuleDestroy() {
     if (this.driver) {
       await this.driver.close();
-      this.logger.log('Neo4j connection closed');
+      this.logger.log("Neo4j connection closed");
     }
   }
 
@@ -81,7 +92,11 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
       CREATE (from)-[r:${relationshipType} $properties]->(to)
       RETURN r
     `;
-    const result = await this.run(cypher, { fromId, toId, properties: properties || {} });
+    const result = await this.run(cypher, {
+      fromId,
+      toId,
+      properties: properties || {},
+    });
     return result[0]?.r;
   }
 

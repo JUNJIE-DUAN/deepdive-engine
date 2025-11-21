@@ -435,6 +435,8 @@ export class SourceWhitelistService {
             // 学术库
             "arxiv.org",
             "*.arxiv.org",
+            "alphaxiv.org",
+            "*.alphaxiv.org",
             "openreview.net",
             "papers.nips.cc",
             "proceedings.mlr.press",

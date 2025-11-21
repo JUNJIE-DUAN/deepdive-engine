@@ -12,6 +12,7 @@ import { ImportManagerController } from "./controllers/import-manager.controller
 import { ImportTaskProcessorService } from "./services/import-task-processor.service";
 import { MetadataExtractorService } from "./services/metadata-extractor.service";
 import { DuplicateDetectorService } from "./services/duplicate-detector.service";
+import { PaperMetadataExtractorService } from "./services/paper-metadata-extractor.service";
 import { DashboardService } from "./services/dashboard.service";
 import { DashboardController } from "./controllers/dashboard.controller";
 import { ConfigurationController } from "./controllers/configuration.controller";
@@ -38,6 +39,7 @@ import { ConfigurationService } from "./services/configuration.service";
     ImportTaskProcessorService,
     MetadataExtractorService,
     DuplicateDetectorService,
+    PaperMetadataExtractorService,
     DashboardService,
     ConfigurationService,
   ],

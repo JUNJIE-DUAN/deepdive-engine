@@ -3,10 +3,23 @@
 import { useState, useEffect } from 'react';
 import {
   AlertCircle,
-  CheckCircle2,
   Plus,
   RefreshCw,
   Trash2,
+  X,
+  FileText,
+  Video,
+  Newspaper,
+  FolderGit2,
+  Rss,
+  BarChart3,
+  Calendar,
+  Globe,
+  Clock,
+  Zap,
+  Settings,
+  Play,
+  TrendingUp,
 } from 'lucide-react';
 
 interface CollectionRule {
@@ -32,12 +45,78 @@ interface CollectionStats {
   lastCollectionAt?: string;
 }
 
+const resourceTypeIcons: Record<string, React.ReactNode> = {
+  YOUTUBE_VIDEO: <Video className="h-6 w-6" />,
+  PAPER: <FileText className="h-6 w-6" />,
+  BLOG: <Globe className="h-6 w-6" />,
+  NEWS: <Newspaper className="h-6 w-6" />,
+  PROJECT: <FolderGit2 className="h-6 w-6" />,
+  RSS: <Rss className="h-6 w-6" />,
+  REPORT: <BarChart3 className="h-6 w-6" />,
+  EVENT: <Calendar className="h-6 w-6" />,
+};
+
+const resourceTypeColors: Record<
+  string,
+  { bg: string; text: string; border: string; gradient: string }
+> = {
+  YOUTUBE_VIDEO: {
+    bg: 'bg-red-50',
+    text: 'text-red-600',
+    border: 'border-red-100',
+    gradient: 'from-red-500 to-red-600',
+  },
+  PAPER: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-600',
+    border: 'border-blue-100',
+    gradient: 'from-blue-500 to-blue-600',
+  },
+  BLOG: {
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-600',
+    border: 'border-emerald-100',
+    gradient: 'from-emerald-500 to-emerald-600',
+  },
+  NEWS: {
+    bg: 'bg-violet-50',
+    text: 'text-violet-600',
+    border: 'border-violet-100',
+    gradient: 'from-violet-500 to-violet-600',
+  },
+  PROJECT: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-600',
+    border: 'border-amber-100',
+    gradient: 'from-amber-500 to-amber-600',
+  },
+  RSS: {
+    bg: 'bg-orange-50',
+    text: 'text-orange-600',
+    border: 'border-orange-100',
+    gradient: 'from-orange-500 to-orange-600',
+  },
+  REPORT: {
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-600',
+    border: 'border-indigo-100',
+    gradient: 'from-indigo-500 to-indigo-600',
+  },
+  EVENT: {
+    bg: 'bg-pink-50',
+    text: 'text-pink-600',
+    border: 'border-pink-100',
+    gradient: 'from-pink-500 to-pink-600',
+  },
+};
+
 export default function CollectionManagement() {
   const [rules, setRules] = useState<CollectionRule[]>([]);
   const [stats, setStats] = useState<CollectionStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddRule, setShowAddRule] = useState(false);
+  const [selectedRule, setSelectedRule] = useState<CollectionRule | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newRule, setNewRule] = useState({
     resourceType: 'PAPER',
     cronExpression: '0 */6 * * *',
@@ -93,7 +172,7 @@ export default function CollectionManagement() {
         timeout: 300,
         description: '',
       });
-      setShowAddRule(false);
+      setShowAddModal(false);
       await fetchRulesAndStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create rule');
@@ -113,6 +192,9 @@ export default function CollectionManagement() {
 
       if (!res.ok) throw new Error('Failed to update rule');
       await fetchRulesAndStats();
+      if (selectedRule?.resourceType === rule.resourceType) {
+        setSelectedRule({ ...rule, isActive: !rule.isActive });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update rule');
     }
@@ -143,10 +225,30 @@ export default function CollectionManagement() {
       });
 
       if (!res.ok) throw new Error('Failed to delete rule');
+      setSelectedRule(null);
       await fetchRulesAndStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete rule');
     }
+  };
+
+  const getColors = (resourceType: string) => {
+    return (
+      resourceTypeColors[resourceType] || {
+        bg: 'bg-gray-50',
+        text: 'text-gray-600',
+        border: 'border-gray-100',
+        gradient: 'from-gray-500 to-gray-600',
+      }
+    );
+  };
+
+  const getIcon = (resourceType: string) => {
+    return resourceTypeIcons[resourceType] || <Globe className="h-6 w-6" />;
+  };
+
+  const getStatsForRule = (resourceType: string) => {
+    return stats.find((s) => s.resourceType === resourceType);
   };
 
   if (loading) {
@@ -172,130 +274,354 @@ export default function CollectionManagement() {
         </div>
       )}
 
-      {/* Collection Statistics */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-gray-200/50 bg-white/70 p-6 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md">
-          <div className="mb-6 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10">
-              <svg
-                className="h-5 w-5 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <h2 className="text-base font-semibold text-gray-900">
-              Collection Statistics
-            </h2>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25">
+            <Settings className="h-5 w-5 text-white" />
           </div>
-          <div className="space-y-4">
-            {stats.length === 0 ? (
-              <p className="text-gray-500">No statistics available yet</p>
-            ) : (
-              stats.map((stat) => (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Collection Rules
+            </h2>
+            <p className="text-sm text-gray-500">
+              {rules.length} active collectors
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => fetchRulesAndStats()}
+            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30"
+          >
+            <Plus className="h-4 w-4" />
+            New Rule
+          </button>
+        </div>
+      </div>
+
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {rules.length === 0 ? (
+          <div className="col-span-full rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
+            <Settings className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900">
+              No collection rules
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Get started by creating a new collection rule
+            </p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Create Rule
+            </button>
+          </div>
+        ) : (
+          rules.map((rule) => {
+            const colors = getColors(rule.resourceType);
+            const ruleStats = getStatsForRule(rule.resourceType);
+            return (
+              <div
+                key={rule.id}
+                onClick={() => setSelectedRule(rule)}
+                className={`group relative cursor-pointer overflow-hidden rounded-xl border bg-white p-5 shadow-sm transition-all hover:scale-[1.02] hover:shadow-xl ${colors.border}`}
+              >
+                {/* Gradient accent */}
                 <div
-                  key={stat.resourceType}
-                  className="border-b border-gray-100/50 pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-100">
-                        <span className="text-xs font-semibold text-blue-600">
-                          {stat.resourceType.charAt(0)}
+                  className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${colors.gradient}`}
+                />
+
+                {/* Header */}
+                <div className="mb-4 flex items-start justify-between">
+                  <div className={`rounded-xl p-3 ${colors.bg} ${colors.text}`}>
+                    {getIcon(rule.resourceType)}
+                  </div>
+                  <div
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      rule.isActive
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {rule.isActive ? 'Active' : 'Paused'}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <h3 className="mb-1 font-semibold text-gray-900">
+                  {rule.resourceType.replace(/_/g, ' ')}
+                </h3>
+
+                {/* Schedule */}
+                <div className="mb-4 flex items-center gap-1.5 text-sm text-gray-500">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{rule.cronExpression}</span>
+                </div>
+
+                {/* Stats */}
+                {ruleStats && (
+                  <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
+                    <div>
+                      <div className="text-xs text-gray-500">Collected</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {ruleStats.totalCollected}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Success Rate</div>
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="text-lg font-semibold text-gray-900">
+                          {ruleStats.successRate.toFixed(0)}%
                         </span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">
-                        {stat.resourceType}
-                      </span>
-                    </div>
-                    <span className="text-xs font-semibold text-blue-600">
-                      {stat.successRate.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
-                        style={{ width: `${stat.successRate}%` }}
-                      />
                     </div>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                    <div className="rounded bg-gray-50/50 px-2 py-1.5">
-                      <span className="block text-gray-500">Collected</span>
-                      <span className="font-semibold text-gray-900">
-                        {stat.totalCollected}
-                      </span>
+                )}
+
+                {/* Quick Actions (visible on hover) */}
+                <div className="absolute bottom-4 right-4 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExecuteRule(rule.resourceType);
+                    }}
+                    className="rounded-lg bg-gray-100 p-2 text-gray-600 hover:bg-gray-200"
+                    title="Run now"
+                  >
+                    <Play className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Statistics Summary */}
+      {stats.length > 0 && (
+        <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <h3 className="font-semibold text-gray-900">Collection Overview</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="text-2xl font-bold text-gray-900">
+                {stats.reduce((acc, s) => acc + s.totalCollected, 0)}
+              </div>
+              <div className="text-sm text-gray-500">Total Collected</div>
+            </div>
+            <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="text-2xl font-bold text-emerald-600">
+                {stats.reduce((acc, s) => acc + s.totalSuccessful, 0)}
+              </div>
+              <div className="text-sm text-gray-500">Successful</div>
+            </div>
+            <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="text-2xl font-bold text-red-600">
+                {stats.reduce((acc, s) => acc + s.totalFailed, 0)}
+              </div>
+              <div className="text-sm text-gray-500">Failed</div>
+            </div>
+            <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="text-2xl font-bold text-amber-600">
+                {stats.reduce((acc, s) => acc + s.totalDuplicates, 0)}
+              </div>
+              <div className="text-sm text-gray-500">Duplicates</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rule Detail Modal */}
+      {selectedRule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            {/* Modal Header */}
+            <div
+              className={`relative overflow-hidden rounded-t-2xl ${getColors(selectedRule.resourceType).bg} px-6 py-5`}
+            >
+              <div
+                className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${getColors(selectedRule.resourceType).gradient}`}
+              />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`rounded-xl bg-white/80 p-2.5 ${getColors(selectedRule.resourceType).text}`}
+                  >
+                    {getIcon(selectedRule.resourceType)}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {selectedRule.resourceType.replace(/_/g, ' ')}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Collection Rule Settings
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedRule(null)}
+                  className="rounded-lg p-2 text-gray-500 hover:bg-white/50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="space-y-5 p-6">
+              {/* Status Toggle */}
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
+                <div>
+                  <h4 className="font-medium text-gray-900">Rule Status</h4>
+                  <p className="text-sm text-gray-500">
+                    {selectedRule.isActive
+                      ? 'Collection is running on schedule'
+                      : 'Collection is paused'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleToggleRule(selectedRule)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    selectedRule.isActive ? 'bg-emerald-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      selectedRule.isActive ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Configuration */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900">Configuration</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-gray-200 p-3">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Clock className="h-4 w-4" />
+                      <span className="text-xs">Schedule</span>
                     </div>
-                    <div className="rounded bg-gray-50/50 px-2 py-1.5">
-                      <span className="block text-gray-500">Failed</span>
-                      <span className="font-semibold text-gray-900">
-                        {stat.totalFailed}
-                      </span>
+                    <div className="mt-1 font-mono text-sm text-gray-900">
+                      {selectedRule.cronExpression}
                     </div>
-                    <div className="rounded bg-gray-50/50 px-2 py-1.5">
-                      <span className="block text-gray-500">Duplicates</span>
-                      <span className="font-semibold text-gray-900">
-                        {stat.totalDuplicates}
-                      </span>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 p-3">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Zap className="h-4 w-4" />
+                      <span className="text-xs">Concurrency</span>
                     </div>
-                    <div className="rounded bg-gray-50/50 px-2 py-1.5">
-                      <span className="block text-gray-500">Quality</span>
-                      <span className="font-semibold text-gray-900">
-                        {stat.averageQualityScore.toFixed(1)}
-                      </span>
+                    <div className="mt-1 text-sm font-semibold text-gray-900">
+                      {selectedRule.maxConcurrent} tasks
                     </div>
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+
+              {/* Stats */}
+              {getStatsForRule(selectedRule.resourceType) && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900">Statistics</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(() => {
+                      const ruleStats = getStatsForRule(
+                        selectedRule.resourceType
+                      )!;
+                      return (
+                        <>
+                          <div className="rounded-lg bg-gray-50 p-3 text-center">
+                            <div className="text-lg font-bold text-gray-900">
+                              {ruleStats.totalCollected}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Collected
+                            </div>
+                          </div>
+                          <div className="rounded-lg bg-emerald-50 p-3 text-center">
+                            <div className="text-lg font-bold text-emerald-600">
+                              {ruleStats.totalSuccessful}
+                            </div>
+                            <div className="text-xs text-gray-500">Success</div>
+                          </div>
+                          <div className="rounded-lg bg-red-50 p-3 text-center">
+                            <div className="text-lg font-bold text-red-600">
+                              {ruleStats.totalFailed}
+                            </div>
+                            <div className="text-xs text-gray-500">Failed</div>
+                          </div>
+                          <div className="rounded-lg bg-blue-50 p-3 text-center">
+                            <div className="text-lg font-bold text-blue-600">
+                              {ruleStats.successRate.toFixed(0)}%
+                            </div>
+                            <div className="text-xs text-gray-500">Rate</div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between rounded-b-2xl border-t border-gray-100 bg-gray-50 px-6 py-4">
+              <button
+                onClick={() => handleDeleteRule(selectedRule.resourceType)}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Rule
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleExecuteRule(selectedRule.resourceType)}
+                  className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Play className="h-4 w-4" />
+                  Run Now
+                </button>
+                <button
+                  onClick={() => setSelectedRule(null)}
+                  className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Collection Rules */}
-        <div className="rounded-xl border border-gray-200/50 bg-white/70 p-6 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md">
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10">
-                <svg
-                  className="h-5 w-5 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-base font-semibold text-gray-900">
-                Collection Rules
-              </h2>
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-600">
-                {rules.length}
-              </span>
+      {/* Add Rule Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Create Collection Rule
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <button
-              onClick={() => setShowAddRule(!showAddRule)}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-lg"
-            >
-              <Plus className="h-4 w-4" />
-              New Rule
-            </button>
-          </div>
 
-          {showAddRule && (
-            <div className="mb-4 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="space-y-4 p-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Resource Type
@@ -305,7 +631,7 @@ export default function CollectionManagement() {
                   onChange={(e) =>
                     setNewRule({ ...newRule, resourceType: e.target.value })
                   }
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option>PAPER</option>
                   <option>BLOG</option>
@@ -319,7 +645,7 @@ export default function CollectionManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Cron Expression
+                  Schedule (Cron)
                 </label>
                 <input
                   type="text"
@@ -328,14 +654,14 @@ export default function CollectionManagement() {
                     setNewRule({ ...newRule, cronExpression: e.target.value })
                   }
                   placeholder="0 */6 * * *"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   e.g., '0 */6 * * *' = every 6 hours
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Max Concurrent
@@ -349,12 +675,12 @@ export default function CollectionManagement() {
                         maxConcurrent: parseInt(e.target.value),
                       })
                     }
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Timeout (seconds)
+                    Timeout (sec)
                   </label>
                   <input
                     type="number"
@@ -365,108 +691,29 @@ export default function CollectionManagement() {
                         timeout: parseInt(e.target.value),
                       })
                     }
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAddRule}
-                  className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  Create Rule
-                </button>
-                <button
-                  onClick={() => setShowAddRule(false)}
-                  className="flex-1 rounded-lg bg-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-              </div>
             </div>
-          )}
 
-          <div className="space-y-2">
-            {rules.length === 0 ? (
-              <p className="text-gray-500">No collection rules configured</p>
-            ) : (
-              rules.map((rule) => (
-                <div
-                  key={rule.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-200 p-3"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {rule.isActive ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-gray-400" />
-                      )}
-                      <span className="font-medium text-gray-900">
-                        {rule.resourceType}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Cron: {rule.cronExpression}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleExecuteRule(rule.resourceType)}
-                      className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
-                      title="Execute now"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleToggleRule(rule)}
-                      className={`rounded-lg px-3 py-1 text-xs font-medium ${
-                        rule.isActive
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {rule.isActive ? 'Active' : 'Inactive'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRule(rule.resourceType)}
-                      className="rounded-lg p-2 text-red-600 hover:bg-red-50"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+            <div className="flex gap-3 rounded-b-2xl border-t border-gray-100 bg-gray-50 px-6 py-4">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddRule}
+                className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Create Rule
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Collection Import Dialog */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">
-          Quick Import
-        </h2>
-        <p className="mb-4 text-sm text-gray-600">
-          Import data sources by URL. The system will validate and add them
-          based on whitelist rules.
-        </p>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {['PAPER', 'BLOG', 'NEWS', 'YOUTUBE_VIDEO', 'PROJECT', 'EVENT'].map(
-            (type) => (
-              <button
-                key={type}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Import {type}
-              </button>
-            )
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

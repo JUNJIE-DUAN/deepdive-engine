@@ -8,6 +8,20 @@ import NoteEditor from '@/components/features/NoteEditor';
 import NotesList from '@/components/features/NotesList';
 import CommentsList from '@/components/features/CommentsList';
 import Sidebar from '@/components/layout/Sidebar';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for PDF viewer (client-side only)
+const PDFViewerClient = dynamic(
+  () => import('@/components/ui/PDFViewerClient'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-96 items-center justify-center rounded-lg bg-gray-100">
+        Loading PDF viewer...
+      </div>
+    ),
+  }
+);
 
 interface Resource {
   id: string;
@@ -42,9 +56,9 @@ export default function ResourcePage() {
 
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'comments'>(
-    'overview'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'pdf' | 'notes' | 'comments'
+  >('overview');
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | undefined>(
@@ -219,6 +233,39 @@ export default function ResourcePage() {
               </button>
             </div>
 
+            {/* Paper-specific metadata */}
+            {resource.type === 'PAPER' && (
+              <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50 p-4">
+                <h3 className="mb-3 font-semibold text-blue-900">
+                  Paper Information
+                </h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {resource.authors && resource.authors.length > 0 && (
+                    <div>
+                      <span className="font-medium text-blue-700">
+                        Authors:
+                      </span>
+                      <p className="mt-1 text-gray-700">
+                        {resource.authors
+                          .map((a) => a.name || a.username)
+                          .join(', ')}
+                      </p>
+                    </div>
+                  )}
+                  {resource.publishedAt && (
+                    <div>
+                      <span className="font-medium text-blue-700">
+                        Published:
+                      </span>
+                      <p className="mt-1 text-gray-700">
+                        {new Date(resource.publishedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Abstract */}
             {resource.abstract && (
               <div className="mt-6 rounded-lg bg-gray-50 p-4">
@@ -368,10 +415,10 @@ export default function ResourcePage() {
 
           {/* Tabs */}
           <div className="mb-6 rounded-lg bg-white shadow-sm">
-            <div className="flex border-b border-gray-200">
+            <div className="flex overflow-x-auto border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
                   activeTab === 'overview'
                     ? 'border-b-2 border-red-600 text-red-600'
                     : 'text-gray-500 hover:text-gray-700'
@@ -379,9 +426,21 @@ export default function ResourcePage() {
               >
                 Overview
               </button>
+              {resource.type === 'PAPER' && resource.pdfUrl && (
+                <button
+                  onClick={() => setActiveTab('pdf')}
+                  className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
+                    activeTab === 'pdf'
+                      ? 'border-b-2 border-red-600 text-red-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  PDF Viewer
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('notes')}
-                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
                   activeTab === 'notes'
                     ? 'border-b-2 border-red-600 text-red-600'
                     : 'text-gray-500 hover:text-gray-700'
@@ -391,7 +450,7 @@ export default function ResourcePage() {
               </button>
               <button
                 onClick={() => setActiveTab('comments')}
-                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
                   activeTab === 'comments'
                     ? 'border-b-2 border-red-600 text-red-600'
                     : 'text-gray-500 hover:text-gray-700'
@@ -402,6 +461,12 @@ export default function ResourcePage() {
             </div>
 
             <div className="p-6">
+              {activeTab === 'pdf' && resource.pdfUrl && (
+                <div className="space-y-4">
+                  <PDFViewerClient url={resource.pdfUrl} />
+                </div>
+              )}
+
               {activeTab === 'overview' && (
                 <div className="space-y-4">
                   {/* Stats */}

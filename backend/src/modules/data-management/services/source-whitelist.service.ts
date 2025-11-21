@@ -373,12 +373,12 @@ export class SourceWhitelistService {
    * 3. 子域名匹配：domain.com 也匹配 sub.domain.com（隐含的通配符）
    */
   private matchDomain(domain: string, pattern: string): boolean {
-    // 1. 精确匹配
+    // 1. 精确匹配：domain.com 匹配 domain.com
     if (domain === pattern) {
       return true;
     }
 
-    // 2. 通配符匹配 (*.example.com)
+    // 2. 通配符匹配：*.example.com 匹配 sub.example.com
     if (pattern.startsWith("*.")) {
       const baseDomain = pattern.slice(2); // 移除 *.
       // 检查域名是否以 baseDomain 结尾且有一个子域名
@@ -387,7 +387,20 @@ export class SourceWhitelistService {
       }
     }
 
-    // 3. 隐含的通配符：example.com 也应该匹配 sub.example.com
+    // 3. 双通配符匹配：*.domain.* 匹配 sub.domain.com、sub.domain.org 等
+    if (pattern.startsWith("*.") && pattern.endsWith(".*")) {
+      const middle = pattern.slice(2, -2); // 提取中间部分，如 "alphaviv"
+      // 检查域名是否包含该中间部分，如 "www.alphaviv.org"
+      if (domain.includes("." + middle + ".")) {
+        return true;
+      }
+      // 也支持 "alphaviv.org" 这样不带 www 的情况
+      if (domain.startsWith(middle + ".")) {
+        return true;
+      }
+    }
+
+    // 4. 隐含的通配符：example.com 也应该匹配 sub.example.com
     // 这是常见的用法，用户通常期望父域名覆盖子域名
     if (!pattern.startsWith("*.") && !pattern.startsWith("/")) {
       if (domain.endsWith("." + pattern)) {
@@ -395,7 +408,7 @@ export class SourceWhitelistService {
       }
     }
 
-    // 4. 正则表达式匹配 (如果需要的话)
+    // 5. 正则表达式匹配：/^pattern$/ 支持正则表达式
     try {
       if (pattern.startsWith("/") && pattern.endsWith("/")) {
         const regexPattern = pattern.slice(1, -1);

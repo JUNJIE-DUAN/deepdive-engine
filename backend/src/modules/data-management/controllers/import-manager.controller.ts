@@ -457,12 +457,54 @@ export class ImportManagerController {
       const domain = urlObj.hostname;
 
       return allowedDomains.some((allowed) => {
-        if (allowed.startsWith("*.")) {
-          // 支持通配符匹配
-          const suffix = allowed.substring(2);
-          return domain.endsWith(suffix) || domain === suffix.substring(2);
+        // 1. 精确匹配：domain.com 匹配 domain.com
+        if (domain === allowed) {
+          return true;
         }
-        return domain === allowed;
+
+        // 2. 通配符匹配：*.domain.com 匹配 sub.domain.com
+        if (allowed.startsWith("*.")) {
+          const baseDomain = allowed.slice(2); // 移除 *.
+          if (domain.endsWith("." + baseDomain)) {
+            return true;
+          }
+        }
+
+        // 3. 双通配符匹配：*.domain.* 匹配 sub.domain.com、sub.domain.org 等
+        if (allowed.startsWith("*.") && allowed.endsWith(".*")) {
+          const middle = allowed.slice(2, -2); // 提取中间部分，如 "alphaviv"
+          // 检查域名是否包含该中间部分，如 "www.alphaviv.org"
+          if (domain.includes("." + middle + ".")) {
+            return true;
+          }
+          // 也支持 "alphaviv.org" 这样不带 www 的情况
+          if (domain.startsWith(middle + ".")) {
+            return true;
+          }
+        }
+
+        // 4. 隐含的通配符：example.com 也应该匹配 sub.example.com
+        // 这是常见的用法，用户通常期望父域名覆盖子域名
+        if (!allowed.startsWith("*.") && !allowed.startsWith("/")) {
+          if (domain.endsWith("." + allowed)) {
+            return true;
+          }
+        }
+
+        // 5. 正则表达式匹配：/^pattern$/ 支持正则表达式
+        try {
+          if (allowed.startsWith("/") && allowed.endsWith("/")) {
+            const regexPattern = allowed.slice(1, -1);
+            const regex = new RegExp(regexPattern);
+            if (regex.test(domain)) {
+              return true;
+            }
+          }
+        } catch (error) {
+          // 忽略无效的正则表达式
+        }
+
+        return false;
       });
     } catch {
       return false;

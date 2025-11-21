@@ -43,17 +43,26 @@ async function bootstrap() {
     }
   });
 
-  // 启用CORS - 允许所有localhost端口（开发环境）
+  // 启用CORS - 支持开发和生产环境
+  const allowedOrigins = process.env.CORS_ORIGINS?.split(",") || [];
   app.enableCors({
     origin: (origin, callback) => {
-      console.log("CORS origin check:", origin);
-      // 允许所有localhost端口、127.0.0.1、IPv6 localhost和undefined（同源请求）
-      if (
+      // 允许所有localhost端口（开发环境）
+      const isLocalhost =
         !origin ||
         origin.match(/^http:\/\/localhost:\d+$/) ||
         origin.match(/^http:\/\/127\.0\.0\.1:\d+$/) ||
-        origin.match(/^http:\/\/\[::1\]:\d+$/)
-      ) {
+        origin.match(/^http:\/\/\[::1\]:\d+$/);
+
+      // 允许Railway域名（生产环境）
+      const isRailway = origin?.includes(".railway.app");
+
+      // 允许配置的域名
+      const isAllowed = allowedOrigins.some((allowed) =>
+        origin?.includes(allowed),
+      );
+
+      if (isLocalhost || isRailway || isAllowed) {
         callback(null, true);
       } else {
         console.error("CORS rejected origin:", origin);
@@ -77,7 +86,8 @@ async function bootstrap() {
   // API前缀
   app.setGlobalPrefix("api/v1");
 
-  const port = process.env.BACKEND_PORT || 4000;
+  // Railway uses PORT, fallback to BACKEND_PORT for local dev
+  const port = process.env.PORT || process.env.BACKEND_PORT || 4000;
   await app.listen(port);
 
   console.log(`🚀 DeepDive Backend running on http://localhost:${port}`);

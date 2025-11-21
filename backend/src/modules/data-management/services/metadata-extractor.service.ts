@@ -23,6 +23,7 @@ export interface ParsedUrlMetadata {
   favicon?: string;
   wordCount?: number;
   contentHash?: string;
+  pdfUrl?: string; // 论文PDF URL或PDF链接
 }
 
 export interface ValidationResult {
@@ -367,10 +368,7 @@ export class MetadataExtractorService {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname || "";
-      return (
-        hostname.includes("youtube.com") ||
-        hostname.includes("youtu.be")
-      );
+      return hostname.includes("youtube.com") || hostname.includes("youtu.be");
     } catch {
       return false;
     }
@@ -405,7 +403,9 @@ export class MetadataExtractorService {
    * YouTube元数据提取
    * 使用noembed API获取YouTube视频元数据（无需API密钥）
    */
-  private async extractYouTubeMetadata(url: string): Promise<ParsedUrlMetadata> {
+  private async extractYouTubeMetadata(
+    url: string,
+  ): Promise<ParsedUrlMetadata> {
     try {
       const videoId = this.extractYouTubeVideoId(url);
 
@@ -422,7 +422,7 @@ export class MetadataExtractorService {
             "User-Agent":
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
           },
-        }
+        },
       );
 
       const embedData = response.data;
@@ -431,7 +431,9 @@ export class MetadataExtractorService {
         url,
         domain: "youtube.com",
         title: embedData.title || `YouTube Video - ${videoId}`,
-        description: embedData.description || `Enjoy this YouTube video. Video ID: ${videoId}`,
+        description:
+          embedData.description ||
+          `Enjoy this YouTube video. Video ID: ${videoId}`,
         imageUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         language: "en",
         contentType: "video",
@@ -443,7 +445,10 @@ export class MetadataExtractorService {
           .digest("hex"),
       };
     } catch (error) {
-      this.logger.error(`Failed to extract YouTube metadata from ${url}:`, error);
+      this.logger.error(
+        `Failed to extract YouTube metadata from ${url}:`,
+        error,
+      );
 
       // Fallback: 使用正则表达式从HTML提取信息
       try {
@@ -460,7 +465,9 @@ export class MetadataExtractorService {
    * YouTube元数据提取（备选方案）
    * 当noembed API失败时，尝试从HTML中提取og:tags
    */
-  private async extractYouTubeMetadataFallback(url: string): Promise<ParsedUrlMetadata> {
+  private async extractYouTubeMetadataFallback(
+    url: string,
+  ): Promise<ParsedUrlMetadata> {
     const videoId = this.extractYouTubeVideoId(url);
 
     if (!videoId) {
@@ -493,7 +500,7 @@ export class MetadataExtractorService {
           const parsed = JSON.parse(jsonLd);
           if (parsed.itemListElement && Array.isArray(parsed.itemListElement)) {
             const uploadedBy = parsed.itemListElement.find(
-              (item: any) => item["@type"] === "VideoObject"
+              (item: any) => item["@type"] === "VideoObject",
             );
             if (uploadedBy?.uploadDate) {
               author = uploadedBy.name || undefined;

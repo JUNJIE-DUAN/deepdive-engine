@@ -473,7 +473,7 @@ function YouTubeTLDWContent() {
           body: JSON.stringify({
             text: currentSegment.text,
             targetLanguage: 'zh-CN',
-            model: 'openai', // 使用最便宜的模型 gpt-4o-mini
+            model: 'grok', // OpenAI quota exhausted, use Grok
           }),
         });
 
@@ -569,7 +569,10 @@ function YouTubeTLDWContent() {
           </div>
 
           {/* Key Moments Section - Below Video */}
-          <div className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm" style={{ minHeight: '300px' }}>
+          <div
+            className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+            style={{ minHeight: '300px' }}
+          >
             <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
@@ -597,9 +600,7 @@ function YouTubeTLDWContent() {
             </div>
 
             {/* Key Moments List */}
-            <div
-              className="flex-1 overflow-y-auto p-3"
-            >
+            <div className="flex-1 overflow-y-auto p-3">
               {keyMoments.length === 0 ? (
                 <div className="py-12 text-center">
                   <div className="text-4xl">🔍</div>
@@ -849,10 +850,7 @@ function YouTubeTLDWContent() {
                   </button>
 
                   {/* Subtitle Export Button */}
-                  <SubtitleExportButton
-                    videoId={videoId}
-                    variant="icon"
-                  />
+                  <SubtitleExportButton videoId={videoId} variant="icon" />
                 </div>
               </div>
             </div>

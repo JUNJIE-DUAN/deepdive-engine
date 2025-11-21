@@ -13,6 +13,7 @@ import {
   Clock,
   Star,
 } from 'lucide-react';
+import UserProfileButton from './UserProfileButton';
 
 export type TabType = 'papers' | 'blogs' | 'reports' | 'youtube' | 'news';
 export type SortByType = 'trendingScore' | 'publishedAt' | 'qualityScore';
@@ -146,6 +147,9 @@ export default function ResponsiveNav({
 
       {/* Action Buttons - Icon only */}
       <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+        {/* User Profile Button */}
+        <UserProfileButton />
+
         {/* Import Button - Icon only */}
         <button
           onClick={onImportClick}

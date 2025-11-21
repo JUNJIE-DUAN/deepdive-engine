@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { config } from '@/lib/config';
+import { useAuth } from '@/contexts/AuthContext';
+import { getAuthHeader } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import PDFThumbnail from '@/components/ui/PDFThumbnail';
 import PDFViewer from '@/components/ui/PDFViewer';
@@ -128,6 +130,7 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -329,9 +332,19 @@ function HomeContent() {
 
   // Load bookmarks function
   const loadBookmarks = useCallback(async () => {
+    // Only load bookmarks if user is authenticated
+    if (!user) {
+      return;
+    }
+
     try {
+      const authHeaders = getAuthHeader();
+
       // Get all collections
-      const response = await fetch(`${config.apiBaseUrl}/api/v1/collections`);
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/collections`, {
+        headers: authHeaders,
+      });
+
       if (response.ok) {
         const collections = await response.json();
 
@@ -346,7 +359,10 @@ function HomeContent() {
             `${config.apiBaseUrl}/api/v1/collections`,
             {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders,
+              },
               body: JSON.stringify({
                 name: '我的收藏',
                 description: '默认收藏集',
@@ -375,7 +391,7 @@ function HomeContent() {
     } catch (err) {
       console.error('Failed to load bookmarks:', err);
     }
-  }, []);
+  }, [user]);
 
   // Load bookmarks from backend API on mount
   useEffect(() => {
@@ -1256,13 +1272,17 @@ function HomeContent() {
     }
 
     try {
+      const authHeaders = getAuthHeader();
       const isCurrentlyBookmarked = bookmarks.has(resourceId);
 
       if (isCurrentlyBookmarked) {
         // Remove from collection
         const response = await fetch(
           `${config.apiBaseUrl}/api/v1/collections/${defaultCollectionId}/items/${resourceId}`,
-          { method: 'DELETE' }
+          {
+            method: 'DELETE',
+            headers: authHeaders,
+          }
         );
 
         if (response.ok) {
@@ -1276,7 +1296,10 @@ function HomeContent() {
           `${config.apiBaseUrl}/api/v1/collections/${defaultCollectionId}/items`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders,
+            },
             body: JSON.stringify({ resourceId }),
           }
         );

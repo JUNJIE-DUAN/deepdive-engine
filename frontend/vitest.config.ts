@@ -13,13 +13,12 @@ export default defineConfig({
     testTimeout: 60000, // 60秒
     hookTimeout: 60000, // 60秒
 
-    // 使用threads pool而不是forks，更稳定
-    // 单线程模式避免pool timeout问题
-    pool: 'threads',
+    // Windows环境下使用forks pool更稳定
+    pool: 'forks',
     // @ts-expect-error - poolOptions exists at runtime but not in type definitions for vitest 4.0.8
     poolOptions: {
-      threads: {
-        singleThread: true,
+      forks: {
+        singleFork: true,
       },
     },
 

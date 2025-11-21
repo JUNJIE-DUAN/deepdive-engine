@@ -87,7 +87,7 @@ const MANAGEMENT_TABS: Array<{
 ];
 
 const fetchDashboardSummary = async (): Promise<DashboardSummary> => {
-  const response = await fetch('/api/data-management/dashboard/summary');
+  const response = await fetch('/api/v1/data-management/dashboard/summary');
   if (!response.ok) {
     throw new Error('Failed to fetch dashboard summary');
   }
@@ -95,7 +95,7 @@ const fetchDashboardSummary = async (): Promise<DashboardSummary> => {
 };
 
 const fetchRecentTasks = async (): Promise<RecentTask[]> => {
-  const response = await fetch('/api/data-management/dashboard/recent-tasks');
+  const response = await fetch('/api/v1/data-management/dashboard/recent-tasks');
   if (!response.ok) {
     throw new Error('Failed to fetch recent tasks');
   }

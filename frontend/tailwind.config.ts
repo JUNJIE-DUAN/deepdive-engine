@@ -1,4 +1,4 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: [
@@ -7,6 +7,17 @@ const config: Config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    screens: {
+      // Mobile first breakpoints - matching our responsive design
+      xs: '375px', // Small mobile
+      sm: '640px', // Mobile landscape / Small tablet
+      md: '768px', // Tablet portrait
+      lg: '1024px', // Tablet landscape / Small desktop
+      xl: '1280px', // Desktop
+      '2xl': '1440px', // Large desktop
+      '3xl': '1920px', // Extra large desktop
+      '4xl': '2560px', // Ultra wide
+    },
     extend: {
       colors: {
         // AlphaXiv inspired color scheme
@@ -23,8 +34,59 @@ const config: Config = {
           900: '#1e3a8a',
         },
       },
+      spacing: {
+        // Additional spacing values for fine-grained control
+        '18': '4.5rem',
+        '88': '22rem',
+        '112': '28rem',
+        '128': '32rem',
+        '144': '36rem',
+      },
+      fontSize: {
+        // Responsive font sizes with line heights
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
+      },
+      maxWidth: {
+        // Container max widths
+        '8xl': '88rem',
+        '9xl': '96rem',
+      },
+      minHeight: {
+        // Minimum heights for layouts
+        'screen-nav': 'calc(100vh - 4rem)',
+      },
+      zIndex: {
+        // Z-index scale for layering
+        '60': '60',
+        '70': '70',
+        '80': '80',
+        '90': '90',
+        '100': '100',
+      },
+      animation: {
+        // Custom animations
+        'fade-in': 'fadeIn 0.2s ease-in',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'slide-down': 'slideDown 0.3s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideDown: {
+          '0%': { transform: 'translateY(-10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+      },
     },
   },
   plugins: [],
-}
-export default config
+};
+export default config;

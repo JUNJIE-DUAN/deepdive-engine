@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
 import {
   FileText,
   Rss,
@@ -9,8 +8,6 @@ import {
   Newspaper,
   Plus,
   Filter,
-  ChevronDown,
-  MoreHorizontal,
 } from 'lucide-react';
 
 export type TabType = 'papers' | 'blogs' | 'reports' | 'youtube' | 'news';
@@ -87,6 +84,15 @@ const NAV_TABS: NavTab[] = [
   },
 ];
 
+/**
+ * ResponsiveNav - Responsive navigation component
+ *
+ * Features:
+ * - Always shows all 5 tabs (Papers, Blogs, Reports, YouTube, News)
+ * - Icon-only action buttons (Import, Filter) on the right
+ * - Horizontal scrolling on small screens
+ * - Responsive text sizing
+ */
 export default function ResponsiveNav({
   activeTab,
   onTabChange,
@@ -95,189 +101,63 @@ export default function ResponsiveNav({
   filterActive,
   className = '',
 }: ResponsiveNavProps) {
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [visibleTabs, setVisibleTabs] = useState<TabType[]>([]);
-  const [hiddenTabs, setHiddenTabs] = useState<TabType[]>([]);
-  const navRef = useRef<HTMLDivElement>(null);
-  const tabsRef = useRef<HTMLDivElement>(null);
-
-  // Calculate visible/hidden tabs based on container width
-  useEffect(() => {
-    const calculateVisibility = () => {
-      if (!navRef.current || !tabsRef.current) return;
-
-      const containerWidth = navRef.current.clientWidth;
-      const actionsWidth = 200; // Approximate width for Import + Filter buttons
-      const availableWidth = containerWidth - actionsWidth - 100; // Extra margin
-
-      // On large screens (>1280px), show all tabs
-      if (containerWidth > 1280) {
-        setVisibleTabs(NAV_TABS.map((t) => t.id));
-        setHiddenTabs([]);
-        return;
-      }
-
-      // On medium screens (768px-1280px), show first 3-4 tabs
-      if (containerWidth > 768) {
-        const visible =
-          availableWidth > 600
-            ? NAV_TABS.slice(0, 4).map((t) => t.id)
-            : NAV_TABS.slice(0, 3).map((t) => t.id);
-        const hidden = NAV_TABS.slice(visible.length).map((t) => t.id);
-        setVisibleTabs(visible);
-        setHiddenTabs(hidden);
-        return;
-      }
-
-      // On small screens (<768px), show first 2 tabs + more menu
-      setVisibleTabs(NAV_TABS.slice(0, 2).map((t) => t.id));
-      setHiddenTabs(NAV_TABS.slice(2).map((t) => t.id));
-    };
-
-    calculateVisibility();
-    window.addEventListener('resize', calculateVisibility);
-    return () => window.removeEventListener('resize', calculateVisibility);
-  }, []);
-
-  const renderTab = (tab: NavTab, showLabel: boolean = true) => {
-    const Icon = tab.icon;
-    const isActive = activeTab === tab.id;
-
-    return (
-      <button
-        key={tab.id}
-        onClick={() => {
-          onTabChange(tab.id);
-          setShowMoreMenu(false);
-        }}
-        className={`
-          flex flex-shrink-0 items-center gap-1.5
-          whitespace-nowrap rounded-lg border px-2
-          py-1.5 text-xs font-medium
-          shadow-sm transition-all duration-200
-          sm:gap-2 sm:px-3
-          sm:py-2 sm:text-sm
-          md:px-4 md:py-2.5
-          ${isActive ? tab.color.active : tab.color.inactive}
-        `}
-      >
-        <Icon className="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
-        {showLabel && <span className="hidden sm:inline">{tab.label}</span>}
-      </button>
-    );
-  };
-
   return (
     <div
-      ref={navRef}
-      className={`flex items-center justify-between gap-2 sm:gap-4 ${className}`}
+      className={`flex items-center justify-between gap-2 sm:gap-3 ${className}`}
     >
-      {/* Main Tabs - Responsive */}
-      <div
-        ref={tabsRef}
-        className="scrollbar-hide flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto sm:gap-1"
-      >
-        {/* Visible tabs */}
-        {NAV_TABS.filter((tab) => visibleTabs.includes(tab.id)).map((tab) =>
-          renderTab(tab)
-        )}
+      {/* Main Tabs - Always visible, horizontal scroll on small screens */}
+      <div className="scrollbar-hide flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto sm:gap-1">
+        {NAV_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
 
-        {/* More menu for hidden tabs */}
-        {hiddenTabs.length > 0 && (
-          <div className="relative flex-shrink-0">
+          return (
             <button
-              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
               className={`
-                flex items-center gap-1.5 rounded-lg
-                border px-2 py-1.5 text-xs
-                font-medium shadow-sm transition-all
-                duration-200 sm:gap-2 sm:px-3
+                flex flex-shrink-0 items-center gap-1.5
+                whitespace-nowrap rounded-lg border px-2
+                py-1.5 text-xs font-medium
+                shadow-sm transition-all duration-200
+                sm:gap-2 sm:px-3
                 sm:py-2 sm:text-sm
                 md:px-4 md:py-2.5
-                ${
-                  hiddenTabs.includes(activeTab)
-                    ? 'border-gray-300 bg-gray-100 text-gray-700'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                }
+                ${isActive ? tab.color.active : tab.color.inactive}
               `}
             >
-              <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">More</span>
-              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+              <Icon className="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
-
-            {/* Dropdown menu */}
-            {showMoreMenu && (
-              <div className="absolute left-0 top-full z-50 mt-2 min-w-[150px] rounded-lg border border-gray-200 bg-white shadow-lg">
-                <div className="p-1">
-                  {NAV_TABS.filter((tab) => hiddenTabs.includes(tab.id)).map(
-                    (tab) => {
-                      const Icon = tab.icon;
-                      const isActive = activeTab === tab.id;
-
-                      return (
-                        <button
-                          key={tab.id}
-                          onClick={() => {
-                            onTabChange(tab.id);
-                            setShowMoreMenu(false);
-                          }}
-                          className={`
-                          flex w-full items-center gap-2
-                          rounded-md px-3 py-2
-                          text-sm font-medium
-                          transition-colors
-                          ${
-                            isActive
-                              ? 'bg-gray-100 text-gray-900'
-                              : 'text-gray-700 hover:bg-gray-50'
-                          }
-                        `}
-                        >
-                          <Icon className="h-4 w-4 flex-shrink-0" />
-                          <span>{tab.label}</span>
-                        </button>
-                      );
-                    }
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          );
+        })}
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Icon only */}
       <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
-        {/* Import Button */}
+        {/* Import Button - Icon only */}
         <button
           onClick={onImportClick}
           className="
-            flex items-center gap-1 whitespace-nowrap
+            flex items-center justify-center
             rounded-lg border border-gray-300
-            bg-white px-2 py-1 text-xs
-            font-medium text-gray-700 transition-colors
-            hover:bg-gray-50 sm:gap-2
-            sm:px-3
-            sm:py-1.5
-            sm:text-sm
+            bg-white p-2 text-gray-700
+            transition-colors hover:bg-gray-50
+            sm:p-2.5
           "
           title="Import URL or file"
+          aria-label="Import"
         >
-          <Plus className="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
-          <span className="hidden md:inline">Import</span>
+          <Plus className="h-4 w-4 flex-shrink-0" />
         </button>
 
-        {/* Filter Button */}
+        {/* Filter Button - Icon only with active indicator */}
         <button
           onClick={onFilterClick}
           className={`
-            relative flex items-center gap-1 whitespace-nowrap
-            rounded-lg border
-            px-2 py-1 text-xs font-medium
-            transition-colors sm:gap-2 sm:px-3
-            sm:py-1.5
-            sm:text-sm
+            relative flex items-center justify-center
+            rounded-lg border p-2
+            transition-colors sm:p-2.5
             ${
               filterActive
                 ? 'border-blue-300 bg-blue-50 text-blue-700'
@@ -285,9 +165,9 @@ export default function ResponsiveNav({
             }
           `}
           title="Advanced filters"
+          aria-label="Filter"
         >
-          <Filter className="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" />
-          <span className="hidden md:inline">Filter</span>
+          <Filter className="h-4 w-4 flex-shrink-0" />
           {filterActive && (
             <span className="absolute -right-1 -top-1 flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
@@ -299,16 +179,3 @@ export default function ResponsiveNav({
     </div>
   );
 }
-
-// Utility CSS class for hiding scrollbar
-// Add to global CSS:
-/*
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-*/

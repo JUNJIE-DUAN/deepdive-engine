@@ -12,14 +12,16 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const aiUrl = process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
     return [
       {
         source: '/api/v1/:path*',
-        destination: 'http://localhost:4000/api/v1/:path*',
+        destination: `${apiUrl}/api/v1/:path*`,
       },
       {
         source: '/api/ai-service/:path*',
-        destination: 'http://localhost:5000/api/v1/:path*',
+        destination: `${aiUrl}/api/v1/:path*`,
       },
     ];
   },
@@ -71,7 +73,7 @@ const nextConfig = {
               // 允许媒体来源
               "media-src 'self' blob: data: https: http:",
               // 允许manifest来源
-              "manifest-src 'self' blob: data: https: http:"
+              "manifest-src 'self' blob: data: https: http:",
             ].join('; '),
           },
         ],

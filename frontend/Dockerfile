@@ -1,5 +1,13 @@
 FROM node:20-alpine AS builder
 
+# 接收构建时参数 - Railway 会自动传递同名环境变量作为 build args
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_AI_URL
+
+# 设置为环境变量供 npm run build 使用
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_AI_URL=$NEXT_PUBLIC_AI_URL
+
 WORKDIR /app
 
 COPY package.json ./

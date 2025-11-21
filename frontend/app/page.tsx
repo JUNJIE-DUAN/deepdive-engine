@@ -14,7 +14,10 @@ import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
 import { ImportUrlDialog } from '@/components/ImportUrlDialog';
-import ResponsiveNav, { type TabType } from '@/components/layout/ResponsiveNav';
+import ResponsiveNav, {
+  type TabType,
+  type SortByType,
+} from '@/components/layout/ResponsiveNav';
 import {
   AIContextBuilder,
   type Resource as AIResource,
@@ -190,7 +193,6 @@ function HomeContent() {
 
   // Advanced filter states
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const [showSortMenu, setShowSortMenu] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<
     'all' | '24h' | '7d' | '30d' | '90d'
@@ -1564,91 +1566,19 @@ function HomeContent() {
               </div>
 
               {/* Tabs and Filters */}
-              <div className="flex items-center justify-between gap-2 sm:gap-4">
-                <ResponsiveNav
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  onImportClick={() => setShowImportDialog(true)}
-                  onFilterClick={() => setShowFilterPanel(true)}
-                  filterActive={
-                    selectedCategories.length > 0 ||
-                    dateRange !== 'all' ||
-                    minQualityScore > 0
-                  }
-                  className="flex-1"
-                />
-                {/* Sort Button - Icon only with dropdown */}
-                <div className="relative flex-shrink-0">
-                  <button
-                    onClick={() => setShowSortMenu(!showSortMenu)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 sm:h-10 sm:w-10"
-                    title={
-                      sortBy === 'trendingScore'
-                        ? 'Trending'
-                        : sortBy === 'publishedAt'
-                          ? 'Latest'
-                          : 'Quality'
-                    }
-                    aria-label="Sort"
-                  >
-                    {sortBy === 'trendingScore' && (
-                      <TrendingUp className="h-4 w-4" />
-                    )}
-                    {sortBy === 'publishedAt' && <Clock className="h-4 w-4" />}
-                    {sortBy === 'qualityScore' && <Star className="h-4 w-4" />}
-                  </button>
-
-                  {/* Sort Dropdown Menu */}
-                  {showSortMenu && (
-                    <div className="absolute right-0 top-full z-50 mt-2 w-36 rounded-lg border border-gray-200 bg-white shadow-lg">
-                      <div className="p-1">
-                        <button
-                          onClick={() => {
-                            setSortBy('trendingScore');
-                            setShowSortMenu(false);
-                          }}
-                          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                            sortBy === 'trendingScore'
-                              ? 'bg-gray-100 text-gray-900'
-                              : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <TrendingUp className="h-4 w-4" />
-                          <span>Trending</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSortBy('publishedAt');
-                            setShowSortMenu(false);
-                          }}
-                          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                            sortBy === 'publishedAt'
-                              ? 'bg-gray-100 text-gray-900'
-                              : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <Clock className="h-4 w-4" />
-                          <span>Latest</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSortBy('qualityScore');
-                            setShowSortMenu(false);
-                          }}
-                          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                            sortBy === 'qualityScore'
-                              ? 'bg-gray-100 text-gray-900'
-                              : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <Star className="h-4 w-4" />
-                          <span>Quality</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ResponsiveNav
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onImportClick={() => setShowImportDialog(true)}
+                onFilterClick={() => setShowFilterPanel(true)}
+                filterActive={
+                  selectedCategories.length > 0 ||
+                  dateRange !== 'all' ||
+                  minQualityScore > 0
+                }
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+              />
             </div>
           </div>
         )}

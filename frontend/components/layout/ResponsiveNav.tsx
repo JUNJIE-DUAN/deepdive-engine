@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   FileText,
   Rss,
@@ -8,9 +9,13 @@ import {
   Newspaper,
   Plus,
   Filter,
+  TrendingUp,
+  Clock,
+  Star,
 } from 'lucide-react';
 
 export type TabType = 'papers' | 'blogs' | 'reports' | 'youtube' | 'news';
+export type SortByType = 'trendingScore' | 'publishedAt' | 'qualityScore';
 
 interface ResponsiveNavProps {
   activeTab: TabType;
@@ -18,6 +23,8 @@ interface ResponsiveNavProps {
   onImportClick: () => void;
   onFilterClick: () => void;
   filterActive?: boolean;
+  sortBy: SortByType;
+  onSortChange: (sortBy: SortByType) => void;
   className?: string;
 }
 
@@ -99,8 +106,12 @@ export default function ResponsiveNav({
   onImportClick,
   onFilterClick,
   filterActive,
+  sortBy,
+  onSortChange,
   className = '',
 }: ResponsiveNavProps) {
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
   return (
     <div
       className={`flex items-center justify-between gap-2 sm:gap-3 ${className}`}
@@ -164,6 +175,82 @@ export default function ResponsiveNav({
             </span>
           )}
         </button>
+
+        {/* Sort Button - Icon only with dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 sm:h-10 sm:w-10"
+            title={
+              sortBy === 'trendingScore'
+                ? 'Trending'
+                : sortBy === 'publishedAt'
+                  ? 'Latest'
+                  : 'Quality'
+            }
+            aria-label="Sort"
+          >
+            {sortBy === 'trendingScore' && (
+              <TrendingUp className="h-4 w-4 flex-shrink-0" />
+            )}
+            {sortBy === 'publishedAt' && (
+              <Clock className="h-4 w-4 flex-shrink-0" />
+            )}
+            {sortBy === 'qualityScore' && (
+              <Star className="h-4 w-4 flex-shrink-0" />
+            )}
+          </button>
+
+          {/* Sort Dropdown Menu */}
+          {showSortMenu && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-36 rounded-lg border border-gray-200 bg-white shadow-lg">
+              <div className="p-1">
+                <button
+                  onClick={() => {
+                    onSortChange('trendingScore');
+                    setShowSortMenu(false);
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    sortBy === 'trendingScore'
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Trending</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onSortChange('publishedAt');
+                    setShowSortMenu(false);
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    sortBy === 'publishedAt'
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Clock className="h-4 w-4" />
+                  <span>Latest</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onSortChange('qualityScore');
+                    setShowSortMenu(false);
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    sortBy === 'qualityScore'
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Star className="h-4 w-4" />
+                  <span>Quality</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

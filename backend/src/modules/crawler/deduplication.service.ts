@@ -81,16 +81,20 @@ export class DeduplicationService {
   }
 
   /**
-   * 规范化 URL（移除 query 参数、hash、trailing slash）
+   * 规范化 URL（移除 query 参数、hash、trailing slash，转换为小写）
    */
   normalizeUrl(url: string): string {
     try {
       const urlObj = new URL(url);
+      // 转换为小写
+      urlObj.protocol = urlObj.protocol.toLowerCase();
+      urlObj.hostname = urlObj.hostname.toLowerCase();
+      urlObj.pathname = urlObj.pathname.toLowerCase();
       // 移除 query 参数和 hash
       urlObj.search = "";
       urlObj.hash = "";
       let normalized = urlObj.toString();
-      // 移除 trailing slash
+      // 移除所有 trailing slash（包括根路径）
       if (normalized.endsWith("/")) {
         normalized = normalized.slice(0, -1);
       }
@@ -115,21 +119,52 @@ export class DeduplicationService {
 
   /**
    * 批量检测重复（返回重复项的索引）
+   * 检测基于：1) URL精确匹配  2) 标题相似度
+   * 注意：批量检测使用较低的阈值（0.75）以提高召回率
    */
   detectDuplicatesInBatch(
     items: Array<{ url: string; title: string }>,
+    titleSimilarityThreshold = 0.75,
   ): number[] {
     const duplicateIndices: number[] = [];
     const seen = new Map<string, number>();
+    const processedItems: Array<{ url: string; title: string; index: number }> =
+      [];
 
     items.forEach((item, index) => {
       const urlHash = this.generateUrlHash(this.normalizeUrl(item.url));
+      let isDuplicate = false;
 
+      // 检查URL重复
       if (seen.has(urlHash)) {
         duplicateIndices.push(index);
-        this.logger.debug(`Duplicate detected: ${item.title} (index ${index})`);
+        isDuplicate = true;
+        this.logger.debug(
+          `URL duplicate detected: ${item.title} (index ${index})`,
+        );
       } else {
+        // 检查标题相似度重复
+        for (const processed of processedItems) {
+          if (
+            this.areTitlesSimilar(
+              item.title,
+              processed.title,
+              titleSimilarityThreshold,
+            )
+          ) {
+            duplicateIndices.push(index);
+            isDuplicate = true;
+            this.logger.debug(
+              `Title similarity duplicate detected: "${item.title}" similar to "${processed.title}" (index ${index})`,
+            );
+            break;
+          }
+        }
+      }
+
+      if (!isDuplicate) {
         seen.set(urlHash, index);
+        processedItems.push({ ...item, index });
       }
     });
 

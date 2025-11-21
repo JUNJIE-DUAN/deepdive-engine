@@ -196,21 +196,28 @@ export class GlobalDeduplicationService {
    * @returns 海明距离（0-64）
    */
   hammingDistance(hash1: string, hash2: string): number {
-    // 将十进制转换回二进制
-    const bin1 = BigInt(hash1).toString(2).padStart(64, "0");
-    const bin2 = BigInt(hash2).toString(2).padStart(64, "0");
+    // 将十进制或十六进制转换回二进制
+    // 如果是十六进制字符串，添加 0x 前缀
+    const isHex = /^[0-9a-fA-F]+$/.test(hash1) && hash1.length <= 16;
+    const prefix = isHex ? "0x" : "";
+
+    const bin1 = BigInt(prefix + hash1)
+      .toString(2)
+      .padStart(64, "0");
+    const bin2 = BigInt(prefix + hash2)
+      .toString(2)
+      .padStart(64, "0");
 
     let distance = 0;
-    const minLen = Math.min(bin1.length, bin2.length);
+    const maxLen = Math.max(bin1.length, bin2.length);
 
-    for (let i = 0; i < minLen; i++) {
-      if (bin1[i] !== bin2[i]) {
+    for (let i = 0; i < maxLen; i++) {
+      const bit1 = i < bin1.length ? bin1[i] : "0";
+      const bit2 = i < bin2.length ? bin2[i] : "0";
+      if (bit1 !== bit2) {
         distance++;
       }
     }
-
-    // 处理长度不同的部分（不应该发生）
-    distance += Math.abs(bin1.length - bin2.length);
 
     return distance;
   }

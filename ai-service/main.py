@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from loguru import logger
 import sys
+import os
 
 # ⚠️ 关键：必须在导入 secret_manager 之前加载环境变量
 load_dotenv()
@@ -22,7 +23,9 @@ from utils.feature_flags import is_workspace_ai_v2_enabled
 logger.remove()
 # Windows 环境下配置 UTF-8 输出以支持 emoji
 import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import platform
+if platform.system() == "Windows":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 logger.add(
     sys.stdout,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
@@ -116,7 +119,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=5000,
-        reload=True,
+        port=int(os.environ.get("PORT", 8000)),
+        
         log_level="info"
     )

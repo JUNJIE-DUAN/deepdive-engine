@@ -156,4 +156,68 @@ export class AuthService {
 
     return user;
   }
+
+  /**
+   * Google OAuth - 查找或创建用户
+   */
+  async findOrCreateGoogleUser(profile: {
+    id: string;
+    email: string;
+    displayName: string;
+    picture?: string;
+  }) {
+    // 先尝试通过email查找用户
+    let user = await this.prisma.user.findUnique({
+      where: { email: profile.email },
+    });
+
+    if (!user) {
+      // 用户不存在，创建新用户
+      user = await this.prisma.user.create({
+        data: {
+          email: profile.email,
+          username: profile.displayName || profile.email.split("@")[0],
+          oauthProvider: "google",
+          oauthId: profile.id,
+          avatarUrl: profile.picture,
+          // Google OAuth用户不需要密码
+          passwordHash: null,
+          isVerified: true, // Google账户已验证
+        },
+      });
+
+      this.logger.log(`New Google user created: ${user.username}`);
+    } else if (!user.oauthId || user.oauthProvider !== "google") {
+      // 用户存在但没有关联Google ID，更新用户
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          oauthProvider: "google",
+          oauthId: profile.id,
+          avatarUrl: profile.picture || user.avatarUrl,
+          isVerified: true,
+        },
+      });
+
+      this.logger.log(`Existing user linked with Google: ${user.username}`);
+    }
+
+    // 生成tokens
+    if (!user.email) {
+      throw new UnauthorizedException("User email is required");
+    }
+
+    const tokens = this.generateTokens(user.id, user.email);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+        createdAt: user.createdAt,
+      },
+      ...tokens,
+    };
+  }
 }

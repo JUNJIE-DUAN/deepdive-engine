@@ -5,6 +5,7 @@ import {
   Get,
   UseGuards,
   Request,
+  Response,
   Logger,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
@@ -64,5 +65,34 @@ export class AuthController {
   @UseGuards(AuthGuard("jwt"))
   getProfile(@Request() req: { user: unknown }) {
     return req.user;
+  }
+
+  /**
+   * Google OAuth 登录
+   * GET /api/v1/auth/google
+   */
+  @Get("google")
+  @UseGuards(AuthGuard("google"))
+  async googleAuth() {
+    // Guard redirects to Google
+  }
+
+  /**
+   * Google OAuth 回调
+   * GET /api/v1/auth/google/callback
+   */
+  @Get("google/callback")
+  @UseGuards(AuthGuard("google"))
+  async googleAuthCallback(@Request() req: any, @Response() res: any) {
+    // 成功认证后，返回用户信息和tokens
+    const { user, accessToken, refreshToken } = req.user;
+
+    this.logger.log(`Google OAuth callback for user: ${user.email}`);
+
+    // 重定向到前端，携带token
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const redirectUrl = `${frontendUrl}/auth/callback?token=${accessToken}&refreshToken=${refreshToken}`;
+
+    return res.redirect(redirectUrl);
   }
 }

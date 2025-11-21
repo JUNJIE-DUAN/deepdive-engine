@@ -18,14 +18,27 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
   private readonly logger = new Logger(GoogleStrategy.name);
 
   constructor(private authService: AuthService) {
+    // 如果环境变量未配置，使用占位符值防止报错
+    const clientID = process.env.GOOGLE_CLIENT_ID || "placeholder-client-id";
+    const clientSecret =
+      process.env.GOOGLE_CLIENT_SECRET || "placeholder-secret";
+    const callbackURL =
+      process.env.GOOGLE_CALLBACK_URL || "http://localhost:8080/callback";
+
     super({
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      clientID,
+      clientSecret,
+      callbackURL,
       scope: ["email", "profile"],
     });
 
-    this.logger.log("Google OAuth Strategy initialized");
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      this.logger.warn(
+        "Google OAuth not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_CALLBACK_URL environment variables to enable Google login.",
+      );
+    } else {
+      this.logger.log("Google OAuth Strategy initialized");
+    }
   }
 
   async validate(

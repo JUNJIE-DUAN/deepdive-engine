@@ -62,7 +62,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         className={`flex items-center p-4 ${isCollapsed ? 'justify-center' : ''}`}
       >
         {isCollapsed ? (
-          /* Collapsed Logo - Minimalist geometric mark */
+          /* Collapsed Logo - Modern tech hexagon */
           <Link href="/" className="group" title="DeepDive Engine">
             <svg
               className="h-10 w-10 transition-transform duration-300 group-hover:scale-110"
@@ -70,48 +70,55 @@ export default function Sidebar({ className = '' }: SidebarProps) {
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Core geometric shape: stacked horizontal bars with depth perspective */}
-              {/* Top bar - brightest */}
-              <rect
-                x="6"
-                y="8"
-                width="28"
-                height="2.5"
-                rx="1.25"
-                fill="#1e40af"
+              {/* Gradient Definition */}
+              <defs>
+                <linearGradient
+                  id="logoGradient"
+                  x1="8"
+                  y1="8"
+                  x2="32"
+                  y2="32"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#1e40af" />
+                </linearGradient>
+              </defs>
+
+              {/* Outer Hexagon */}
+              <path
+                d="M20 6 L30 12 L30 24 L20 30 L10 24 L10 12 Z"
+                stroke="url(#logoGradient)"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
 
-              {/* Middle bar - center emphasis */}
-              <rect
-                x="8"
-                y="16"
-                width="24"
-                height="2.5"
-                rx="1.25"
-                fill="#1e40af"
-                opacity="0.8"
+              {/* Inner Diamond/Data Node */}
+              <path
+                d="M20 14 L25 18 L20 22 L15 18 Z"
+                fill="url(#logoGradient)"
+                opacity="0.9"
               />
 
-              {/* Bottom bar - perspective fade */}
-              <rect
-                x="10"
-                y="24"
-                width="20"
-                height="2.5"
-                rx="1.25"
-                fill="#1e40af"
-                opacity="0.6"
-              />
-
-              {/* Optional: vertical accent line through center for tech feel */}
+              {/* Connection Lines - representing data flow */}
               <line
                 x1="20"
-                y1="6"
+                y1="14"
                 x2="20"
-                y2="30"
-                stroke="#1e40af"
-                strokeWidth="1.2"
-                opacity="0.4"
+                y2="10"
+                stroke="url(#logoGradient)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="20"
+                y1="22"
+                x2="20"
+                y2="26"
+                stroke="url(#logoGradient)"
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
             </svg>
@@ -129,48 +136,55 @@ export default function Sidebar({ className = '' }: SidebarProps) {
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Core geometric shape: stacked horizontal bars with depth perspective */}
-              {/* Top bar - brightest */}
-              <rect
-                x="6"
-                y="8"
-                width="28"
-                height="2.5"
-                rx="1.25"
-                fill="#1e40af"
+              {/* Gradient Definition */}
+              <defs>
+                <linearGradient
+                  id="logoGradientExpanded"
+                  x1="8"
+                  y1="8"
+                  x2="32"
+                  y2="32"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#1e40af" />
+                </linearGradient>
+              </defs>
+
+              {/* Outer Hexagon */}
+              <path
+                d="M20 6 L30 12 L30 24 L20 30 L10 24 L10 12 Z"
+                stroke="url(#logoGradientExpanded)"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
 
-              {/* Middle bar - center emphasis */}
-              <rect
-                x="8"
-                y="16"
-                width="24"
-                height="2.5"
-                rx="1.25"
-                fill="#1e40af"
-                opacity="0.8"
+              {/* Inner Diamond/Data Node */}
+              <path
+                d="M20 14 L25 18 L20 22 L15 18 Z"
+                fill="url(#logoGradientExpanded)"
+                opacity="0.9"
               />
 
-              {/* Bottom bar - perspective fade */}
-              <rect
-                x="10"
-                y="24"
-                width="20"
-                height="2.5"
-                rx="1.25"
-                fill="#1e40af"
-                opacity="0.6"
-              />
-
-              {/* Optional: vertical accent line through center for tech feel */}
+              {/* Connection Lines - representing data flow */}
               <line
                 x1="20"
-                y1="6"
+                y1="14"
                 x2="20"
-                y2="30"
-                stroke="#1e40af"
-                strokeWidth="1.2"
-                opacity="0.4"
+                y2="10"
+                stroke="url(#logoGradientExpanded)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="20"
+                y1="22"
+                x2="20"
+                y2="26"
+                stroke="url(#logoGradientExpanded)"
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
             </svg>

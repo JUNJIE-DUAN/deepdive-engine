@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useResourceStore } from '@/stores/aiOfficeStore';
-import { UserCircle } from 'lucide-react';
+import UserProfileButton from './UserProfileButton';
 
 interface SidebarProps {
   className?: string;
@@ -382,25 +382,10 @@ export default function Sidebar({ className = '' }: SidebarProps) {
           {!isCollapsed && <span>Notifications</span>}
         </Link>
 
-        <Link
-          href="/profile"
-          onClick={(e) => {
-            // Force navigation even if already on profile page
-            if (pathname === '/profile') {
-              e.preventDefault();
-              window.location.href = '/profile';
-            }
-          }}
-          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-lg px-3 py-2 text-sm ${
-            isActive('/profile')
-              ? 'bg-pink-50 text-gray-900'
-              : 'text-gray-700 hover:bg-gray-50'
-          }`}
-          title="Profile"
-        >
-          <UserCircle className="h-5 w-5 flex-shrink-0" />
-          {!isCollapsed && <span>Profile</span>}
-        </Link>
+        {/* User Profile / Login Button */}
+        <div className={`${isCollapsed ? '' : ''}`}>
+          <UserProfileButton isCollapsed={isCollapsed} />
+        </div>
 
         <Link
           href="/labs"

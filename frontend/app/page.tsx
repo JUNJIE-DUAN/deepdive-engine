@@ -1266,6 +1266,14 @@ function HomeContent() {
       e.stopPropagation();
     }
 
+    // Check if user is logged in
+    if (!user) {
+      alert(
+        '请先登录才能使用收藏功能。\n\n请在左侧边栏底部点击 "Login" 按钮登录。'
+      );
+      return;
+    }
+
     if (!defaultCollectionId) {
       console.error('Default collection not found');
       return;

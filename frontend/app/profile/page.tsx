@@ -1,21 +1,50 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Sidebar from '@/components/layout/Sidebar';
+import { useAuth } from '@/contexts/AuthContext';
+import { config } from '@/lib/config';
 
 function ProfileContent() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'profile' | 'settings' | 'stats'>(
     'profile'
   );
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
-  // Mock user data
+  // Redirect to home if not logged in
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/');
+    }
+  }, [user, isLoading, router]);
+
+  // Real user data from auth
   const [userData, setUserData] = useState({
-    name: 'DeepDive User',
-    email: 'user@deepdive.ai',
+    name: user?.username || '',
+    email: user?.email || '',
     bio: 'AI researcher and enthusiast',
     interests: ['Machine Learning', 'Computer Vision', 'NLP', 'Robotics'],
   });
+
+  // Update userData when user changes
+  useEffect(() => {
+    if (user) {
+      setUserData({
+        name: user.username || user.email.split('@')[0],
+        email: user.email,
+        bio: 'AI researcher and enthusiast',
+        interests: ['Machine Learning', 'Computer Vision', 'NLP', 'Robotics'],
+      });
+    }
+  }, [user]);
 
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -25,13 +54,71 @@ function ProfileContent() {
     language: 'en',
   });
 
-  // Mock stats
+  // Real stats from user
   const stats = {
     bookmarked: 15,
     read: 42,
     sharedCount: 8,
-    joinedDate: 'November 2024',
+    joinedDate: user?.createdAt
+      ? new Date(user.createdAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+        })
+      : 'N/A',
   };
+
+  // Save profile changes
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`${config.apiUrl}/auth/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: JSON.stringify({ username: userData.name }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      setMessage({
+        type: 'success',
+        text: 'Profile updated successfully!',
+      });
+
+      // Reload to refresh user state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setMessage({
+        type: 'error',
+        text: 'Failed to update profile. Please try again.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Not logged in
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -92,15 +179,25 @@ function ProfileContent() {
                     Profile Picture
                   </h2>
                   <div className="flex items-center gap-4">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-cyan-400 text-3xl font-bold text-white">
-                      P
+                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gray-200">
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.username || user.email}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-cyan-400 text-3xl font-bold text-white">
+                          {userData.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                     <div>
-                      <button className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700">
-                        Upload Photo
-                      </button>
-                      <p className="mt-2 text-xs text-gray-500">
-                        JPG, PNG or GIF. Max size 2MB
+                      <p className="text-sm text-gray-600">
+                        Profile picture is managed by Google
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Update your Google profile to change your avatar
                       </p>
                     </div>
                   </div>
@@ -174,10 +271,27 @@ function ProfileContent() {
                   </button>
                 </div>
 
+                {/* Message */}
+                {message && (
+                  <div
+                    className={`flex items-center gap-2 rounded-md border px-4 py-3 ${
+                      message.type === 'success'
+                        ? 'border-green-200 bg-green-50 text-green-800'
+                        : 'border-red-200 bg-red-50 text-red-800'
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{message.text}</span>
+                  </div>
+                )}
+
                 {/* Save Button */}
                 <div className="flex justify-end">
-                  <button className="rounded-lg bg-red-600 px-6 py-2 font-medium text-white transition-colors hover:bg-red-700">
-                    Save Changes
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={saving || userData.name === user.username}
+                    className="rounded-lg bg-red-600 px-6 py-2 font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>

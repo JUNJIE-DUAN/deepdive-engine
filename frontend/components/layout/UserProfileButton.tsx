@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, LogOut, LogIn } from 'lucide-react';
+import { User, LogOut, LogIn, UserCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface UserProfileButtonProps {
   isCollapsed?: boolean;
@@ -98,6 +99,14 @@ export default function UserProfileButton({
             </div>
           </div>
           <div className="p-1">
+            <Link
+              href="/profile"
+              onClick={() => setShowMenu(false)}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <UserCircle className="h-4 w-4" />
+              <span>Profile</span>
+            </Link>
             <button
               onClick={() => {
                 logout();

@@ -136,15 +136,8 @@ function HomeContent() {
   const [loading, setLoading] = useState(true);
 
   // Initialize activeTab from URL query parameter if present
-  const initialTab = (searchParams?.get('tab') || 'papers') as
-    | 'papers'
-    | 'blogs'
-    | 'reports'
-    | 'youtube'
-    | 'news';
-  const [activeTab, setActiveTab] = useState<
-    'papers' | 'blogs' | 'reports' | 'youtube' | 'news'
-  >(initialTab);
+  const initialTab = (searchParams?.get('tab') || 'papers') as TabType;
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(
     null
   );

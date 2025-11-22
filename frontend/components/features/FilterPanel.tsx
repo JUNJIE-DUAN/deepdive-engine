@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import type { TabType } from '@/components/layout/ResponsiveNav';
 
 interface FilterPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'papers' | 'blogs' | 'reports' | 'youtube' | 'news';
+  activeTab: TabType;
   selectedCategories: string[];
   setSelectedCategories: (categories: string[]) => void;
   dateRange: 'all' | '24h' | '7d' | '30d' | '90d';
@@ -17,10 +18,7 @@ interface FilterPanelProps {
 }
 
 // 每个Tab的筛选配置
-const FILTER_CONFIGS: Record<
-  'papers' | 'blogs' | 'reports' | 'youtube' | 'news',
-  { categories: string[] }
-> = {
+const FILTER_CONFIGS: Record<TabType, { categories: string[] }> = {
   papers: {
     categories: [
       'AI',
@@ -59,6 +57,16 @@ const FILTER_CONFIGS: Record<
       'Demo',
       'Review',
       'Lecture',
+    ],
+  },
+  policy: {
+    categories: [
+      'AI Policy',
+      'Security Policy',
+      'Technology Regulation',
+      'Trade Policy',
+      'Innovation Policy',
+      'Privacy & Data',
     ],
   },
   reports: {

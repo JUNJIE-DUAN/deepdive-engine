@@ -6,6 +6,7 @@ import {
   Rss,
   FileBarChart,
   Youtube,
+  Scale,
   Newspaper,
   Plus,
   Filter,
@@ -14,7 +15,13 @@ import {
   Star,
 } from 'lucide-react';
 
-export type TabType = 'papers' | 'blogs' | 'reports' | 'youtube' | 'news';
+export type TabType =
+  | 'papers'
+  | 'blogs'
+  | 'reports'
+  | 'youtube'
+  | 'policy'
+  | 'news';
 export type SortByType = 'trendingScore' | 'publishedAt' | 'qualityScore';
 
 interface ResponsiveNavProps {
@@ -75,6 +82,16 @@ const NAV_TABS: NavTab[] = [
     icon: Youtube,
     color: {
       active: 'border-red-200 bg-red-50 text-red-700',
+      inactive:
+        'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50',
+    },
+  },
+  {
+    id: 'policy',
+    label: 'Policy',
+    icon: Scale,
+    color: {
+      active: 'border-indigo-200 bg-indigo-50 text-indigo-700',
       inactive:
         'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50',
     },

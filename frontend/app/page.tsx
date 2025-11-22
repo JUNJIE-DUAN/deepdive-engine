@@ -6,6 +6,7 @@ import { config } from '@/lib/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthHeader } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
+import VersionUpdateBanner from '@/components/layout/VersionUpdateBanner';
 import PDFThumbnail from '@/components/ui/PDFThumbnail';
 import PDFViewer from '@/components/ui/PDFViewer';
 import HTMLViewer from '@/components/ui/HTMLViewer';
@@ -1390,6 +1391,7 @@ function HomeContent() {
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-gray-50">
+      <VersionUpdateBanner />
       <ReportWorkspace />
       <Sidebar />
 

@@ -30,6 +30,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         id: true,
         email: true,
         username: true,
+        avatarUrl: true,
+        bio: true,
+        interests: {
+          select: {
+            tag: true,
+          },
+        },
         createdAt: true,
       },
     });
@@ -38,6 +45,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException("User not found");
     }
 
-    return user;
+    // 转换interests为string数组
+    return {
+      ...user,
+      interests: user.interests.map((i) => i.tag),
+    };
   }
 }

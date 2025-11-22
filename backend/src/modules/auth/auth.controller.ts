@@ -3,6 +3,7 @@ import {
   Post,
   Body,
   Get,
+  Patch,
   UseGuards,
   Request,
   Response,
@@ -10,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
 
 /**
  * 认证控制器
@@ -94,5 +96,19 @@ export class AuthController {
     const redirectUrl = `${frontendUrl}/auth/callback?token=${accessToken}&refreshToken=${refreshToken}`;
 
     return res.redirect(redirectUrl);
+  }
+
+  /**
+   * 更新用户个人信息
+   * PATCH /api/v1/auth/profile
+   */
+  @Patch("profile")
+  @UseGuards(AuthGuard("jwt"))
+  async updateProfile(
+    @Request() req: { user: { id: string } },
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    this.logger.log(`Profile update request for user: ${req.user.id}`);
+    return this.authService.updateProfile(req.user.id, updateProfileDto);
   }
 }

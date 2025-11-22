@@ -220,4 +220,73 @@ export class AuthService {
       ...tokens,
     };
   }
+
+  /**
+   * 更新用户个人信息
+   */
+  async updateProfile(
+    userId: string,
+    updateData: { username?: string; bio?: string; interests?: string[] },
+  ) {
+    // 如果要更新username，检查是否已存在
+    if (updateData.username) {
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          username: updateData.username,
+          NOT: { id: userId },
+        },
+      });
+
+      if (existingUser) {
+        throw new ConflictException("Username already exists");
+      }
+    }
+
+    // 处理interests更新
+    if (updateData.interests !== undefined) {
+      // 删除旧的interests
+      await this.prisma.userInterest.deleteMany({
+        where: { userId },
+      });
+
+      // 创建新的interests
+      if (updateData.interests.length > 0) {
+        await this.prisma.userInterest.createMany({
+          data: updateData.interests.map((tag) => ({
+            userId,
+            tag,
+            source: "manual",
+          })),
+        });
+      }
+    }
+
+    // 更新用户基本信息（不包括interests，因为已单独处理）
+    const { interests: _, ...updateFields } = updateData;
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: updateFields,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        bio: true,
+        interests: {
+          select: {
+            tag: true,
+          },
+        },
+        avatarUrl: true,
+        createdAt: true,
+      },
+    });
+
+    this.logger.log(`User profile updated: ${user.username}`);
+
+    // 转换interests为string数组
+    return {
+      ...user,
+      interests: user.interests.map((i) => i.tag),
+    };
+  }
 }

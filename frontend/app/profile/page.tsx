@@ -30,9 +30,10 @@ function ProfileContent() {
   const [userData, setUserData] = useState({
     name: user?.username || '',
     email: user?.email || '',
-    bio: 'AI researcher and enthusiast',
-    interests: ['Machine Learning', 'Computer Vision', 'NLP', 'Robotics'],
+    bio: user?.bio || '',
+    interests: user?.interests || [],
   });
+  const [newInterest, setNewInterest] = useState('');
 
   // Update userData when user changes
   useEffect(() => {
@@ -40,8 +41,8 @@ function ProfileContent() {
       setUserData({
         name: user.username || user.email.split('@')[0],
         email: user.email,
-        bio: 'AI researcher and enthusiast',
-        interests: ['Machine Learning', 'Computer Vision', 'NLP', 'Robotics'],
+        bio: user.bio || '',
+        interests: user.interests || [],
       });
     }
   }, [user]);
@@ -67,6 +68,30 @@ function ProfileContent() {
       : 'N/A',
   };
 
+  // Add interest
+  const handleAddInterest = () => {
+    if (
+      newInterest.trim() &&
+      !userData.interests.includes(newInterest.trim())
+    ) {
+      setUserData({
+        ...userData,
+        interests: [...userData.interests, newInterest.trim()],
+      });
+      setNewInterest('');
+    }
+  };
+
+  // Remove interest
+  const handleRemoveInterest = (index: number) => {
+    setUserData({
+      ...userData,
+      interests: userData.interests.filter(
+        (_: string, i: number) => i !== index
+      ),
+    });
+  };
+
   // Save profile changes
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -79,7 +104,11 @@ function ProfileContent() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
-        body: JSON.stringify({ username: userData.name }),
+        body: JSON.stringify({
+          username: userData.name,
+          bio: userData.bio,
+          interests: userData.interests,
+        }),
       });
 
       if (!response.ok) {
@@ -229,11 +258,12 @@ function ProfileContent() {
                       <input
                         type="email"
                         value={userData.email}
-                        onChange={(e) =>
-                          setUserData({ ...userData, email: e.target.value })
-                        }
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        disabled
+                        className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-gray-500"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Email cannot be changed
+                      </p>
                     </div>
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -257,18 +287,39 @@ function ProfileContent() {
                     Research Interests
                   </h2>
                   <div className="mb-3 flex flex-wrap gap-2">
-                    {userData.interests.map((interest, idx) => (
+                    {userData.interests.map((interest: string, idx: number) => (
                       <span
                         key={idx}
-                        className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700"
+                        className="flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700"
                       >
                         {interest}
+                        <button
+                          onClick={() => handleRemoveInterest(idx)}
+                          className="ml-1 text-red-600 hover:text-red-800"
+                        >
+                          ×
+                        </button>
                       </span>
                     ))}
                   </div>
-                  <button className="text-sm font-medium text-red-600 hover:text-red-700">
-                    + Add Interest
-                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newInterest}
+                      onChange={(e) => setNewInterest(e.target.value)}
+                      onKeyPress={(e) =>
+                        e.key === 'Enter' && handleAddInterest()
+                      }
+                      placeholder="Enter interest..."
+                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                    <button
+                      onClick={handleAddInterest}
+                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
 
                 {/* Message */}
@@ -288,7 +339,7 @@ function ProfileContent() {
                 <div className="flex justify-end">
                   <button
                     onClick={handleSaveProfile}
-                    disabled={saving || userData.name === user.username}
+                    disabled={saving}
                     className="rounded-lg bg-red-600 px-6 py-2 font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving ? 'Saving...' : 'Save Changes'}

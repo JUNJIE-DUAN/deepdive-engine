@@ -17,6 +17,7 @@ import {
   Rss,
   BarChart3,
   Calendar,
+  Scale,
 } from 'lucide-react';
 
 interface Whitelist {
@@ -40,6 +41,7 @@ const resourceTypeIcons: Record<string, React.ReactNode> = {
   RSS: <Rss className="h-6 w-6" />,
   REPORT: <BarChart3 className="h-6 w-6" />,
   EVENT: <Calendar className="h-6 w-6" />,
+  POLICY: <Scale className="h-6 w-6" />,
 };
 
 const resourceTypeColors: Record<
@@ -78,6 +80,11 @@ const resourceTypeColors: Record<
     border: 'border-indigo-200',
   },
   EVENT: { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
+  POLICY: {
+    bg: 'bg-teal-50',
+    text: 'text-teal-600',
+    border: 'border-teal-200',
+  },
 };
 
 export default function WhitelistManagement() {

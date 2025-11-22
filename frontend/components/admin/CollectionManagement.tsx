@@ -21,6 +21,7 @@ import {
   Settings,
   Play,
   TrendingUp,
+  Scale,
 } from 'lucide-react';
 
 interface CollectionRule {
@@ -55,6 +56,7 @@ const resourceTypeIcons: Record<string, React.ReactNode> = {
   RSS: <Rss className="h-6 w-6" />,
   REPORT: <BarChart3 className="h-6 w-6" />,
   EVENT: <Calendar className="h-6 w-6" />,
+  POLICY: <Scale className="h-6 w-6" />,
 };
 
 const resourceTypeColors: Record<
@@ -108,6 +110,12 @@ const resourceTypeColors: Record<
     text: 'text-pink-600',
     border: 'border-pink-100',
     gradient: 'from-pink-500 to-pink-600',
+  },
+  POLICY: {
+    bg: 'bg-teal-50',
+    text: 'text-teal-600',
+    border: 'border-teal-100',
+    gradient: 'from-teal-500 to-teal-600',
   },
 };
 
@@ -644,6 +652,7 @@ export default function CollectionManagement() {
                   <option>PROJECT</option>
                   <option>EVENT</option>
                   <option>REPORT</option>
+                  <option>POLICY</option>
                 </select>
               </div>
 

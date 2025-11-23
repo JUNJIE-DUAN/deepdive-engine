@@ -7,6 +7,7 @@ interface ReaderViewProps {
   url: string;
   title?: string;
   className?: string;
+  category?: string; // 资源类别，用于选择合适的API端点
   onArticleLoaded?: (article: Article) => void;
 }
 
@@ -36,6 +37,7 @@ export default function ReaderView({
   url,
   title: propTitle,
   className = '',
+  category,
   onArticleLoaded,
 }: ReaderViewProps) {
   const [loading, setLoading] = useState(true);
@@ -50,8 +52,12 @@ export default function ReaderView({
       setError(null);
 
       try {
-        const readerUrl = `${config.apiUrl}/proxy/html-reader?url=${encodeURIComponent(url)}`;
-        console.log(`Fetching article via Reader Mode: ${readerUrl}`);
+        // 根据资源类别选择合适的API端点
+        // News类型使用html-reader-news（无域名限制），其他类型使用html-reader（有域名白名单）
+        const isNews = category?.toLowerCase() === 'news';
+        const endpoint = isNews ? 'html-reader-news' : 'html-reader';
+        const readerUrl = `${config.apiUrl}/proxy/${endpoint}?url=${encodeURIComponent(url)}`;
+        console.log(`Fetching article via Reader Mode (${endpoint}): ${readerUrl}`);
 
         const response = await fetch(readerUrl);
 

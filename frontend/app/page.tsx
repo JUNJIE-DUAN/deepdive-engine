@@ -2199,6 +2199,7 @@ function HomeContent() {
                     <ReaderView
                       url={selectedResource.sourceUrl}
                       title={selectedResource.title}
+                      category={selectedResource.type}
                       className="h-full w-full"
                       onArticleLoaded={handleArticleLoaded}
                     />

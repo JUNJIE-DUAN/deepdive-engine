@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "build": "nest build",
+    "postbuild": "prisma generate && prisma migrate deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "dev": "nest start --watch",
@@ -20,6 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "templates:seed": "ts-node -r tsconfig-paths/register src/scripts/seed-report-templates.ts",
     "thumbnails:generate": "ts-node -r tsconfig-paths/register src/scripts/generate-thumbnails.ts",

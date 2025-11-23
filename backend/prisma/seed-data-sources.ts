@@ -167,44 +167,6 @@ const predefinedDataSources = [
     isVerified: false,
   },
 
-  // ============ PROJECT (开源项目) ============
-  {
-    name: "GitHub Trending",
-    description: "Trending repositories on GitHub",
-    type: "GITHUB" as const,
-    category: "PROJECT" as const,
-    baseUrl: "https://github.com",
-    apiEndpoint: "/trending",
-    crawlerType: "WEB_SCRAPER",
-    crawlerConfig: {
-      language: "python",
-      since: "daily",
-    },
-    rateLimit: 30,
-    keywords: ["machine learning", "AI", "deep learning"],
-    minQualityScore: 7.0,
-    status: "ACTIVE" as const,
-    isVerified: true,
-  },
-  {
-    name: "Hugging Face Models",
-    description: "Trending ML models on Hugging Face",
-    type: "CUSTOM" as const,
-    category: "PROJECT" as const,
-    baseUrl: "https://huggingface.co",
-    apiEndpoint: "/api/models",
-    crawlerType: "API",
-    crawlerConfig: {
-      sort: "trending",
-      filter: "text-generation,text-classification",
-    },
-    rateLimit: 10,
-    keywords: ["transformers", "LLM", "NLP"],
-    minQualityScore: 7.5,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
-
   // ============ NEWS (行业新闻) ============
   {
     name: "TechCrunch AI",

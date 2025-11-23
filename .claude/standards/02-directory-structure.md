@@ -23,7 +23,7 @@
 ```
 deepdive-engine/
 │
-├── 📄 README.md                       ← 项目说明
+├── 📄 readme.md                       ← 项目说明
 ├── 📄 prd.md                          ← 产品需求文档
 ├── 📄 architecture.md                 ← 技术架构文档
 ├── 📄 project-rules.md                ← 项目开发规范
@@ -153,7 +153,7 @@ deepdive-engine/
 │   └── package.json
 │
 ├── docs/                              ← ✅ 文档
-│   ├── README.md
+│   ├── readme.md
 │   ├── product/                       ← 产品文档
 │   │   └── requirements.md
 │   ├── tech/                          ← 技术文档
@@ -235,6 +235,7 @@ deepdive-engine/
 ### 🔴 MUST - 严格遵守
 
 #### 1. 服务独立性
+
 ```
 ✅ frontend/ - 完整的Next.js应用
 ✅ backend/ - 完整的NestJS应用
@@ -246,6 +247,7 @@ deepdive-engine/
 ```
 
 #### 2. 模块化组织（Backend/NestJS）
+
 ```
 ✅ backend/src/modules/resource/
     ├── resource.module.ts
@@ -259,6 +261,7 @@ deepdive-engine/
 ```
 
 #### 3. 组件化结构（Frontend/Next.js）
+
 ```
 ✅ frontend/components/ui/Button.tsx
 ✅ frontend/components/features/FeedCard.tsx
@@ -269,6 +272,7 @@ deepdive-engine/
 ```
 
 #### 4. Python模块结构（AI Service）
+
 ```
 ✅ ai-service/
     ├── __init__.py (包标记)
@@ -285,6 +289,7 @@ deepdive-engine/
 ```
 
 #### 5. 配置文件位置
+
 ```
 ✅ 服务根目录：package.json, tsconfig.json, .eslintrc.js
 ✅ 项目根目录：docker-compose.yml, .gitignore, .env.example
@@ -301,6 +306,7 @@ deepdive-engine/
 ### Frontend (Next.js 14)
 
 #### App Router 结构
+
 ```
 frontend/app/
 ├── page.tsx                    ← 首页 /
@@ -322,6 +328,7 @@ frontend/app/
 ```
 
 #### Components 组织
+
 ```
 frontend/components/
 ├── ui/                         ← 基础UI组件（可复用）
@@ -343,6 +350,7 @@ frontend/components/
 ### Backend (NestJS)
 
 #### 模块组织
+
 ```
 backend/src/modules/resource/
 ├── resource.module.ts          ← 模块定义
@@ -360,6 +368,7 @@ backend/src/modules/resource/
 ```
 
 #### Common 目录
+
 ```
 backend/src/common/
 ├── filters/                    ← 异常过滤器
@@ -379,6 +388,7 @@ backend/src/common/
 ### AI Service (FastAPI)
 
 #### Python包结构
+
 ```
 ai-service/
 ├── __init__.py                 ← 包标记
@@ -426,6 +436,7 @@ ai-service/
 ## 添加新功能的目录规范
 
 ### 场景 1：添加新的 Backend 模块
+
 ```bash
 # 1. 创建模块目录
 mkdir -p backend/src/modules/analytics
@@ -443,6 +454,7 @@ touch analytics.service.spec.ts
 ```
 
 ### 场景 2：添加新的 Frontend 页面
+
 ```bash
 # 1. 在 app/ 下创建路由
 mkdir -p frontend/app/analytics
@@ -459,6 +471,7 @@ touch frontend/components/features/analytics/AnalyticsChart.tsx
 ```
 
 ### 场景 3：添加新的 AI 服务功能
+
 ```bash
 # 1. 创建服务文件
 touch ai-service/services/text_analysis.py
@@ -493,19 +506,25 @@ touch ai-service/tests/test_text_analysis.py
 ## 常见问题
 
 ### Q: 某个文件应该放在哪里？
+
 **A:** 按照这个优先级判断：
+
 1. 是哪个服务？→ frontend/backend/ai-service/crawler
 2. 是什么类型？→ 组件/API/服务/工具/配置
 3. 是什么功能？→ 具体的业务模块
 
 ### Q: 跨服务共享代码怎么办？
+
 **A:**
+
 - **不推荐：** 直接文件引用
 - **推荐：** 通过 API 通信
 - **可选：** 创建独立的共享包（发布到 npm）
 
 ### Q: 测试文件放在哪里？
+
 **A:**
+
 - **NestJS：** 与源文件同目录，文件名 `*.spec.ts`
 - **Next.js：** 与组件同目录，文件名 `*.test.tsx`
 - **Python：** 在 `tests/` 目录，文件名 `test_*.py`

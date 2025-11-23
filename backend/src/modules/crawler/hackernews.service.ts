@@ -143,14 +143,25 @@ export class HackernewsService {
   private async processStory(itemId: number): Promise<void> {
     const externalId = itemId.toString();
 
-    // 检查是否已存在（去重）
+    // 层级1去重：检查同源是否已存在（HackerNews 内部去重）
     const existingRawData = await this.mongodb.findRawDataByExternalId(
       "hackernews",
       externalId,
     );
 
     if (existingRawData) {
-      this.logger.debug(`Story already exists: ${itemId}`);
+      this.logger.debug(`Story already exists in HackerNews source: ${itemId}`);
+      return;
+    }
+
+    // 层级2去重：跨源检查 - 使用 externalId（防止同一故事从不同源采集）
+    const crossSourceDuplicate =
+      await this.mongodb.findRawDataByExternalIdAcrossAllSources(externalId);
+
+    if (crossSourceDuplicate) {
+      this.logger.debug(
+        `Story already exists from another source: ${itemId} (source: ${crossSourceDuplicate.source})`,
+      );
       return;
     }
 
@@ -160,6 +171,39 @@ export class HackernewsService {
     if (!storyData || storyData.type !== "story") {
       this.logger.debug(`Item ${itemId} is not a story`);
       return;
+    }
+
+    // 层级3去重：URL 去重（防止同一链接从不同源采集）
+    const storyUrl = storyData.url;
+
+    if (storyUrl) {
+      const normalizedUrl = this.dedup.normalizeUrl(storyUrl);
+      const urlDuplicate =
+        await this.mongodb.findRawDataByUrlAcrossAllSources(normalizedUrl);
+
+      if (urlDuplicate) {
+        this.logger.debug(
+          `Story already exists with same URL: ${normalizedUrl} (source: ${urlDuplicate.source})`,
+        );
+        return;
+      }
+    }
+
+    // 层级4去重：标题相似度检查
+    const storyTitle = storyData.title || "";
+
+    if (storyTitle) {
+      const similarTitles =
+        await this.mongodb.findRawDataByTitleAcrossAllSources(storyTitle);
+
+      for (const similar of similarTitles) {
+        if (this.dedup.areTitlesSimilar(storyTitle, similar.data?.title, 0.9)) {
+          this.logger.debug(
+            `Story already exists with similar title: "${similar.data?.title}" (source: ${similar.source}, similarity threshold: 0.9)`,
+          );
+          return;
+        }
+      }
     }
 
     // 解析完整的原始数据

@@ -4,13 +4,13 @@ import { useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import SettingsNav from '@/components/admin/SettingsNav';
 import WhitelistManagement from '@/components/admin/WhitelistManagement';
-import CollectionManagement from '@/components/admin/CollectionManagement';
 import DataQualityManagement from '@/components/admin/DataQualityManagement';
+import SystemSettings from '@/components/admin/SystemSettings';
 
-type SettingsTab = 'whitelist' | 'collection' | 'quality';
+type SettingsTab = 'whitelist' | 'quality' | 'system';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('collection');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('whitelist');
 
   return (
     <div className="flex h-screen bg-gray-50/30">
@@ -46,9 +46,9 @@ export default function SettingsPage() {
 
           {/* Content */}
           <div className="flex-1 overflow-auto">
-            {activeTab === 'collection' && <CollectionManagement />}
             {activeTab === 'whitelist' && <WhitelistManagement />}
             {activeTab === 'quality' && <DataQualityManagement />}
+            {activeTab === 'system' && <SystemSettings />}
           </div>
         </div>
       </div>

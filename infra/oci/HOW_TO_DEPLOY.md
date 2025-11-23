@@ -101,7 +101,7 @@ C:\Users\yourname\.oci\oci_api_key.pem
 需要了解更多细节？查看这些文档：
 
 - `infra/oci/docs/QUICK_START.md` - 快速开始
-- `infra/oci/docs/ARCHITECTURE.md` - 系统架构
+- `infra/oci/docs/architecture.md` - 系统架构
 - `infra/oci/docs/COST_MANAGEMENT.md` - 成本管理
 - `infra/oci/PRE_DEPLOYMENT_CHECKLIST.md` - 详细检查清单
 

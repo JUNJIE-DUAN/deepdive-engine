@@ -22,6 +22,7 @@
 ### 🔴 MUST - 严格遵守
 
 #### 1. TypeScript/JavaScript 文件
+
 ```
 ✅ 组件文件: PascalCase
    ResourceCard.tsx
@@ -44,6 +45,7 @@
 ```
 
 #### 2. Python 文件
+
 ```
 ✅ 所有Python文件: snake_case
    grok_client.py
@@ -59,6 +61,7 @@
 ```
 
 #### 3. 目录名
+
 ```
 ✅ 全部小写，kebab-case（TypeScript/JavaScript）
    ai-service/
@@ -74,13 +77,14 @@
 ```
 
 #### 4. Markdown 文档文件
+
 ```
 ✅ kebab-case (间隔号)
    00-overview.md
    quick-reference.md
    api-design.md
    system-architecture.md
-   README.md
+   readme.md
    CONTRIBUTING.md
 
 ❌ 00_overview.md (文档用 kebab-case)
@@ -89,6 +93,7 @@
 ```
 
 **说明**: Markdown 使用 kebab-case 因为：
+
 - 更易读: `quick-reference` vs `quick_reference`
 - 符合 Web 标准: GitHub, GitLab 等都采用这种格式
 - 更适合 URL: `/docs/quick-reference`
@@ -100,6 +105,7 @@
 ### 🔴 MUST - 严格遵守
 
 #### 1. 类和接口
+
 ```typescript
 ✅ 类名: PascalCase
 class ResourceService {
@@ -129,6 +135,7 @@ type UserId = string;
 ```
 
 #### 2. 函数和方法
+
 ```typescript
 ✅ 函数名: camelCase，动词开头
 function getResourceById(id: string): Resource {}
@@ -150,6 +157,7 @@ function handleSubmit(data: FormData): void {}
 ```
 
 #### 3. 变量和常量
+
 ```typescript
 ✅ 变量: camelCase
 const userId = '123';
@@ -183,6 +191,7 @@ const errorMessages = new Map<string, string>();
 ```
 
 #### 4. React 组件
+
 ```tsx
 ✅ 组件名: PascalCase
 export const ResourceCard: React.FC<ResourceCardProps> = (props) => {
@@ -214,6 +223,7 @@ function useAuth() {
 ```
 
 #### 5. NestJS 特定命名
+
 ```typescript
 ✅ Controller: PascalCase + Controller 后缀
 @Controller('resources')
@@ -260,6 +270,7 @@ model Resource {
 ### 🔴 MUST - 严格遵守
 
 #### 1. 类和异常
+
 ```python
 ✅ 类名: PascalCase
 class GrokClient:
@@ -287,6 +298,7 @@ class DatabaseConnectionError(Exception):
 ```
 
 #### 2. 函数和方法
+
 ```python
 ✅ 函数名: snake_case
 def generate_summary(text: str) -> str:
@@ -321,6 +333,7 @@ class AIService:
 ```
 
 #### 3. 变量和常量
+
 ```python
 ✅ 变量: snake_case
 user_id = "123"
@@ -352,6 +365,7 @@ error_messages = {}
 ```
 
 #### 4. FastAPI 特定命名
+
 ```python
 ✅ Router: snake_case
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
@@ -382,6 +396,7 @@ class SummaryResponse(BaseModel):
 ### 🔴 MUST - 严格遵守
 
 #### 1. Prisma Schema（PostgreSQL）
+
 ```prisma
 ✅ 模型名: PascalCase 单数
 model User {
@@ -423,6 +438,7 @@ model User {
 ```
 
 #### 2. 数据库表和列（实际数据库）
+
 ```sql
 ✅ 表名: snake_case 复数
 CREATE TABLE users (...)
@@ -471,6 +487,7 @@ ALTER TABLE resources
 ```
 
 #### 3. MongoDB 集合和字段
+
 ```javascript
 ✅ 集合名: snake_case 复数
 db.resources_raw
@@ -492,6 +509,7 @@ db.github_projects
 ```
 
 #### 4. Neo4j 图数据库
+
 ```cypher
 ✅ 节点标签: PascalCase
 (:User)
@@ -555,6 +573,7 @@ POST   /api/v1/ai/generate-summary
 ### 🔴 MUST - 严格遵守
 
 #### 1. 分支命名
+
 ```bash
 ✅ 功能分支: feature/{number}-{description}
 feature/001-add-pdf-proxy
@@ -579,6 +598,7 @@ refactor/simplify-ai-client
 ```
 
 #### 2. 提交信息（Conventional Commits）
+
 ```bash
 ✅ 格式: <type>(<scope>): <subject>
 

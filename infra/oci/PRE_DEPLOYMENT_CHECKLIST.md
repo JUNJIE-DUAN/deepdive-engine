@@ -146,7 +146,7 @@ ls -la
 # 检查 infra/oci 结构
 ls -la infra/oci/
 # 应该看到:
-# - README.md
+# - readme.md
 # - docs/
 # - scripts/
 # - terraform/

@@ -23,7 +23,7 @@ DeepDive Engine的文档体系：
 
 ```
 docs/
-├── README.md                    # 项目概览
+├── readme.md                    # 项目概览
 ├── CONTRIBUTING.md              # 贡献指南
 ├── CHANGELOG.md                 # 变更日志
 ├── .claude/
@@ -36,7 +36,7 @@ docs/
 │   │   ├── 07-testing-standards.md
 │   │   └── 09-documentation.md
 │   └── adrs/                    # 架构决策记录
-│       ├── README.md
+│       ├── readme.md
 │       ├── template.md
 │       └── NNNN-decision-title.md
 ├── architecture/                # 架构文档
@@ -55,7 +55,7 @@ docs/
 
 ### 1. 项目README结构 🔴 MUST
 
-```markdown
+````markdown
 # 项目名称
 
 > 一句话描述项目是什么
@@ -98,19 +98,25 @@ docs/
 ### 安装
 
 \```bash
+
 # 克隆项目
+
 git clone https://github.com/org/repo.git
 
 # 安装依赖
+
 npm install
 
 # 配置环境变量
+
 cp .env.example .env
 
 # 运行数据库迁移
+
 npm run db:migrate
 
 # 启动开发服务器
+
 npm run dev
 \```
 
@@ -124,11 +130,11 @@ npm run dev
 
 \```
 deepdive-engine/
-├── frontend/           # Next.js前端应用
-├── backend/            # NestJS后端API
-├── ai-service/         # Python AI服务
-├── .claude/            # 项目标准和ADR
-└── docs/               # 详细文档
+├── frontend/ # Next.js前端应用
+├── backend/ # NestJS后端API
+├── ai-service/ # Python AI服务
+├── .claude/ # 项目标准和ADR
+└── docs/ # 详细文档
 \```
 
 详见 [项目结构文档](docs/project-structure.md)
@@ -145,13 +151,17 @@ deepdive-engine/
 ## 测试
 
 \```bash
+
 # 运行所有测试
+
 npm test
 
 # 运行测试并生成覆盖率
+
 npm run test:coverage
 
 # 运行E2E测试
+
 npm run test:e2e
 \```
 
@@ -166,13 +176,13 @@ npm run test:e2e
 ## 许可证
 
 MIT © [Your Organization]
-```
+````
 
 ### 2. 模块README 🟡 SHOULD
 
 每个主要模块/包应该有自己的README：
 
-```markdown
+````markdown
 # Resources Module
 
 资源管理模块，负责处理各类学习资源的CRUD操作。
@@ -192,9 +202,9 @@ const service = new ResourcesService(prisma, mongodb);
 
 // 获取资源列表
 const resources = await service.findAll({
-  page: 1,
-  limit: 20,
-  type: 'ARTICLE'
+page: 1,
+limit: 20,
+type: 'ARTICLE'
 });
 \```
 
@@ -216,7 +226,7 @@ npm test -- resources
 
 - [API设计规范](../.claude/standards/05-api-design.md)
 - [数据库设计](../.claude/standards/06-database-design.md)
-```
+````
 
 ---
 
@@ -226,82 +236,88 @@ npm test -- resources
 
 ```typescript
 // backend/src/resources/resources.controller.ts
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+} from "@nestjs/swagger";
 
-@ApiTags('resources')
-@Controller('api/v1/resources')
+@ApiTags("resources")
+@Controller("api/v1/resources")
 export class ResourcesController {
   @Get()
   @ApiOperation({
-    summary: '获取资源列表',
-    description: '支持分页、过滤和排序的资源列表查询'
+    summary: "获取资源列表",
+    description: "支持分页、过滤和排序的资源列表查询",
   })
   @ApiQuery({
-    name: 'page',
+    name: "page",
     required: false,
     type: Number,
-    description: '页码（从1开始）',
-    example: 1
+    description: "页码（从1开始）",
+    example: 1,
   })
   @ApiQuery({
-    name: 'limit',
+    name: "limit",
     required: false,
     type: Number,
-    description: '每页数量（默认20，最大100）',
-    example: 20
+    description: "每页数量（默认20，最大100）",
+    example: 20,
   })
   @ApiQuery({
-    name: 'type',
+    name: "type",
     required: false,
     enum: ResourceType,
-    description: '资源类型过滤'
+    description: "资源类型过滤",
   })
   @ApiResponse({
     status: 200,
-    description: '成功返回资源列表',
+    description: "成功返回资源列表",
     schema: {
       example: {
         data: [
           {
-            id: '123',
-            title: 'Resource Title',
-            type: 'ARTICLE',
-            sourceUrl: 'https://example.com'
-          }
+            id: "123",
+            title: "Resource Title",
+            type: "ARTICLE",
+            sourceUrl: "https://example.com",
+          },
         ],
         pagination: {
           total: 100,
           page: 1,
           limit: 20,
-          totalPages: 5
-        }
-      }
-    }
+          totalPages: 5,
+        },
+      },
+    },
   })
   async findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('type') type?: ResourceType,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("type") type?: ResourceType,
   ) {
     return this.service.findAll({ page, limit, type });
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: '获取单个资源' })
+  @Get(":id")
+  @ApiOperation({ summary: "获取单个资源" })
   @ApiParam({
-    name: 'id',
-    description: '资源ID',
-    example: 'clxy123456'
+    name: "id",
+    description: "资源ID",
+    example: "clxy123456",
   })
   @ApiResponse({
     status: 200,
-    description: '成功返回资源详情'
+    description: "成功返回资源详情",
   })
   @ApiResponse({
     status: 404,
-    description: '资源不存在'
+    description: "资源不存在",
   })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param("id") id: string) {
     return this.service.findOne(id);
   }
 }
@@ -311,37 +327,37 @@ export class ResourcesController {
 
 ```typescript
 // backend/src/resources/dto/create-resource.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, Length, IsUrl } from 'class-validator';
-import { ResourceType } from '@prisma/client';
+import { ApiProperty } from "@nestjs/swagger";
+import { IsString, IsEnum, IsOptional, Length, IsUrl } from "class-validator";
+import { ResourceType } from "@prisma/client";
 
 /**
  * 创建资源DTO
  */
 export class CreateResourceDto {
   @ApiProperty({
-    description: '资源标题',
-    example: 'Introduction to Machine Learning',
+    description: "资源标题",
+    example: "Introduction to Machine Learning",
     minLength: 1,
-    maxLength: 500
+    maxLength: 500,
   })
   @IsString()
   @Length(1, 500)
   title: string;
 
   @ApiProperty({
-    description: '资源类型',
+    description: "资源类型",
     enum: ResourceType,
-    example: 'ARTICLE'
+    example: "ARTICLE",
   })
   @IsEnum(ResourceType)
   type: ResourceType;
 
   @ApiProperty({
-    description: '资源描述',
-    example: 'A comprehensive guide to machine learning basics',
+    description: "资源描述",
+    example: "A comprehensive guide to machine learning basics",
     required: false,
-    maxLength: 2000
+    maxLength: 2000,
   })
   @IsString()
   @IsOptional()
@@ -349,9 +365,9 @@ export class CreateResourceDto {
   description?: string;
 
   @ApiProperty({
-    description: '资源来源URL',
-    example: 'https://example.com/article',
-    format: 'uri'
+    description: "资源来源URL",
+    example: "https://example.com/article",
+    format: "uri",
   })
   @IsUrl()
   sourceUrl: string;
@@ -366,7 +382,7 @@ export class CreateResourceDto {
 
 **TypeScript (JSDoc)**:
 
-```typescript
+````typescript
 /**
  * 计算两个文本的相似度
  *
@@ -385,11 +401,11 @@ export class CreateResourceDto {
 export function calculateSimilarity(
   text1: string,
   text2: string,
-  method: 'cosine' | 'jaccard' = 'cosine'
+  method: "cosine" | "jaccard" = "cosine",
 ): number {
   // implementation
 }
-```
+````
 
 **Python (docstring)**:
 
@@ -418,7 +434,7 @@ def calculate_similarity(text1: str, text2: str, method: str = "cosine") -> floa
 
 ### 2. 类注释 🔴 MUST
 
-```typescript
+````typescript
 /**
  * 资源服务类
  *
@@ -443,7 +459,7 @@ export class ResourcesService {
 
   // methods...
 }
-```
+````
 
 ### 3. 复杂逻辑注释 🔴 MUST
 
@@ -465,6 +481,7 @@ async function syncResourceData(resourceId: string) {
 ```
 
 **注释标签**:
+
 - `TODO`: 待办事项（必须包含日期和负责人）
 - `FIXME`: 已知问题，需要修复
 - `HACK`: 临时解决方案，需要改进
@@ -527,19 +544,23 @@ const cleanText = sanitizeHtml(userInput);
 ### 方案A: [名称]
 
 **优点**:
+
 - 优点1
 - 优点2
 
 **缺点**:
+
 - 缺点1
 - 缺点2
 
 ### 方案B: [名称]
 
 **优点**:
+
 - 优点1
 
 **缺点**:
+
 - 缺点1
 
 ## 结果
@@ -547,14 +568,17 @@ const cleanText = sanitizeHtml(userInput);
 描述实施此决策的预期结果：
 
 **正面影响**:
+
 - 影响1
 - 影响2
 
 **负面影响**:
+
 - 影响1
 - 权衡点
 
 **风险**:
+
 - 风险1及缓解措施
 
 ## 参考资料
@@ -565,7 +589,7 @@ const cleanText = sanitizeHtml(userInput);
 
 ### 2. ADR示例
 
-```markdown
+````markdown
 # ADR-0002: 采用TypeScript严格模式
 
 ## 状态
@@ -575,11 +599,13 @@ const cleanText = sanitizeHtml(userInput);
 ## 上下文
 
 当前Backend的TypeScript配置禁用了所有严格检查选项：
+
 - `strictNullChecks: false`
 - `noImplicitAny: false`
 - `strictBindCallApply: false`
 
 这导致：
+
 1. 运行时类型错误频发
 2. 代码质量难以保证
 3. 重构风险高
@@ -588,6 +614,7 @@ const cleanText = sanitizeHtml(userInput);
 ## 决策
 
 启用TypeScript完整严格模式：
+
 ```json
 {
   "compilerOptions": {
@@ -606,6 +633,7 @@ const cleanText = sanitizeHtml(userInput);
   }
 }
 ```
+````
 
 并修复所有因此产生的类型错误。
 
@@ -614,20 +642,24 @@ const cleanText = sanitizeHtml(userInput);
 ### 方案A: 立即全面启用严格模式
 
 **优点**:
+
 - 彻底解决类型安全问题
 - 一次性完成，无技术债务
 
 **缺点**:
+
 - 需要修复大量现有代码
 - 可能需要1-2周时间
 
 ### 方案B: 渐进式启用（仅对新代码）
 
 **优点**:
+
 - 不影响现有代码
 - 改动较小
 
 **缺点**:
+
 - 技术债务持续存在
 - 新旧代码标准不一致
 - 最终还是要全量修复
@@ -635,15 +667,18 @@ const cleanText = sanitizeHtml(userInput);
 ### 方案C: 保持现状
 
 **优点**:
+
 - 无需改动
 
 **缺点**:
+
 - 持续产生运行时错误
 - 不符合工程标准
 
 ## 决策选择
 
 选择**方案A**，理由：
+
 1. 长痛不如短痛
 2. 项目处于MVP阶段，代码量适中
 3. 符合工程最佳实践
@@ -652,16 +687,19 @@ const cleanText = sanitizeHtml(userInput);
 ## 结果
 
 **正面影响**:
+
 - ✅ 减少90%+的类型相关运行时错误
 - ✅ 提高代码可维护性
 - ✅ 更好的IDE支持和自动补全
 - ✅ 更安全的重构
 
 **负面影响**:
+
 - ⚠️ 需要投入1-2周时间修复现有代码
 - ⚠️ 短期内可能降低开发速度
 
 **风险与缓解**:
+
 - 风险: 修复过程中可能引入bug
   - 缓解: 充分的测试覆盖
 - 风险: 某些第三方库类型定义不完善
@@ -678,11 +716,13 @@ const cleanText = sanitizeHtml(userInput);
 
 - [TypeScript Strict Mode](https://www.typescriptlang.org/tsconfig#strict)
 - [Google TypeScript Style Guide](https://google.github.io/styleguide/tsguide.html)
+
 ```
 
 ### 3. ADR命名 🔴 MUST
 
 ```
+
 格式: NNNN-descriptive-title.md
 
 示例:
@@ -690,7 +730,8 @@ const cleanText = sanitizeHtml(userInput);
 0002-typescript-strict-mode.md
 0003-use-prisma-for-orm.md
 0004-mongodb-for-raw-data.md
-```
+
+````
 
 ---
 
@@ -750,7 +791,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 修复用户登录session过期问题
-```
+````
 
 ---
 

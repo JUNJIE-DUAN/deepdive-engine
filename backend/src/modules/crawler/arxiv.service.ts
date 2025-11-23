@@ -107,15 +107,56 @@ export class ArxivService {
       return;
     }
 
-    // 检查是否已存在（去重）
+    // 层级1去重：检查同源是否已存在（arXiv 内部去重）
     const existingRawData = await this.mongodb.findRawDataByExternalId(
       "arxiv",
       arxivId,
     );
 
     if (existingRawData) {
-      this.logger.debug(`Paper already exists: ${arxivId}`);
+      this.logger.debug(`Paper already exists in arXiv source: ${arxivId}`);
       return;
+    }
+
+    // 层级2去重：跨源检查 - 使用 externalId（防止同一论文从不同源采集）
+    const crossSourceDuplicate =
+      await this.mongodb.findRawDataByExternalIdAcrossAllSources(arxivId);
+
+    if (crossSourceDuplicate) {
+      this.logger.debug(
+        `Paper already exists from another source: ${arxivId} (source: ${crossSourceDuplicate.source})`,
+      );
+      return;
+    }
+
+    // 层级3去重：URL 去重（防止同一链接从不同源采集）
+    const title = this.dedup.cleanText(entry.title);
+    const abstractUrl = entry.id?.replace("http://", "https://");
+
+    if (abstractUrl) {
+      const normalizedUrl = this.dedup.normalizeUrl(abstractUrl);
+      const urlDuplicate =
+        await this.mongodb.findRawDataByUrlAcrossAllSources(normalizedUrl);
+
+      if (urlDuplicate) {
+        this.logger.debug(
+          `Paper already exists with same URL: ${normalizedUrl} (source: ${urlDuplicate.source})`,
+        );
+        return;
+      }
+    }
+
+    // 层级4去重：标题相似度检查（防止同一内容以不同标题从不同源采集）
+    const similarTitles =
+      await this.mongodb.findRawDataByTitleAcrossAllSources(title);
+
+    for (const similar of similarTitles) {
+      if (this.dedup.areTitlesSimilar(title, similar.data?.title, 0.9)) {
+        this.logger.debug(
+          `Paper already exists with similar title: "${similar.data?.title}" (source: ${similar.source}, similarity threshold: 0.9)`,
+        );
+        return;
+      }
     }
 
     // 解析完整的原始数据

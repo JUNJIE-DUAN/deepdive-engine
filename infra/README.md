@@ -6,15 +6,15 @@
 
 ```
 infra/                          ← 所有基础设施相关
-├── README.md                   # 本文件 - 多云导航
+├── readme.md                   # 本文件 - 多云导航
 ├── oci/                        # 🔵 OCI 免费套餐部署 (完整方案)
-│   ├── README.md               # OCI 导航文档
+│   ├── readme.md               # OCI 导航文档
 │   ├── docs/                   # 📚 详细文档 (45,000+ 字)
 │   │   ├── QUICK_START.md
 │   │   ├── README_OCI_DEPLOYMENT.md
 │   │   ├── OCI_DEPLOYMENT_PLAN.md
 │   │   ├── COST_MANAGEMENT.md
-│   │   ├── ARCHITECTURE.md
+│   │   ├── architecture.md
 │   │   ├── DEPLOYMENT_SUMMARY.md
 │   │   └── FINAL_REPORT.md
 │   ├── scripts/                # 🚀 部署脚本
@@ -29,13 +29,13 @@ infra/                          ← 所有基础设施相关
 │       └── oci-deploy.yml
 │
 ├── aws/                        # 🟠 AWS 部署 (规划中)
-│   └── README.md               # AWS 方案说明
+│   └── readme.md               # AWS 方案说明
 │
 ├── gcp/                        # 🔴 Google Cloud 部署 (规划中)
-│   └── README.md               # GCP 方案说明
+│   └── readme.md               # GCP 方案说明
 │
 └── local/                      # 🟢 本地/Docker 部署 (规划中)
-    └── README.md               # 本地方案说明
+    └── readme.md               # 本地方案说明
 ```
 
 ## 🎯 快速开始
@@ -47,7 +47,7 @@ infra/                          ← 所有基础设施相关
 cd infra/oci
 
 # 查看快速开始指南
-cat README.md
+cat readme.md
 cat docs/QUICK_START.md
 
 # 执行一键部署
@@ -126,7 +126,7 @@ bash scripts/deploy.sh
 
 **快速参考** (15 分钟)
 
-- `infra/oci/README.md` - OCI 导航和快速开始
+- `infra/oci/readme.md` - OCI 导航和快速开始
 - `infra/oci/docs/QUICK_START.md` - 5 分钟快速开始
 
 **完整方案** (2 小时)
@@ -134,7 +134,7 @@ bash scripts/deploy.sh
 - `infra/oci/docs/README_OCI_DEPLOYMENT.md` - 部署入口和检查清单
 - `infra/oci/docs/OCI_DEPLOYMENT_PLAN.md` - 15,000+ 字详细方案
 - `infra/oci/docs/COST_MANAGEMENT.md` - 成本管控完整指南
-- `infra/oci/docs/ARCHITECTURE.md` - 系统架构详解
+- `infra/oci/docs/architecture.md` - 系统架构详解
 - `infra/oci/docs/DEPLOYMENT_SUMMARY.md` - 项目总体总结
 - `infra/oci/docs/FINAL_REPORT.md` - 交付总结报告
 
@@ -238,7 +238,7 @@ GitHub Actions 触发
 
 ```bash
 cd infra/oci
-cat README.md
+cat readme.md
 ```
 
 ### 执行 OCI 部署
@@ -259,7 +259,7 @@ cat docs/COST_MANAGEMENT.md
 
 ```bash
 cd infra/oci
-cat docs/ARCHITECTURE.md
+cat docs/architecture.md
 ```
 
 ## 📊 成本对比
@@ -305,7 +305,7 @@ cd infra/oci
 # 快速问题 → docs/QUICK_START.md
 # 部署问题 → docs/README_OCI_DEPLOYMENT.md
 # 成本问题 → docs/COST_MANAGEMENT.md
-# 架构问题 → docs/ARCHITECTURE.md
+# 架构问题 → docs/architecture.md
 ```
 
 ### 外部资源

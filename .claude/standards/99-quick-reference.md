@@ -106,6 +106,7 @@ git push origin feature/001-your-feature
 ## 提交信息速查
 
 ### 格式
+
 ```
 <type>(<scope>): <subject>
 
@@ -115,6 +116,7 @@ git push origin feature/001-your-feature
 ```
 
 ### Types
+
 ```
 feat:      新功能
 fix:       bug修复
@@ -129,12 +131,14 @@ revert:    撤销
 ```
 
 ### Scopes
+
 ```
 frontend, backend, ai-service, crawler
 proxy, resource, feed, api, database, auth, config
 ```
 
 ### 示例
+
 ```
 feat(proxy): add PDF proxy for arXiv papers
 fix(frontend): resolve PDF iframe blocking
@@ -148,6 +152,7 @@ test(backend): add resource controller tests
 ## 命名规范速查
 
 ### 文件命名
+
 ```
 ✅ TypeScript:  kebab-case.ts      (proxy-controller.ts)
 ✅ Python:      snake_case.py      (grok_client.py)
@@ -157,6 +162,7 @@ test(backend): add resource controller tests
 ```
 
 ### 代码命名
+
 ```
 ✅ 类名:        PascalCase         (ProxyController)
 ✅ 函数/方法:   camelCase (TS)     (getResource)
@@ -168,6 +174,7 @@ test(backend): add resource controller tests
 ```
 
 ### 数据库命名
+
 ```
 ✅ 表名:        snake_case 复数    (resources, users)
 ✅ 列名:        snake_case         (created_at, user_id)
@@ -176,6 +183,7 @@ test(backend): add resource controller tests
 ```
 
 ### API路由命名
+
 ```
 ✅ 路径:        kebab-case         (/api/v1/data-sources)
 ✅ 资源:        复数名词           (/api/v1/resources)
@@ -187,6 +195,7 @@ test(backend): add resource controller tests
 ## 目录结构速查
 
 ### Frontend (Next.js)
+
 ```
 frontend/
 ├── app/                  ← App Router页面
@@ -199,6 +208,7 @@ frontend/
 ```
 
 ### Backend (NestJS)
+
 ```
 backend/
 ├── src/
@@ -215,6 +225,7 @@ backend/
 ```
 
 ### AI Service (FastAPI/Python)
+
 ```
 ai-service/
 ├── main.py              ← 应用入口
@@ -230,6 +241,7 @@ ai-service/
 ## 代码审查清单
 
 ### 提交前检查
+
 - [ ] 代码遵循命名规范
 - [ ] 通过所有Lint检查
 - [ ] 通过所有类型检查
@@ -242,6 +254,7 @@ ai-service/
 - [ ] 文档已更新
 
 ### PR检查
+
 - [ ] PR标题清晰
 - [ ] PR描述完整
 - [ ] 关联相关Issue
@@ -254,6 +267,7 @@ ai-service/
 ## 环境变量
 
 ### Backend (.env)
+
 ```env
 DATABASE_URL="postgresql://..."
 NEO4J_URI="bolt://localhost:7687"
@@ -263,6 +277,7 @@ JWT_SECRET="..."
 ```
 
 ### AI Service (.env)
+
 ```env
 GROK_API_KEY="..."
 OPENAI_API_KEY="..."
@@ -275,6 +290,7 @@ GCP_PROJECT_ID="..."
 ## 故障排查
 
 ### 问题：端口被占用
+
 ```bash
 # 查看端口占用
 netstat -ano | findstr :3000
@@ -288,6 +304,7 @@ kill -9 <PID>
 ```
 
 ### 问题：数据库连接失败
+
 ```bash
 # 检查Docker容器状态
 docker-compose ps
@@ -301,6 +318,7 @@ docker-compose logs postgres
 ```
 
 ### 问题：前端编译错误
+
 ```bash
 # 清理缓存
 cd frontend
@@ -310,6 +328,7 @@ npm run dev
 ```
 
 ### 问题：AI服务超时
+
 ```bash
 # 检查AI服务日志
 cd ai-service
@@ -323,7 +342,7 @@ AI_SERVICE_TIMEOUT=60
 
 ## 有用的链接
 
-- **项目文档：** [README.md](../../README.md)
+- **项目文档：** [readme.md](../../readme.md)
 - **产品需求：** [prd.md](../../prd.md)
 - **技术架构：** [architecture.md](../../architecture.md)
 - **开发规范：** [project-rules.md](../../project-rules.md)

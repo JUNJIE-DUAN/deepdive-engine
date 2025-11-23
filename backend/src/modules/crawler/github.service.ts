@@ -24,7 +24,7 @@ export class GithubService {
   constructor(
     private prisma: PrismaService,
     private mongodb: MongoDBService,
-    _dedup: DeduplicationService,
+    private dedup: DeduplicationService,
     private config: ConfigService,
   ) {
     this.githubToken = this.config.get<string>("GITHUB_TOKEN") || "";
@@ -149,15 +149,68 @@ export class GithubService {
   private async processRepository(repo: any): Promise<void> {
     const repoFullName = repo.full_name;
 
-    // 检查是否已存在（去重）
+    // 层级1去重：检查同源是否已存在（GitHub 内部去重）
     const existingRawData = await this.mongodb.findRawDataByExternalId(
       "github",
       repoFullName,
     );
 
     if (existingRawData) {
-      this.logger.debug(`Repo already exists: ${repoFullName}`);
+      this.logger.debug(
+        `Repo already exists in GitHub source: ${repoFullName}`,
+      );
       return;
+    }
+
+    // 层级2去重：跨源检查 - 使用 externalId（防止同一项目从不同源采集）
+    const crossSourceDuplicate =
+      await this.mongodb.findRawDataByExternalIdAcrossAllSources(repoFullName);
+
+    if (crossSourceDuplicate) {
+      this.logger.debug(
+        `Repo already exists from another source: ${repoFullName} (source: ${crossSourceDuplicate.source})`,
+      );
+      return;
+    }
+
+    // 层级3去重：URL 去重（防止同一链接从不同源采集）
+    const repoUrl = repo.html_url;
+
+    if (repoUrl) {
+      const normalizedUrl = this.dedup.normalizeUrl(repoUrl);
+      const urlDuplicate =
+        await this.mongodb.findRawDataByUrlAcrossAllSources(normalizedUrl);
+
+      if (urlDuplicate) {
+        this.logger.debug(
+          `Repo already exists with same URL: ${normalizedUrl} (source: ${urlDuplicate.source})`,
+        );
+        return;
+      }
+    }
+
+    // 层级4去重：标题相似度检查（使用项目名称）
+    const repoName = repo.name || "";
+    const repoDescription = repo.description || "";
+    const titleText = `${repoName} ${repoDescription}`.trim();
+
+    if (titleText) {
+      const similarTitles =
+        await this.mongodb.findRawDataByTitleAcrossAllSources(titleText);
+
+      for (const similar of similarTitles) {
+        const similarTitle =
+          similar.data?.name && similar.data?.description
+            ? `${similar.data.name} ${similar.data.description}`
+            : similar.data?.title || "";
+
+        if (this.dedup.areTitlesSimilar(titleText, similarTitle, 0.9)) {
+          this.logger.debug(
+            `Repo already exists with similar title/description (source: ${similar.source}, similarity threshold: 0.9)`,
+          );
+          return;
+        }
+      }
     }
 
     // 获取完整的仓库信息（包括 README）

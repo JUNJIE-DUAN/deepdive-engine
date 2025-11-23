@@ -27,10 +27,10 @@ deepdive-engine/
 │   ├── guides/                  # 开发指南
 │   ├── prd/                     # 产品需求文档
 │   ├── data-management/         # Data Management模块文档
-│   │   ├── DATA-MANAGEMENT-IMPLEMENTATION.md
-│   │   ├── DATA-MANAGEMENT-VALIDATION.md
-│   │   ├── DATA-MANAGEMENT-QUICK-GUIDE.md
-│   │   └── UI-REDESIGN-REPORT.md
+│   │   ├── data-management-implementation.md
+│   │   ├── data-management-validation.md
+│   │   ├── data-management-quick-guide.md
+│   │   └── ui-redesign-report.md
 │   └── project-reports/         # 项目交付报告
 │       └── DELIVERY-MANIFEST.txt
 │
@@ -41,7 +41,7 @@ deepdive-engine/
 │
 ├── package.json                 # 项目配置
 ├── docker-compose.yml           # Docker配置
-├── README.md                    # 项目说明
+├── readme.md                    # 项目说明
 └── STRUCTURE.md                 # 本文件
 ```
 
@@ -53,7 +53,7 @@ deepdive-engine/
 
 位置: `docs/data-management/`
 
-1. **UI-REDESIGN-REPORT.md** - UI整改报告
+1. **ui-redesign-report.md** - UI整改报告
    - Icon专业化分析
    - 空间优化方案
    - 设计改进指标
@@ -63,25 +63,25 @@ deepdive-engine/
    - API 404错误修复
    - 验证步骤
 
-3. **DATA-MANAGEMENT-IMPLEMENTATION.md** - 实现方案文档
+3. **data-management-implementation.md** - 实现方案文档
    - 完整架构设计
    - 功能说明
    - API文档
    - 扩展建议
 
-4. **DATA-MANAGEMENT-VALIDATION.md** - 验证报告
+4. **data-management-validation.md** - 验证报告
    - PRD要求对标
    - 功能完整性检查
    - 质量评分
    - 上线清单
 
-5. **DATA-MANAGEMENT-QUICK-GUIDE.md** - 快速参考
+5. **data-management-quick-guide.md** - 快速参考
    - 页面位置
    - 核心特性
    - 常见问题
    - 开发指南
 
-6. **UI-REDESIGN-REPORT.md** - UI整改报告
+6. **ui-redesign-report.md** - UI整改报告
    - Icon专业化分析
    - 空间优化方案
    - 设计改进指标
@@ -132,15 +132,15 @@ scripts/stop-all.bat           # Windows
 
 ### 快速了解项目
 
-1. 阅读 `README.md` (3分钟)
-2. 阅读 `docs/project-reports/COMPLETION-SUMMARY.md` (5分钟)
-3. 阅读 `docs/data-management/DATA-MANAGEMENT-QUICK-GUIDE.md` (10分钟)
+1. 阅读 `readme.md` (3分钟)
+2. 阅读 `docs/project-reports/completion-summary.md` (5分钟)
+3. 阅读 `docs/data-management/data-management-quick-guide.md` (10分钟)
 
 ### 深入了解Data Management
 
-1. `docs/data-management/DATA-MANAGEMENT-IMPLEMENTATION.md` (15分钟)
-2. `docs/data-management/DATA-MANAGEMENT-VALIDATION.md` (20分钟)
-3. `docs/data-management/UI-REDESIGN-REPORT.md` (10分钟)
+1. `docs/data-management/data-management-implementation.md` (15分钟)
+2. `docs/data-management/data-management-validation.md` (20分钟)
+3. `docs/data-management/ui-redesign-report.md` (10分钟)
 
 ### 开发相关
 
@@ -154,7 +154,7 @@ scripts/stop-all.bat           # Windows
 
 ### 根目录文件
 
-- `README.md` - 项目说明
+- `readme.md` - 项目说明
 - `package.json` - 项目配置
 - `docker-compose.yml` - Docker配置
 - `.env.example` - 环境变量示例
@@ -165,10 +165,10 @@ scripts/stop-all.bat           # Windows
 ```
 docs/
 ├── data-management/
-│   ├── DATA-MANAGEMENT-IMPLEMENTATION.md
-│   ├── DATA-MANAGEMENT-QUICK-GUIDE.md
-│   ├── DATA-MANAGEMENT-VALIDATION.md
-│   └── UI-REDESIGN-REPORT.md
+│   ├── data-management-implementation.md
+│   ├── data-management-quick-guide.md
+│   ├── data-management-validation.md
+│   └── ui-redesign-report.md
 └── project-reports/
     └── DELIVERY-MANIFEST.txt
 ```
@@ -191,7 +191,7 @@ scripts/
 - `*-REPORT.md` - 报告类文档
 - `*-GUIDE.md` - 指南类文档
 - `*-IMPLEMENTATION.md` - 实现方案文档
-- `README.md` - 说明文档
+- `readme.md` - 说明文档
 
 ### 目录命名
 

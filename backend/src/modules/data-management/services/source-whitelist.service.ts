@@ -704,6 +704,75 @@ export class SourceWhitelistService {
           description:
             "Events and conferences: Eventbrite, Meetup, NeurIPS, ICML, ICLR, CES, GDC, SXSW, etc.",
         },
+        {
+          resourceType: "POLICY" as ResourceType,
+          allowedDomains: [
+            // 美国政府机构
+            "whitehouse.gov",
+            "*.whitehouse.gov",
+            "congress.gov",
+            "senate.gov",
+            "house.gov",
+            // 联邦机构
+            "commerce.gov",
+            "*.commerce.gov",
+            "bis.doc.gov",
+            "ustr.gov",
+            "treasury.gov",
+            "state.gov",
+            "defense.gov",
+            "energy.gov",
+            "nist.gov",
+            // 智库和研究机构
+            "brookings.edu",
+            "*.brookings.edu",
+            "cfr.org",
+            "*.cfr.org",
+            "csis.org",
+            "*.csis.org",
+            "rand.org",
+            "*.rand.org",
+            "cnas.org",
+            "*.cnas.org",
+            "heritage.org",
+            "*.heritage.org",
+            "aei.org",
+            "*.aei.org",
+            "carnegieendowment.org",
+            "*.carnegieendowment.org",
+            // 科技政策研究
+            "itif.org",
+            "*.itif.org",
+            "cset.georgetown.edu",
+            "*.georgetown.edu",
+            "ash.harvard.edu",
+            "*.harvard.edu",
+            "cyber.harvard.edu",
+            "law.stanford.edu",
+            "*.stanford.edu",
+            // 新闻和分析
+            "politico.com",
+            "*.politico.com",
+            "axios.com",
+            "*.axios.com",
+            "thehill.com",
+            "rollcall.com",
+            // 国际组织
+            "oecd.org",
+            "*.oecd.org",
+            "wto.org",
+            "*.wto.org",
+            "europa.eu",
+            "*.europa.eu",
+            // 行业组织
+            "semiconductors.org",
+            "*.semiconductors.org",
+            "itif.org",
+            "*.itif.org",
+          ],
+          description:
+            "US Tech Policy: White House, Congress, Commerce, State Dept, Think tanks (Brookings, CFR, CSIS, RAND), Universities (Georgetown, Harvard, Stanford), etc.",
+        },
       ];
 
       for (const defaultWhitelist of defaults) {

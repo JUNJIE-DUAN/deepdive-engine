@@ -28,7 +28,7 @@
 | `OCI_DEPLOYMENT_PLAN.md`   | 完整部署方案详解   | 15,000+ | 架构师/运维 |
 | `COST_MANAGEMENT.md`       | 成本管控完整指南   | 8,000+  | 财务/运维   |
 | `DEPLOYMENT_SUMMARY.md`    | 项目总体总结       | 5,000+  | 项目经理    |
-| `ARCHITECTURE.md`          | 系统架构详解       | 8,000+  | 技术团队    |
+| `architecture.md`          | 系统架构详解       | 8,000+  | 技术团队    |
 
 **小计: 45,000+ 字，6 份文档**
 
@@ -429,7 +429,7 @@ curl http://<backend-IP>:3001/health
    ├─ OCI_DEPLOYMENT_PLAN.md
    ├─ COST_MANAGEMENT.md
    ├─ DEPLOYMENT_SUMMARY.md
-   └─ ARCHITECTURE.md
+   └─ architecture.md
 
 ✅ 部署脚本
    ├─ deploy.sh
@@ -480,7 +480,7 @@ curl http://<backend-IP>:3001/health
 2. **常见问题**
    - 部署失败: 查看 `README_OCI_DEPLOYMENT.md` FAQ
    - 成本问题: 查看 `COST_MANAGEMENT.md` 成本管理
-   - 架构问题: 查看 `ARCHITECTURE.md` 系统架构
+   - 架构问题: 查看 `architecture.md` 系统架构
 
 3. **外部资源**
    - OCI 文档: https://docs.oracle.com/iaas/
@@ -611,7 +611,7 @@ curl http://<backend-IP>:3001/health
 | OCI_DEPLOYMENT_PLAN.md   | 架构师/运维 | 30 分钟  |
 | COST_MANAGEMENT.md       | 财务/运维   | 20 分钟  |
 | DEPLOYMENT_SUMMARY.md    | 项目经理    | 10 分钟  |
-| ARCHITECTURE.md          | 技术团队    | 25 分钟  |
+| architecture.md          | 技术团队    | 25 分钟  |
 | FINAL_REPORT.md          | 管理层      | 15 分钟  |
 
 ---

@@ -2,8 +2,12 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 
 /**
- * 去重服务
- * 实现 URL 哈希去重和标题相似度检测
+ * 去重服务（增强版）
+ * 实现4层渐进式去重：
+ * 1. URL哈希去重 - 最快（O(1)）
+ * 2. 标题相似度去重 - 快速（O(n)）
+ * 3. 内容指纹去重 - SimHash + 汉明距离
+ * 4. 作者+时间去重 - 学术论文专用
  */
 @Injectable()
 export class DeduplicationService {
@@ -180,5 +184,198 @@ export class DeduplicationService {
       .replace(/\s+/g, " ") // 多个空格替换为单个
       .replace(/\n+/g, " ") // 换行替换为空格
       .trim();
+  }
+
+  // ============================================================================
+  // 第3层：内容指纹去重（SimHash + 汉明距离）
+  // ============================================================================
+
+  /**
+   * 生成内容的SimHash指纹（64位）
+   * SimHash算法：将文本转换为固定长度的指纹，相似文本的指纹汉明距离小
+   */
+  generateSimHash(content: string): string {
+    if (!content || content.length === 0) {
+      return "0".repeat(16); // 空内容返回0
+    }
+
+    // 1. 分词（简单按空格和标点分词）
+    const words = content
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ") // 移除标点
+      .split(/\s+/)
+      .filter((w) => w.length > 2); // 过滤短词
+
+    if (words.length === 0) {
+      return "0".repeat(16);
+    }
+
+    // 2. 初始化64位向量
+    const vector = new Array(64).fill(0);
+
+    // 3. 对每个词计算哈希并累加到向量
+    for (const word of words) {
+      const hash = createHash("md5").update(word).digest("hex");
+      const hashBigInt = BigInt("0x" + hash.substring(0, 16));
+
+      for (let i = 0; i < 64; i++) {
+        const bit = (hashBigInt >> BigInt(i)) & BigInt(1);
+        vector[i] += bit === BigInt(1) ? 1 : -1;
+      }
+    }
+
+    // 4. 生成64位指纹
+    let fingerprint = BigInt(0);
+    for (let i = 0; i < 64; i++) {
+      if (vector[i] > 0) {
+        fingerprint |= BigInt(1) << BigInt(i);
+      }
+    }
+
+    // 5. 转换为16进制字符串（16字符）
+    return fingerprint.toString(16).padStart(16, "0");
+  }
+
+  /**
+   * 计算两个SimHash指纹的汉明距离
+   * 汉明距离：两个等长字符串对应位置不同字符的个数
+   */
+  calculateHammingDistance(fp1: string, fp2: string): number {
+    try {
+      const int1 = BigInt("0x" + fp1);
+      const int2 = BigInt("0x" + fp2);
+      let xor = int1 ^ int2;
+      let distance = 0;
+
+      // 计算1的个数
+      while (xor > BigInt(0)) {
+        distance += Number(xor & BigInt(1));
+        xor >>= BigInt(1);
+      }
+
+      return distance;
+    } catch (error) {
+      this.logger.error(
+        `Failed to calculate hamming distance: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return 64; // 返回最大距离
+    }
+  }
+
+  /**
+   * 判断两个内容是否相似（基于SimHash指纹）
+   * @param fp1 第一个SimHash指纹
+   * @param fp2 第二个SimHash指纹
+   * @param threshold 汉明距离阈值（默认3，表示允许3位差异）
+   * @returns 是否相似
+   */
+  areContentsSimilarByFingerprint(
+    fp1: string,
+    fp2: string,
+    threshold = 3,
+  ): boolean {
+    const distance = this.calculateHammingDistance(fp1, fp2);
+    return distance <= threshold;
+  }
+
+  /**
+   * 生成内容指纹（包含归一化）
+   * 这是对外的统一接口
+   */
+  generateSimHashFingerprint(content: string): string {
+    const normalized = this.cleanText(content);
+    return this.generateSimHash(normalized);
+  }
+
+  // ============================================================================
+  // 第4层：作者+时间去重（学术论文专用）
+  // ============================================================================
+
+  /**
+   * 生成作者-时间组合键
+   * 用于学术论文去重：同一作者在同一天发布的论文很可能是重复的
+   * @param authors 作者列表
+   * @param date 发布日期
+   * @returns MD5哈希的组合键
+   */
+  generateAuthorTimeKey(authors: string[], date: Date): string {
+    if (!authors || authors.length === 0) {
+      return ""; // 无作者返回空
+    }
+
+    // 1. 取前3个作者（避免作者列表过长）
+    const topAuthors = authors
+      .slice(0, 3)
+      .map((a) => a.toLowerCase().trim())
+      .sort(); // 排序保证顺序一致
+
+    // 2. 提取日期（YYYY-MM-DD）
+    const dateKey = date.toISOString().split("T")[0];
+
+    // 3. 组合并生成哈希
+    const content = `${topAuthors.join("_")}:${dateKey}`;
+    return createHash("md5").update(content).digest("hex");
+  }
+
+  /**
+   * 判断是否是相同作者在同一天的论文
+   */
+  isSameAuthorAndDate(
+    authors1: string[],
+    date1: Date,
+    authors2: string[],
+    date2: Date,
+  ): boolean {
+    const key1 = this.generateAuthorTimeKey(authors1, date1);
+    const key2 = this.generateAuthorTimeKey(authors2, date2);
+
+    if (!key1 || !key2) return false;
+
+    return key1 === key2;
+  }
+
+  // ============================================================================
+  // 综合去重接口
+  // ============================================================================
+
+  /**
+   * 4层渐进式去重检测
+   * 返回去重检测结果
+   */
+  checkAllDuplicationMethods(item: {
+    url: string;
+    title: string;
+    content?: string;
+    authors?: string[];
+    publishedAt?: Date;
+  }): {
+    urlHash: string;
+    titleHash: string;
+    contentFingerprint: string | null;
+    authorTimeKey: string | null;
+  } {
+    // 第1层：URL哈希
+    const urlHash = this.generateUrlHash(this.normalizeUrl(item.url));
+
+    // 第2层：标题哈希
+    const titleHash = this.generateContentFingerprint(item.title, []); // 使用原有方法
+
+    // 第3层：内容指纹（如果有内容）
+    const contentFingerprint = item.content
+      ? this.generateSimHashFingerprint(item.content)
+      : null;
+
+    // 第4层：作者+时间键（如果有作者和发布时间）
+    const authorTimeKey =
+      item.authors && item.publishedAt
+        ? this.generateAuthorTimeKey(item.authors, item.publishedAt)
+        : null;
+
+    return {
+      urlHash,
+      titleHash,
+      contentFingerprint,
+      authorTimeKey,
+    };
   }
 }

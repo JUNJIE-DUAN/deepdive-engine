@@ -113,6 +113,57 @@ export class MongoDBService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * 跨数据源查找：根据外部 ID 在所有数据源中查找（用于去重）
+   * @param externalId 外部ID
+   */
+  async findRawDataByExternalIdAcrossAllSources(
+    externalId: string,
+  ): Promise<any> {
+    const collection = this.getRawDataCollection();
+    return collection.findOne({
+      "data.externalId": externalId,
+    });
+  }
+
+  /**
+   * 跨数据源查找：根据标题查找相似内容（用于跨源去重）
+   * @param title 标题
+   * @param similarity 相似度阈值（可选，用于模糊匹配）
+   */
+  async findRawDataByTitleAcrossAllSources(title: string): Promise<any[]> {
+    const collection = this.getRawDataCollection();
+    // 使用正则表达式进行标题匹配（不区分大小写）
+    const titleRegex = new RegExp(
+      title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+      "i",
+    );
+    return collection
+      .find({
+        "data.title": titleRegex,
+      })
+      .limit(10)
+      .toArray();
+  }
+
+  /**
+   * 跨数据源查找：根据 URL 查找（用于跨源去重）
+   * @param url 原始URL或规范化URL
+   */
+  async findRawDataByUrlAcrossAllSources(url: string): Promise<any> {
+    const collection = this.getRawDataCollection();
+    // 尝试匹配多个可能的URL字段
+    return collection.findOne({
+      $or: [
+        { "data.url": url },
+        { "data.abstractUrl": url },
+        { "data.pdfUrl": url },
+        { "data.html_url": url },
+        { "data.link": url },
+      ],
+    });
+  }
+
+  /**
    * 更新原始数据
    */
   async updateRawData(

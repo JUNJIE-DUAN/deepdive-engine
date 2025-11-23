@@ -6,13 +6,13 @@
 
 ```
 oci/
-├── README.md                    # 本文件 - 快速导航
+├── readme.md                    # 本文件 - 快速导航
 ├── docs/                        # 📚 详细文档 (45,000+ 字)
 │   ├── README_OCI_DEPLOYMENT.md     # 部署入口和快速导航
 │   ├── QUICK_START.md               # 5 分钟快速开始
 │   ├── OCI_DEPLOYMENT_PLAN.md       # 15,000+ 字详细方案
 │   ├── COST_MANAGEMENT.md           # 成本管控完整指南
-│   ├── ARCHITECTURE.md              # 系统架构详解
+│   ├── architecture.md              # 系统架构详解
 │   ├── DEPLOYMENT_SUMMARY.md        # 项目总体总结
 │   └── FINAL_REPORT.md              # 交付总结报告
 ├── scripts/                     # 🚀 部署脚本
@@ -73,7 +73,7 @@ bash oci/scripts/deploy.sh
 | [README_OCI_DEPLOYMENT.md](./docs/README_OCI_DEPLOYMENT.md) | 部署入口和检查清单 | 10 分钟 |
 | [OCI_DEPLOYMENT_PLAN.md](./docs/OCI_DEPLOYMENT_PLAN.md)     | 完整详细方案       | 30 分钟 |
 | [COST_MANAGEMENT.md](./docs/COST_MANAGEMENT.md)             | 零成本管控         | 20 分钟 |
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md)                   | 系统架构详解       | 25 分钟 |
+| [architecture.md](./docs/architecture.md)                   | 系统架构详解       | 25 分钟 |
 | [DEPLOYMENT_SUMMARY.md](./docs/DEPLOYMENT_SUMMARY.md)       | 项目总体总结       | 10 分钟 |
 | [FINAL_REPORT.md](./docs/FINAL_REPORT.md)                   | 交付总结报告       | 15 分钟 |
 
@@ -94,7 +94,7 @@ bash oci/scripts/deploy.sh
 ### 🏗️ 架构师
 
 - OCI_DEPLOYMENT_PLAN.md (30 分钟)
-- ARCHITECTURE.md (25 分钟)
+- architecture.md (25 分钟)
 - COST_MANAGEMENT.md (20 分钟)
 
 ### 🛠️ 运维工程师
@@ -301,7 +301,7 @@ A: 不会！我们完全使用免费套餐，有实时成本监控。详见：[C
 1. 快速问题 → `QUICK_START.md`
 2. 部署问题 → `README_OCI_DEPLOYMENT.md`
 3. 成本问题 → `COST_MANAGEMENT.md`
-4. 架构问题 → `ARCHITECTURE.md`
+4. 架构问题 → `architecture.md`
 5. 深入理解 → `OCI_DEPLOYMENT_PLAN.md`
 
 ### 外部资源

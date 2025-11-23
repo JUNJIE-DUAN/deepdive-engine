@@ -4,6 +4,8 @@ import { ArxivService } from "./arxiv.service";
 import { GithubService } from "./github.service";
 import { HackernewsService } from "./hackernews.service";
 import { HackernewsCommentsService } from "./hackernews-comments.service";
+import { RssService } from "./rss.service";
+import { WebScraperService } from "./web-scraper.service";
 import { DeduplicationService } from "./deduplication.service";
 import { ResourcesModule } from "../resources/resources.module";
 
@@ -18,6 +20,8 @@ import { ResourcesModule } from "../resources/resources.module";
     GithubService,
     HackernewsService,
     HackernewsCommentsService,
+    RssService,
+    WebScraperService,
     DeduplicationService,
   ],
   exports: [
@@ -25,6 +29,8 @@ import { ResourcesModule } from "../resources/resources.module";
     GithubService,
     HackernewsService,
     HackernewsCommentsService,
+    RssService,
+    WebScraperService,
     DeduplicationService,
   ],
 })

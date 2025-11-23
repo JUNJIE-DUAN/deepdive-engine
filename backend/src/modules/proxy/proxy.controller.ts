@@ -422,22 +422,12 @@ export class ProxyController {
       );
     }
 
-    // 安全检查：使用可配置的域名白名单
+    // News类别不限制域名，允许访问所有新闻网站
     try {
       const urlObj = new URL(url);
 
-      if (!isDomainAllowed(urlObj.hostname)) {
-        this.logger.warn(
-          `News Reader Mode blocked - domain not allowed: ${urlObj.hostname}`,
-        );
-        throw new HttpException(
-          `Domain ${urlObj.hostname} is not allowed. Allowed domains: ${WHITELISTED_DOMAINS.join(", ")}`,
-          HttpStatus.FORBIDDEN,
-        );
-      }
-
       this.logger.log(
-        `Fetching HTML for News Reader Mode from: ${urlObj.hostname}`,
+        `Fetching HTML for News Reader Mode from: ${urlObj.hostname} (no domain restriction for News)`,
       );
 
       // 从远程服务器获取 HTML

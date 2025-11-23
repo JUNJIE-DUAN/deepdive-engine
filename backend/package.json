@@ -23,7 +23,11 @@
     "prisma:studio": "prisma studio",
     "templates:seed": "ts-node -r tsconfig-paths/register src/scripts/seed-report-templates.ts",
     "thumbnails:generate": "ts-node -r tsconfig-paths/register src/scripts/generate-thumbnails.ts",
-    "thumbnails:arxiv": "ts-node -r tsconfig-paths/register src/scripts/update-arxiv-thumbnails.ts"
+    "thumbnails:arxiv": "ts-node -r tsconfig-paths/register src/scripts/update-arxiv-thumbnails.ts",
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.10.0",

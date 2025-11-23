@@ -27,6 +27,7 @@ import { AiModule } from "./modules/ai/ai.module";
 import { BlogCollectionModule } from "./modules/blog-collection/blog-collection.module";
 import { DataManagementModule } from "./modules/data-management/data-management.module";
 import { AiOfficeModule } from "./modules/ai-office/ai-office.module";
+import { DataCollectionModule } from "./modules/data-collection/data-collection.module";
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { AiOfficeModule } from "./modules/ai-office/ai-office.module";
     BlogCollectionModule,
     DataManagementModule,
     AiOfficeModule,
+    DataCollectionModule,
   ],
   controllers: [AppController],
   providers: [
@@ -89,4 +91,4 @@ import { AiOfficeModule } from "./modules/ai-office/ai-office.module";
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -14,56 +14,56 @@ datasource db {
 // ============ 用户相关 ============
 
 model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  username        String?   @unique
-  passwordHash    String?   @map("password_hash")
+  id           String  @id @default(uuid())
+  email        String  @unique
+  username     String? @unique
+  passwordHash String? @map("password_hash")
 
   // OAuth
-  oauthProvider   String?   @map("oauth_provider")
-  oauthId         String?   @map("oauth_id")
+  oauthProvider String? @map("oauth_provider")
+  oauthId       String? @map("oauth_id")
 
   // 订阅
-  subscriptionTier String   @default("free") @map("subscription_tier")
+  subscriptionTier      String    @default("free") @map("subscription_tier")
   subscriptionExpiresAt DateTime? @map("subscription_expires_at")
 
   // 个人信息
-  fullName        String?   @map("full_name")
-  avatarUrl       String?   @map("avatar_url")
-  bio             String?   @db.Text
+  fullName  String? @map("full_name")
+  avatarUrl String? @map("avatar_url")
+  bio       String? @db.Text
 
   // 偏好设置
-  preferences     Json      @default("{}")
+  preferences Json @default("{}")
 
   // 状态
-  isActive        Boolean   @default(true) @map("is_active")
-  isVerified      Boolean   @default(false) @map("is_verified")
+  isActive   Boolean @default(true) @map("is_active")
+  isVerified Boolean @default(false) @map("is_verified")
 
   // 时间戳
-  createdAt       DateTime  @default(now()) @map("created_at")
-  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastLoginAt DateTime? @map("last_login_at")
 
   // 关系
-  interests       UserInterest[]
-  collections     Collection[]
-  activities      UserActivity[]
-  learningPaths   LearningPath[]
-  notes           Note[]
-  comments        Comment[]
-  reports         Report[]
-  youtubeVideos   YouTubeVideo[]
-  workspaces      Workspace[]
+  interests     UserInterest[]
+  collections   Collection[]
+  activities    UserActivity[]
+  learningPaths LearningPath[]
+  notes         Note[]
+  comments      Comment[]
+  reports       Report[]
+  youtubeVideos YouTubeVideo[]
+  workspaces    Workspace[]
 
   @@map("users")
 }
 
 model UserInterest {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  tag       String
-  category  String?
-  weight    Decimal  @default(1.0) @db.Decimal(5, 4)
-  source    String   @default("manual")
+  id       String  @id @default(uuid())
+  userId   String  @map("user_id")
+  tag      String
+  category String?
+  weight   Decimal @default(1.0) @db.Decimal(5, 4)
+  source   String  @default("manual")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -87,6 +87,7 @@ enum ResourceType {
   PROJECT
   EVENT
   RSS
+  POLICY
 }
 
 enum WorkspaceStatus {
@@ -102,89 +103,98 @@ enum TaskStatus {
 }
 
 model Resource {
-  id              String       @id @default(uuid())
-  type            ResourceType
+  id   String       @id @default(uuid())
+  type ResourceType
 
   // 基础信息
-  title           String       @db.VarChar(1000)
-  abstract        String?      @db.Text
-  content         String?      @db.Text
-  sourceUrl       String       @map("source_url") @db.Text
-  pdfUrl          String?      @map("pdf_url") @db.Text
-  thumbnailUrl    String?      @map("thumbnail_url") @db.Text
-  codeUrl         String?      @map("code_url") @db.Text
+  title        String  @db.VarChar(1000)
+  abstract     String? @db.Text
+  content      String? @db.Text
+  sourceUrl    String  @map("source_url") @db.Text
+  pdfUrl       String? @map("pdf_url") @db.Text
+  thumbnailUrl String? @map("thumbnail_url") @db.Text
+  codeUrl      String? @map("code_url") @db.Text
 
   // 作者/机构
-  authors         Json?
-  organizations   Json?
+  authors       Json?
+  organizations Json?
 
   // 时间
-  publishedAt     DateTime?    @map("published_at")
+  publishedAt DateTime? @map("published_at")
 
   // AI生成字段
-  aiSummary       String?      @map("ai_summary") @db.Text
-  keyInsights     Json?        @map("key_insights")
-  difficultyLevel Int?         @map("difficulty_level")
+  aiSummary       String? @map("ai_summary") @db.Text
+  keyInsights     Json?   @map("key_insights")
+  difficultyLevel Int?    @map("difficulty_level")
   prerequisites   Json?
 
   // 结构化AI摘要（新增，为前端最新版本组件提供支持）
-  structuredAISummary Json?    @map("structured_ai_summary")
+  structuredAISummary Json? @map("structured_ai_summary")
 
   // 分类
-  primaryCategory String?      @map("primary_category")
-  categories      Json?        @default("[]")
-  tags            Json?        @default("[]")
-  autoTags        Json?        @map("auto_tags") @default("[]")
+  primaryCategory String? @map("primary_category")
+  categories      Json?   @default("[]")
+  tags            Json?   @default("[]")
+  autoTags        Json?   @default("[]") @map("auto_tags")
 
   // 质量评分
-  qualityScore    Decimal?     @map("quality_score") @db.Decimal(5, 2)
-  trendingScore   Decimal?     @map("trending_score") @db.Decimal(10, 2)
+  qualityScore  Decimal? @map("quality_score") @db.Decimal(5, 2)
+  trendingScore Decimal? @map("trending_score") @db.Decimal(10, 2)
 
   // 统计
-  viewCount       Int          @default(0) @map("view_count")
-  saveCount       Int          @default(0) @map("save_count")
-  upvoteCount     Int          @default(0) @map("upvote_count")
-  commentCount    Int          @default(0) @map("comment_count")
+  viewCount    Int @default(0) @map("view_count")
+  saveCount    Int @default(0) @map("save_count")
+  upvoteCount  Int @default(0) @map("upvote_count")
+  commentCount Int @default(0) @map("comment_count")
 
   // 元数据
-  metadata        Json?        @default("{}")
+  metadata Json? @default("{}")
 
   // MongoDB 原始数据引用（关键！）
-  rawDataId       String?      @map("raw_data_id")
+  rawDataId String? @map("raw_data_id")
 
   // 向量引用
-  embeddingId     String?      @map("embedding_id")
+  embeddingId String? @map("embedding_id")
+
+  // 数据采集相关（新增）
+  sourceType       String?         @map("source_type") // arxiv, medium, youtube等
+  externalId       String?         @map("external_id") // 外部系统ID
+  collectionTaskId String?         @map("collection_task_id")
+  collectionTask   CollectionTask? @relation(fields: [collectionTaskId], references: [id])
 
   // 时间戳
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // 关系
-  collectionItems CollectionItem[]
-  activities      UserActivity[]
-  notes           Note[]
-  comments        Comment[]
+  collectionItems    CollectionItem[]
+  activities         UserActivity[]
+  notes              Note[]
+  comments           Comment[]
   workspaceResources WorkspaceResource[]
 
   @@index([type, publishedAt(sort: Desc)])
   @@index([qualityScore(sort: Desc)])
   @@index([trendingScore(sort: Desc)])
   @@index([createdAt(sort: Desc)])
+  @@index([sourceType, createdAt(sort: Desc)])
+  @@index([externalId])
+  @@index([collectionTaskId])
   @@map("resources")
 }
 
 // ============ 收藏相关 ============
 
 model Collection {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  name        String   @db.VarChar(200)
-  description String?  @db.Text
-  isPublic    Boolean  @default(false) @map("is_public")
-  sortOrder   Int      @default(0) @map("sort_order")
+  id          String  @id @default(uuid())
+  userId      String  @map("user_id")
+  name        String  @db.VarChar(200)
+  description String? @db.Text
+  isPublic    Boolean @default(false) @map("is_public")
+  sortOrder   Int     @default(0) @map("sort_order")
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   items CollectionItem[]
@@ -194,13 +204,13 @@ model Collection {
 }
 
 model CollectionItem {
-  id           String    @id @default(uuid())
-  collectionId String    @map("collection_id")
-  resourceId   String    @map("resource_id")
-  note         String?   @db.Text
-  position     Int       @default(0)
+  id           String  @id @default(uuid())
+  collectionId String  @map("collection_id")
+  resourceId   String  @map("resource_id")
+  note         String? @db.Text
+  position     Int     @default(0)
 
-  addedAt      DateTime  @default(now()) @map("added_at")
+  addedAt DateTime @default(now()) @map("added_at")
 
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   resource   Resource   @relation(fields: [resourceId], references: [id], onDelete: Cascade)
@@ -224,19 +234,19 @@ enum ActivityType {
 }
 
 model UserActivity {
-  id              String       @id @default(uuid())
-  userId          String       @map("user_id")
-  resourceId      String       @map("resource_id")
-  activityType    ActivityType @map("activity_type")
+  id           String       @id @default(uuid())
+  userId       String       @map("user_id")
+  resourceId   String       @map("resource_id")
+  activityType ActivityType @map("activity_type")
 
-  durationSeconds Int?         @map("duration_seconds")
-  scrollDepth     Decimal?     @map("scroll_depth") @db.Decimal(5, 2)
+  durationSeconds Int?     @map("duration_seconds")
+  scrollDepth     Decimal? @map("scroll_depth") @db.Decimal(5, 2)
   metadata        Json?
 
-  deviceType      String?      @map("device_type")
-  userAgent       String?      @map("user_agent") @db.Text
+  deviceType String? @map("device_type")
+  userAgent  String? @map("user_agent") @db.Text
 
-  createdAt       DateTime     @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
@@ -256,15 +266,15 @@ enum LearningPathStatus {
 }
 
 model LearningPath {
-  id        String              @id @default(uuid())
-  userId    String              @map("user_id")
-  title     String              @db.VarChar(200)
-  goal      String?             @db.Text
-  status    LearningPathStatus  @default(ACTIVE)
-  progress  Decimal             @default(0) @db.Decimal(5, 2)
+  id       String             @id @default(uuid())
+  userId   String             @map("user_id")
+  title    String             @db.VarChar(200)
+  goal     String?            @db.Text
+  status   LearningPathStatus @default(ACTIVE)
+  progress Decimal            @default(0) @db.Decimal(5, 2)
 
-  createdAt DateTime            @default(now()) @map("created_at")
-  updatedAt DateTime            @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   steps LearningPathStep[]
@@ -280,14 +290,14 @@ enum StepStatus {
 }
 
 model LearningPathStep {
-  id          String     @id @default(uuid())
-  pathId      String     @map("path_id")
-  stepOrder   Int        @map("step_order")
-  conceptId   String     @map("concept_id")
-  resources   Json?
-  status      StepStatus @default(PENDING)
+  id        String     @id @default(uuid())
+  pathId    String     @map("path_id")
+  stepOrder Int        @map("step_order")
+  conceptId String     @map("concept_id")
+  resources Json?
+  status    StepStatus @default(PENDING)
 
-  completedAt DateTime?  @map("completed_at")
+  completedAt DateTime? @map("completed_at")
 
   path LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
 
@@ -299,30 +309,30 @@ model LearningPathStep {
 // ============ 笔记系统 ============
 
 model Note {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  resourceId  String   @map("resource_id")
+  id         String @id @default(uuid())
+  userId     String @map("user_id")
+  resourceId String @map("resource_id")
 
   // 笔记内容
-  content     String   @db.Text
+  content String @db.Text
 
   // 高亮标注数据 (JSON)
-  highlights  Json?    @default("[]")
+  highlights Json? @default("[]")
 
   // AI解释和洞察
-  aiInsights  Json?    @map("ai_insights")
+  aiInsights Json? @map("ai_insights")
 
   // 关联的知识图谱节点
-  graphNodes  Json?    @map("graph_nodes") @default("[]")
+  graphNodes Json? @default("[]") @map("graph_nodes")
 
   // 标签
-  tags        Json?    @default("[]")
+  tags Json? @default("[]")
 
   // 是否公开
-  isPublic    Boolean  @default(false) @map("is_public")
+  isPublic Boolean @default(false) @map("is_public")
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
@@ -336,32 +346,32 @@ model Note {
 // ============ 评论系统 ============
 
 model Comment {
-  id          String    @id @default(uuid())
-  userId      String    @map("user_id")
-  resourceId  String    @map("resource_id")
+  id         String @id @default(uuid())
+  userId     String @map("user_id")
+  resourceId String @map("resource_id")
 
   // 评论内容
-  content     String    @db.Text
+  content String @db.Text
 
   // 嵌套回复支持
-  parentId    String?   @map("parent_id")
+  parentId String? @map("parent_id")
 
   // 统计
-  upvoteCount Int       @default(0) @map("upvote_count")
-  replyCount  Int       @default(0) @map("reply_count")
+  upvoteCount Int @default(0) @map("upvote_count")
+  replyCount  Int @default(0) @map("reply_count")
 
   // 状态
-  isEdited    Boolean   @default(false) @map("is_edited")
-  isDeleted   Boolean   @default(false) @map("is_deleted")
+  isEdited  Boolean @default(false) @map("is_edited")
+  isDeleted Boolean @default(false) @map("is_deleted")
 
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // 关系
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resource    Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies     Comment[] @relation("CommentReplies")
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
 
   @@index([userId])
   @@index([resourceId])
@@ -373,35 +383,35 @@ model Comment {
 // ============ 报告系统 ============
 
 model Report {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
+  id     String @id @default(uuid())
+  userId String @map("user_id")
 
   // 报告基本信息
-  title         String   @db.VarChar(500)
-  template      String   @db.VarChar(50) // comparison, trend, learning-path, literature-review
-  templateName  String   @map("template_name") @db.VarChar(100) // 对比分析, 趋势报告, etc.
-  templateIcon  String   @map("template_icon") @db.VarChar(10) // 📊, 📈, etc.
+  title        String @db.VarChar(500)
+  template     String @db.VarChar(50) // comparison, trend, learning-path, literature-review
+  templateName String @map("template_name") @db.VarChar(100) // 对比分析, 趋势报告, etc.
+  templateIcon String @map("template_icon") @db.VarChar(10) // 📊, 📈, etc.
 
   // 报告内容
-  summary       String   @db.Text // 核心摘要
-  sections      Json     // [{ title: string, content: string }]
+  summary  String @db.Text // 核心摘要
+  sections Json // [{ title: string, content: string }]
 
   // 关联的资源
-  resourceIds   Json     @map("resource_ids") // [resourceId1, resourceId2, ...]
-  resourceCount Int      @map("resource_count")
+  resourceIds   Json @map("resource_ids") // [resourceId1, resourceId2, ...]
+  resourceCount Int  @map("resource_count")
 
   // AI生成元数据
-  metadata      Json?    // { model, tokensUsed, generationTime, ... }
-  workspaceId   String?  @map("workspace_id")
-  taskId        String?  @map("task_id")
+  metadata    Json? // { model, tokensUsed, generationTime, ... }
+  workspaceId String? @map("workspace_id")
+  taskId      String? @map("task_id")
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // 关系
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace     Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
-  task          WorkspaceTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  task      WorkspaceTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([template])
@@ -422,7 +432,7 @@ model ReportTemplate {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  tasks        WorkspaceTask[]
+  tasks WorkspaceTask[]
 
   @@map("report_templates")
 }
@@ -434,10 +444,10 @@ model Workspace {
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")
 
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resources  WorkspaceResource[]
-  tasks      WorkspaceTask[]
-  reports    Report[]
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resources WorkspaceResource[]
+  tasks     WorkspaceTask[]
+  reports   Report[]
 
   @@index([userId])
   @@map("workspaces")
@@ -460,23 +470,23 @@ model WorkspaceResource {
 }
 
 model WorkspaceTask {
-  id            String     @id @default(uuid())
-  workspaceId   String     @map("workspace_id")
-  templateId    String     @map("template_id")
-  externalTaskId String?   @unique @map("external_task_id")
-  model         String
-  status        TaskStatus @default(PENDING)
-  queuePosition Int?       @map("queue_position")
-  estimatedTime Int?       @map("estimated_time")
-  startedAt     DateTime?  @map("started_at")
-  finishedAt    DateTime?  @map("finished_at")
-  parameters    Json?
-  result        Json?
-  error         Json?
-  cost          Json?
-  metadata      Json?
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
+  id             String     @id @default(uuid())
+  workspaceId    String     @map("workspace_id")
+  templateId     String     @map("template_id")
+  externalTaskId String?    @unique @map("external_task_id")
+  model          String
+  status         TaskStatus @default(PENDING)
+  queuePosition  Int?       @map("queue_position")
+  estimatedTime  Int?       @map("estimated_time")
+  startedAt      DateTime?  @map("started_at")
+  finishedAt     DateTime?  @map("finished_at")
+  parameters     Json?
+  result         Json?
+  error          Json?
+  cost           Json?
+  metadata       Json?
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
 
   workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   template  ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
@@ -492,27 +502,27 @@ model WorkspaceTask {
 // ============ YouTube视频系统 ============
 
 model YouTubeVideo {
-  id              String    @id @default(uuid())
-  userId          String    @map("user_id")
+  id     String @id @default(uuid())
+  userId String @map("user_id")
 
   // 视频基本信息
-  videoId         String    @map("video_id") @db.VarChar(100) // YouTube视频ID
-  title           String    @db.VarChar(1000)
-  url             String    @db.Text
+  videoId String @map("video_id") @db.VarChar(100) // YouTube视频ID
+  title   String @db.VarChar(1000)
+  url     String @db.Text
 
   // 字幕信息
-  transcript      Json?     // [{ start: number, duration: number, text: string }]
-  translatedText  String?   @map("translated_text") @db.Text
+  transcript     Json? // [{ start: number, duration: number, text: string }]
+  translatedText String? @map("translated_text") @db.Text
 
   // AI生成的报告
-  aiReport        Json?     @map("ai_report") // { title, summary, sections }
+  aiReport Json? @map("ai_report") // { title, summary, sections }
 
   // 时间戳
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // 关系
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, videoId])
   @@index([userId])
@@ -523,19 +533,19 @@ model YouTubeVideo {
 // ============ 报告相关 (Reports TAB) ============
 
 model ReportPublisher {
-  id              String      @id @default(uuid())
-  name            String      @unique
-  displayName     String
-  description     String?     @db.Text
-  logoUrl         String?     @map("logo_url")
-  website         String?
-  category        String      // "enterprise", "analyst", "research", "security"
-  rssFeeds        Json?       @default("[]") @map("rss_feeds")  // RSS 源 URL 列表
-  isActive        Boolean     @default(true)
+  id          String  @id @default(uuid())
+  name        String  @unique
+  displayName String
+  description String? @db.Text
+  logoUrl     String? @map("logo_url")
+  website     String?
+  category    String // "enterprise", "analyst", "research", "security"
+  rssFeeds    Json?   @default("[]") @map("rss_feeds") // RSS 源 URL 列表
+  isActive    Boolean @default(true)
 
   collectedReports CollectedReport[]
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
 
   @@index([category])
   @@index([name])
@@ -543,55 +553,55 @@ model ReportPublisher {
 }
 
 model CollectedReport {
-  id              String      @id @default(uuid())
+  id String @id @default(uuid())
 
   // 基础信息
-  title           String      @db.VarChar(1000)
-  abstract        String?     @db.Text
-  sourceUrl       String      @map("source_url") @db.Text
-  publisherName   String      @map("publisher_name")  // "NVIDIA", "SemiAnalysis" 等
-  publishedAt     DateTime    @map("published_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  title         String   @db.VarChar(1000)
+  abstract      String?  @db.Text
+  sourceUrl     String   @map("source_url") @db.Text
+  publisherName String   @map("publisher_name") // "NVIDIA", "SemiAnalysis" 等
+  publishedAt   DateTime @map("published_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // 报告属性
-  reportType      String      @map("report_type")  // "research", "market-analysis", "threat-report", "technical-whitepaper", "industry-insight"
-  category        String      // "AI", "Security", "Semiconductors", "Cloud", "Software"
-  subCategory     String?     @map("sub_category")
+  reportType  String  @map("report_type") // "research", "market-analysis", "threat-report", "technical-whitepaper", "industry-insight"
+  category    String // "AI", "Security", "Semiconductors", "Cloud", "Software"
+  subCategory String? @map("sub_category")
 
   // 内容
-  pdfUrl          String?     @map("pdf_url") @db.Text
-  htmlUrl         String?     @map("html_url") @db.Text
-  documentContent String?     @map("document_content") @db.Text  // 原文内容（可选）
+  pdfUrl          String? @map("pdf_url") @db.Text
+  htmlUrl         String? @map("html_url") @db.Text
+  documentContent String? @map("document_content") @db.Text // 原文内容（可选）
 
   // AI 富化数据
-  aiSummary       String?     @map("ai_summary") @db.Text
-  structuredAISummary Json?   @map("structured_ai_summary")  // ReportAISummary 结构化数据
+  aiSummary           String? @map("ai_summary") @db.Text
+  structuredAISummary Json?   @map("structured_ai_summary") // ReportAISummary 结构化数据
 
   // 元数据
-  authors         Json?       @default("[]")  // [{ name, title, company }]
-  keyMetrics      Json?       @default("{}") @map("key_metrics")  // { "revenue": "50B", "marketShare": "35%" }
-  keyFindings     Json?       @default("[]") @map("key_findings")  // 核心发现列表
+  authors     Json? @default("[]") // [{ name, title, company }]
+  keyMetrics  Json? @default("{}") @map("key_metrics") // { "revenue": "50B", "marketShare": "35%" }
+  keyFindings Json? @default("[]") @map("key_findings") // 核心发现列表
 
   // 来源追踪
-  sourceType      String      @map("source_type")  // "official-blog", "rss-feed", "pdf-upload", "web-scrape"
-  rssSourceId     String?     @map("rss_source_id")  // 关联的 RSS 源
+  sourceType  String  @map("source_type") // "official-blog", "rss-feed", "pdf-upload", "web-scrape"
+  rssSourceId String? @map("rss_source_id") // 关联的 RSS 源
 
   // 统计数据
-  viewCount       Int         @default(0) @map("view_count")
-  saveCount       Int         @default(0) @map("save_count")
-  upvoteCount     Int         @default(0) @map("upvote_count")
-  commentCount    Int         @default(0) @map("comment_count")
-  relevanceScore  Float       @default(0.0) @map("relevance_score")  // AI 相关性评分
+  viewCount      Int   @default(0) @map("view_count")
+  saveCount      Int   @default(0) @map("save_count")
+  upvoteCount    Int   @default(0) @map("upvote_count")
+  commentCount   Int   @default(0) @map("comment_count")
+  relevanceScore Float @default(0.0) @map("relevance_score") // AI 相关性评分
 
   // 元数据
-  tags            Json?       @default("[]")
-  metadata        Json?       @default("{}")
+  tags     Json? @default("[]")
+  metadata Json? @default("{}")
 
-  createdAt       DateTime    @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // 关系
-  publisherId     String?
-  publisher       ReportPublisher? @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  publisherId String?
+  publisher   ReportPublisher? @relation(fields: [publisherId], references: [id], onDelete: SetNull)
 
   @@index([publisherName])
   @@index([reportType])
@@ -613,20 +623,20 @@ enum ImportTaskStatus {
 }
 
 model SourceWhitelist {
-  id        String   @id @default(cuid())
-  resourceType String  // Store as string to avoid PostgreSQL enum type casting issues
+  id           String @id @default(cuid())
+  resourceType String // Store as string to avoid PostgreSQL enum type casting issues
 
   // 允许的域名或正则模式（存储为JSON数组）
   allowedDomains Json // Array<string> 支持完整域名或通配符 (e.g., ["arxiv.org", "*.ieee.org"])
   description    String?
 
-  isActive Boolean @default(true)
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // 字段用于跟踪验证统计
-  totalValidated Int @default(0)
-  totalRejected  Int @default(0)
+  totalValidated  Int       @default(0)
+  totalRejected   Int       @default(0)
   lastValidatedAt DateTime?
 
   @@unique([resourceType])
@@ -635,12 +645,12 @@ model SourceWhitelist {
 }
 
 model CollectionRule {
-  id        String   @id @default(cuid())
-  resourceType String  // Store as string to avoid PostgreSQL enum type casting issues
+  id           String @id @default(cuid())
+  resourceType String // Store as string to avoid PostgreSQL enum type casting issues
 
   // 调度配置
   cronExpression String @default("0 */6 * * *") // 默认每6小时
-  maxConcurrent  Int    @default(3)  // 最大并发任务数
+  maxConcurrent  Int    @default(3) // 最大并发任务数
   timeout        Int    @default(300) // 超时时间（秒）
 
   // 采集过滤条件（存储为JSON）
@@ -654,10 +664,10 @@ model CollectionRule {
 
   // 启用状态和优先级
   isActive Boolean @default(true)
-  priority Int    @default(0) // 更高的值表示更高的优先级
+  priority Int     @default(0) // 更高的值表示更高的优先级
 
-  description String?
-  lastExecutedAt DateTime?
+  description     String?
+  lastExecutedAt  DateTime?
   nextScheduledAt DateTime?
 
   createdAt DateTime @default(now())
@@ -673,9 +683,9 @@ model CollectionRule {
 }
 
 model ImportTask {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  resourceType String  // Store as string to avoid PostgreSQL enum type casting issues
+  resourceType String // Store as string to avoid PostgreSQL enum type casting issues
   ruleId       String?
   rule         CollectionRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
 
@@ -684,42 +694,42 @@ model ImportTask {
   sourceDomain String? // 提取的域名，用于快速查询
 
   // 新增：关联到实际创建的资源
-  resourceId   String?         // 关联到实际资源 (Paper.id, Blog.id等)
-  resourceModel String?        // 资源类型表名 (papers, blogs等)
+  resourceId    String? // 关联到实际资源 (Paper.id, Blog.id等)
+  resourceModel String? // 资源类型表名 (papers, blogs等)
 
   // 新增：关联到ParsedMetadata
   parsedMetadataId String?
-  parsedMetadata ParsedMetadata? @relation(fields: [parsedMetadataId], references: [id], onDelete: SetNull)
+  parsedMetadata   ParsedMetadata? @relation(fields: [parsedMetadataId], references: [id], onDelete: SetNull)
 
   // 任务状态
   status       ImportTaskStatus @default(PENDING)
   statusReason String?
 
   // 处理统计
-  itemsFound   Int @default(0)
+  itemsFound     Int @default(0)
   itemsProcessed Int @default(0)
-  itemsSaved   Int @default(0)
-  itemsRejected Int @default(0) // 被过滤或去重的项目
+  itemsSaved     Int @default(0)
+  itemsRejected  Int @default(0) // 被过滤或去重的项目
 
   // 错误跟踪
   errorMessage String?
   errorDetails Json? // 详细的错误信息
 
   // 去重信息
-  duplicatesFound Int @default(0)
+  duplicatesFound      Int   @default(0)
   deduplicationDetails Json? // 去重的详细信息
 
   // 时间戳
-  startedAt    DateTime?
-  completedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // 性能指标
   executionTimeMs Int? // 执行时间（毫秒）
 
   // 元数据 - 存储用户编辑后的完整元数据
-  metadata     Json?
+  metadata Json?
 
   @@index([resourceType])
   @@index([status])
@@ -733,41 +743,41 @@ model ImportTask {
 // ============ 元数据提取与缓存 ============
 
 model ParsedMetadata {
-  id              String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // URL信息
-  sourceUrl       String    @unique  // 唯一的源URL
-  domain          String              // 提取的域名，用于快速查询
+  sourceUrl String @unique // 唯一的源URL
+  domain    String // 提取的域名，用于快速查询
 
   // 页面元数据
-  title           String              // HTML <title> 或 Open Graph title
-  description     String?  @db.Text   // 页面描述
-  imageUrl        String?             // Open Graph image URL
-  authors         Json?               // 作者列表 (string[])
-  publishedDate   DateTime?           // 发布日期
+  title         String // HTML <title> 或 Open Graph title
+  description   String?   @db.Text // 页面描述
+  imageUrl      String? // Open Graph image URL
+  authors       Json? // 作者列表 (string[])
+  publishedDate DateTime? // 发布日期
 
   // 页面信息
-  language        String  @default("en")  // 页面语言代码 (en, zh, ja等)
-  contentType     String  @default("html") // html, pdf, video等
-  siteName        String?             // 网站名称
-  canonicalUrl    String?             // 规范URL
-  favicon         String?             // 网站favicon URL
-  wordCount       Int?                // 文章字数（仅适用于文本内容）
+  language     String  @default("en") // 页面语言代码 (en, zh, ja等)
+  contentType  String  @default("html") // html, pdf, video等
+  siteName     String? // 网站名称
+  canonicalUrl String? // 规范URL
+  favicon      String? // 网站favicon URL
+  wordCount    Int? // 文章字数（仅适用于文本内容）
 
   // 内容识别
-  contentHash     String?             // SHA256 hash for duplicate detection
+  contentHash String? // SHA256 hash for duplicate detection
 
   // 解析元数据
-  parseError      String?             // 解析错误消息
-  parseSuccess    Boolean @default(true)
+  parseError   String? // 解析错误消息
+  parseSuccess Boolean @default(true)
 
   // 缓存管理
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  expiresAt       DateTime? @default(dbgenerated("(now() + interval '7 days')"))  // 7天过期
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expiresAt DateTime? @default(dbgenerated("(now() + interval '7 days')")) // 7天过期
 
   // 关系
-  importTasks     ImportTask[]
+  importTasks ImportTask[]
 
   @@index([domain])
   @@index([sourceUrl])
@@ -776,7 +786,7 @@ model ParsedMetadata {
 }
 
 model DataQualityMetric {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // 关联的资源
   resourceType String // Store as string to avoid PostgreSQL enum type casting issues
@@ -784,14 +794,14 @@ model DataQualityMetric {
   sourceUrl    String? // 原始来源URL
 
   // 质量评分（0-100）
-  qualityScore     Float @default(0)
+  qualityScore      Float @default(0)
   completenessScore Float @default(0) // 完整性评分
-  relevanceScore    Float @default(0)  // 相关性评分
+  relevanceScore    Float @default(0) // 相关性评分
 
   // 去重信息
-  duplicateScore   Float @default(0) // 相似度 (0 = 完全不同, 100 = 重复)
+  duplicateScore       Float   @default(0) // 相似度 (0 = 完全不同, 100 = 重复)
   potentialDuplicateOf String? // 指向可能的重复项
-  isDuplicate      Boolean @default(false)
+  isDuplicate          Boolean @default(false)
 
   // 问题标记
   issues Json? // Array of { type: string, severity: 'LOW'|'MEDIUM'|'HIGH', message: string }
@@ -801,7 +811,7 @@ model DataQualityMetric {
   category String?
 
   // 审核状态
-  reviewStatus String @default("PENDING") // PENDING, APPROVED, REJECTED, NEEDS_REVIEW
+  reviewStatus String    @default("PENDING") // PENDING, APPROVED, REJECTED, NEEDS_REVIEW
   reviewedBy   String?
   reviewNote   String?
   reviewedAt   DateTime?
@@ -818,7 +828,7 @@ model DataQualityMetric {
 }
 
 model CollectionStatistics {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   resourceType String // Store as string to avoid PostgreSQL enum type casting issues
 
@@ -831,13 +841,13 @@ model CollectionStatistics {
   totalRejected   Int @default(0)
 
   // 质量统计
-  averageQualityScore Float @default(0)
-  itemsAboveQualityThreshold Int @default(0)
-  itemsBelowQualityThreshold Int @default(0)
+  averageQualityScore        Float @default(0)
+  itemsAboveQualityThreshold Int   @default(0)
+  itemsBelowQualityThreshold Int   @default(0)
 
   // 时间统计
-  lastCollectionAt DateTime?
-  nextScheduledAt  DateTime?
+  lastCollectionAt            DateTime?
+  nextScheduledAt             DateTime?
   averageCollectionDurationMs Int? // 平均采集耗时
 
   // 成功率
@@ -859,35 +869,264 @@ model CollectionStatistics {
 // ============================================================================
 
 model CollectionConfiguration {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  resourceType String   @db.VarChar(255) // Store as string to avoid PostgreSQL enum type casting issues
-  name         String   @db.VarChar(255)
-  description  String?  @db.Text
+  resourceType String  @db.VarChar(255) // Store as string to avoid PostgreSQL enum type casting issues
+  name         String  @db.VarChar(255)
+  description  String? @db.Text
 
   // 关键词和过滤
-  keywords          Json?   // Array<string> - 包含关键词
-  excludeKeywords   Json?   // Array<string> - 排除关键词
-  urlPatterns       Json?   // Array<string> - URL匹配模式，支持*通配符
+  keywords        Json? // Array<string> - 包含关键词
+  excludeKeywords Json? // Array<string> - 排除关键词
+  urlPatterns     Json? // Array<string> - URL匹配模式，支持*通配符
 
   // 采集调度
-  cronExpression    String   @default("0 */6 * * *") // Cron表达式
-  maxConcurrent     Int      @default(3)  // 最大并发
-  timeout           Int      @default(300) // 超时时间（秒）
+  cronExpression String @default("0 */6 * * *") // Cron表达式
+  maxConcurrent  Int    @default(3) // 最大并发
+  timeout        Int    @default(300) // 超时时间（秒）
 
   // 状态
-  isActive          Boolean  @default(true)
+  isActive Boolean @default(true)
 
   // 统计
-  totalCollected    Int      @default(0)
-  lastCollectedAt   DateTime?
+  totalCollected  Int       @default(0)
+  lastCollectedAt DateTime?
 
   // 时间戳
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([resourceType, name])
   @@index([resourceType])
   @@index([isActive])
   @@map("collection_configurations")
+}
+
+// ============================================================================
+// Enhanced Data Collection System - 增强的数据采集系统
+// ============================================================================
+
+// 数据源配置表
+enum DataSourceType {
+  ARXIV
+  PUBMED
+  IEEE
+  ACL_ANTHOLOGY
+  MEDIUM
+  DEVTO
+  SUBSTACK
+  HASHNODE
+  YOUTUBE
+  BILIBILI
+  HACKERNEWS
+  TECHCRUNCH
+  THE_VERGE
+  GITHUB
+  PRODUCTHUNT
+  POLICY_US
+  POLICY_EU
+  POLICY_CN
+  GARTNER
+  MCKINSEY
+  IDC
+  CUSTOM
+  RSS
+}
+
+enum DataSourceStatus {
+  ACTIVE
+  PAUSED
+  FAILED
+  MAINTENANCE
+  DEPRECATED
+}
+
+model DataSource {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  description String?
+  type        DataSourceType
+  category    ResourceType // 对应的资源类型
+
+  // 连接配置
+  baseUrl     String
+  apiEndpoint String?
+  authType    String? // NONE|API_KEY|OAUTH|COOKIE
+  credentials String? @db.Text // 加密存储
+
+  // 采集配置
+  crawlerType   String // API|SCRAPER|RSS
+  crawlerConfig Json // {selectors, patterns}
+  rateLimit     Int? // 每秒请求数
+
+  // 内容过滤
+  keywords        Json? // ["AI", "Machine Learning"]
+  categories      Json? // ["cs.AI", "cs.LG"]
+  languages       Json? // ["en", "zh"]
+  minQualityScore Float @default(0)
+
+  // 去重配置
+  deduplicationConfig Json? // {methods, thresholds}
+
+  // 状态管理
+  status           DataSourceStatus @default(ACTIVE)
+  isVerified       Boolean          @default(false)
+  lastTestedAt     DateTime?
+  lastSuccessAt    DateTime?
+  lastErrorMessage String?
+
+  // 统计信息
+  totalCollected  Int   @default(0)
+  totalSuccess    Int   @default(0)
+  totalFailed     Int   @default(0)
+  totalDuplicates Int   @default(0)
+  successRate     Float @default(0)
+  averageQuality  Float @default(0)
+
+  // 审计字段
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+
+  // 关系
+  tasks CollectionTask[]
+
+  @@index([type, status])
+  @@index([category, status])
+  @@map("data_sources")
+}
+
+// 采集任务表（增强版）
+enum CollectionTaskType {
+  SCHEDULED
+  MANUAL
+  IMPORT
+  RETRY
+}
+
+enum CollectionTaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PAUSED
+}
+
+model CollectionTask {
+  id          String             @id @default(uuid())
+  name        String
+  description String?
+  type        CollectionTaskType
+
+  // 数据源配置
+  sourceId     String
+  source       DataSource @relation(fields: [sourceId], references: [id])
+  sourceConfig Json // {maxResults, category, dateRange}
+
+  // 执行配置
+  schedule       String? // Cron表达式
+  priority       Int     @default(5) // 1-10
+  maxConcurrency Int     @default(5)
+  timeout        Int     @default(300) // 秒
+  retryCount     Int     @default(3)
+
+  // 去重配置
+  deduplicationRules Json // {methods, thresholds}
+
+  // 执行状态
+  status      CollectionTaskStatus @default(PENDING)
+  progress    Float                @default(0) // 0-100
+  currentStep String?
+
+  // 统计信息
+  totalItems     Int @default(0)
+  processedItems Int @default(0)
+  successItems   Int @default(0)
+  failedItems    Int @default(0)
+  duplicateItems Int @default(0)
+  skippedItems   Int @default(0)
+
+  // 时间信息
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  nextRunAt   DateTime?
+
+  // 错误信息
+  errorMessage String? @db.Text
+  errorStack   String? @db.Text
+  warnings     Json? // ["warning1", "warning2"]
+
+  // 结果数据
+  resultSummary Json? // {avg_quality, sources, etc}
+  logs          Json? // 日志摘要
+
+  // 审计字段
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+
+  // 关系
+  resources            Resource[]
+  deduplicationRecords DeduplicationRecord[]
+
+  @@index([status, scheduledAt])
+  @@index([sourceId, status])
+  @@index([type, createdAt])
+  @@map("collection_tasks")
+}
+
+// 去重记录表
+enum DuplicateDecision {
+  AUTO_SKIP // 自动跳过（高相似度）
+  MANUAL_SKIP // 人工确认跳过
+  MERGED // 合并资源
+  FALSE_POSITIVE // 误判，实际不重复
+  PENDING_REVIEW // 待人工审核
+}
+
+model DeduplicationRecord {
+  id String @id @default(uuid())
+
+  // 关联信息
+  taskId        String?
+  task          CollectionTask? @relation(fields: [taskId], references: [id])
+  resourceId    String? // 如果保留，指向保留的资源
+  duplicateOfId String? // 指向原始资源
+
+  // 检测方式
+  method     String // URL_HASH|TITLE_SIMILARITY|CONTENT_FINGERPRINT|AUTHOR_TIME
+  similarity Float // 相似度 0-1
+  confidence Float  @default(1.0) // 置信度
+
+  // 去重依据
+  urlHash            String?
+  titleHash          String?
+  contentFingerprint String?
+  authorTimeKey      String?
+
+  // 原始数据
+  originalData Json // 被去重的原始数据（标题、URL等）
+  comparedWith Json? // 比较的资源信息
+
+  // 决策信息
+  decision  DuplicateDecision
+  isCorrect Boolean? // 人工验证结果
+
+  // 处理信息
+  processedBy String? // USER_ID or SYSTEM
+  processedAt DateTime @default(now())
+  notes       String?
+
+  // 审计
+  createdAt DateTime @default(now())
+
+  @@index([urlHash])
+  @@index([titleHash])
+  @@index([contentFingerprint])
+  @@index([resourceId])
+  @@index([decision])
+  @@index([taskId])
+  @@map("deduplication_records")
 }

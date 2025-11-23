@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Activity,
@@ -32,7 +32,7 @@ interface TaskStats {
   duplicates: number;
 }
 
-export default function BatchMonitorPage() {
+function BatchMonitorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -657,5 +657,24 @@ export default function BatchMonitorPage() {
       {/* Spacing for fixed bottom bar */}
       <div className="h-20" />
     </div>
+  );
+}
+
+export default function BatchMonitorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <Activity className="mx-auto h-12 w-12 animate-spin text-blue-600" />
+            <p className="mt-4 text-lg text-gray-600">
+              Loading batch collection monitor...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <BatchMonitorContent />
+    </Suspense>
   );
 }

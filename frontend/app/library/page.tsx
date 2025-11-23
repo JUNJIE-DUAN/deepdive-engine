@@ -15,7 +15,16 @@ interface Collection {
   description?: string;
   isPublic: boolean;
   createdAt: string;
-  items: any[];
+  items: CollectionItem[];
+}
+
+interface CollectionItem {
+  id: string;
+  collectionId: string;
+  resourceId: string;
+  note?: string;
+  createdAt: string;
+  resource: Resource;
 }
 
 interface YouTubeVideo {
@@ -46,18 +55,17 @@ export default function LibraryPage() {
   >('all');
   const [collections, setCollections] = useState<Collection[]>([]);
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
-  const [bookmarks, setBookmarks] = useState<Resource[]>([]);
+  const [bookmarkItems, setBookmarkItems] = useState<CollectionItem[]>([]);
+  const [currentCollectionId, setCurrentCollectionId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'type'>('date');
 
   // Modal states
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(
-    null
-  );
+  const [editNoteModalOpen, setEditNoteModalOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<CollectionItem | null>(null);
 
   // Load data based on active tab
   useEffect(() => {
@@ -127,11 +135,9 @@ export default function LibraryPage() {
           (c: Collection) => c.name === '我的收藏'
         );
         if (defaultCollection && defaultCollection.items) {
-          // Extract resources from collection items
-          const resources = defaultCollection.items.map(
-            (item: any) => item.resource
-          );
-          setBookmarks(resources);
+          // 保存完整的 CollectionItem 数组，而不只是 Resource
+          setBookmarkItems(defaultCollection.items);
+          setCurrentCollectionId(defaultCollection.id);
         }
       }
     } catch (err) {
@@ -139,32 +145,32 @@ export default function LibraryPage() {
     }
   };
 
-  // Handle view resource
-  const handleView = (resource: Resource) => {
-    setSelectedResource(resource);
+  // Handle view resource - 查看资源详情（只读）
+  const handleView = (item: CollectionItem) => {
+    setSelectedItem(item);
     setViewModalOpen(true);
   };
 
-  // Handle edit resource
-  const handleEdit = (resource: Resource) => {
-    setSelectedResource(resource);
-    setEditModalOpen(true);
+  // Handle edit note - 编辑个人笔记
+  const handleEditNote = (item: CollectionItem) => {
+    setSelectedItem(item);
+    setEditNoteModalOpen(true);
   };
 
-  // Handle delete resource
-  const handleDelete = (resource: Resource) => {
-    setSelectedResource(resource);
-    setDeleteDialogOpen(true);
+  // Handle remove from collection - 从收藏中移除
+  const handleRemove = (item: CollectionItem) => {
+    setSelectedItem(item);
+    setRemoveDialogOpen(true);
   };
 
-  // Confirm delete
-  const confirmDelete = async () => {
-    if (!selectedResource) return;
+  // Confirm remove from collection - 确认从收藏移除（不删除资源本身）
+  const confirmRemove = async () => {
+    if (!selectedItem || !currentCollectionId) return;
 
     try {
       const authHeaders = getAuthHeader();
       const response = await fetch(
-        `${config.apiBaseUrl}/api/v1/resources/${selectedResource.id}`,
+        `${config.apiBaseUrl}/api/v1/collections/${currentCollectionId}/items/${selectedItem.resourceId}`,
         {
           method: 'DELETE',
           headers: authHeaders,
@@ -172,16 +178,54 @@ export default function LibraryPage() {
       );
 
       if (response.ok) {
-        // Remove from bookmarks
-        setBookmarks(bookmarks.filter((b) => b.id !== selectedResource.id));
-        setDeleteDialogOpen(false);
-        setSelectedResource(null);
+        // 从收藏列表中移除该项
+        setBookmarkItems(
+          bookmarkItems.filter((item) => item.id !== selectedItem.id)
+        );
+        setRemoveDialogOpen(false);
+        setSelectedItem(null);
       } else {
-        alert('Failed to delete resource');
+        alert('Failed to remove from collection');
       }
     } catch (err) {
-      console.error('Failed to delete:', err);
-      alert('Failed to delete resource');
+      console.error('Failed to remove:', err);
+      alert('Failed to remove from collection');
+    }
+  };
+
+  // Update note - 更新个人笔记
+  const updateNote = async (newNote: string) => {
+    if (!selectedItem || !currentCollectionId) return;
+
+    try {
+      const authHeaders = getAuthHeader();
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/collections/${currentCollectionId}/items/${selectedItem.resourceId}/note`,
+        {
+          method: 'PATCH',
+          headers: {
+            ...authHeaders,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ note: newNote }),
+        }
+      );
+
+      if (response.ok) {
+        // 更新本地状态
+        setBookmarkItems(
+          bookmarkItems.map((item) =>
+            item.id === selectedItem.id ? { ...item, note: newNote } : item
+          )
+        );
+        setEditNoteModalOpen(false);
+        setSelectedItem(null);
+      } else {
+        alert('Failed to update note');
+      }
+    } catch (err) {
+      console.error('Failed to update note:', err);
+      alert('Failed to update note');
     }
   };
 
@@ -197,22 +241,22 @@ export default function LibraryPage() {
     return `${config.apiBaseUrl}${thumbnailUrl}`;
   };
 
-  // Filter and sort functions
-  const filteredBookmarks = bookmarks
+  // Filter and sort functions - 基于 CollectionItem
+  const filteredBookmarks = bookmarkItems
     .filter((item) =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      item.resource.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       switch (sortBy) {
         case 'title':
-          return a.title.localeCompare(b.title);
+          return a.resource.title.localeCompare(b.resource.title);
         case 'type':
-          return a.type.localeCompare(b.type);
+          return a.resource.type.localeCompare(b.resource.type);
         case 'date':
         default:
           return (
-            new Date(b.publishedAt).getTime() -
-            new Date(a.publishedAt).getTime()
+            new Date(b.resource.publishedAt).getTime() -
+            new Date(a.resource.publishedAt).getTime()
           );
       }
     });
@@ -223,7 +267,9 @@ export default function LibraryPage() {
   );
 
   // Get unique resource types for filtering
-  const resourceTypes = Array.from(new Set(bookmarks.map((item) => item.type)));
+  const resourceTypes = Array.from(
+    new Set(bookmarkItems.map((item) => item.resource.type))
+  );
 
   // Type badge config - 与 Explore 页面一致的设计系统，使用全局SVG图标
   const typeConfig: Record<
@@ -390,7 +436,8 @@ export default function LibraryPage() {
   };
 
   // Resource Card Component - Business style, clean white card
-  const ResourceCard = ({ resource }: { resource: Resource }) => {
+  const ResourceCard = ({ item }: { item: CollectionItem }) => {
+    const { resource, note } = item;
     const config = typeConfig[resource.type] || {
       bg: 'bg-gray-50',
       text: 'text-gray-700',
@@ -419,10 +466,10 @@ export default function LibraryPage() {
           <button
             onClick={(e) => {
               e.preventDefault();
-              handleView(resource);
+              handleView(item);
             }}
             className="rounded-lg bg-white p-2 shadow-md transition-all hover:bg-blue-50 hover:text-blue-600"
-            title="View details"
+            title="查看详情"
           >
             <svg
               className="h-4 w-4"
@@ -447,10 +494,10 @@ export default function LibraryPage() {
           <button
             onClick={(e) => {
               e.preventDefault();
-              handleEdit(resource);
+              handleEditNote(item);
             }}
-            className="rounded-lg bg-white p-2 shadow-md transition-all hover:bg-green-50 hover:text-green-600"
-            title="Edit"
+            className="rounded-lg bg-white p-2 shadow-md transition-all hover:bg-amber-50 hover:text-amber-600"
+            title="编辑笔记"
           >
             <svg
               className="h-4 w-4"
@@ -469,10 +516,10 @@ export default function LibraryPage() {
           <button
             onClick={(e) => {
               e.preventDefault();
-              handleDelete(resource);
+              handleRemove(item);
             }}
             className="rounded-lg bg-white p-2 shadow-md transition-all hover:bg-red-50 hover:text-red-600"
-            title="Delete"
+            title="从收藏移除"
           >
             <svg
               className="h-4 w-4"
@@ -484,7 +531,7 @@ export default function LibraryPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                d="M20 12H4"
               />
             </svg>
           </button>
@@ -535,6 +582,30 @@ export default function LibraryPage() {
             )}
           </div>
         </Link>
+
+        {/* Personal Note Preview - 个人笔记预览 */}
+        {note && (
+          <div className="border-t border-gray-100 bg-amber-50/50 px-4 py-2">
+            <div className="flex items-start gap-2">
+              <svg
+                className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+              <p className="line-clamp-2 text-xs italic text-amber-900">
+                {note}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -640,9 +711,9 @@ export default function LibraryPage() {
                 }`}
               >
                 Bookmarks
-                {bookmarks.length > 0 && (
+                {bookmarkItems.length > 0 && (
                   <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                    {bookmarks.length > 99 ? '99+' : bookmarks.length}
+                    {bookmarkItems.length > 99 ? '99+' : bookmarkItems.length}
                   </span>
                 )}
               </button>
@@ -712,8 +783,8 @@ export default function LibraryPage() {
                 <div>
                   {/* Resource grid - multi-column layout */}
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filteredBookmarks.map((resource) => (
-                      <ResourceCard key={resource.id} resource={resource} />
+                    {filteredBookmarks.map((item) => (
+                      <ResourceCard key={item.id} item={item} />
                     ))}
                   </div>
                 </div>
@@ -792,7 +863,7 @@ export default function LibraryPage() {
       </main>
 
       {/* View Details Modal */}
-      {viewModalOpen && selectedResource && (
+      {viewModalOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
@@ -826,7 +897,7 @@ export default function LibraryPage() {
                   Type
                 </label>
                 <span className="inline-block rounded-lg bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-                  {selectedResource.type.replace('_', ' ')}
+                  {selectedItem.resource.type.replace('_', ' ')}
                 </span>
               </div>
 
@@ -835,16 +906,18 @@ export default function LibraryPage() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Title
                 </label>
-                <p className="text-gray-900">{selectedResource.title}</p>
+                <p className="text-gray-900">{selectedItem.resource.title}</p>
               </div>
 
               {/* Abstract */}
-              {selectedResource.abstract && (
+              {selectedItem.resource.abstract && (
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
                     Abstract
                   </label>
-                  <p className="text-gray-700">{selectedResource.abstract}</p>
+                  <p className="text-gray-700">
+                    {selectedItem.resource.abstract}
+                  </p>
                 </div>
               )}
 
@@ -854,14 +927,13 @@ export default function LibraryPage() {
                   Published Date
                 </label>
                 <p className="text-gray-700">
-                  {new Date(selectedResource.publishedAt).toLocaleDateString(
-                    'en-US',
-                    {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    }
-                  )}
+                  {new Date(
+                    selectedItem.resource.publishedAt
+                  ).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
                 </p>
               </div>
 
@@ -871,42 +943,58 @@ export default function LibraryPage() {
                   Source URL
                 </label>
                 <a
-                  href={selectedResource.sourceUrl}
+                  href={selectedItem.resource.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"
                 >
-                  {selectedResource.sourceUrl}
+                  {selectedItem.resource.sourceUrl}
                 </a>
               </div>
 
               {/* Upvote Count */}
-              {selectedResource.upvoteCount !== undefined &&
-                selectedResource.upvoteCount > 0 && (
+              {selectedItem.resource.upvoteCount !== undefined &&
+                selectedItem.resource.upvoteCount > 0 && (
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
                       Upvotes
                     </label>
                     <p className="text-gray-700">
-                      {selectedResource.upvoteCount}
+                      {selectedItem.resource.upvoteCount}
                     </p>
                   </div>
                 )}
 
               {/* Thumbnail */}
-              {selectedResource.thumbnailUrl &&
-                resolveThumbnailUrl(selectedResource.thumbnailUrl) && (
+              {selectedItem.resource.thumbnailUrl &&
+                resolveThumbnailUrl(selectedItem.resource.thumbnailUrl) && (
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
                       Thumbnail
                     </label>
                     <img
-                      src={resolveThumbnailUrl(selectedResource.thumbnailUrl)!}
-                      alt={selectedResource.title}
+                      src={
+                        resolveThumbnailUrl(selectedItem.resource.thumbnailUrl)!
+                      }
+                      alt={selectedItem.resource.title}
                       className="max-w-full rounded-lg"
                     />
                   </div>
                 )}
+
+              {/* Personal Note - 显示个人笔记 */}
+              {selectedItem.note && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    My Note
+                  </label>
+                  <div className="rounded-lg bg-amber-50 p-3">
+                    <p className="text-sm text-amber-900">
+                      {selectedItem.note}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
@@ -917,7 +1005,7 @@ export default function LibraryPage() {
                 Close
               </button>
               <a
-                href={`/?id=${selectedResource.id}`}
+                href={`/?id=${selectedItem.resource.id}`}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
                 View Full Details
@@ -927,14 +1015,16 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
-      {editModalOpen && selectedResource && (
+      {/* Edit Note Modal - 编辑个人笔记 */}
+      {editNoteModalOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Edit Resource</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                Edit Bookmark Note
+              </h2>
               <button
-                onClick={() => setEditModalOpen(false)}
+                onClick={() => setEditNoteModalOpen(false)}
                 className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
                 <svg
@@ -953,122 +1043,62 @@ export default function LibraryPage() {
               </button>
             </div>
 
+            {/* Resource Info - Read-only */}
+            <div className="mb-4 rounded-lg bg-gray-50 p-3">
+              <p className="text-sm font-medium text-gray-700">
+                {selectedItem.resource.title}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {selectedItem.resource.type.replace('_', ' ')} •{' '}
+                {new Date(selectedItem.resource.publishedAt).toLocaleDateString(
+                  'en-US'
+                )}
+              </p>
+            </div>
+
             <form
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
-
-                try {
-                  const authHeaders = getAuthHeader();
-                  const response = await fetch(
-                    `${config.apiBaseUrl}/api/v1/resources/${selectedResource.id}`,
-                    {
-                      method: 'PATCH',
-                      headers: {
-                        ...authHeaders,
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        title: formData.get('title'),
-                        abstract: formData.get('abstract'),
-                      }),
-                    }
-                  );
-
-                  if (response.ok) {
-                    const updatedResource = await response.json();
-                    setBookmarks(
-                      bookmarks.map((b) =>
-                        b.id === updatedResource.id ? updatedResource : b
-                      )
-                    );
-                    setEditModalOpen(false);
-                    setSelectedResource(null);
-                  } else {
-                    alert('Failed to update resource');
-                  }
-                } catch (err) {
-                  console.error('Failed to update:', err);
-                  alert('Failed to update resource');
-                }
+                const newNote = formData.get('note') as string;
+                void updateNote(newNote);
               }}
               className="space-y-4"
             >
-              {/* Title */}
+              {/* Note Textarea */}
               <div>
                 <label
-                  htmlFor="title"
+                  htmlFor="note"
                   className="mb-1 block text-sm font-medium text-gray-700"
                 >
-                  Title
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  defaultValue={selectedResource.title}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              {/* Abstract */}
-              <div>
-                <label
-                  htmlFor="abstract"
-                  className="mb-1 block text-sm font-medium text-gray-700"
-                >
-                  Abstract
+                  Your Personal Note
                 </label>
                 <textarea
-                  id="abstract"
-                  name="abstract"
-                  rows={4}
-                  defaultValue={selectedResource.abstract || ''}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  id="note"
+                  name="note"
+                  rows={6}
+                  defaultValue={selectedItem.note || ''}
+                  placeholder="Add your thoughts, insights, or reminders about this resource..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  This note is private and only visible to you.
+                </p>
               </div>
 
-              {/* Read-only fields */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Type (Read-only)
-                </label>
-                <input
-                  type="text"
-                  value={selectedResource.type.replace('_', ' ')}
-                  className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2"
-                  disabled
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Published Date (Read-only)
-                </label>
-                <input
-                  type="text"
-                  value={new Date(
-                    selectedResource.publishedAt
-                  ).toLocaleDateString('en-US')}
-                  className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2"
-                  disabled
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setEditModalOpen(false)}
+                  onClick={() => setEditNoteModalOpen(false)}
                   className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700"
                 >
-                  Save Changes
+                  Save Note
                 </button>
               </div>
             </form>
@@ -1076,14 +1106,14 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      {deleteDialogOpen && selectedResource && (
+      {/* Remove from Collection Confirmation Dialog */}
+      {removeDialogOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
                 <svg
-                  className="h-6 w-6 text-red-600"
+                  className="h-6 w-6 text-orange-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1092,34 +1122,43 @@ export default function LibraryPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    d="M20 12H4"
                   />
                 </svg>
               </div>
               <h3 className="mt-4 text-center text-lg font-semibold text-gray-900">
-                Delete Resource
+                Remove from Collection
               </h3>
               <p className="mt-2 text-center text-sm text-gray-600">
-                Are you sure you want to delete this resource? This action
-                cannot be undone.
+                This will remove the bookmark from your collection. The resource
+                itself will not be deleted and will remain available in the
+                system.
               </p>
-              <p className="mt-3 text-center text-sm font-medium text-gray-900">
-                "{selectedResource.title}"
+              <p className="mt-3 rounded-lg bg-gray-50 p-3 text-center text-sm font-medium text-gray-900">
+                "{selectedItem.resource.title}"
               </p>
+              {selectedItem.note && (
+                <div className="mt-2 rounded-lg bg-amber-50 p-2">
+                  <p className="text-xs text-amber-900">
+                    <span className="font-medium">Note:</span> Your personal
+                    note will also be removed.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => setDeleteDialogOpen(false)}
+                onClick={() => setRemoveDialogOpen(false)}
                 className="flex-1 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmDelete}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+                onClick={confirmRemove}
+                className="flex-1 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
               >
-                Delete
+                Remove
               </button>
             </div>
           </div>

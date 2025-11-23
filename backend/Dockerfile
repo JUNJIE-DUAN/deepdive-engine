@@ -22,6 +22,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY package.json ./
+COPY docker-entrypoint.sh ./
+
+RUN chmod +x docker-entrypoint.sh
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
 USER nestjs
@@ -30,4 +33,4 @@ EXPOSE 4000
 ENV PORT=4000
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/main"]
+CMD ["sh", "./docker-entrypoint.sh"]

@@ -904,15 +904,17 @@ async function seedDataSources() {
         category: source.category,
         baseUrl: source.baseUrl,
         crawlerType: source.crawlerType,
-        crawlerConfig: source.crawlerConfig,
+        crawlerConfig: JSON.parse(JSON.stringify(source.crawlerConfig)),
         minQualityScore: source.minQualityScore ?? 0,
         status: source.status,
         isVerified: source.isVerified ?? false,
-        deduplicationConfig: {
-          checkUrl: true,
-          checkTitle: true,
-          titleSimilarityThreshold: 0.85,
-        },
+        deduplicationConfig: JSON.parse(
+          JSON.stringify({
+            checkUrl: true,
+            checkTitle: true,
+            titleSimilarityThreshold: 0.85,
+          }),
+        ),
       };
 
       // Only add optional fields if they exist
@@ -921,9 +923,12 @@ async function seedDataSources() {
       if (source.authType) data.authType = source.authType;
       if (source.credentials) data.credentials = source.credentials;
       if (source.rateLimit) data.rateLimit = source.rateLimit;
-      if (source.keywords) data.keywords = source.keywords;
-      if (source.categories) data.categories = source.categories;
-      if (source.languages) data.languages = source.languages;
+      if (source.keywords)
+        data.keywords = JSON.parse(JSON.stringify(source.keywords));
+      if (source.categories)
+        data.categories = JSON.parse(JSON.stringify(source.categories));
+      if (source.languages)
+        data.languages = JSON.parse(JSON.stringify(source.languages));
 
       await prisma.dataSource.create({ data });
 

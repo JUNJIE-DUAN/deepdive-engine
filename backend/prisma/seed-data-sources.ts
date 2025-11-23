@@ -900,12 +900,28 @@ async function seedDataSources() {
 
       await prisma.dataSource.create({
         data: {
-          ...source,
+          name: source.name,
+          description: source.description,
+          type: source.type,
+          category: source.category,
+          baseUrl: source.baseUrl,
+          apiEndpoint: source.apiEndpoint,
+          authType: source.authType,
+          credentials: source.credentials,
+          crawlerType: source.crawlerType,
+          crawlerConfig: source.crawlerConfig as any,
+          rateLimit: source.rateLimit,
+          keywords: source.keywords as any,
+          categories: source.categories as any,
+          languages: source.languages as any,
+          minQualityScore: source.minQualityScore,
+          status: source.status,
+          isVerified: source.isVerified,
           deduplicationConfig: {
             checkUrl: true,
             checkTitle: true,
             titleSimilarityThreshold: 0.85,
-          },
+          } as any,
         },
       });
 

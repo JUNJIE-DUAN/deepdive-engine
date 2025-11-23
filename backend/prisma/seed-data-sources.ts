@@ -898,32 +898,34 @@ async function seedDataSources() {
         continue;
       }
 
-      await prisma.dataSource.create({
-        data: {
-          name: source.name,
-          description: source.description,
-          type: source.type,
-          category: source.category,
-          baseUrl: source.baseUrl,
-          apiEndpoint: source.apiEndpoint,
-          authType: source.authType,
-          credentials: source.credentials,
-          crawlerType: source.crawlerType,
-          crawlerConfig: source.crawlerConfig as any,
-          rateLimit: source.rateLimit,
-          keywords: source.keywords as any,
-          categories: source.categories as any,
-          languages: source.languages as any,
-          minQualityScore: source.minQualityScore,
-          status: source.status,
-          isVerified: source.isVerified,
-          deduplicationConfig: {
-            checkUrl: true,
-            checkTitle: true,
-            titleSimilarityThreshold: 0.85,
-          } as any,
+      const data: any = {
+        name: source.name,
+        type: source.type,
+        category: source.category,
+        baseUrl: source.baseUrl,
+        crawlerType: source.crawlerType,
+        crawlerConfig: source.crawlerConfig,
+        minQualityScore: source.minQualityScore ?? 0,
+        status: source.status,
+        isVerified: source.isVerified ?? false,
+        deduplicationConfig: {
+          checkUrl: true,
+          checkTitle: true,
+          titleSimilarityThreshold: 0.85,
         },
-      });
+      };
+
+      // Only add optional fields if they exist
+      if (source.description) data.description = source.description;
+      if (source.apiEndpoint) data.apiEndpoint = source.apiEndpoint;
+      if (source.authType) data.authType = source.authType;
+      if (source.credentials) data.credentials = source.credentials;
+      if (source.rateLimit) data.rateLimit = source.rateLimit;
+      if (source.keywords) data.keywords = source.keywords;
+      if (source.categories) data.categories = source.categories;
+      if (source.languages) data.languages = source.languages;
+
+      await prisma.dataSource.create({ data });
 
       console.log(`✅ Created: ${source.name} (${source.category})`);
       created++;

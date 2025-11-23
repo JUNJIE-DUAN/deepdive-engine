@@ -54,10 +54,21 @@ export default function ReaderView({
       try {
         // 根据资源类别选择合适的API端点
         // News类型使用html-reader-news（无域名限制），其他类型使用html-reader（有域名白名单）
-        const isNews = category?.toLowerCase() === 'news';
+        console.log('[ReaderView] Category:', category, 'URL:', url);
+
+        // 检查是否是新闻：通过category或URL域名判断
+        const newsDomains = ['reuters.com', 'bbc.com', 'theguardian.com', 'nytimes.com',
+                             'wsj.com', 'ft.com', 'bloomberg.com', 'apnews.com', 'cnn.com',
+                             'foxnews.com', 'nbcnews.com', 'abcnews.go.com', 'cbsnews.com'];
+        const urlDomain = new URL(url).hostname.replace('www.', '');
+        const isNewsByDomain = newsDomains.some(domain => urlDomain.includes(domain));
+        const isNewsByCategory = category?.toLowerCase() === 'news';
+        const isNews = isNewsByCategory || isNewsByDomain;
+
         const endpoint = isNews ? 'html-reader-news' : 'html-reader';
         const readerUrl = `${config.apiUrl}/proxy/${endpoint}?url=${encodeURIComponent(url)}`;
-        console.log(`Fetching article via Reader Mode (${endpoint}): ${readerUrl}`);
+        console.log(`[ReaderView] Using endpoint: ${endpoint} (category: ${isNewsByCategory}, domain: ${isNewsByDomain})`);
+        console.log(`[ReaderView] Fetching: ${readerUrl}`);
 
         const response = await fetch(readerUrl);
 

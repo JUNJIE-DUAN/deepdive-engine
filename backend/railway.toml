@@ -1,13 +1,8 @@
 [build]
 builder = "nixpacks"
 
-[build.nixpacksPlan]
-phases.setup.nixPkgs = ["nodejs", "python3"]
-phases.install.cmds = ["npm ci"]
-phases.build.cmds = ["npm run build", "npm run prisma:generate"]
-
 [deploy]
-startCommand = "npm run deploy && npm run start:prod"
+startCommand = "npx prisma generate && npm run deploy && npm run start:prod"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

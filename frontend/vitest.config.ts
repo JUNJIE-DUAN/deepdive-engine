@@ -13,14 +13,8 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 30000,
 
-    // 使用 threads pool - 在 Windows 上比 forks 更稳定
-    pool: 'threads',
-    // @ts-expect-error - poolOptions type definition issue with vitest 4.0.8
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
+    // 禁用 pool 以避免启动超时问题
+    pool: 'vmThreads',
 
     // 覆盖率配置
     coverage: {

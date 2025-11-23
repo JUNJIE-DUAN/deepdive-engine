@@ -1,6 +1,7 @@
 # AI-Office 优化实施指南 (快速版)
 
 ## 🎯 目标
+
 完成Phase 2和Phase 3,实现前后端完整对接
 
 ---
@@ -14,6 +15,7 @@
 **位置**: 第43-47行
 
 **原代码**:
+
 ```python
 class ReportRequest(BaseModel):
     \"\"\"报告生成请求\"\"\"
@@ -23,6 +25,7 @@ class ReportRequest(BaseModel):
 ```
 
 **新代码**:
+
 ```python
 class ReportRequest(BaseModel):
     \"\"\"报告生成请求\"\"\"
@@ -41,19 +44,20 @@ class ReportRequest(BaseModel):
 **位置**: 第272行 `async def generate_report(request: ReportRequest):` 函数内
 
 **在第283行后添加**:
+
 ```python
         logger.info(f\"Generating {request.template} report for {len(request.resources)} resources using {request.model}\")
 
         # 1. 准备资源信息
         resources_info = prepare_resources_info(request.resources)
-        
+
         # === 新增: 处理配置参数 ===
         tone = 'academic'
         detail_level = 2
         if request.config:
             tone = request.config.get('tone', 'academic')
             detail_level = request.config.get('detailLevel', 2)
-        
+
         # 构建增强的system prompt
         tone_mapping = {
             'academic': 'formal, rigorous, and scholarly',
@@ -61,13 +65,13 @@ class ReportRequest(BaseModel):
             'casual': 'friendly, accessible, and conversational',
             'technical': 'precise, detailed, and technical'
         }
-        
+
         detail_mapping = {
             1: 'brief and concise (focus on key points only)',
             2: 'standard and balanced (comprehensive coverage)',
             3: 'comprehensive and detailed (in-depth analysis)'
         }
-        
+
         enhanced_system_prompt = f\"\"\"You are a helpful AI assistant that generates structured reports.
 
 Writing Style: {tone_mapping.get(tone, 'professional')}
@@ -81,6 +85,7 @@ Always output valid JSON in the specified format.\"\"\"
 ```
 
 **在第300-313行修改**:
+
 ```python
         # 4. 调用AI生成
         if request.model == \"gpt-4\":
@@ -129,10 +134,10 @@ logger = logging.getLogger(__name__)
 
 class ResourceExtensionService:
     \"\"\"资源扩展服务 - 基于AI生成建议\"\"\"
-    
+
     def __init__(self, ai_client):
         self.ai_client = ai_client
-    
+
     async def extend_resources(
         self,
         base_resources: List[Dict],
@@ -141,27 +146,28 @@ class ResourceExtensionService:
         \"\"\"扩展资源\"\"\"
         topic = ' | '.join([r.get('title', '')[:50] for r in base_resources[:3]])
         extensions = {}
-        
+
         if options.get('searchImages'):
             extensions['images_note'] = f\"Suggested: Add diagrams/charts for {topic}\"
-        
+
         if options.get('fetchData'):
             extensions['data_note'] = f\"Suggested: Include statistics/metrics for {topic}\"
-        
+
         if options.get('citePapers'):
             papers = [r for r in base_resources if r.get('type') == 'PAPER']
             extensions['papers'] = papers[:5]
-        
+
         if options.get('findReports'):
             extensions['reports_note'] = f\"Suggested: Reference industry reports on {topic}\"
-        
+
         return extensions
 ```
 
 **在 `generate_report` 中集成** (第285行后):
+
 ```python
         resources_info = prepare_resources_info(request.resources)
-        
+
         # === 新增: 智能扩展 ===
         extended_note = \"\"
         if request.config and request.config.get('extensions'):
@@ -174,7 +180,7 @@ class ResourceExtensionService:
                     [r.dict() for r in request.resources],
                     request.config['extensions']
                 )
-                
+
                 notes = []
                 if 'images_note' in extended:
                     notes.append(extended['images_note'])
@@ -182,13 +188,13 @@ class ResourceExtensionService:
                     notes.append(extended['data_note'])
                 if 'reports_note' in extended:
                     notes.append(extended['reports_note'])
-                
+
                 if notes:
                     extended_note = \"\\n\\nAI Suggestions:\\n\" + \"\\n\".join(f\"- {n}\" for n in notes)
             except Exception as e:
                 logger.warning(f\"Resource extension failed: {e}\")
         # === 新增结束 ===
-        
+
         # 2. 选择prompt模板
         prompt_template = REPORT_PROMPTS.get(request.template)
         if not prompt_template:
@@ -210,41 +216,42 @@ class ResourceExtensionService:
 **查找**: `DocumentGenerationWizard` 的 `onGenerate` 回调
 
 **更新API调用**:
+
 ```typescript
 const handleDocumentGeneration = async (config: GenerationConfig) => {
   try {
-    const response = await fetch('/api/v1/ai/generate-report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/v1/ai/generate-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        resources: selectedResources.map(r => ({
+        resources: selectedResources.map((r) => ({
           id: r._id,
-          title: r.metadata?.title || '',
-          abstract: r.metadata?.abstract || '',
+          title: r.metadata?.title || "",
+          abstract: r.metadata?.abstract || "",
           authors: r.metadata?.authors || [],
-          published_date: r.metadata?.published_date || '',
+          published_date: r.metadata?.published_date || "",
           tags: r.metadata?.tags || [],
-          type: r.type
+          type: r.type,
         })),
         template: config.template.id,
-        model: 'grok',
+        model: "grok",
         config: {
           detailLevel: config.options.detailLevel,
           tone: config.options.tone,
           extensions: config.options.extensions.reduce((acc, ext) => {
             acc[ext] = true;
             return acc;
-          }, {})
-        }
-      })
+          }, {}),
+        },
+      }),
     });
-    
-    if (!response.ok) throw new Error('Generation failed');
-    
+
+    if (!response.ok) throw new Error("Generation failed");
+
     const result = await response.json();
     // 处理返回的报告...
   } catch (error) {
-    console.error('Document generation error:', error);
+    console.error("Document generation error:", error);
   }
 };
 ```
@@ -254,6 +261,7 @@ const handleDocumentGeneration = async (config: GenerationConfig) => {
 ## ✅ 验证测试
 
 ### 测试1: 模板支持
+
 ```bash
 # 测试新模板是否可用
 curl -X POST http://localhost:8000/api/v1/ai/generate-report \\
@@ -266,6 +274,7 @@ curl -X POST http://localhost:8000/api/v1/ai/generate-report \\
 ```
 
 ### 测试2: 配置参数
+
 ```bash
 # 测试config参数
 curl -X POST http://localhost:8000/api/v1/ai/generate-report \\

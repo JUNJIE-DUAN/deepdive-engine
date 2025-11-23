@@ -327,7 +327,7 @@ curl -H "Authorization: Bearer <token>" \
 
 ## 🔗 相关文档
 
-- [架构设计](./ARCHITECTURE.md)
-- [优化方案](./OPTIMIZATION_PLAN.md)
+- [架构设计](./architecture.md)
+- [优化方案](./optimization-plan.md)
 - [故障排查](./TROUBLESHOOTING.md)
 - [API文档](./API.md)

@@ -22,7 +22,7 @@
 
 ```bash
 # docs目录
-docs/README.md → docs/readme.md
+docs/readme.md → docs/readme.md
 docs/REORGANIZATION-PLAN.md → docs/reorganization-plan.md
 docs/REORGANIZATION-COMPLETE.md → docs/reorganization-complete.md
 
@@ -32,7 +32,7 @@ architecture/AI-CONTEXT.md → architecture/ai-context.md
 architecture/IMPROVEMENTS-SUMMARY.md → architecture/improvements-summary.md
 
 # api目录
-api/README.md → api/readme.md
+api/readme.md → api/readme.md
 ```
 
 ### 2. 项目规则更新
@@ -40,6 +40,7 @@ api/README.md → api/readme.md
 在 `project-rules.md` 中新增第1章节：**文件与目录命名规范**
 
 包含内容：
+
 - 核心原则说明
 - 详细命名规则（文档、代码、Python文件、目录）
 - 例外情况（仅5种）
@@ -51,6 +52,7 @@ api/README.md → api/readme.md
 ### 3. 文档链接更新
 
 更新 `docs/readme.md` 中的所有链接引用：
+
 - 架构文档链接（3处）
 - API文档链接（3处）
 - 目录结构示例（1处）
@@ -91,7 +93,7 @@ features/ai-office/
 
 ```bash
 # 文档文件
-docs/README.md                  # 应该小写
+docs/readme.md                  # 应该小写
 docs/Architecture/Overview.md   # 目录和文件都不应大写
 docs/API/README.MD              # 扩展名也应小写
 
@@ -146,7 +148,8 @@ find docs -name "*.md" | grep -E "[A-Z]"
 ### 例外情况
 
 仅以下5种文件允许大写：
-1. `README.md` - 项目根目录
+
+1. `readme.md` - 项目根目录
 2. `LICENSE`
 3. `CHANGELOG.md`
 4. `CONTRIBUTING.md`
@@ -159,11 +162,13 @@ find docs -name "*.md" | grep -E "[A-Z]"
 ## ✨ 改进效果
 
 ### 改进前
+
 - ❌ 命名混乱（大小写、下划线、空格混用）
 - ❌ 无明确规范
 - ❌ 难以维护
 
 ### 改进后
+
 - ✅ 统一的小写规范
 - ✅ 明确写入项目规则（v2.1）
 - ✅ 100%合规
@@ -174,6 +179,7 @@ find docs -name "*.md" | grep -E "[A-Z]"
 ## 📞 问题反馈
 
 如发现任何不符合规范的文件，请：
+
 1. 使用检查命令验证
 2. 按照迁移指南修复
 3. 更新相关链接

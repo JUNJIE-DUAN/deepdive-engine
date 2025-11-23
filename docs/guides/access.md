@@ -318,7 +318,7 @@ curl -s http://localhost:3000 | head -10
 
 ## 📞 获取帮助
 
-- **项目文档**: 查看 `PRD.md`, `ARCHITECTURE.md`
+- **项目文档**: 查看 `PRD.md`, `architecture.md`
 - **验证报告**: 查看 `VERIFICATION_REPORT.md`
 - **技术规范**: 查看 `project-rules.md`
 

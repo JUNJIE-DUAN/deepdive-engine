@@ -300,8 +300,8 @@ A:
 
 ## 📚 相关文档
 
-- 📖 [完整实现文档](./DATA-MANAGEMENT-IMPLEMENTATION.md)
-- ✅ [验证报告](./DATA-MANAGEMENT-VALIDATION.md)
+- 📖 [完整实现文档](./data-management-implementation.md)
+- ✅ [验证报告](./data-management-validation.md)
 - 🧪 [API测试脚本](./test-data-management-api.sh)
 - 📋 [PRD文档](./docs/prd/prd-数据采集.md)
 
@@ -309,7 +309,7 @@ A:
 
 ## 👥 联系方式
 
-- 代码问题: 查看 `/DATA-MANAGEMENT-IMPLEMENTATION.md`
+- 代码问题: 查看 `/data-management-implementation.md`
 - 设计问题: 参考PRD要求
 - 功能问题: 查看对应View组件的注释
 

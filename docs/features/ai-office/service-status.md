@@ -5,18 +5,21 @@
 所有服务已成功启动并运行:
 
 ### 1. **前端服务** (Next.js)
+
 - 🟢 状态: **运行中**
 - 🌐 URL: **http://localhost:3000**
 - 📍 AI Office页面: **http://localhost:3000/ai-office**
 - ⚡ 编译状态: 成功 (26.7s)
 
 ### 2. **后端服务** (NestJS)
+
 - 🟢 状态: **运行中**
 - 🌐 URL: **http://localhost:3001**
 - 📡 API端点: **http://localhost:3001/api/ai-office/quick-generate**
 - ⚡ 编译状态: 成功 (0 errors)
 
 ### 3. **AI服务** (FastAPI)
+
 - 🟢 状态: **运行中**
 - 🌐 URL: **http://localhost:8000**
 - 📡 API端点: **http://localhost:8000/api/v1/ai/quick-generate**
@@ -36,8 +39,9 @@
    - 🔧 **Advanced Mode** - 原有功能
 
 3. 在Quick Generate模式下,输入您想要创建的文档描述,例如:
+
    ```
-   Create a business plan for a SaaS startup focused on AI-powered 
+   Create a business plan for a SaaS startup focused on AI-powered
    documentation tools for developers
    ```
 
@@ -75,12 +79,15 @@ curl -X POST http://localhost:8000/api/v1/ai/quick-generate \
 ## 🎨 新功能亮点
 
 ### 1. **极简输入体验**
+
 - 只需用自然语言描述需求
 - 无需复杂配置
 - AI自动理解意图
 
 ### 2. **智能文档类型识别**
+
 系统会自动识别以下文档类型:
+
 - 📊 商业计划 (business-plan)
 - 📝 学术论文 (academic-research-page)
 - 🎤 演讲PPT (academic-presentation)
@@ -90,12 +97,14 @@ curl -X POST http://localhost:8000/api/v1/ai/quick-generate \
 - 📉 趋势分析 (trend)
 
 ### 3. **自动研究功能**
+
 - AI主动搜集相关信息
 - 补充事实和数据
 - 引用专家观点
 - 添加案例研究
 
 ### 4. **智能配图建议**
+
 - 自动建议图片位置
 - 描述所需图片内容
 - 标注[IMAGE: ...]占位符
@@ -107,12 +116,14 @@ curl -X POST http://localhost:8000/api/v1/ai/quick-generate \
 ### 示例1: 创建商业计划
 
 **输入**:
+
 ```
-Create a business plan for a SaaS startup that helps developers 
+Create a business plan for a SaaS startup that helps developers
 generate documentation automatically using AI
 ```
 
 **AI将生成**:
+
 - 执行摘要
 - 问题与解决方案
 - 市场分析
@@ -124,12 +135,14 @@ generate documentation automatically using AI
 ### 示例2: 生成技术博客
 
 **输入**:
+
 ```
-Write a technical blog about the benefits of React Server Components 
+Write a technical blog about the benefits of React Server Components
 and how they improve web performance
 ```
 
 **AI将生成**:
+
 - 引言
 - 背景介绍
 - 主要内容 (含代码示例)
@@ -141,12 +154,14 @@ and how they improve web performance
 ### 示例3: 制作演讲PPT
 
 **输入**:
+
 ```
-Make a presentation about the future of renewable energy and 
+Make a presentation about the future of renewable energy and
 sustainability for a business conference
 ```
 
 **AI将生成**:
+
 - 标题页
 - 引言 (2-3页)
 - 主要内容 (8-12页)
@@ -158,16 +173,19 @@ sustainability for a business conference
 ## 🔧 技术架构
 
 ### 前端 (Next.js 14)
+
 - **新组件**: `QuickGenerateInput.tsx`
 - **页面更新**: `app/ai-office/page.tsx`
 - **状态管理**: Zustand (aiOfficeStore)
 
 ### 后端 (NestJS 10)
+
 - **新模块**: `AiOfficeModule`
 - **新服务**: `QuickGenerateService`
 - **新控制器**: `QuickGenerateController`
 
 ### AI服务 (FastAPI)
+
 - **新路由**: `quick_generate.py`
 - **意图识别**: 基于关键词匹配
 - **模板系统**: 9种文档模板
@@ -176,20 +194,21 @@ sustainability for a business conference
 
 ## 🎯 与Genspark对标
 
-| 功能 | Genspark | DeepDive (现在) | 状态 |
-|------|----------|----------------|------|
-| 自然语言输入 | ✅ | ✅ | ✅ 已实现 |
-| 自动研究 | ✅ | ✅ | ✅ 已实现 |
-| 智能配图建议 | ✅ | ✅ | ✅ 已实现 |
-| 文档导入转换 | ✅ | ⏳ | 🔜 未来版本 |
-| 模板系统 | ✅ | ✅ | ✅ 已实现 (9种) |
-| **资源整合** | ❌ | ✅ | ✅ 独特优势! |
+| 功能         | Genspark | DeepDive (现在) | 状态            |
+| ------------ | -------- | --------------- | --------------- |
+| 自然语言输入 | ✅       | ✅              | ✅ 已实现       |
+| 自动研究     | ✅       | ✅              | ✅ 已实现       |
+| 智能配图建议 | ✅       | ✅              | ✅ 已实现       |
+| 文档导入转换 | ✅       | ⏳              | 🔜 未来版本     |
+| 模板系统     | ✅       | ✅              | ✅ 已实现 (9种) |
+| **资源整合** | ❌       | ✅              | ✅ 独特优势!    |
 
 ---
 
 ## 🐛 故障排查
 
 ### 如果前端无法访问:
+
 ```bash
 # 检查前端状态
 cd frontend
@@ -197,6 +216,7 @@ npm run dev
 ```
 
 ### 如果后端报错:
+
 ```bash
 # 检查后端状态
 cd backend
@@ -204,6 +224,7 @@ npm run dev
 ```
 
 ### 如果AI服务报错:
+
 ```bash
 # 检查AI服务状态
 cd ai-service
@@ -211,7 +232,9 @@ python -m uvicorn main:app --reload --port 8000
 ```
 
 ### 检查环境变量:
+
 确保 `.env` 文件包含:
+
 ```
 GROK_API_KEY=your_key_here
 OPENAI_API_KEY=your_key_here
@@ -231,6 +254,7 @@ OPENAI_API_KEY=your_key_here
 ## 🎊 总结
 
 ✅ **已完成**:
+
 - Phase 1: 快速生成入口 (100%)
 - Phase 2: 后端API服务 (100%)
 - Phase 3: AI服务端点 (100%)
@@ -240,9 +264,10 @@ OPENAI_API_KEY=your_key_here
 访问 **http://localhost:3000/ai-office** 开始使用!
 
 📚 **文档**:
+
 - API文档: http://localhost:8000/docs
-- 实施指南: `docs/features/ai-office/GENSPARK_QUICK_START.md`
-- 深度分析: `docs/features/ai-office/GENSPARK_ANALYSIS.md`
+- 实施指南: `docs/features/ai-office/genspark-quick-start.md`
+- 深度分析: `docs/features/ai-office/genspark-analysis.md`
 
 ---
 

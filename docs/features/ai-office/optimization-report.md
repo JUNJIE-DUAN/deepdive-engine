@@ -54,6 +54,7 @@
    - 参考文献
 
 **技术实现**:
+
 - 文件: `ai-service/routers/report.py`
 - 位置: `REPORT_PROMPTS` 字典
 - 格式: 与现有模板保持一致的JSON输出格式
@@ -85,12 +86,12 @@ class ReportRequest(BaseModel):
 ```python
 async def generate_report(request: ReportRequest):
     # ... 现有代码 ...
-    
+
     # 提取配置参数
     tone = request.config.get('tone', 'academic') if request.config else 'academic'
     detail_level = request.config.get('detailLevel', 2) if request.config else 2
     extensions = request.config.get('extensions', []) if request.config else []
-    
+
     # 构建增强的system prompt
     tone_mapping = {
         'academic': 'formal and rigorous',
@@ -98,18 +99,18 @@ async def generate_report(request: ReportRequest):
         'casual': 'friendly and accessible',
         'technical': 'precise and detailed'
     }
-    
+
     detail_mapping = {
         1: 'brief and concise',
         2: 'standard and balanced',
         3: 'comprehensive and detailed'
     }
-    
+
     system_prompt = f\"\"\"You are a helpful AI assistant that generates structured reports.
 Tone: {tone_mapping.get(tone, 'professional')}
 Detail Level: {detail_mapping.get(detail_level, 'standard')}
 Always output valid JSON.\"\"\"
-    
+
     # 调用AI时使用增强的system prompt
     response = await ai_client.chat(
         messages=[
@@ -142,10 +143,10 @@ logger = logging.getLogger(__name__)
 
 class ResourceExtensionService:
     \"\"\"资源扩展服务\"\"\"
-    
+
     def __init__(self, ai_client):
         self.ai_client = ai_client
-    
+
     async def extend_resources(
         self,
         base_resources: List[Dict],
@@ -153,68 +154,68 @@ class ResourceExtensionService:
     ) -> Dict[str, Any]:
         \"\"\"
         扩展资源 (MVP: AI生成建议)
-        
+
         Args:
             base_resources: 基础资源列表
             options: {searchImages, fetchData, citePapers, findReports}
-        
+
         Returns:
             扩展资源建议
         \"\"\"
         topic = self._extract_topic(base_resources)
         extensions = {}
-        
+
         if options.get('searchImages'):
             extensions['images'] = await self._suggest_images(topic)
-        
+
         if options.get('fetchData'):
             extensions['data'] = await self._suggest_data(topic)
-        
+
         if options.get('citePapers'):
             extensions['papers'] = self._extract_papers(base_resources)
-        
+
         if options.get('findReports'):
             extensions['reports'] = await self._suggest_reports(topic)
-        
+
         return extensions
-    
+
     def _extract_topic(self, resources: List[Dict]) -> str:
         \"\"\"从资源中提取主题\"\"\"
         titles = [r.get('title', '') for r in resources[:3]]
         return ' | '.join(titles)
-    
+
     async def _suggest_images(self, topic: str) -> List[Dict]:
         \"\"\"AI建议相关图片类型\"\"\"
         prompt = f\"\"\"For a document about: {topic}
-        
+
 Suggest 3-5 types of images/diagrams that would enhance this document.
 Format: JSON array of {{\"type\": \"image type\", \"description\": \"why useful\"}}
 
 JSON output:\"\"\"
-        
+
         response = await self.ai_client.chat(
             messages=[{\"role\": \"user\", \"content\": prompt}],
             max_tokens=500
         )
-        
+
         return [{\"type\": \"AI Suggested\", \"note\": response[:200]}]
-    
+
     async def _suggest_data(self, topic: str) -> List[Dict]:
         \"\"\"AI建议相关数据点\"\"\"
         prompt = f\"\"\"For a document about: {topic}
-        
+
 Suggest 3-5 key data points or statistics that would be valuable.
 Format: JSON array of {{\"metric\": \"name\", \"value\": \"range\", \"source\": \"where to find\"}}
 
 JSON output:\"\"\"
-        
+
         response = await self.ai_client.chat(
             messages=[{\"role\": \"user\", \"content\": prompt}],
             max_tokens=500
         )
-        
+
         return [{\"metric\": \"AI Suggested\", \"note\": response[:200]}]
-    
+
     def _extract_papers(self, base_resources: List[Dict]) -> List[Dict]:
         \"\"\"从现有资源中提取论文\"\"\"
         papers = []
@@ -225,7 +226,7 @@ JSON output:\"\"\"
                     \"relevance\": \"high\"
                 })
         return papers[:5]
-    
+
     async def _suggest_reports(self, topic: str) -> List[Dict]:
         \"\"\"AI建议相关报告\"\"\"
         return [{\"note\": f\"Consider industry reports on: {topic}\"}]
@@ -238,7 +239,7 @@ from services.resource_extension import ResourceExtensionService
 
 async def generate_report(request: ReportRequest):
     # ... 现有代码 ...
-    
+
     # 如果启用了智能扩展
     extended_info = \"\"
     if request.config and request.config.get('extensions'):
@@ -249,11 +250,11 @@ async def generate_report(request: ReportRequest):
             [r.dict() for r in request.resources],
             request.config['extensions']
         )
-        
+
         # 将扩展信息添加到prompt中
         if extended_resources:
             extended_info = f\"\"\"
-            
+
 Additional Resources Suggested by AI:
 - Images: {len(extended_resources.get('images', []))} types suggested
 - Data: {len(extended_resources.get('data', []))} metrics suggested
@@ -262,7 +263,7 @@ Additional Resources Suggested by AI:
 
 Consider incorporating these in your analysis.
 \"\"\"
-    
+
     # 将extended_info添加到prompt
     prompt = prompt_template.format(
         count=len(request.resources),
@@ -283,51 +284,57 @@ Consider incorporating these in your analysis.
 const handleGenerateDocument = async (config: GenerationConfig) => {
   try {
     setGenerating(true);
-    
+
     // 调用新的API结构
-    const response = await fetch('/api/v1/ai/generate-report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/v1/ai/generate-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        resources: selectedResources.map(r => ({
+        resources: selectedResources.map((r) => ({
           id: r._id,
-          title: r.metadata?.title || '',
-          abstract: r.metadata?.abstract || '',
+          title: r.metadata?.title || "",
+          abstract: r.metadata?.abstract || "",
           authors: r.metadata?.authors || [],
-          published_date: r.metadata?.published_date || '',
+          published_date: r.metadata?.published_date || "",
           tags: r.metadata?.tags || [],
-          type: r.type
+          type: r.type,
         })),
-        template: config.template.id,  // 例如: "business-plan"
-        model: 'grok',
+        template: config.template.id, // 例如: "business-plan"
+        model: "grok",
         config: {
-          detailLevel: config.options.detailLevel,  // 1-3
-          tone: config.options.tone,  // 'academic' | 'business' | 'casual' | 'technical'
-          extensions: config.options.extensions.reduce((acc, ext) => {
-            acc[ext] = true;  // {searchImages: true, fetchData: true, ...}
-            return acc;
-          }, {} as Record<string, boolean>)
-        }
-      })
+          detailLevel: config.options.detailLevel, // 1-3
+          tone: config.options.tone, // 'academic' | 'business' | 'casual' | 'technical'
+          extensions: config.options.extensions.reduce(
+            (acc, ext) => {
+              acc[ext] = true; // {searchImages: true, fetchData: true, ...}
+              return acc;
+            },
+            {} as Record<string, boolean>,
+          ),
+        },
+      }),
     });
-    
+
     const result = await response.json();
-    
+
     // 处理返回的报告
     const document = {
       title: result.title,
       content: {
-        markdown: result.summary + '\\n\\n' + 
-          result.sections.map(s => `## ${s.title}\\n\\n${s.content}`).join('\\n\\n')
+        markdown:
+          result.summary +
+          "\\n\\n" +
+          result.sections
+            .map((s) => `## ${s.title}\\n\\n${s.content}`)
+            .join("\\n\\n"),
       },
-      metadata: result.metadata
+      metadata: result.metadata,
     };
-    
+
     // 更新文档store
     useDocumentStore.getState().updateDocument(targetDocumentId, document);
-    
   } catch (error) {
-    console.error('Document generation failed:', error);
+    console.error("Document generation failed:", error);
   } finally {
     setGenerating(false);
   }
@@ -338,16 +345,16 @@ const handleGenerateDocument = async (config: GenerationConfig) => {
 
 ## 📊 模板映射关系
 
-| 前端模板ID | 后端模板ID | 状态 |
-|-----------|-----------|------|
-| `standard-research-report` | `literature-review` | ✅ 已支持 |
-| `industry-analysis-report` | `trend` | ✅ 已支持 |
-| `literature-review` | `literature-review` | ✅ 已支持 |
-| `api-documentation` | `api-documentation` | ✅ 新增 |
-| `business-plan` | `business-plan` | ✅ 新增 |
-| `academic-presentation` | `academic-presentation` | ✅ 新增 |
-| `tech-blog` | `tech-blog` | ✅ 新增 |
-| `academic-research-page` | `academic-research-page` | ✅ 新增 |
+| 前端模板ID                 | 后端模板ID               | 状态      |
+| -------------------------- | ------------------------ | --------- |
+| `standard-research-report` | `literature-review`      | ✅ 已支持 |
+| `industry-analysis-report` | `trend`                  | ✅ 已支持 |
+| `literature-review`        | `literature-review`      | ✅ 已支持 |
+| `api-documentation`        | `api-documentation`      | ✅ 新增   |
+| `business-plan`            | `business-plan`          | ✅ 新增   |
+| `academic-presentation`    | `academic-presentation`  | ✅ 新增   |
+| `tech-blog`                | `tech-blog`              | ✅ 新增   |
+| `academic-research-page`   | `academic-research-page` | ✅ 新增   |
 
 ---
 
@@ -376,11 +383,13 @@ const handleGenerateDocument = async (config: GenerationConfig) => {
 ## 🎨 用户体验提升
 
 ### 优化前:
+
 - 用户选择"商业提案" → 后端返回错误(模板不存在)
 - 用户勾选"搜索图片" → 无任何效果(功能未实现)
 - 用户选择"详细程度" → AI忽略此参数
 
 ### 优化后:
+
 - 用户选择"商业提案" → 生成包含市场分析、财务预测的专业文档
 - 用户勾选"搜索图片" → AI建议3-5种适合的配图类型
 - 用户选择"详细程度:详细" → AI生成更全面深入的内容

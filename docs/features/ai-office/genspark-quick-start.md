@@ -3,6 +3,7 @@
 ## 🎯 核心目标
 
 实现与Genspark一致的用户体验:
+
 - ✨ 自然语言输入即可生成
 - 🔍 AI自动研究补充内容
 - 🖼️ 智能配图和媒体建议
@@ -44,10 +45,10 @@ export default function QuickGenerateInput() {
       });
 
       const result = await response.json();
-      
+
       // 处理生成结果
       console.log('Generated:', result);
-      
+
     } catch (error) {
       console.error('Generation failed:', error);
     } finally {
@@ -130,19 +131,22 @@ Examples:
 **新建文件**: `backend/src/modules/ai-office/quick-generate.controller.ts`
 
 ```typescript
-import { Controller, Post, Body } from '@nestjs/common';
-import { QuickGenerateService } from './quick-generate.service';
+import { Controller, Post, Body } from "@nestjs/common";
+import { QuickGenerateService } from "./quick-generate.service";
 
-@Controller('ai-office')
+@Controller("ai-office")
 export class QuickGenerateController {
   constructor(private readonly quickGenerateService: QuickGenerateService) {}
 
-  @Post('quick-generate')
-  async quickGenerate(@Body() body: {
-    prompt: string;
-    autoResearch?: boolean;
-    autoMedia?: boolean;
-  }) {
+  @Post("quick-generate")
+  async quickGenerate(
+    @Body()
+    body: {
+      prompt: string;
+      autoResearch?: boolean;
+      autoMedia?: boolean;
+    },
+  ) {
     return this.quickGenerateService.generate(body);
   }
 }
@@ -151,9 +155,9 @@ export class QuickGenerateController {
 **新建文件**: `backend/src/modules/ai-office/quick-generate.service.ts`
 
 ```typescript
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { Injectable, HttpException, HttpStatus } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
+import { firstValueFrom } from "rxjs";
 
 @Injectable()
 export class QuickGenerateService {
@@ -170,20 +174,23 @@ export class QuickGenerateService {
 
       // 2. 调用AI服务生成文档
       const response = await firstValueFrom(
-        this.httpService.post('http://localhost:8000/api/v1/ai/quick-generate', {
-          prompt: params.prompt,
-          template: intent.template,
-          autoResearch: params.autoResearch,
-          autoMedia: params.autoMedia,
-          model: 'grok'
-        })
+        this.httpService.post(
+          "http://localhost:8000/api/v1/ai/quick-generate",
+          {
+            prompt: params.prompt,
+            template: intent.template,
+            autoResearch: params.autoResearch,
+            autoMedia: params.autoMedia,
+            model: "grok",
+          },
+        ),
       );
 
       return response.data;
     } catch (error) {
       throw new HttpException(
-        'Document generation failed',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        "Document generation failed",
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -195,21 +202,27 @@ export class QuickGenerateService {
     // 简单的关键词匹配
     const promptLower = prompt.toLowerCase();
 
-    if (promptLower.includes('business plan') || promptLower.includes('startup')) {
-      return { template: 'business-plan', confidence: 0.9 };
+    if (
+      promptLower.includes("business plan") ||
+      promptLower.includes("startup")
+    ) {
+      return { template: "business-plan", confidence: 0.9 };
     }
-    if (promptLower.includes('presentation') || promptLower.includes('slides')) {
-      return { template: 'academic-presentation', confidence: 0.9 };
+    if (
+      promptLower.includes("presentation") ||
+      promptLower.includes("slides")
+    ) {
+      return { template: "academic-presentation", confidence: 0.9 };
     }
-    if (promptLower.includes('research') || promptLower.includes('paper')) {
-      return { template: 'academic-research-page', confidence: 0.85 };
+    if (promptLower.includes("research") || promptLower.includes("paper")) {
+      return { template: "academic-research-page", confidence: 0.85 };
     }
-    if (promptLower.includes('blog') || promptLower.includes('article')) {
-      return { template: 'tech-blog', confidence: 0.85 };
+    if (promptLower.includes("blog") || promptLower.includes("article")) {
+      return { template: "tech-blog", confidence: 0.85 };
     }
 
     // 默认使用技术博客模板
-    return { template: 'tech-blog', confidence: 0.5 };
+    return { template: "tech-blog", confidence: 0.5 };
   }
 }
 ```
@@ -254,7 +267,7 @@ class QuickGenerateRequest(BaseModel):
 async def quick_generate(request: QuickGenerateRequest):
     """
     快速生成文档 - 基于自然语言描述
-    
+
     这是对标Genspark的核心功能
     """
     try:
@@ -294,7 +307,7 @@ For each suggestion, describe:
 
         # 4. 添加模板指令
         template_prompt = REPORT_PROMPTS.get(request.template, REPORT_PROMPTS['tech-blog'])
-        
+
         # 简化模板prompt,只保留结构要求
         simplified_template = template_prompt.split("IMPORTANT:")[1] if "IMPORTANT:" in template_prompt else template_prompt
 
@@ -302,7 +315,7 @@ For each suggestion, describe:
 
         # 5. 调用AI生成
         ai_client = grok_client if request.model == "grok" else openai_client
-        
+
         response = await ai_client.chat(
             messages=[{
                 "role": "system",
@@ -375,7 +388,7 @@ export default function AIOfficePage() {
           // 新增: 快速生成模式
           <div className="h-full flex flex-col">
             <QuickGenerateInput />
-            
+
             <div className="text-center py-4">
               <button
                 onClick={() => setShowAdvanced(true)}
@@ -449,12 +462,14 @@ curl -X POST http://localhost:8000/api/v1/ai/quick-generate \
 ## 🎯 预期效果
 
 ### 用户体验:
+
 ```
 优化前: 选择资源 → 打开向导 → 选择类型 → 选择模板 → 配置选项 → 生成
 优化后: 描述需求 → 生成 ✨
 ```
 
 ### 生成质量:
+
 - ✅ 自动研究补充内容
 - ✅ 智能建议配图位置
 - ✅ 专业格式和结构

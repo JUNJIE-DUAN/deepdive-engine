@@ -123,9 +123,9 @@
 
 **新增文档**:
 
-1. ✅ OPTIMIZATION_PLAN.md (完整优化方案，2000+行)
-2. ✅ HARDENING_EXECUTION.md (执行日志)
-3. ✅ DEPLOYMENT_GUIDE.md (部署指南)
+1. ✅ optimization-plan.md (完整优化方案，2000+行)
+2. ✅ hardening-execution.md (执行日志)
+3. ✅ deployment-guide.md (部署指南)
 4. ✅ rollback.sh (回滚脚本)
 
 **文档覆盖**:
@@ -171,9 +171,9 @@
 3. `backend/src/common/filters/all-exceptions.filter.ts`
 4. `backend/src/common/guards/jwt-auth.guard.ts`
 5. `backend/src/common/guards/optional-jwt-auth.guard.ts`
-6. `docs/DEPLOYMENT_GUIDE.md`
-7. `docs/HARDENING_EXECUTION.md`
-8. `docs/OPTIMIZATION_PLAN.md`
+6. `docs/deployment-guide.md`
+7. `docs/hardening-execution.md`
+8. `docs/optimization-plan.md`
 9. `scripts/rollback.sh`
 
 ### 修改文件

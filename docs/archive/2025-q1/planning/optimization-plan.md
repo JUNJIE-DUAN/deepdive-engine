@@ -1117,13 +1117,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
 ```
 docs/
-├── README.md                     # 项目概览
-├── ARCHITECTURE.md               # 架构设计
+├── readme.md                     # 项目概览
+├── architecture.md               # 架构设计
 ├── API.md                        # API文档
 ├── DEPLOYMENT.md                 # 部署指南
 ├── DEVELOPMENT.md                # 开发指南
 ├── TROUBLESHOOTING.md            # 故障排查
-├── OPTIMIZATION_PLAN.md          # 本文档
+├── optimization-plan.md          # 本文档
 ├── CHANGELOG.md                  # 变更日志
 └── guides/
     ├── authentication.md         # 认证指南

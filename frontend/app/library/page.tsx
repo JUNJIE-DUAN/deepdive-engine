@@ -51,6 +51,14 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'type'>('date');
 
+  // Modal states
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(
+    null
+  );
+
   // Load data based on active tab
   useEffect(() => {
     const loadData = async () => {
@@ -128,6 +136,52 @@ export default function LibraryPage() {
       }
     } catch (err) {
       console.error('Failed to load bookmarks:', err);
+    }
+  };
+
+  // Handle view resource
+  const handleView = (resource: Resource) => {
+    setSelectedResource(resource);
+    setViewModalOpen(true);
+  };
+
+  // Handle edit resource
+  const handleEdit = (resource: Resource) => {
+    setSelectedResource(resource);
+    setEditModalOpen(true);
+  };
+
+  // Handle delete resource
+  const handleDelete = (resource: Resource) => {
+    setSelectedResource(resource);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (!selectedResource) return;
+
+    try {
+      const authHeaders = getAuthHeader();
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/resources/${selectedResource.id}`,
+        {
+          method: 'DELETE',
+          headers: authHeaders,
+        }
+      );
+
+      if (response.ok) {
+        // Remove from bookmarks
+        setBookmarks(bookmarks.filter((b) => b.id !== selectedResource.id));
+        setDeleteDialogOpen(false);
+        setSelectedResource(null);
+      } else {
+        alert('Failed to delete resource');
+      }
+    } catch (err) {
+      console.error('Failed to delete:', err);
+      alert('Failed to delete resource');
     }
   };
 
@@ -359,53 +413,129 @@ export default function LibraryPage() {
     };
 
     return (
-      <Link
-        href={`/?id=${resource.id}`}
-        className="block overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:shadow-lg"
-      >
-        <div className="p-4">
-          {/* Type badge */}
-          <div className="mb-3 flex items-center gap-2">
-            <div className="flex-shrink-0">
-              {config.icon('w-4 h-4 text-gray-600')}
-            </div>
-            <span
-              className={`inline-block rounded px-2.5 py-0.5 text-xs font-semibold ${config.text} bg-gray-50`}
+      <div className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:shadow-lg">
+        {/* Action buttons - appear on hover */}
+        <div className="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleView(resource);
+            }}
+            className="rounded-lg bg-white p-2 shadow-md transition-all hover:bg-blue-50 hover:text-blue-600"
+            title="View details"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              {resource.type.replace('_', ' ')}
-            </span>
-            <span className="ml-auto text-xs text-gray-500">
-              {new Date(resource.publishedAt).toLocaleDateString('en-US')}
-            </span>
-          </div>
-
-          {/* Title */}
-          <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600">
-            {resource.title}
-          </h3>
-
-          {/* Abstract - single line */}
-          {resource.abstract && (
-            <p className="mb-3 line-clamp-1 text-xs text-gray-600">
-              {resource.abstract}
-            </p>
-          )}
-
-          {/* Footer: Upvotes */}
-          {resource.upvoteCount !== undefined && resource.upvoteCount > 0 && (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <svg
-                className="h-3.5 w-3.5 text-gray-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M2 10.5a1.5 1.5 0 113 0v-7a1.5 1.5 0 01-3 0v7zM14 4a1 1 0 011 1v12a1 1 0 11-2 0V5a1 1 0 011-1zm3 1a1 1 0 010 2H9a3 3 0 00-3 3v6a3 3 0 003 3h8a1 1 0 110-2H9a1 1 0 01-1-1v-6a1 1 0 011-1h8z" />
-              </svg>
-              <span>{resource.upvoteCount}</span>
-            </div>
-          )}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleEdit(resource);
+            }}
+            className="rounded-lg bg-white p-2 shadow-md transition-all hover:bg-green-50 hover:text-green-600"
+            title="Edit"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleDelete(resource);
+            }}
+            className="rounded-lg bg-white p-2 shadow-md transition-all hover:bg-red-50 hover:text-red-600"
+            title="Delete"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
         </div>
-      </Link>
+
+        {/* Main card content - clickable link */}
+        <Link href={`/?id=${resource.id}`} className="block">
+          <div className="p-4">
+            {/* Type badge */}
+            <div className="mb-3 flex items-center gap-2">
+              <div className="flex-shrink-0">
+                {config.icon('w-4 h-4 text-gray-600')}
+              </div>
+              <span
+                className={`inline-block rounded px-2.5 py-0.5 text-xs font-semibold ${config.text} bg-gray-50`}
+              >
+                {resource.type.replace('_', ' ')}
+              </span>
+              <span className="ml-auto text-xs text-gray-500">
+                {new Date(resource.publishedAt).toLocaleDateString('en-US')}
+              </span>
+            </div>
+
+            {/* Title */}
+            <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600">
+              {resource.title}
+            </h3>
+
+            {/* Abstract - single line */}
+            {resource.abstract && (
+              <p className="mb-3 line-clamp-1 text-xs text-gray-600">
+                {resource.abstract}
+              </p>
+            )}
+
+            {/* Footer: Upvotes */}
+            {resource.upvoteCount !== undefined && resource.upvoteCount > 0 && (
+              <div className="flex items-center gap-1 text-xs text-gray-600">
+                <svg
+                  className="h-3.5 w-3.5 text-gray-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M2 10.5a1.5 1.5 0 113 0v-7a1.5 1.5 0 01-3 0v7zM14 4a1 1 0 011 1v12a1 1 0 11-2 0V5a1 1 0 011-1zm3 1a1 1 0 010 2H9a3 3 0 00-3 3v6a3 3 0 003 3h8a1 1 0 110-2H9a1 1 0 01-1-1v-6a1 1 0 011-1h8z" />
+                </svg>
+                <span>{resource.upvoteCount}</span>
+              </div>
+            )}
+          </div>
+        </Link>
+      </div>
     );
   };
 
@@ -660,6 +790,341 @@ export default function LibraryPage() {
           </div>
         </div>
       </main>
+
+      {/* View Details Modal */}
+      {viewModalOpen && selectedResource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">
+                Resource Details
+              </h2>
+              <button
+                onClick={() => setViewModalOpen(false)}
+                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Type Badge */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Type
+                </label>
+                <span className="inline-block rounded-lg bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                  {selectedResource.type.replace('_', ' ')}
+                </span>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Title
+                </label>
+                <p className="text-gray-900">{selectedResource.title}</p>
+              </div>
+
+              {/* Abstract */}
+              {selectedResource.abstract && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Abstract
+                  </label>
+                  <p className="text-gray-700">{selectedResource.abstract}</p>
+                </div>
+              )}
+
+              {/* Published Date */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Published Date
+                </label>
+                <p className="text-gray-700">
+                  {new Date(selectedResource.publishedAt).toLocaleDateString(
+                    'en-US',
+                    {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    }
+                  )}
+                </p>
+              </div>
+
+              {/* Source URL */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Source URL
+                </label>
+                <a
+                  href={selectedResource.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {selectedResource.sourceUrl}
+                </a>
+              </div>
+
+              {/* Upvote Count */}
+              {selectedResource.upvoteCount !== undefined &&
+                selectedResource.upvoteCount > 0 && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Upvotes
+                    </label>
+                    <p className="text-gray-700">
+                      {selectedResource.upvoteCount}
+                    </p>
+                  </div>
+                )}
+
+              {/* Thumbnail */}
+              {selectedResource.thumbnailUrl &&
+                resolveThumbnailUrl(selectedResource.thumbnailUrl) && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Thumbnail
+                    </label>
+                    <img
+                      src={resolveThumbnailUrl(selectedResource.thumbnailUrl)!}
+                      alt={selectedResource.title}
+                      className="max-w-full rounded-lg"
+                    />
+                  </div>
+                )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setViewModalOpen(false)}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+              >
+                Close
+              </button>
+              <a
+                href={`/?id=${selectedResource.id}`}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                View Full Details
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editModalOpen && selectedResource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Edit Resource</h2>
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+
+                try {
+                  const authHeaders = getAuthHeader();
+                  const response = await fetch(
+                    `${config.apiBaseUrl}/api/v1/resources/${selectedResource.id}`,
+                    {
+                      method: 'PATCH',
+                      headers: {
+                        ...authHeaders,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        title: formData.get('title'),
+                        abstract: formData.get('abstract'),
+                      }),
+                    }
+                  );
+
+                  if (response.ok) {
+                    const updatedResource = await response.json();
+                    setBookmarks(
+                      bookmarks.map((b) =>
+                        b.id === updatedResource.id ? updatedResource : b
+                      )
+                    );
+                    setEditModalOpen(false);
+                    setSelectedResource(null);
+                  } else {
+                    alert('Failed to update resource');
+                  }
+                } catch (err) {
+                  console.error('Failed to update:', err);
+                  alert('Failed to update resource');
+                }
+              }}
+              className="space-y-4"
+            >
+              {/* Title */}
+              <div>
+                <label
+                  htmlFor="title"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  defaultValue={selectedResource.title}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Abstract */}
+              <div>
+                <label
+                  htmlFor="abstract"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Abstract
+                </label>
+                <textarea
+                  id="abstract"
+                  name="abstract"
+                  rows={4}
+                  defaultValue={selectedResource.abstract || ''}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Read-only fields */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Type (Read-only)
+                </label>
+                <input
+                  type="text"
+                  value={selectedResource.type.replace('_', ' ')}
+                  className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2"
+                  disabled
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Published Date (Read-only)
+                </label>
+                <input
+                  type="text"
+                  value={new Date(
+                    selectedResource.publishedAt
+                  ).toLocaleDateString('en-US')}
+                  className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2"
+                  disabled
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialogOpen && selectedResource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                <svg
+                  className="h-6 w-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h3 className="mt-4 text-center text-lg font-semibold text-gray-900">
+                Delete Resource
+              </h3>
+              <p className="mt-2 text-center text-sm text-gray-600">
+                Are you sure you want to delete this resource? This action
+                cannot be undone.
+              </p>
+              <p className="mt-3 text-center text-sm font-medium text-gray-900">
+                "{selectedResource.title}"
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteDialogOpen(false)}
+                className="flex-1 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

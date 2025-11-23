@@ -1020,52 +1020,52 @@ model CollectionTask {
   type        CollectionTaskType
 
   // 数据源配置
-  sourceId     String
+  sourceId     String     @map("source_id")
   source       DataSource @relation(fields: [sourceId], references: [id])
-  sourceConfig Json // {maxResults, category, dateRange}
+  sourceConfig Json       @map("source_config") // {maxResults, category, dateRange}
 
   // 执行配置
   schedule       String? // Cron表达式
   priority       Int     @default(5) // 1-10
-  maxConcurrency Int     @default(5)
+  maxConcurrency Int     @default(5) @map("max_concurrency")
   timeout        Int     @default(300) // 秒
-  retryCount     Int     @default(3)
+  retryCount     Int     @default(3) @map("retry_count")
 
   // 去重配置
-  deduplicationRules Json // {methods, thresholds}
+  deduplicationRules Json @map("deduplication_rules") // {methods, thresholds}
 
   // 执行状态
   status      CollectionTaskStatus @default(PENDING)
   progress    Float                @default(0) // 0-100
-  currentStep String?
+  currentStep String?              @map("current_step")
 
   // 统计信息
-  totalItems     Int @default(0)
-  processedItems Int @default(0)
-  successItems   Int @default(0)
-  failedItems    Int @default(0)
-  duplicateItems Int @default(0)
-  skippedItems   Int @default(0)
+  totalItems     Int @default(0) @map("total_items")
+  processedItems Int @default(0) @map("processed_items")
+  successItems   Int @default(0) @map("success_items")
+  failedItems    Int @default(0) @map("failed_items")
+  duplicateItems Int @default(0) @map("duplicate_items")
+  skippedItems   Int @default(0) @map("skipped_items")
 
   // 时间信息
-  scheduledAt DateTime?
-  startedAt   DateTime?
-  completedAt DateTime?
-  nextRunAt   DateTime?
+  scheduledAt DateTime? @map("scheduled_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  nextRunAt   DateTime? @map("next_run_at")
 
   // 错误信息
-  errorMessage String? @db.Text
-  errorStack   String? @db.Text
+  errorMessage String? @db.Text @map("error_message")
+  errorStack   String? @db.Text @map("error_stack")
   warnings     Json? // ["warning1", "warning2"]
 
   // 结果数据
-  resultSummary Json? // {avg_quality, sources, etc}
+  resultSummary Json? @map("result_summary") // {avg_quality, sources, etc}
   logs          Json? // 日志摘要
 
   // 审计字段
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
 
   // 关系
   resources            Resource[]
@@ -1090,10 +1090,10 @@ model DeduplicationRecord {
   id String @id @default(uuid())
 
   // 关联信息
-  taskId        String?
+  taskId        String?         @map("task_id")
   task          CollectionTask? @relation(fields: [taskId], references: [id])
-  resourceId    String? // 如果保留，指向保留的资源
-  duplicateOfId String? // 指向原始资源
+  resourceId    String?         @map("resource_id") // 如果保留，指向保留的资源
+  duplicateOfId String?         @map("duplicate_of_id") // 指向原始资源
 
   // 检测方式
   method     String // URL_HASH|TITLE_SIMILARITY|CONTENT_FINGERPRINT|AUTHOR_TIME
@@ -1101,26 +1101,26 @@ model DeduplicationRecord {
   confidence Float  @default(1.0) // 置信度
 
   // 去重依据
-  urlHash            String?
-  titleHash          String?
-  contentFingerprint String?
-  authorTimeKey      String?
+  urlHash            String? @map("url_hash")
+  titleHash          String? @map("title_hash")
+  contentFingerprint String? @map("content_fingerprint")
+  authorTimeKey      String? @map("author_time_key")
 
   // 原始数据
-  originalData Json // 被去重的原始数据（标题、URL等）
-  comparedWith Json? // 比较的资源信息
+  originalData Json  @map("original_data") // 被去重的原始数据（标题、URL等）
+  comparedWith Json? @map("compared_with") // 比较的资源信息
 
   // 决策信息
   decision  DuplicateDecision
-  isCorrect Boolean? // 人工验证结果
+  isCorrect Boolean?          @map("is_correct") // 人工验证结果
 
   // 处理信息
-  processedBy String? // USER_ID or SYSTEM
-  processedAt DateTime @default(now())
+  processedBy String?  @map("processed_by") // USER_ID or SYSTEM
+  processedAt DateTime @default(now()) @map("processed_at")
   notes       String?
 
   // 审计
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([urlHash])
   @@index([titleHash])

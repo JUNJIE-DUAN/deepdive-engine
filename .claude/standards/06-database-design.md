@@ -22,12 +22,14 @@
 ### DeepDive Engine 数据架构
 
 **PostgreSQL (主数据库)**:
+
 - ✅ 结构化数据（用户、资源、集合、学习路径）
 - ✅ 需要事务保证的数据
 - ✅ 需要复杂查询和关联的数据
 - ✅ 需要强一致性的数据
 
 **MongoDB (辅助数据库)**:
+
 - ✅ 原始数据存储（raw_data from APIs）
 - ✅ 文档结构不固定的数据
 - ✅ 大量非结构化内容
@@ -80,6 +82,7 @@ CREATE TABLE LearningPath (   -- 应该用复数且snake_case
 ```
 
 **规则**:
+
 - 🔴 MUST: 表名使用snake_case复数形式
 - 🔴 MUST: 列名使用snake_case
 - 🔴 MUST: 主键命名为`id`
@@ -110,6 +113,7 @@ model Resource {
 ```
 
 **选择原则**:
+
 - 🔴 MUST: 使用字符串类型的ID（CUID或UUID）
 - 🟡 SHOULD: 优先选择CUID（性能更好，更短）
 - 🟢 MAY: 内部关联表可以使用复合主键
@@ -179,6 +183,7 @@ model ResourceCollection {
 ```
 
 **级联删除规则** 🔴 MUST:
+
 - `Cascade`: 主记录删除时，相关记录也删除（如用户删除时删除其资源）
 - `SetNull`: 主记录删除时，外键设为NULL（较少使用）
 - `Restrict`: 有相关记录时禁止删除（默认，最安全）
@@ -206,6 +211,7 @@ model Resource {
 ```
 
 **索引原则**:
+
 - 🔴 MUST: 所有外键必须有索引
 - 🔴 MUST: 唯一约束字段自动有唯一索引
 - 🟡 SHOULD: WHERE子句常用字段建立索引
@@ -254,6 +260,7 @@ enum ResourceType {
 ```
 
 **类型选择**:
+
 - 🔴 MUST: 字符串指定最大长度（防止滥用）
   - 短文本: `@db.VarChar(n)` (n < 2000)
   - 长文本: `@db.Text`
@@ -265,27 +272,29 @@ enum ResourceType {
 
 ```typescript
 // schemas/resource-metadata.schema.ts
-import { z } from 'zod';
+import { z } from "zod";
 
-export const ResourceMetadataSchema = z.object({
-  // GitHub特有字段
-  stars: z.number().int().nonnegative().optional(),
-  forks: z.number().int().nonnegative().optional(),
-  language: z.string().optional(),
+export const ResourceMetadataSchema = z
+  .object({
+    // GitHub特有字段
+    stars: z.number().int().nonnegative().optional(),
+    forks: z.number().int().nonnegative().optional(),
+    language: z.string().optional(),
 
-  // arXiv特有字段
-  citations: z.number().int().nonnegative().optional(),
-  pdfUrl: z.string().url().optional(),
+    // arXiv特有字段
+    citations: z.number().int().nonnegative().optional(),
+    pdfUrl: z.string().url().optional(),
 
-  // 通用字段
-  topics: z.array(z.string()).max(10).optional(),
-  lastUpdated: z.string().datetime().optional(),
-}).strict();  // 禁止额外字段
+    // 通用字段
+    topics: z.array(z.string()).max(10).optional(),
+    lastUpdated: z.string().datetime().optional(),
+  })
+  .strict(); // 禁止额外字段
 
 export type ResourceMetadata = z.infer<typeof ResourceMetadataSchema>;
 
 // 使用
-import { ResourceMetadataSchema } from '@/schemas/resource-metadata.schema';
+import { ResourceMetadataSchema } from "@/schemas/resource-metadata.schema";
 
 async function createResource(data: CreateResourceDto) {
   // 验证JSON字段
@@ -409,6 +418,7 @@ arxivRawData            # 不要用camelCase
 ```
 
 **规则**:
+
 - 🔴 MUST: 必须包含`resourceId`字段关联PostgreSQL
 - 🔴 MUST: 必须存储完整的API原始响应
 - 🔴 MUST: 包含`fetchedAt`时间戳
@@ -418,15 +428,12 @@ arxivRawData            # 不要用camelCase
 
 ```javascript
 // MongoDB索引创建
-db.arxiv_raw_data.createIndex({ resourceId: 1 });  // 🔴 MUST
-db.arxiv_raw_data.createIndex({ sourceId: 1 });    // 🔴 MUST（去重）
-db.arxiv_raw_data.createIndex({ fetchedAt: -1 });  // 🟡 SHOULD
+db.arxiv_raw_data.createIndex({ resourceId: 1 }); // 🔴 MUST
+db.arxiv_raw_data.createIndex({ sourceId: 1 }); // 🔴 MUST（去重）
+db.arxiv_raw_data.createIndex({ fetchedAt: -1 }); // 🟡 SHOULD
 
 // 唯一索引防止重复
-db.arxiv_raw_data.createIndex(
-  { source: 1, sourceId: 1 },
-  { unique: true }
-);
+db.arxiv_raw_data.createIndex({ source: 1, sourceId: 1 }, { unique: true });
 ```
 
 ---
@@ -563,7 +570,7 @@ const result = await prisma.$transaction(async (tx) => {
     data: {
       userId,
       resourceId: resource.id,
-      type: 'CREATE',
+      type: "CREATE",
     },
   });
 
@@ -601,6 +608,7 @@ DATABASE_URL="postgresql://user:password@localhost:5432/dbname?connection_limit=
 ```
 
 **连接池大小建议**:
+
 - 开发环境: 5-10
 - 生产环境: `(核心数 * 2) + 磁盘数`
 - 示例: 4核心 + 1磁盘 = 9-10连接
@@ -625,6 +633,7 @@ prisma/migrations/
 ```
 
 **规则**:
+
 - 🔴 MUST: 迁移名称使用snake_case且具有描述性
 - 🔴 MUST: 所有迁移文件提交到Git
 - 🔴 MUST: 生产环境使用`prisma migrate deploy`
@@ -634,12 +643,12 @@ prisma/migrations/
 
 ```typescript
 // src/scripts/migrate-data.ts
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function migrateData() {
-  console.log('Starting data migration...');
+  console.log("Starting data migration...");
 
   try {
     // 使用事务确保原子性
@@ -661,10 +670,10 @@ async function migrateData() {
         });
       }
 
-      console.log('Migration completed successfully');
+      console.log("Migration completed successfully");
     });
   } catch (error) {
-    console.error('Migration failed:', error);
+    console.error("Migration failed:", error);
     throw error;
   } finally {
     await prisma.$disconnect();
@@ -684,18 +693,18 @@ migrateData();
 // ✅ 正确 - 使用索引
 const resources = await prisma.resource.findMany({
   where: {
-    userId,           // 有索引
-    type: 'ARTICLE',  // 有索引
+    userId, // 有索引
+    type: "ARTICLE", // 有索引
   },
   orderBy: {
-    createdAt: 'desc',  // 有索引
+    createdAt: "desc", // 有索引
   },
 });
 
 // ❌ 错误 - 全表扫描
 const resources = await prisma.resource.findMany({
   where: {
-    title: { contains: keyword },  // 无索引，全表扫描！
+    title: { contains: keyword }, // 无索引，全表扫描！
   },
 });
 
@@ -713,17 +722,17 @@ const resources = await prisma.$queryRaw`
 // ✅ 正确 - 批量创建
 await prisma.resource.createMany({
   data: resources,
-  skipDuplicates: true,  // 跳过重复项
+  skipDuplicates: true, // 跳过重复项
 });
 
 // ❌ 错误 - 循环单个创建
 for (const resource of resources) {
-  await prisma.resource.create({ data: resource });  // 很慢！
+  await prisma.resource.create({ data: resource }); // 很慢！
 }
 
 // ✅ 正确 - 批量更新
 await prisma.resource.updateMany({
-  where: { type: 'ARTICLE' },
+  where: { type: "ARTICLE" },
   data: { isPublished: true },
 });
 ```
@@ -731,7 +740,7 @@ await prisma.resource.updateMany({
 ### 3. 缓存策略 🟡 SHOULD
 
 ```typescript
-import { Redis } from 'ioredis';
+import { Redis } from "ioredis";
 
 const redis = new Redis(process.env.REDIS_URL);
 
@@ -748,11 +757,7 @@ async function getResourceWithCache(id: string) {
   });
 
   // 3. 写入缓存（5分钟）
-  await redis.setex(
-    `resource:${id}`,
-    300,
-    JSON.stringify(resource)
-  );
+  await redis.setex(`resource:${id}`, 300, JSON.stringify(resource));
 
   return resource;
 }
@@ -764,8 +769,8 @@ async function getResourceWithCache(id: string) {
 
 ```typescript
 // src/scripts/verify-data-integrity.ts
-import { PrismaClient } from '@prisma/client';
-import { MongoClient } from 'mongodb';
+import { PrismaClient } from "@prisma/client";
+import { MongoClient } from "mongodb";
 
 async function verifyDataIntegrity() {
   const prisma = new PrismaClient();
@@ -789,20 +794,22 @@ async function verifyDataIntegrity() {
     }
 
     // 检查2: MongoDB中的每个rawData都应该有resourceId
-    const collections = ['arxiv_raw_data', 'github_raw_data'];
+    const collections = ["arxiv_raw_data", "github_raw_data"];
     for (const collectionName of collections) {
       const count = await db.collection(collectionName).countDocuments({
         resourceId: { $exists: false },
       });
 
       if (count > 0) {
-        console.warn(`${collectionName}: ${count} documents missing resourceId`);
+        console.warn(
+          `${collectionName}: ${count} documents missing resourceId`,
+        );
       }
     }
 
     // 检查3: 检查重复的sourceUrl
     const duplicates = await prisma.resource.groupBy({
-      by: ['sourceUrl'],
+      by: ["sourceUrl"],
       having: {
         sourceUrl: {
           _count: { gt: 1 },
@@ -814,7 +821,7 @@ async function verifyDataIntegrity() {
       console.warn(`Found ${duplicates.length} duplicate sourceUrls`);
     }
 
-    console.log('Data integrity check completed');
+    console.log("Data integrity check completed");
   } finally {
     await prisma.$disconnect();
     await mongo.close();

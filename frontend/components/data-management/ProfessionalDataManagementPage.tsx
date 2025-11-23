@@ -44,7 +44,9 @@ const fetchDashboardSummary = async (): Promise<DashboardSummary> => {
 };
 
 const fetchRecentTasks = async (): Promise<RecentTask[]> => {
-  const response = await fetch('/api/v1/data-management/dashboard/recent-tasks');
+  const response = await fetch(
+    '/api/v1/data-management/dashboard/recent-tasks'
+  );
   if (!response.ok) {
     throw new Error('Failed to fetch recent tasks');
   }

@@ -37,7 +37,9 @@ class PerformanceMonitor {
     }
 
     const duration = performance.now() - startTime;
-    const metadata = this.marks.get(`${name}_metadata`) as Record<string, any> | undefined;
+    const metadata = this.marks.get(`${name}_metadata`) as
+      | Record<string, any>
+      | undefined;
 
     const metric: PerformanceMetric = {
       name,
@@ -52,7 +54,9 @@ class PerformanceMonitor {
 
     // 如果性能较差，记录警告
     if (duration > 1000) {
-      console.warn(`Slow operation detected: ${name} took ${duration.toFixed(2)}ms`);
+      console.warn(
+        `Slow operation detected: ${name} took ${duration.toFixed(2)}ms`
+      );
     }
 
     return duration;
@@ -92,16 +96,38 @@ class PerformanceMonitor {
       return 'No performance data collected.';
     }
 
-    const summary = this.metrics.reduce((acc, metric) => {
-      if (!acc[metric.name]) {
-        acc[metric.name] = { count: 0, totalDuration: 0, maxDuration: 0, minDuration: Infinity };
-      }
-      acc[metric.name].count++;
-      acc[metric.name].totalDuration += metric.duration;
-      acc[metric.name].maxDuration = Math.max(acc[metric.name].maxDuration, metric.duration);
-      acc[metric.name].minDuration = Math.min(acc[metric.name].minDuration, metric.duration);
-      return acc;
-    }, {} as Record<string, { count: number; totalDuration: number; maxDuration: number; minDuration: number }>);
+    const summary = this.metrics.reduce(
+      (acc, metric) => {
+        if (!acc[metric.name]) {
+          acc[metric.name] = {
+            count: 0,
+            totalDuration: 0,
+            maxDuration: 0,
+            minDuration: Infinity,
+          };
+        }
+        acc[metric.name].count++;
+        acc[metric.name].totalDuration += metric.duration;
+        acc[metric.name].maxDuration = Math.max(
+          acc[metric.name].maxDuration,
+          metric.duration
+        );
+        acc[metric.name].minDuration = Math.min(
+          acc[metric.name].minDuration,
+          metric.duration
+        );
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          count: number;
+          totalDuration: number;
+          maxDuration: number;
+          minDuration: number;
+        }
+      >
+    );
 
     let report = 'Performance Report:\n';
     report += '='.repeat(80) + '\n';
@@ -262,7 +288,10 @@ export async function batchProcess<T, R>(
  * 长任务分片执行
  * 使用requestIdleCallback优化长时间运行的任务
  */
-export function scheduleIdleTask(task: () => void, timeout: number = 1000): void {
+export function scheduleIdleTask(
+  task: () => void,
+  timeout: number = 1000
+): void {
   if (typeof window === 'undefined') return;
 
   if ('requestIdleCallback' in window) {

@@ -5,8 +5,8 @@ import {
   HttpException,
   HttpStatus,
   Logger,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
+} from "@nestjs/common";
+import { Request, Response } from "express";
 
 /**
  * 全局HTTP异常过滤器
@@ -44,7 +44,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     request: Request,
     status: number,
   ) {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = process.env.NODE_ENV === "production";
 
     // 基础错误信息
     const baseResponse = {
@@ -58,7 +58,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       // 如果是NestJS标准错误响应
-      if (typeof exceptionResponse === 'object') {
+      if (typeof exceptionResponse === "object") {
         return {
           ...baseResponse,
           ...(exceptionResponse as Record<string, unknown>),
@@ -75,24 +75,23 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // 未知错误处理
     const errorMessage =
-      exception instanceof Error ? exception.message : 'Internal server error';
+      exception instanceof Error ? exception.message : "Internal server error";
 
     return {
       ...baseResponse,
-      message: isProduction
-        ? 'Internal server error'
-        : errorMessage,
+      message: isProduction ? "Internal server error" : errorMessage,
       error: HttpStatus[status],
       // 开发环境提供堆栈信息
-      ...((!isProduction && exception instanceof Error) && {
-        stack: exception.stack,
-      }),
+      ...(!isProduction &&
+        exception instanceof Error && {
+          stack: exception.stack,
+        }),
     };
   }
 
   private logError(exception: unknown, request: Request, status: number) {
     const errorMessage =
-      exception instanceof Error ? exception.message : 'Unknown error';
+      exception instanceof Error ? exception.message : "Unknown error";
 
     const errorLog = {
       statusCode: status,
@@ -100,7 +99,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       method: request.method,
       message: errorMessage,
       ip: request.ip,
-      userAgent: request.get('user-agent'),
+      userAgent: request.get("user-agent"),
       timestamp: new Date().toISOString(),
     };
 

@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, BarChart3, AlertCircle, TrendingUp } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  BarChart3,
+  AlertCircle,
+  TrendingUp,
+} from 'lucide-react';
 import { CollectionConfigurationPanel } from './CollectionConfigurationPanel';
 
 type ResourceType = 'PAPER' | 'BLOG' | 'REPORT' | 'YOUTUBE_VIDEO' | 'NEWS';
@@ -145,7 +151,7 @@ export function NewDataManagementPage() {
                   className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     activeTab === tab.id
                       ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   {tab.emoji ? (
@@ -165,7 +171,9 @@ export function NewDataManagementPage() {
           {/* Main Content */}
           <div className="flex-1 overflow-auto p-6">
             {activeTab === 'configuration' && (
-              <CollectionConfigurationPanel resourceType={selectedResourceType} />
+              <CollectionConfigurationPanel
+                resourceType={selectedResourceType}
+              />
             )}
 
             {activeTab === 'monitoring' && (

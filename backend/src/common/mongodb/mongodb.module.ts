@@ -1,5 +1,5 @@
-import { Global, Module } from '@nestjs/common';
-import { MongoDBService } from './mongodb.service';
+import { Global, Module } from "@nestjs/common";
+import { MongoDBService } from "./mongodb.service";
 
 /**
  * MongoDB 全局模块

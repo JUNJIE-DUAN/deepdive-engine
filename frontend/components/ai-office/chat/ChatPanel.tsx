@@ -13,7 +13,15 @@ import {
   useTaskStore,
   Task,
 } from '@/stores/aiOfficeStore';
-import { Send, Paperclip, Sparkles, FileText, StopCircle, Bot, Zap } from 'lucide-react';
+import {
+  Send,
+  Paperclip,
+  Sparkles,
+  FileText,
+  StopCircle,
+  Bot,
+  Zap,
+} from 'lucide-react';
 import DocumentGenerationWizard, {
   type GenerationConfig,
 } from '../document/DocumentGenerationWizard';
@@ -1403,13 +1411,19 @@ ${userInput || ''}
         <div className="flex items-center space-x-3">
           {/* Agent Mode Toggle */}
           <button
-            onClick={() => setAgentMode(agentMode === 'basic' ? 'enhanced' : 'basic')}
+            onClick={() =>
+              setAgentMode(agentMode === 'basic' ? 'enhanced' : 'basic')
+            }
             className={`group flex items-center space-x-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
               agentMode === 'enhanced'
                 ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
-            title={agentMode === 'enhanced' ? 'Multi-Agent增强模式已启用' : '点击启用Multi-Agent增强模式'}
+            title={
+              agentMode === 'enhanced'
+                ? 'Multi-Agent增强模式已启用'
+                : '点击启用Multi-Agent增强模式'
+            }
           >
             {agentMode === 'enhanced' ? (
               <>

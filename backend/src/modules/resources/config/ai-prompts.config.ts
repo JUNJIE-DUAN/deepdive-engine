@@ -14,8 +14,8 @@ export interface AIPromptTemplate {
  * 论文摘要生成提示词
  */
 export const PaperSummaryPrompt: AIPromptTemplate = {
-  name: 'paper_summary',
-  description: 'Generate structured summary for academic papers',
+  name: "paper_summary",
+  description: "Generate structured summary for academic papers",
   system: `You are an expert academic paper analyzer. Your task is to generate a structured summary of research papers in JSON format.
 
 Please analyze the paper and extract:
@@ -67,8 +67,8 @@ Return JSON with this exact structure:
  * 新闻文章摘要生成提示词
  */
 export const NewsSummaryPrompt: AIPromptTemplate = {
-  name: 'news_summary',
-  description: 'Generate structured summary for news articles',
+  name: "news_summary",
+  description: "Generate structured summary for news articles",
   system: `You are an expert news analyst. Your task is to generate a structured summary of news articles in JSON format.
 
 Please analyze the article and extract:
@@ -126,8 +126,8 @@ Return JSON with this exact structure:
  * 视频摘要生成提示词
  */
 export const VideoSummaryPrompt: AIPromptTemplate = {
-  name: 'video_summary',
-  description: 'Generate structured summary for video content',
+  name: "video_summary",
+  description: "Generate structured summary for video content",
   system: `You are an expert video content analyzer. Your task is to generate a structured summary of video transcripts in JSON format.
 
 Please analyze the video and extract:
@@ -198,8 +198,8 @@ Return JSON with this exact structure:
  * 开源项目摘要生成提示词
  */
 export const ProjectSummaryPrompt: AIPromptTemplate = {
-  name: 'project_summary',
-  description: 'Generate structured summary for open source projects',
+  name: "project_summary",
+  description: "Generate structured summary for open source projects",
   system: `You are an expert open source project analyst. Your task is to generate a structured summary of GitHub projects in JSON format.
 
 Please analyze the project and extract:
@@ -262,17 +262,19 @@ export function getPromptTemplate(resourceType: string): AIPromptTemplate {
     PROJECT: ProjectSummaryPrompt,
   };
 
-  return templates[resourceType] || {
-    name: 'generic_summary',
-    description: 'Generic summary for unknown resource type',
-    system: `You are a content analyzer. Generate a structured summary in JSON format.`,
-    user: (resource) => `
+  return (
+    templates[resourceType] || {
+      name: "generic_summary",
+      description: "Generic summary for unknown resource type",
+      system: `You are a content analyzer. Generate a structured summary in JSON format.`,
+      user: (resource) => `
 Analyze this content:
 Title: ${resource.title}
 Content: ${resource.content}
 
 Return valid JSON with: overview, category, subcategories, keyPoints, keywords, difficulty, readingTime, confidence, generatedAt, model`,
-  };
+    }
+  );
 }
 
 /**
@@ -294,35 +296,35 @@ export const PromptBestPractices = {
    * 验证 AI 响应的检查清单
    */
   validationChecklist: [
-    '✓ 响应是有效的 JSON',
-    '✓ 包含所有必需字段',
-    '✓ overview 字段 200-300 字',
-    '✓ keyPoints 数组有 3-5 个项目',
-    '✓ confidence 值在 0-1 之间',
-    '✓ generatedAt 是有效的 ISO 8601 日期',
-    '✓ difficulty 值是允许的之一',
-    '✓ 没有 markdown 格式化',
+    "✓ 响应是有效的 JSON",
+    "✓ 包含所有必需字段",
+    "✓ overview 字段 200-300 字",
+    "✓ keyPoints 数组有 3-5 个项目",
+    "✓ confidence 值在 0-1 之间",
+    "✓ generatedAt 是有效的 ISO 8601 日期",
+    "✓ difficulty 值是允许的之一",
+    "✓ 没有 markdown 格式化",
   ],
 
   /**
    * 降级策略
    */
   fallbackStrategies: [
-    '1. 尝试重新请求 AI 服务',
-    '2. 使用 convertToStructuredSummary() 从普通摘要转换',
-    '3. 返回最小化的结构化数据（只有必需字段）',
-    '4. 记录错误并返回 null',
+    "1. 尝试重新请求 AI 服务",
+    "2. 使用 convertToStructuredSummary() 从普通摘要转换",
+    "3. 返回最小化的结构化数据（只有必需字段）",
+    "4. 记录错误并返回 null",
   ],
 
   /**
    * 性能优化建议
    */
   performanceOptimizations: [
-    '- 缓存 AI 响应以避免重复生成',
-    '- 对大内容进行分块处理',
-    '- 使用流式处理长文本',
-    '- 并行处理多个资源',
-    '- 实现响应缓存策略（24小时）',
+    "- 缓存 AI 响应以避免重复生成",
+    "- 对大内容进行分块处理",
+    "- 使用流式处理长文本",
+    "- 并行处理多个资源",
+    "- 实现响应缓存策略（24小时）",
   ],
 };
 
@@ -331,40 +333,44 @@ export const PromptBestPractices = {
  */
 export function validateStructuredResponse(
   response: any,
-  resourceType: string = 'PAPER',
+  resourceType: string = "PAPER",
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // 检查基础字段
-  if (!response.overview || typeof response.overview !== 'string') {
-    errors.push('Missing or invalid overview');
+  if (!response.overview || typeof response.overview !== "string") {
+    errors.push("Missing or invalid overview");
   }
-  if (!response.category || typeof response.category !== 'string') {
-    errors.push('Missing or invalid category');
+  if (!response.category || typeof response.category !== "string") {
+    errors.push("Missing or invalid category");
   }
   if (!Array.isArray(response.keyPoints) || response.keyPoints.length === 0) {
-    errors.push('Missing or invalid keyPoints');
+    errors.push("Missing or invalid keyPoints");
   }
-  if (typeof response.confidence !== 'number' || response.confidence < 0 || response.confidence > 1) {
-    errors.push('Invalid confidence value');
+  if (
+    typeof response.confidence !== "number" ||
+    response.confidence < 0 ||
+    response.confidence > 1
+  ) {
+    errors.push("Invalid confidence value");
   }
 
   // 检查类型特定字段
-  if (resourceType === 'PAPER') {
+  if (resourceType === "PAPER") {
     if (!Array.isArray(response.contributions)) {
-      errors.push('PAPER: Missing or invalid contributions');
+      errors.push("PAPER: Missing or invalid contributions");
     }
-  } else if (resourceType === 'NEWS') {
-    if (!response.headline || typeof response.headline !== 'string') {
-      errors.push('NEWS: Missing or invalid headline');
+  } else if (resourceType === "NEWS") {
+    if (!response.headline || typeof response.headline !== "string") {
+      errors.push("NEWS: Missing or invalid headline");
     }
-  } else if (resourceType === 'YOUTUBE_VIDEO') {
+  } else if (resourceType === "YOUTUBE_VIDEO") {
     if (!Array.isArray(response.speakers)) {
-      errors.push('VIDEO: Missing or invalid speakers');
+      errors.push("VIDEO: Missing or invalid speakers");
     }
-  } else if (resourceType === 'PROJECT') {
-    if (!response.projectName || typeof response.projectName !== 'string') {
-      errors.push('PROJECT: Missing or invalid projectName');
+  } else if (resourceType === "PROJECT") {
+    if (!response.projectName || typeof response.projectName !== "string") {
+      errors.push("PROJECT: Missing or invalid projectName");
     }
   }
 

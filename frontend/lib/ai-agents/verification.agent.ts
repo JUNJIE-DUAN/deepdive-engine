@@ -7,7 +7,11 @@
 
 import type { Resource } from '@/types/ai-office';
 
-export type VerificationStatus = 'verified' | 'uncertain' | 'unsupported' | 'conflicting';
+export type VerificationStatus =
+  | 'verified'
+  | 'uncertain'
+  | 'unsupported'
+  | 'conflicting';
 
 export interface VerificationBadge {
   section: string; // 章节/页面标识
@@ -59,7 +63,11 @@ export class VerificationAgent {
    */
   async verify(input: VerificationInput): Promise<VerificationResult> {
     try {
-      const prompt = this.buildPrompt(input.content, input.sources, input.documentType);
+      const prompt = this.buildPrompt(
+        input.content,
+        input.sources,
+        input.documentType
+      );
 
       const response = await fetch('/api/ai/grok', {
         method: 'POST',
@@ -131,7 +139,11 @@ export class VerificationAgent {
   /**
    * 构建验证提示词
    */
-  private buildPrompt(content: string, sources: Resource[], documentType?: string): string {
+  private buildPrompt(
+    content: string,
+    sources: Resource[],
+    documentType?: string
+  ): string {
     const sourceSummaries = sources
       .map(
         (s: any, i) => `
@@ -202,7 +214,9 @@ ${sourceSummaries}
   /**
    * 解析AI响应
    */
-  private parseResponse(content: string): Omit<VerificationResult, 'verifiedAt'> {
+  private parseResponse(
+    content: string
+  ): Omit<VerificationResult, 'verifiedAt'> {
     try {
       const parsed = JSON.parse(content);
       return this.validateVerification(parsed);
@@ -220,24 +234,45 @@ ${sourceSummaries}
   /**
    * 验证并规范化验证结果
    */
-  private validateVerification(raw: any): Omit<VerificationResult, 'verifiedAt'> {
-    const validStatuses: VerificationStatus[] = ['verified', 'uncertain', 'unsupported', 'conflicting'];
+  private validateVerification(
+    raw: any
+  ): Omit<VerificationResult, 'verifiedAt'> {
+    const validStatuses: VerificationStatus[] = [
+      'verified',
+      'uncertain',
+      'unsupported',
+      'conflicting',
+    ];
 
     return {
-      confidence: typeof raw.confidence === 'number' ? Math.max(0, Math.min(1, raw.confidence)) : 0.7,
+      confidence:
+        typeof raw.confidence === 'number'
+          ? Math.max(0, Math.min(1, raw.confidence))
+          : 0.7,
       badges: Array.isArray(raw.badges)
         ? raw.badges.map((b: any) => ({
             section: b.section || '未知',
             status: validStatuses.includes(b.status) ? b.status : 'uncertain',
-            confidence: typeof b.confidence === 'number' ? Math.max(0, Math.min(1, b.confidence)) : 0.7,
-            issues: Array.isArray(b.issues) ? b.issues.filter((i: any) => typeof i === 'string') : undefined,
-            suggestions: Array.isArray(b.suggestions) ? b.suggestions.filter((s: any) => typeof s === 'string') : undefined,
+            confidence:
+              typeof b.confidence === 'number'
+                ? Math.max(0, Math.min(1, b.confidence))
+                : 0.7,
+            issues: Array.isArray(b.issues)
+              ? b.issues.filter((i: any) => typeof i === 'string')
+              : undefined,
+            suggestions: Array.isArray(b.suggestions)
+              ? b.suggestions.filter((s: any) => typeof s === 'string')
+              : undefined,
           }))
         : [],
-      suggestions: Array.isArray(raw.suggestions) ? raw.suggestions.filter((s: any) => typeof s === 'string') : [],
+      suggestions: Array.isArray(raw.suggestions)
+        ? raw.suggestions.filter((s: any) => typeof s === 'string')
+        : [],
       issues: Array.isArray(raw.issues)
         ? raw.issues.map((i: any) => ({
-            severity: ['high', 'medium', 'low'].includes(i.severity) ? i.severity : 'medium',
+            severity: ['high', 'medium', 'low'].includes(i.severity)
+              ? i.severity
+              : 'medium',
             description: i.description || '',
             location: i.location,
           }))
@@ -251,7 +286,10 @@ ${sourceSummaries}
    */
   private getFallbackVerification(content: string): VerificationResult {
     // 简单的章节检测
-    const sections = content.split('---').length > 1 ? content.split('---').map((_, i) => `Slide ${i + 1}`) : ['全文'];
+    const sections =
+      content.split('---').length > 1
+        ? content.split('---').map((_, i) => `Slide ${i + 1}`)
+        : ['全文'];
 
     return {
       confidence: 0.6,
@@ -272,9 +310,15 @@ ${sourceSummaries}
    */
   static getVerificationSummary(result: VerificationResult): string {
     const total = result.badges.length;
-    const verified = result.badges.filter((b) => b.status === 'verified').length;
-    const uncertain = result.badges.filter((b) => b.status === 'uncertain').length;
-    const issues = result.badges.filter((b) => b.status === 'unsupported' || b.status === 'conflicting').length;
+    const verified = result.badges.filter(
+      (b) => b.status === 'verified'
+    ).length;
+    const uncertain = result.badges.filter(
+      (b) => b.status === 'uncertain'
+    ).length;
+    const issues = result.badges.filter(
+      (b) => b.status === 'unsupported' || b.status === 'conflicting'
+    ).length;
 
     const parts: string[] = [];
 

@@ -11,10 +11,12 @@
 **状态**: 已完成
 
 **发现**:
+
 - Prisma Schema本身**没有冲突** - `passwordHash`字段定义正确
 - 问题是Auth和Collections模块被错误地禁用
 
 **修复内容**:
+
 - 验证Prisma schema中的User模型使用`passwordHash`字段（backend/prisma/schema.prisma:19）
 - 验证Collection和CollectionItem关系表定义完整
 
@@ -25,6 +27,7 @@
 **状态**: 已完成
 
 **AuthModule**:
+
 - ✅ 模块位置: `backend/src/auth/auth.module.ts`
 - ✅ Service实现: `backend/src/auth/auth.service.ts`
 - ✅ 所有代码正确使用`passwordHash`字段
@@ -32,6 +35,7 @@
 - ✅ 在`app.module.ts`中成功启用
 
 **CollectionsModule** (从头创建):
+
 - ✅ 创建模块: `backend/src/collections/collections.module.ts`
 - ✅ 创建服务: `backend/src/collections/collections.service.ts`
 - ✅ 创建控制器: `backend/src/collections/collections.controller.ts`
@@ -45,6 +49,7 @@
 **API端点验证**:
 
 Auth模块:
+
 ```
 POST   /api/v1/auth/register
 POST   /api/v1/auth/login
@@ -53,6 +58,7 @@ GET    /api/v1/auth/me
 ```
 
 Collections模块:
+
 ```
 GET    /api/v1/collections
 POST   /api/v1/collections
@@ -74,11 +80,13 @@ GET    /api/v1/collections/check/:resourceId
 **创建文件**: `frontend/lib/use-thumbnail-generator.ts`
 
 **核心功能**:
+
 1. **PDF.js集成**:
    - 自动配置worker路径
    - 支持从PDF URL生成缩略图
 
 2. **可配置选项**:
+
    ```typescript
    {
      scale?: number;        // 默认 1.5
@@ -109,6 +117,7 @@ GET    /api/v1/collections/check/:resourceId
 **创建文件**: `frontend/components/ResourceCard.tsx`
 
 **核心功能**:
+
 1. **自动缩略图生成**:
    - 检测资源是否需要缩略图（PAPER类型 + 有PDF + 无缩略图）
    - 自动在组件挂载时生成
@@ -165,6 +174,7 @@ GET    /api/v1/collections/check/:resourceId
 ## 📁 创建的新文件
 
 ### Backend (2个文件)
+
 1. `backend/src/collections/collections.module.ts`
 2. `backend/src/collections/collections.service.ts`
 3. `backend/src/collections/collections.controller.ts`
@@ -175,6 +185,7 @@ GET    /api/v1/collections/check/:resourceId
 8. `backend/src/collections/dto/update-note.dto.ts`
 
 ### Frontend (2个文件)
+
 1. `frontend/lib/use-thumbnail-generator.ts`
 2. `frontend/components/ResourceCard.tsx`
 
@@ -190,6 +201,7 @@ GET    /api/v1/collections/check/:resourceId
 ## 🚀 已启用的API端点
 
 ### Auth API
+
 ```bash
 POST   http://localhost:4000/api/v1/auth/register
 POST   http://localhost:4000/api/v1/auth/login
@@ -198,6 +210,7 @@ GET    http://localhost:4000/api/v1/auth/me
 ```
 
 ### Collections API
+
 ```bash
 GET    http://localhost:4000/api/v1/collections
 POST   http://localhost:4000/api/v1/collections
@@ -219,7 +232,9 @@ GET    http://localhost:4000/api/v1/collections/check/:resourceId
 **状态**: 待用户配置
 
 **需要配置的位置**:
+
 1. **AI Service**: `ai-service/.env`
+
    ```env
    GROK_API_KEY=your_grok_api_key_here
    OPENAI_API_KEY=your_openai_api_key_here
@@ -230,6 +245,7 @@ GET    http://localhost:4000/api/v1/collections/check/:resourceId
    - Secret名称: `openai-api-key`
 
 **验证步骤**:
+
 ```bash
 # 检查AI服务健康状态
 curl http://localhost:5000/api/v1/health
@@ -249,12 +265,14 @@ curl http://localhost:5000/api/v1/health
 ## 📊 技术栈使用
 
 ### Backend
+
 - NestJS (模块化架构)
 - Prisma ORM (PostgreSQL)
 - Passport + JWT (认证)
 - TypeScript
 
 ### Frontend
+
 - Next.js 14 (App Router)
 - React Hooks
 - PDF.js (缩略图生成)
@@ -265,21 +283,22 @@ curl http://localhost:5000/api/v1/health
 
 ## 🎯 Week 1 完成度
 
-| 任务 | 状态 | 完成度 |
-|------|------|--------|
-| 修复Prisma Schema | ✅ 完成 | 100% |
-| 启用Auth和Collections | ✅ 完成 | 100% |
-| PDF缩略图Hook | ✅ 完成 | 100% |
-| ResourceCard集成 | ✅ 完成 | 100% |
-| 批量生成UI | ✅ 完成 | 100% |
-| AI密钥配置 | ⚠️ 待配置 | 0% (需用户操作) |
-| **总计** | **5/6** | **83%** |
+| 任务                  | 状态      | 完成度          |
+| --------------------- | --------- | --------------- |
+| 修复Prisma Schema     | ✅ 完成   | 100%            |
+| 启用Auth和Collections | ✅ 完成   | 100%            |
+| PDF缩略图Hook         | ✅ 完成   | 100%            |
+| ResourceCard集成      | ✅ 完成   | 100%            |
+| 批量生成UI            | ✅ 完成   | 100%            |
+| AI密钥配置            | ⚠️ 待配置 | 0% (需用户操作) |
+| **总计**              | **5/6**   | **83%**         |
 
 ---
 
 ## 🧪 测试建议
 
 ### 1. Auth模块测试
+
 ```bash
 # 注册新用户
 curl -X POST http://localhost:4000/api/v1/auth/register \
@@ -300,6 +319,7 @@ curl -X POST http://localhost:4000/api/v1/auth/login \
 ```
 
 ### 2. Collections模块测试
+
 ```bash
 # 创建收藏集
 curl -X POST http://localhost:4000/api/v1/collections \
@@ -315,6 +335,7 @@ curl http://localhost:4000/api/v1/collections
 ```
 
 ### 3. 缩略图功能测试
+
 1. 访问管理页面: `http://localhost:3000/admin/thumbnails`
 2. 点击"Generate All"批量生成
 3. 或单独点击"Generate"按钮生成单个缩略图
@@ -325,14 +346,17 @@ curl http://localhost:4000/api/v1/collections
 ## 🐛 已知问题
 
 ### 1. TypeScript编译错误 ✅ 已修复
+
 - **问题**: DTO类属性未初始化
 - **修复**: 添加`!`非空断言操作符
 
 ### 2. Collections路由路径 ✅ 已修复
+
 - **问题**: Controller使用`@Controller('api/v1/collections')`导致重复路径
 - **修复**: 改为`@Controller('collections')`
 
 ### 3. PDF.js依赖
+
 - **状态**: 需要确保安装`pdfjs-dist`包
 - **解决**: 在package.json中添加依赖
 
@@ -358,12 +382,14 @@ Week 1成功完成了以下核心功能：
 3. ✅ **PDF缩略图** - 自动生成和批量管理功能
 
 **代码质量**:
+
 - ✅ TypeScript类型安全
 - ✅ 错误处理完善
 - ✅ 模块化架构
 - ✅ 用户体验优化（loading状态、进度显示等）
 
 **待改进**:
+
 - ⚠️ 需要配置真实AI API密钥
 - 📋 需要编写单元测试和集成测试
 - 📖 需要补充API文档

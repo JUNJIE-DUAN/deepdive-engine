@@ -10,32 +10,38 @@ interface ThumbnailStatus {
 
 export function useThumbnailGenerator() {
   const [thumbnailStatus, setThumbnailStatus] = useState<ThumbnailStatus>({});
-  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   /**
    * Generate thumbnail for a single resource
    */
-  const generateThumbnail = useCallback(async (resourceId: string, pdfUrl: string) => {
-    try {
-      setThumbnailStatus(prev => ({ ...prev, [resourceId]: 'generating' }));
+  const generateThumbnail = useCallback(
+    async (resourceId: string, pdfUrl: string) => {
+      try {
+        setThumbnailStatus((prev) => ({ ...prev, [resourceId]: 'generating' }));
 
-      // Dynamic import to avoid loading PDF.js on server
-      const { generateAndSaveThumbnail } = await import('./pdf-thumbnail');
-      const thumbnailUrl = await generateAndSaveThumbnail(resourceId, pdfUrl);
+        // Dynamic import to avoid loading PDF.js on server
+        const { generateAndSaveThumbnail } = await import('./pdf-thumbnail');
+        const thumbnailUrl = await generateAndSaveThumbnail(resourceId, pdfUrl);
 
-      if (thumbnailUrl) {
-        setThumbnailStatus(prev => ({ ...prev, [resourceId]: 'success' }));
-        return thumbnailUrl;
-      } else {
-        setThumbnailStatus(prev => ({ ...prev, [resourceId]: 'error' }));
+        if (thumbnailUrl) {
+          setThumbnailStatus((prev) => ({ ...prev, [resourceId]: 'success' }));
+          return thumbnailUrl;
+        } else {
+          setThumbnailStatus((prev) => ({ ...prev, [resourceId]: 'error' }));
+          return null;
+        }
+      } catch (error) {
+        console.error(`Failed to generate thumbnail for ${resourceId}:`, error);
+        setThumbnailStatus((prev) => ({ ...prev, [resourceId]: 'error' }));
         return null;
       }
-    } catch (error) {
-      console.error(`Failed to generate thumbnail for ${resourceId}:`, error);
-      setThumbnailStatus(prev => ({ ...prev, [resourceId]: 'error' }));
-      return null;
-    }
-  }, []);
+    },
+    []
+  );
 
   /**
    * Generate thumbnails for multiple resources
@@ -55,7 +61,10 @@ export function useThumbnailGenerator() {
         const resource = resources[i];
         setProgress({ current: i + 1, total });
 
-        const thumbnailUrl = await generateThumbnail(resource.id, resource.pdfUrl);
+        const thumbnailUrl = await generateThumbnail(
+          resource.id,
+          resource.pdfUrl
+        );
 
         if (thumbnailUrl) {
           results.success++;
@@ -64,7 +73,7 @@ export function useThumbnailGenerator() {
         }
 
         // Add delay to avoid overwhelming the browser
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       setProgress(null);
@@ -77,7 +86,7 @@ export function useThumbnailGenerator() {
    * Reset status for a resource
    */
   const resetStatus = useCallback((resourceId: string) => {
-    setThumbnailStatus(prev => {
+    setThumbnailStatus((prev) => {
       const next = { ...prev };
       delete next[resourceId];
       return next;

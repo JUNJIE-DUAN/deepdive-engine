@@ -29,16 +29,14 @@ const defaultOptions: UseWorkspaceSyncOptions = {
   minResources: 2,
 };
 
-export function useWorkspaceSync(options: UseWorkspaceSyncOptions = {}): UseWorkspaceSyncResult {
+export function useWorkspaceSync(
+  options: UseWorkspaceSyncOptions = {}
+): UseWorkspaceSyncResult {
   const { autoSync, minResources } = { ...defaultOptions, ...options };
   const isEnabled = config.workspaceAiV2Enabled;
 
-  const {
-    resources,
-    workspaceId,
-    setWorkspaceId,
-    setResources,
-  } = useReportWorkspace();
+  const { resources, workspaceId, setWorkspaceId, setResources } =
+    useReportWorkspace();
 
   const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -46,10 +44,7 @@ export function useWorkspaceSync(options: UseWorkspaceSyncOptions = {}): UseWork
 
   const pendingSyncRef = useRef<boolean>(false);
 
-  const resourceIds = useMemo(
-    () => resources.map((r) => r.id),
-    [resources],
-  );
+  const resourceIds = useMemo(() => resources.map((r) => r.id), [resources]);
 
   const syncWorkspace = useCallback(async () => {
     if (!isEnabled) {
@@ -84,9 +79,10 @@ export function useWorkspaceSync(options: UseWorkspaceSyncOptions = {}): UseWork
             id: item.resource.id,
             type: item.resource.type,
             title: item.resource.title,
-            abstract: item.resource.aiSummary ?? item.resource.abstract ?? undefined,
+            abstract:
+              item.resource.aiSummary ?? item.resource.abstract ?? undefined,
             thumbnailUrl: item.resource.thumbnailUrl ?? undefined,
-          })),
+          }))
         );
         return;
       }
@@ -94,7 +90,9 @@ export function useWorkspaceSync(options: UseWorkspaceSyncOptions = {}): UseWork
       const current = await getWorkspace(workspaceId);
       setWorkspace(current);
 
-      const backendIds = new Set(current.resources.map((item) => item.resource.id));
+      const backendIds = new Set(
+        current.resources.map((item) => item.resource.id)
+      );
       const storeIds = new Set(resourceIds);
 
       const addIds = resourceIds.filter((id) => !backendIds.has(id));
@@ -117,9 +115,10 @@ export function useWorkspaceSync(options: UseWorkspaceSyncOptions = {}): UseWork
           id: item.resource.id,
           type: item.resource.type,
           title: item.resource.title,
-          abstract: item.resource.aiSummary ?? item.resource.abstract ?? undefined,
+          abstract:
+            item.resource.aiSummary ?? item.resource.abstract ?? undefined,
           thumbnailUrl: item.resource.thumbnailUrl ?? undefined,
-        })),
+        }))
       );
     } catch (err) {
       if (err instanceof Error) {
@@ -131,7 +130,14 @@ export function useWorkspaceSync(options: UseWorkspaceSyncOptions = {}): UseWork
       pendingSyncRef.current = false;
       setSyncing(false);
     }
-  }, [isEnabled, workspaceId, resourceIds, minResources, setWorkspaceId, setResources]);
+  }, [
+    isEnabled,
+    workspaceId,
+    resourceIds,
+    minResources,
+    setWorkspaceId,
+    setResources,
+  ]);
 
   useEffect(() => {
     if (!isEnabled) {
@@ -151,7 +157,14 @@ export function useWorkspaceSync(options: UseWorkspaceSyncOptions = {}): UseWork
     syncWorkspace().catch(() => {
       /* 错误已在 syncWorkspace 内处理 */
     });
-  }, [isEnabled, autoSync, resourceIds.join(','), workspaceId, syncWorkspace, setWorkspaceId]);
+  }, [
+    isEnabled,
+    autoSync,
+    resourceIds.join(','),
+    workspaceId,
+    syncWorkspace,
+    setWorkspaceId,
+  ]);
 
   const refresh = useCallback(async () => {
     if (!isEnabled || !workspaceId) {

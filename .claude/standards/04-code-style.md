@@ -53,16 +53,17 @@ interface User {
 }
 
 function getUser(id: string): Promise<User> {
-  return fetch(`/api/users/${id}`).then(res => res.json());
+  return fetch(`/api/users/${id}`).then((res) => res.json());
 }
 
 // ❌ 错误 - 使用any类型
 function getUser(id: any): Promise<any> {
-  return fetch(`/api/users/${id}`).then(res => res.json());
+  return fetch(`/api/users/${id}`).then((res) => res.json());
 }
 ```
 
 **规则**:
+
 - 🔴 MUST: 禁止使用`any`类型，使用`unknown`替代
 - 🔴 MUST: 所有函数参数必须有类型标注
 - 🔴 MUST: 公共API函数必须有返回类型标注
@@ -75,14 +76,14 @@ function getUser(id: any): Promise<any> {
 // Classes, Interfaces, Types: PascalCase
 class UserService {}
 interface ApiResponse {}
-type ResourceType = 'article' | 'video';
+type ResourceType = "article" | "video";
 
 // Functions, Variables: camelCase
 function fetchUserData() {}
-const userId = '123';
+const userId = "123";
 
 // Constants: UPPER_SNAKE_CASE
-const API_BASE_URL = 'https://api.example.com';
+const API_BASE_URL = "https://api.example.com";
 const MAX_RETRY_COUNT = 3;
 
 // Private properties: leading underscore (optional)
@@ -91,9 +92,9 @@ class Service {
 }
 
 // ❌ 错误
-class user_service {}  // 应该用PascalCase
-const UserId = '123';  // 变量应该用camelCase
-const apiBaseUrl = 'https://...';  // 常量应该用UPPER_SNAKE_CASE
+class user_service {} // 应该用PascalCase
+const UserId = "123"; // 变量应该用camelCase
+const apiBaseUrl = "https://..."; // 常量应该用UPPER_SNAKE_CASE
 ```
 
 ### 4. 函数规范 🔴 MUST
@@ -110,11 +111,11 @@ const formatDate = (date: Date): string => date.toISOString();
 // ✅ 正确 - 早期返回避免深层嵌套
 function validateUser(user: User): ValidationResult {
   if (!user.email) {
-    return { valid: false, error: 'Email is required' };
+    return { valid: false, error: "Email is required" };
   }
 
   if (!isValidEmail(user.email)) {
-    return { valid: false, error: 'Invalid email format' };
+    return { valid: false, error: "Invalid email format" };
   }
 
   return { valid: true };
@@ -142,6 +143,7 @@ function validateUser(user: User) {
 ```
 
 **规则**:
+
 - 🔴 MUST: 函数长度不超过50行（推荐20行以内）
 - 🔴 MUST: 函数参数不超过3个，更多使用对象参数
 - 🔴 MUST: 使用早期返回避免深层嵌套（最多3层）
@@ -161,7 +163,7 @@ async function fetchUserData(userId: string): Promise<User> {
 
     return await response.json();
   } catch (error) {
-    logger.error('Failed to fetch user data', { userId, error });
+    logger.error("Failed to fetch user data", { userId, error });
     throw error;
   }
 }
@@ -180,17 +182,17 @@ async function fetchDashboardData(): Promise<DashboardData> {
 // ❌ 错误 - Promise链过长
 function fetchUserData(userId: string) {
   return fetch(`/api/users/${userId}`)
-    .then(res => res.json())
-    .then(user => validateUser(user))
-    .then(validUser => transformUser(validUser))
-    .then(transformedUser => saveUser(transformedUser))
-    .catch(error => handleError(error));
+    .then((res) => res.json())
+    .then((user) => validateUser(user))
+    .then((validUser) => transformUser(validUser))
+    .then((transformedUser) => saveUser(transformedUser))
+    .catch((error) => handleError(error));
 }
 
 // ❌ 错误 - 串行请求（应该并行）
 async function fetchDashboardData() {
   const users = await fetchUsers();
-  const resources = await fetchResources();  // 等待上一个完成
+  const resources = await fetchResources(); // 等待上一个完成
   const activities = await fetchActivities();
   return { users, resources, activities };
 }
@@ -300,6 +302,7 @@ export function ResourceCard({
 ```
 
 **组件顺序**（自上而下）:
+
 1. Imports（外部库 → 内部模块 → 类型）
 2. Types/Interfaces
 3. Component declaration
@@ -335,6 +338,7 @@ function ResourcePage() {
 ```
 
 **规则**:
+
 - 🔴 MUST: 单个组件不超过200行
 - 🔴 MUST: 超过3个职责必须拆分
 - 🟡 SHOULD: 推荐每个组件50-100行
@@ -584,6 +588,7 @@ for (const item of items) {
 ```
 
 **规则**:
+
 - 🔴 MUST: 复杂逻辑必须有注释说明
 - 🔴 MUST: TODO必须包含日期和负责人
 - 🟡 SHOULD: 注释解释"为什么"，代码表达"做什么"
@@ -598,15 +603,16 @@ const API_TIMEOUT_MS = 5000;
 const ITEMS_PER_PAGE = 20;
 
 if (retryCount > MAX_RETRY_COUNT) {
-  throw new Error('Max retries exceeded');
+  throw new Error("Max retries exceeded");
 }
 
 // ❌ 错误 - 魔法数字
-if (retryCount > 3) {  // 3是什么？
-  throw new Error('Max retries exceeded');
+if (retryCount > 3) {
+  // 3是什么？
+  throw new Error("Max retries exceeded");
 }
 
-setTimeout(callback, 5000);  // 5000是什么单位？
+setTimeout(callback, 5000); // 5000是什么单位？
 ```
 
 ### 3. 代码组织 🔴 MUST
@@ -646,6 +652,7 @@ setTimeout(callback, 5000);  // 5000是什么单位？
 ### 自动化检查
 
 所有代码风格规则通过以下方式强制执行：
+
 - **Pre-commit hook**: 自动格式化和lint
 - **CI/CD**: 质量门禁检查
 - **IDE配置**: 推荐使用VS Code + ESLint + Prettier插件

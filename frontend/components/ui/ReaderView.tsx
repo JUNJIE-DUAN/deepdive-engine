@@ -57,17 +57,33 @@ export default function ReaderView({
         console.log('[ReaderView] Category:', category, 'URL:', url);
 
         // 检查是否是新闻：通过category或URL域名判断
-        const newsDomains = ['reuters.com', 'bbc.com', 'theguardian.com', 'nytimes.com',
-                             'wsj.com', 'ft.com', 'bloomberg.com', 'apnews.com', 'cnn.com',
-                             'foxnews.com', 'nbcnews.com', 'abcnews.go.com', 'cbsnews.com'];
+        const newsDomains = [
+          'reuters.com',
+          'bbc.com',
+          'theguardian.com',
+          'nytimes.com',
+          'wsj.com',
+          'ft.com',
+          'bloomberg.com',
+          'apnews.com',
+          'cnn.com',
+          'foxnews.com',
+          'nbcnews.com',
+          'abcnews.go.com',
+          'cbsnews.com',
+        ];
         const urlDomain = new URL(url).hostname.replace('www.', '');
-        const isNewsByDomain = newsDomains.some(domain => urlDomain.includes(domain));
+        const isNewsByDomain = newsDomains.some((domain) =>
+          urlDomain.includes(domain)
+        );
         const isNewsByCategory = category?.toLowerCase() === 'news';
         const isNews = isNewsByCategory || isNewsByDomain;
 
         const endpoint = isNews ? 'html-reader-news' : 'html-reader';
         const readerUrl = `${config.apiUrl}/proxy/${endpoint}?url=${encodeURIComponent(url)}`;
-        console.log(`[ReaderView] Using endpoint: ${endpoint} (category: ${isNewsByCategory}, domain: ${isNewsByDomain})`);
+        console.log(
+          `[ReaderView] Using endpoint: ${endpoint} (category: ${isNewsByCategory}, domain: ${isNewsByDomain})`
+        );
         console.log(`[ReaderView] Fetching: ${readerUrl}`);
 
         const response = await fetch(readerUrl);

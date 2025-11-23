@@ -273,7 +273,8 @@ export default function VersionHistory({
 
                 // 确定文档类型
                 const documentType =
-                  newVersion.metadata.slideCount || oldVersion.metadata.slideCount
+                  newVersion.metadata.slideCount ||
+                  oldVersion.metadata.slideCount
                     ? 'ppt'
                     : 'doc';
 

@@ -1,21 +1,21 @@
 module.exports = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
+  moduleFileExtensions: ["js", "json", "ts"],
+  rootDir: "src",
+  testRegex: ".*\\.spec\\.ts$",
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    "^.+\\.(t|j)s$": "ts-jest",
   },
   collectCoverageFrom: [
-    '**/*.(t|j)s',
-    '!**/*.module.ts',
-    '!**/index.ts',
-    '!**/main.ts',
-    '!**/*.interface.ts',
-    '!**/*.dto.ts',
-    '!**/*.entity.ts',
+    "**/*.(t|j)s",
+    "!**/*.module.ts",
+    "!**/index.ts",
+    "!**/main.ts",
+    "!**/*.interface.ts",
+    "!**/*.dto.ts",
+    "!**/*.entity.ts",
   ],
-  coverageDirectory: '../coverage',
-  testEnvironment: 'node',
+  coverageDirectory: "../coverage",
+  testEnvironment: "node",
 
   // 覆盖率阈值 - Phase 1: 50%
   // 根据测试标准文档，采用渐进式提升策略
@@ -32,10 +32,10 @@ module.exports = {
   },
 
   // 覆盖率报告格式
-  coverageReporters: ['text', 'text-summary', 'lcov', 'html'],
+  coverageReporters: ["text", "text-summary", "lcov", "html"],
 
   // 模块路径映射（支持@/路径别名）
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
+    "^@/(.*)$": "<rootDir>/$1",
   },
 };

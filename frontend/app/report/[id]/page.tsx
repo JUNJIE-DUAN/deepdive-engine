@@ -57,7 +57,9 @@ export default function ReportPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${config.apiBaseUrl}/api/v1/reports/${reportId}`);
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/reports/${reportId}`
+      );
 
       if (!response.ok) {
         throw new Error('Failed to load report');
@@ -110,9 +112,9 @@ export default function ReportPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-red-600"></div>
           <p className="text-gray-600">加载报告中...</p>
         </div>
       </div>
@@ -121,14 +123,16 @@ export default function ReportPage() {
 
   if (error || !report) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4">😕</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">报告加载失败</h2>
-          <p className="text-gray-600 mb-4">{error || '未找到报告'}</p>
+          <div className="mb-4 text-6xl">😕</div>
+          <h2 className="mb-2 text-2xl font-bold text-gray-900">
+            报告加载失败
+          </h2>
+          <p className="mb-4 text-gray-600">{error || '未找到报告'}</p>
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
           >
             返回
           </button>
@@ -139,18 +143,22 @@ export default function ReportPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="mx-auto max-w-5xl px-6">
         {/* Header */}
-        <header className="mb-8 bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-start justify-between mb-4">
+        <header className="mb-8 rounded-lg bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-start justify-between">
             <div className="flex-1">
               {/* Metadata */}
-              <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
-                <span>{report.templateIcon} {report.templateName}</span>
+              <div className="mb-3 flex items-center gap-3 text-sm text-gray-600">
+                <span>
+                  {report.templateIcon} {report.templateName}
+                </span>
                 <span>•</span>
                 <span>📄 {report.resourceCount} 篇素材</span>
                 <span>•</span>
-                <span>🕐 {new Date(report.createdAt).toLocaleDateString()}</span>
+                <span>
+                  🕐 {new Date(report.createdAt).toLocaleDateString()}
+                </span>
               </div>
 
               {/* Title */}
@@ -160,16 +168,16 @@ export default function ReportPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 ml-4">
+            <div className="ml-4 flex gap-2">
               <button
                 onClick={handleExportMarkdown}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 📄 导出 MD
               </button>
               <button
                 onClick={handleRegenerate}
-                className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50"
+                className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
               >
                 🔄 重新生成
               </button>
@@ -177,35 +185,43 @@ export default function ReportPage() {
           </div>
 
           {/* Summary */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
+            <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
               <span>📝</span>
               <span>核心摘要</span>
             </h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{report.summary}</p>
+            <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
+              {report.summary}
+            </p>
           </div>
         </header>
 
         {/* Sections */}
-        <div className="space-y-6 mb-12">
+        <div className="mb-12 space-y-6">
           {report.sections.map((section, idx) => (
-            <section key={idx} className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <section key={idx} className="rounded-lg bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-2xl font-semibold text-gray-900">
                 {section.title}
               </h2>
-              <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-red-600 prose-strong:text-gray-900 prose-code:text-red-600 prose-code:bg-red-50 prose-pre:bg-gray-50">
+              <div className="prose prose-sm prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-red-600 prose-strong:text-gray-900 prose-code:text-red-600 prose-code:bg-red-50 prose-pre:bg-gray-50 max-w-none">
                 <ReactMarkdown
                   components={{
                     table: ({ node, ...props }) => (
                       <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-300 border" {...props} />
+                        <table
+                          className="min-w-full divide-y divide-gray-300 border"
+                          {...props}
+                        />
                       </div>
                     ),
                     th: ({ node, ...props }) => (
-                      <th className="px-4 py-2 text-left text-sm font-semibold bg-gray-50 border" {...props} />
+                      <th
+                        className="border bg-gray-50 px-4 py-2 text-left text-sm font-semibold"
+                        {...props}
+                      />
                     ),
                     td: ({ node, ...props }) => (
-                      <td className="px-4 py-2 text-sm border" {...props} />
+                      <td className="border px-4 py-2 text-sm" {...props} />
                     ),
                   }}
                 >
@@ -218,8 +234,8 @@ export default function ReportPage() {
 
         {/* Referenced Resources */}
         {report.resources && report.resources.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="rounded-lg bg-white p-6 shadow-sm">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-gray-900">
               <span>📚</span>
               <span>参考素材 ({report.resources.length})</span>
             </h2>
@@ -227,14 +243,14 @@ export default function ReportPage() {
               {report.resources.map((resource) => (
                 <div
                   key={resource.id}
-                  className="flex gap-4 p-4 border border-gray-200 rounded-lg hover:border-red-300 transition-colors"
+                  className="flex gap-4 rounded-lg border border-gray-200 p-4 transition-colors hover:border-red-300"
                 >
                   {/* Thumbnail */}
                   {resource.thumbnailUrl && (
                     <img
                       src={`${config.apiBaseUrl}${resource.thumbnailUrl}`}
                       alt=""
-                      className="w-20 h-28 object-cover rounded"
+                      className="h-28 w-20 rounded object-cover"
                     />
                   )}
 
@@ -242,20 +258,26 @@ export default function ReportPage() {
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-1">
+                        <h3 className="mb-1 font-semibold text-gray-900">
                           {resource.title}
                         </h3>
                         {resource.abstract && (
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                          <p className="mb-2 line-clamp-2 text-sm text-gray-600">
                             {resource.abstract}
                           </p>
                         )}
                         <div className="flex items-center gap-3 text-xs text-gray-500">
-                          <span className="uppercase font-medium">{resource.type}</span>
+                          <span className="font-medium uppercase">
+                            {resource.type}
+                          </span>
                           {resource.publishedAt && (
                             <>
                               <span>•</span>
-                              <span>{new Date(resource.publishedAt).toLocaleDateString()}</span>
+                              <span>
+                                {new Date(
+                                  resource.publishedAt
+                                ).toLocaleDateString()}
+                              </span>
                             </>
                           )}
                         </div>
@@ -268,7 +290,7 @@ export default function ReportPage() {
                             href={resource.pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100"
+                            className="rounded bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
                           >
                             PDF
                           </a>
@@ -278,7 +300,7 @@ export default function ReportPage() {
                             href={resource.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+                            className="rounded bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
                           >
                             查看
                           </a>
@@ -296,7 +318,7 @@ export default function ReportPage() {
         <div className="mt-8 text-center">
           <button
             onClick={() => router.back()}
-            className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ← 返回
           </button>

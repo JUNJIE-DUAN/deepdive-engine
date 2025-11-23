@@ -553,7 +553,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'abstract',
           title: 'Abstract',
-          aiPrompt: '生成研究摘要（150-250字），包含：研究背景、研究问题、主要方法、关键发现、结论意义',
+          aiPrompt:
+            '生成研究摘要（150-250字），包含：研究背景、研究问题、主要方法、关键发现、结论意义',
           required: true,
           order: 1,
           estimatedWords: 200,
@@ -561,7 +562,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'introduction',
           title: 'Introduction',
-          aiPrompt: '撰写引言部分：介绍研究领域背景、现有研究不足、本研究的动机和目标、研究问题定义',
+          aiPrompt:
+            '撰写引言部分：介绍研究领域背景、现有研究不足、本研究的动机和目标、研究问题定义',
           required: true,
           order: 2,
           estimatedWords: 500,
@@ -569,7 +571,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'literature-review',
           title: 'Literature Review',
-          aiPrompt: '系统回顾相关文献：按主题分类总结现有研究、识别研究空白、分析理论框架',
+          aiPrompt:
+            '系统回顾相关文献：按主题分类总结现有研究、识别研究空白、分析理论框架',
           required: true,
           order: 3,
           estimatedWords: 800,
@@ -577,7 +580,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'methodology',
           title: 'Methodology',
-          aiPrompt: '详细描述研究方法：研究设计、数据来源、分析方法、实验设置（如适用）、评估指标',
+          aiPrompt:
+            '详细描述研究方法：研究设计、数据来源、分析方法、实验设置（如适用）、评估指标',
           required: true,
           order: 4,
           estimatedWords: 600,
@@ -585,7 +589,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'results',
           title: 'Results',
-          aiPrompt: '呈现研究结果：数据分析结果、统计显著性、可视化图表、关键发现的客观描述',
+          aiPrompt:
+            '呈现研究结果：数据分析结果、统计显著性、可视化图表、关键发现的客观描述',
           required: true,
           order: 5,
           estimatedWords: 700,
@@ -593,7 +598,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'discussion',
           title: 'Discussion',
-          aiPrompt: '深入讨论：解释研究结果的意义、与现有文献的关系、研究局限性、未来研究方向',
+          aiPrompt:
+            '深入讨论：解释研究结果的意义、与现有文献的关系、研究局限性、未来研究方向',
           required: true,
           order: 6,
           estimatedWords: 600,
@@ -657,7 +663,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'competitive-landscape',
           title: 'Competitive Landscape',
-          aiPrompt: '分析竞争环境：主要竞争对手、市场份额、差异化策略、竞争优势',
+          aiPrompt:
+            '分析竞争环境：主要竞争对手、市场份额、差异化策略、竞争优势',
           required: true,
           order: 4,
           estimatedWords: 600,
@@ -665,7 +672,8 @@ export const DOCUMENT_TEMPLATES: Record<
         {
           id: 'trends-insights',
           title: 'Trends & Insights',
-          aiPrompt: '识别关键趋势：技术创新、消费者行为变化、监管环境、未来机遇',
+          aiPrompt:
+            '识别关键趋势：技术创新、消费者行为变化、监管环境、未来机遇',
           required: true,
           order: 5,
           estimatedWords: 500,

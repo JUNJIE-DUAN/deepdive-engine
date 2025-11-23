@@ -13,17 +13,20 @@
 ## 📊 市场分析 & 用户需求
 
 ### 用户痛点
+
 1. **学习困难**: 看视频时无法同时记笔记和对照字幕
 2. **便携性缺失**: 无法离线学习字幕内容
 3. **对比学习**: 需要手动对比英文原文和中文翻译来理解语言细节
 4. **资料整理**: 优质视频的字幕难以保存和分类
 
 ### 市场现状
+
 - YouTube官方仅支持SRT/VTT格式下载
 - 没有同时导出双语字幕的官方方案
 - PDF格式易于分享、打印和存档
 
 ### 用户价值主张
+
 ✅ **一键导出**: 两种语言字幕同时导出为格式化的PDF
 ✅ **视觉优化**: 专业排版，易于阅读
 ✅ **离线学习**: 不依赖网络，随时随地学习
@@ -55,12 +58,14 @@
 ### 2. 导出按钮设计
 
 **按钮样式**:
+
 - 图标: ↓ (下载)或 📄 (文档)
 - 颜色: 蓝色 (#2563EB)，hover时深蓝
 - 大小: 40x40px (与其他工具栏按钮一致)
 - 提示文本: "导出字幕为PDF"
 
 **按钮类型**:
+
 ```typescript
 <button
   aria-label="导出字幕为PDF"
@@ -130,6 +135,7 @@
 ### 5. PDF样式设计
 
 #### 页面1: 封面
+
 ```
 ╔════════════════════════════════════════════╗
 ║                                            ║
@@ -149,6 +155,7 @@
 ```
 
 #### 页面2+: 字幕内容
+
 ```
 ┌────────────────────────────────────────────────┐
 │ 0:00                                           │
@@ -379,30 +386,30 @@ export function ExportDialog({ onExport, onClose, state }) {
 // 推荐方案：使用 jsPDF + html2canvas (前端) 或 pdfkit (后端)
 
 // 方案1: 后端生成 (推荐 - 更好的性能和控制)
-import PDFDocument from 'pdfkit';
-import fs from 'fs';
+import PDFDocument from "pdfkit";
+import fs from "fs";
 
 function generateSubtitlePDF(subtitles, options) {
   const doc = new PDFDocument({
-    size: 'A4',
-    margin: 40
+    size: "A4",
+    margin: 40,
   });
 
   // 添加封面
-  doc.fontSize(24).text('YouTube Subtitles', { align: 'center' });
-  doc.fontSize(14).text(subtitles[0].videoTitle, { align: 'center' });
+  doc.fontSize(24).text("YouTube Subtitles", { align: "center" });
+  doc.fontSize(14).text(subtitles[0].videoTitle, { align: "center" });
 
   // 添加字幕内容
   doc.fontSize(11);
-  subtitles.forEach(subtitle => {
+  subtitles.forEach((subtitle) => {
     if (options.includeTimestamp) {
-      doc.text(`[${formatTime(subtitle.startTime)}]`, { color: 'gray' });
+      doc.text(`[${formatTime(subtitle.startTime)}]`, { color: "gray" });
     }
 
-    if (options.languageLayout === 'bilingual-side-by-side') {
+    if (options.languageLayout === "bilingual-side-by-side") {
       doc.text(`English: ${subtitle.text}`);
       doc.text(`Chinese: ${subtitle.translation}`);
-    } else if (options.languageLayout === 'bilingual-stacked') {
+    } else if (options.languageLayout === "bilingual-stacked") {
       doc.text(subtitle.text);
       doc.text(subtitle.translation);
     }
@@ -414,20 +421,22 @@ function generateSubtitlePDF(subtitles, options) {
 }
 
 // 方案2: 前端生成 (用于快速原型)
-import html2pdf from 'html2pdf.js';
+import html2pdf from "html2pdf.js";
 
 function generatePDFClient(subtitles, options) {
   const html = generateSubtitleHTML(subtitles, options);
-  const element = document.createElement('div');
+  const element = document.createElement("div");
   element.innerHTML = html;
 
-  html2pdf().set({
-    margin: 10,
-    filename: `subtitles_${Date.now()}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-  }).save();
+  html2pdf()
+    .set({
+      margin: 10,
+      filename: `subtitles_${Date.now()}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: "portrait", unit: "mm", format: "a4" },
+    })
+    .save();
 }
 ```
 
@@ -436,18 +445,21 @@ function generatePDFClient(subtitles, options) {
 ## 📈 功能迭代路线图
 
 ### Phase 1: MVP (2025年1月)
+
 ✅ PDF格式导出
 ✅ 双语并排显示
 ✅ 时间戳包含
 ✅ 基础UI
 
 ### Phase 2: 增强 (2025年2月)
+
 - [ ] TXT/DOCX格式支持
 - [ ] 高级排版选项 (字体、颜色、间距)
 - [ ] 双语模式: 上下布局、交替布局
 - [ ] 导出历史和预设
 
 ### Phase 3: 高级 (2025年3月)
+
 - [ ] 批量导出 (多个视频)
 - [ ] 字幕编辑 (导出前修改)
 - [ ] 主题样式 (深色/浅色/学术)
@@ -458,30 +470,33 @@ function generatePDFClient(subtitles, options) {
 
 ## 🎯 成功指标 (KPI)
 
-| 指标 | 目标 | 测量方法 |
-|------|------|--------|
-| **导出使用率** | >30% 用户尝试 | 点击事件追踪 |
-| **下载转化率** | >70% 点击转下载 | GA事件跟踪 |
-| **用户满意度** | >4.2/5 星 | 导出后反馈问卷 |
-| **导出成功率** | >98% 无错误 | 后端日志监控 |
-| **平均等待时间** | <3秒 | 性能监控 |
+| 指标             | 目标            | 测量方法       |
+| ---------------- | --------------- | -------------- |
+| **导出使用率**   | >30% 用户尝试   | 点击事件追踪   |
+| **下载转化率**   | >70% 点击转下载 | GA事件跟踪     |
+| **用户满意度**   | >4.2/5 星       | 导出后反馈问卷 |
+| **导出成功率**   | >98% 无错误     | 后端日志监控   |
+| **平均等待时间** | <3秒            | 性能监控       |
 
 ---
 
 ## 🔒 隐私与合规
 
 ### 法律合规性
+
 - ✅ 遵守YouTube ToS (字幕用于学习用途)
 - ✅ 自动生成的翻译标记清晰
 - ✅ 添加"仅供个人学习使用"免责声明
 - ✅ 导出的PDF包含原始视频链接
 
 ### 用户隐私
+
 - 不存储下载历史
 - 不追踪导出内容的分享
 - 后端生成的临时文件24小时后自动删除
 
 ### 使用条款修改
+
 ```
 "导出功能仅用于个人学习和研究目的。
 用户不得商业使用或转发导出内容。
@@ -493,16 +508,19 @@ function generatePDFClient(subtitles, options) {
 ## 🎨 UI/UX最佳实践
 
 ### 可访问性 (A11y)
+
 - ARIA标签: `aria-label="导出字幕为PDF"`
 - 键盘导航: Tab键可访问导出按钮
 - 颜色对比: WCAG AA标准 (4.5:1)
 
 ### 响应式设计
+
 - 桌面: 工具栏右上角按钮 40x40px
 - 平板: 菜单中的导出选项
 - 手机: 底部导出按钮或菜单
 
 ### 错误处理
+
 ```
 常见错误场景：
 1. 网络超时 → "导出超时，请重试"
@@ -515,26 +533,26 @@ function generatePDFClient(subtitles, options) {
 
 ## 📞 相关团队职责
 
-| 角色 | 职责 |
-|------|------|
-| **产品经理** | 需求定义、优先级排序、用户研究 |
-| **设计师** | UI设计、UX流程、可访问性审查 |
-| **前端工程师** | 导出对话框、按钮、事件处理 |
-| **后端工程师** | PDF生成、API开发、性能优化 |
-| **QA工程师** | 功能测试、浏览器兼容性、边界情况 |
-| **法务** | 合规性审核、ToS更新 |
+| 角色           | 职责                             |
+| -------------- | -------------------------------- |
+| **产品经理**   | 需求定义、优先级排序、用户研究   |
+| **设计师**     | UI设计、UX流程、可访问性审查     |
+| **前端工程师** | 导出对话框、按钮、事件处理       |
+| **后端工程师** | PDF生成、API开发、性能优化       |
+| **QA工程师**   | 功能测试、浏览器兼容性、边界情况 |
+| **法务**       | 合规性审核、ToS更新              |
 
 ---
 
 ## 附录A: 竞品分析
 
-| 产品 | 导出格式 | 双语支持 | 离线可用 | 价格 |
-|------|--------|--------|--------|------|
-| **我们的方案** | PDF/TXT/DOCX | ✅ | ✅ | 免费 |
-| Subtitle Edit | SRT/ASS | ❌ | ✅ | 免费 |
-| DownSub | TXT/SRT | ❌ | ✅ | 免费 |
-| 3Play Media | 多格式 | ✅ | ❌ | $$ |
-| Descript | 多格式 | ✅ | ❌ | $$$ |
+| 产品           | 导出格式     | 双语支持 | 离线可用 | 价格 |
+| -------------- | ------------ | -------- | -------- | ---- |
+| **我们的方案** | PDF/TXT/DOCX | ✅       | ✅       | 免费 |
+| Subtitle Edit  | SRT/ASS      | ❌       | ✅       | 免费 |
+| DownSub        | TXT/SRT      | ❌       | ✅       | 免费 |
+| 3Play Media    | 多格式       | ✅       | ❌       | $$   |
+| Descript       | 多格式       | ✅       | ❌       | $$$  |
 
 **竞争优势**: 免费+双语+PDF格式+简洁UI
 
@@ -569,8 +587,7 @@ function generatePDFClient(subtitles, options) {
 
 ## 版本历史
 
-| 版本 | 日期 | 更新内容 | 作者 |
-|------|------|--------|------|
-| 1.0 | 2025-01-20 | 初始PRD | Product Manager |
-| 1.1 | - | 待更新 | - |
-
+| 版本 | 日期       | 更新内容 | 作者            |
+| ---- | ---------- | -------- | --------------- |
+| 1.0  | 2025-01-20 | 初始PRD  | Product Manager |
+| 1.1  | -          | 待更新   | -               |

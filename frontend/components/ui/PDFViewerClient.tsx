@@ -96,11 +96,23 @@ export default function PDFViewerClient({
                 className="rounded p-1 hover:bg-gray-200 disabled:opacity-50"
                 title="Zoom Out"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"
+                  />
                 </svg>
               </button>
-              <span className="text-sm text-gray-600">{Math.round(scale * 100)}%</span>
+              <span className="text-sm text-gray-600">
+                {Math.round(scale * 100)}%
+              </span>
               <button
                 onClick={resetZoom}
                 className="rounded px-2 py-1 text-xs hover:bg-gray-200"
@@ -114,8 +126,18 @@ export default function PDFViewerClient({
                 className="rounded p-1 hover:bg-gray-200 disabled:opacity-50"
                 title="Zoom In"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
+                  />
                 </svg>
               </button>
             </div>
@@ -129,8 +151,18 @@ export default function PDFViewerClient({
                 disabled={pageNumber <= 1}
                 className="rounded p-1 hover:bg-gray-200 disabled:opacity-50"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
               <span className="text-sm text-gray-600">
@@ -141,8 +173,18 @@ export default function PDFViewerClient({
                 disabled={pageNumber >= numPages}
                 className="rounded p-1 hover:bg-gray-200 disabled:opacity-50"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </button>
             </div>
@@ -154,8 +196,18 @@ export default function PDFViewerClient({
             className="rounded p-1 hover:bg-gray-200"
             title="Open Original"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
             </svg>
           </button>
         </div>
@@ -169,7 +221,9 @@ export default function PDFViewerClient({
             <div className="text-center">
               <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
               <p className="mt-4 text-sm text-gray-600">Loading PDF...</p>
-              <p className="mt-2 text-xs text-gray-500">This may take a few seconds</p>
+              <p className="mt-2 text-xs text-gray-500">
+                This may take a few seconds
+              </p>
             </div>
           </div>
         )}

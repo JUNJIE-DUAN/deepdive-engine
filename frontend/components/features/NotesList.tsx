@@ -140,8 +140,12 @@ export default function NotesList({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-semibold text-gray-900">No notes yet</h3>
-        <p className="mt-1 text-xs text-gray-600">Start creating notes to save your thoughts</p>
+        <h3 className="mt-2 text-sm font-semibold text-gray-900">
+          No notes yet
+        </h3>
+        <p className="mt-1 text-xs text-gray-600">
+          Start creating notes to save your thoughts
+        </p>
       </div>
     );
   }
@@ -150,8 +154,10 @@ export default function NotesList({
     <div className="space-y-4">
       {/* Tag filter chips - Only show in Notes tab */}
       {allTags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          <span className="text-xs font-semibold text-gray-600 uppercase">Tags:</span>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase text-gray-600">
+            Tags:
+          </span>
           <button
             onClick={() => setSelectedTag(null)}
             className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
@@ -189,8 +195,8 @@ export default function NotesList({
             <div className="p-4">
               {/* Resource info header */}
               {!resourceId && note.resource && (
-                <div className="mb-3 flex items-center gap-2 pb-3 border-b border-gray-100">
-                  <span className="text-xs font-semibold text-gray-500 uppercase">
+                <div className="mb-3 flex items-center gap-2 border-b border-gray-100 pb-3">
+                  <span className="text-xs font-semibold uppercase text-gray-500">
                     From: {note.resource.type}
                   </span>
                   <span className="truncate text-xs font-medium text-gray-700 hover:text-blue-600">
@@ -200,7 +206,7 @@ export default function NotesList({
               )}
 
               {/* Content preview */}
-              <div className="prose prose-sm mb-3 max-w-none text-sm leading-relaxed text-gray-700 line-clamp-3">
+              <div className="prose prose-sm mb-3 line-clamp-3 max-w-none text-sm leading-relaxed text-gray-700">
                 <ReactMarkdown>{note.content}</ReactMarkdown>
               </div>
 
@@ -226,7 +232,9 @@ export default function NotesList({
               {/* Metadata footer */}
               <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-xs text-gray-500">
                 <div className="flex items-center gap-2">
-                  <span>{new Date(note.createdAt).toLocaleDateString('en-US')}</span>
+                  <span>
+                    {new Date(note.createdAt).toLocaleDateString('en-US')}
+                  </span>
                   {note.isPublic && (
                     <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800">
                       Public

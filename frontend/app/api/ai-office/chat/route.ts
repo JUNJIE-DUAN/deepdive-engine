@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
           });
 
           // 将分析结果转换为增强Context
-          enhancedContext = ResourceAnalysisAgent.toPromptEnhancement(resourceAnalysis);
+          enhancedContext =
+            ResourceAnalysisAgent.toPromptEnhancement(resourceAnalysis);
         }
       } catch (error) {
         console.error('[Multi-Agent] Pre-processing error:', error);
@@ -267,7 +268,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         message,
-        context: systemPrompt ? `${systemPrompt}\n\n${finalContext}` : finalContext,
+        context: systemPrompt
+          ? `${systemPrompt}\n\n${finalContext}`
+          : finalContext,
         model: agentPlan?.model || model, // 🆕 使用Agent推荐的模型
         stream,
         resources, // Pass resources array to backend

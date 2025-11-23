@@ -236,7 +236,9 @@ export default function DocumentEditor() {
   }, [showExportMenu]);
 
   // 导出文档
-  const handleExport = async (format: 'word' | 'pdf' | 'ppt' | 'markdown' | 'html' | 'latex') => {
+  const handleExport = async (
+    format: 'word' | 'pdf' | 'ppt' | 'markdown' | 'html' | 'latex'
+  ) => {
     if (!currentDocument) return;
 
     setShowExportMenu(false); // 关闭菜单

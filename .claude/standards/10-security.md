@@ -23,6 +23,7 @@
 ### 🔴 MUST - 严格遵守
 
 #### 1. 禁止硬编码密钥
+
 ```typescript
 ❌ 绝对禁止
 const apiKey = 'sk-xxx-hardcoded-key';  // 永远不要！
@@ -35,6 +36,7 @@ const apiKey = secrets.grokApiKey;  // 从环境变量加载
 ```
 
 #### 2. 环境变量管理
+
 ```bash
 ✅ .env 文件（本地开发）
 # ✅ 不提交到 Git
@@ -52,6 +54,7 @@ JWT_SECRET=<生成随机密钥>
 ```
 
 #### 3. GCP Secret Manager（生产环境）
+
 ```typescript
 // ai-service/utils/secret_manager.py
 import os
@@ -79,14 +82,15 @@ class SecretManager:
 ```
 
 #### 4. 密钥验证
+
 ```typescript
 // backend/src/config/secrets.ts
 function loadSecrets(): Secrets {
   const required = [
-    'GROK_API_KEY',
-    'OPENAI_API_KEY',
-    'JWT_SECRET',
-    'DATABASE_URL',
+    "GROK_API_KEY",
+    "OPENAI_API_KEY",
+    "JWT_SECRET",
+    "DATABASE_URL",
   ];
 
   // 验证所有必需密钥存在
@@ -106,6 +110,7 @@ function loadSecrets(): Secrets {
 ```
 
 #### 5. 日志中不暴露密钥
+
 ```typescript
 ❌ 错误做法
 console.log(`API Key: ${apiKey}`);  // 永远不要记录密钥！
@@ -127,6 +132,7 @@ logger.debug(`Using key: ${maskedKey}`);  // grok-xxx...xy12
 ### 🔴 MUST - 严格遵守
 
 #### 1. 使用验证库（Zod / class-validator）
+
 ```typescript
 // backend/src/modules/resource/dto/create-resource.dto.ts
 import { IsString, IsEnum, IsUrl, Length, IsOptional } from 'class-validator';
@@ -157,14 +163,15 @@ async createResource(@Body() createDto: CreateResourceDto) {
 ```
 
 #### 2. API 端点验证
+
 ```typescript
 // frontend/lib/api-client.ts
-import { z } from 'zod';
+import { z } from "zod";
 
 const ResourceSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1).max(1000),
-  type: z.enum(['PAPER', 'PROJECT', 'NEWS', 'EVENT']),
+  type: z.enum(["PAPER", "PROJECT", "NEWS", "EVENT"]),
   sourceUrl: z.string().url(),
 });
 
@@ -181,11 +188,12 @@ export async function fetchResource(id: string): Promise<Resource> {
 ```
 
 #### 3. 文件上传验证
+
 ```typescript
 // backend/src/modules/upload/upload.service.ts
-import { extname } from 'path';
+import { extname } from "path";
 
-const ALLOWED_FILE_TYPES = ['.pdf', '.png', '.jpg', '.jpeg'];
+const ALLOWED_FILE_TYPES = [".pdf", ".png", ".jpg", ".jpeg"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 function validateFile(file: Express.Multer.File): void {
@@ -201,7 +209,7 @@ function validateFile(file: Express.Multer.File): void {
   }
 
   // 检查 MIME 类型
-  const allowedMimes = ['application/pdf', 'image/png', 'image/jpeg'];
+  const allowedMimes = ["application/pdf", "image/png", "image/jpeg"];
   if (!allowedMimes.includes(file.mimetype)) {
     throw new Error(`MIME type ${file.mimetype} not allowed`);
   }
@@ -215,6 +223,7 @@ function validateFile(file: Express.Multer.File): void {
 ### 🔴 MUST - 严格遵守
 
 #### 1. 使用 ORM（Prisma）- 自动防护
+
 ```typescript
 ✅ Prisma 自动防护 SQL 注入
 await prisma.user.findMany({
@@ -243,6 +252,7 @@ await prisma.$queryRaw`
 ```
 
 #### 2. MongoDB 注入防护
+
 ```typescript
 // ✅ 使用 Mongoose 或验证
 import mongoose from 'mongoose';
@@ -271,6 +281,7 @@ await db.collection('users').findOne({ email });  // 安全
 ### 🔴 MUST - 严格遵守
 
 #### 1. React 默认转义
+
 ```tsx
 ✅ React 默认安全
 function ResourceCard({ resource }: Props) {
@@ -300,21 +311,24 @@ function SafeHTML({ html }: { html: string }) {
 ```
 
 #### 2. 后端输出编码
+
 ```typescript
 // NestJS 默认使用 Helmet 中间件
 // main.ts
-import helmet from 'helmet';
+import helmet from "helmet";
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
     },
-  },
-}));
+  }),
+);
 ```
 
 ---
@@ -325,26 +339,30 @@ app.use(helmet({
 
 ```typescript
 // backend/main.ts
-import csurf from 'csurf';
+import csurf from "csurf";
 
 // 启用 CSRF 保护
-app.use(csurf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  },
-}));
+app.use(
+  csurf({
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    },
+  }),
+);
 
 // 前端获取 CSRF token
 // frontend/lib/api-client.ts
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+const csrfToken = document
+  .querySelector('meta[name="csrf-token"]')
+  ?.getAttribute("content");
 
-fetch('/api/v1/resources', {
-  method: 'POST',
+fetch("/api/v1/resources", {
+  method: "POST",
   headers: {
-    'Content-Type': 'application/json',
-    'X-CSRF-Token': csrfToken,
+    "Content-Type": "application/json",
+    "X-CSRF-Token": csrfToken,
   },
   body: JSON.stringify(data),
 });
@@ -357,6 +375,7 @@ fetch('/api/v1/resources', {
 ### 🔴 MUST - 严格遵守
 
 #### 1. JWT 认证
+
 ```typescript
 // backend/src/auth/jwt.strategy.ts
 import { Injectable } from '@nestjs/common';
@@ -387,6 +406,7 @@ async getProfile(@Request() req) {
 ```
 
 #### 2. 密码安全
+
 ```typescript
 import * as bcrypt from 'bcrypt';
 
@@ -423,6 +443,7 @@ await prisma.user.create({
 ```
 
 #### 3. 权限控制
+
 ```typescript
 // backend/src/common/decorators/roles.decorator.ts
 import { SetMetadata } from '@nestjs/common';
@@ -450,28 +471,29 @@ async deleteResource(@Param('id') id: string) {
 
 ```typescript
 // backend/src/proxy/proxy.controller.ts
-@Controller('proxy')
+@Controller("proxy")
 export class ProxyController {
   // ✅ 域名白名单
   private readonly ALLOWED_DOMAINS = [
-    'arxiv.org',
-    'openreview.net',
-    'papers.nips.cc',
+    "arxiv.org",
+    "openreview.net",
+    "papers.nips.cc",
   ];
 
-  @Get('pdf')
-  async proxyPdf(@Query('url') url: string, @Res() res: Response) {
+  @Get("pdf")
+  async proxyPdf(@Query("url") url: string, @Res() res: Response) {
     // 验证 URL 参数存在
     if (!url) {
-      throw new HttpException('URL required', HttpStatus.BAD_REQUEST);
+      throw new HttpException("URL required", HttpStatus.BAD_REQUEST);
     }
 
     try {
       const urlObj = new URL(url);
 
       // ✅ 域名白名单检查
-      const isAllowed = this.ALLOWED_DOMAINS.some(domain =>
-        urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`)
+      const isAllowed = this.ALLOWED_DOMAINS.some(
+        (domain) =>
+          urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`),
       );
 
       if (!isAllowed) {
@@ -482,18 +504,18 @@ export class ProxyController {
       }
 
       // ✅ 仅允许 HTTP/HTTPS
-      if (!['http:', 'https:'].includes(urlObj.protocol)) {
-        throw new HttpException('Invalid protocol', HttpStatus.BAD_REQUEST);
+      if (!["http:", "https:"].includes(urlObj.protocol)) {
+        throw new HttpException("Invalid protocol", HttpStatus.BAD_REQUEST);
       }
 
       // 代理请求
       const response = await axios.get(url, {
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
         timeout: 30000,
         maxContentLength: 50 * 1024 * 1024, // 50MB 限制
       });
 
-      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader("Content-Type", "application/pdf");
       res.send(Buffer.from(response.data));
     } catch (error) {
       // 错误处理...
@@ -510,35 +532,37 @@ export class ProxyController {
 
 ```typescript
 // backend/main.ts
-import helmet from 'helmet';
+import helmet from "helmet";
 
-app.use(helmet({
-  // Content Security Policy
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'https://api.x.ai'],
+app.use(
+  helmet({
+    // Content Security Policy
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https://api.x.ai"],
+      },
     },
-  },
-  // X-Frame-Options (防止点击劫持)
-  frameguard: { action: 'deny' },
-  // X-Content-Type-Options
-  noSniff: true,
-  // Strict-Transport-Security
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-  },
-}));
+    // X-Frame-Options (防止点击劫持)
+    frameguard: { action: "deny" },
+    // X-Content-Type-Options
+    noSniff: true,
+    // Strict-Transport-Security
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+    },
+  }),
+);
 
 // CORS 配置
 app.enableCors({
-  origin: ['http://localhost:3000'],  // 仅允许特定来源
+  origin: ["http://localhost:3000"], // 仅允许特定来源
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ["GET", "POST", "PUT", "DELETE"],
 });
 ```
 
@@ -550,25 +574,25 @@ app.enableCors({
 
 ```typescript
 // backend/main.ts
-import rateLimit from 'express-rate-limit';
+import rateLimit from "express-rate-limit";
 
 // API 速率限制
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分钟
   max: 100, // 最多 100 次请求
-  message: 'Too many requests, please try again later',
+  message: "Too many requests, please try again later",
 });
 
-app.use('/api/', apiLimiter);
+app.use("/api/", apiLimiter);
 
 // 登录端点更严格的限制
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,  // 最多 5 次登录尝试
-  message: 'Too many login attempts, please try again later',
+  max: 5, // 最多 5 次登录尝试
+  message: "Too many login attempts, please try again later",
 });
 
-app.use('/api/v1/auth/login', loginLimiter);
+app.use("/api/v1/auth/login", loginLimiter);
 ```
 
 ---
@@ -626,6 +650,7 @@ jobs:
 ## 常见安全漏洞
 
 ### ❌ 不安全的代码
+
 ```typescript
 // SQL 注入
 const query = `SELECT * FROM users WHERE id = ${userId}`;
@@ -647,6 +672,7 @@ async proxy(@Query('url') url: string) {
 ```
 
 ### ✅ 安全的代码
+
 ```typescript
 // 使用 ORM
 await prisma.user.findUnique({ where: { id: userId } });
@@ -662,7 +688,7 @@ const hashed = await bcrypt.hash(password, 10);
 
 // 域名白名单
 if (!ALLOWED_DOMAINS.includes(new URL(url).hostname)) {
-  throw new Error('Domain not allowed');
+  throw new Error("Domain not allowed");
 }
 ```
 

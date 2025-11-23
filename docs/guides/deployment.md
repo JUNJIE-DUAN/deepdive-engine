@@ -42,11 +42,13 @@
 ### 硬件要求
 
 **最低配置:**
+
 - CPU: 2核
 - RAM: 4GB
 - 磁盘: 20GB SSD
 
 **推荐配置:**
+
 - CPU: 4核+
 - RAM: 8GB+
 - 磁盘: 50GB+ SSD
@@ -281,23 +283,25 @@ npm install -g pm2
 
 ```javascript
 module.exports = {
-  apps: [{
-    name: 'deepdive-backend',
-    script: './dist/main.js',
-    instances: 4,  // 4个实例
-    exec_mode: 'cluster',
-    env_production: {
-      NODE_ENV: 'production',
-      PORT: 4000,
+  apps: [
+    {
+      name: "deepdive-backend",
+      script: "./dist/main.js",
+      instances: 4, // 4个实例
+      exec_mode: "cluster",
+      env_production: {
+        NODE_ENV: "production",
+        PORT: 4000,
+      },
+      error_file: "./logs/err.log",
+      out_file: "./logs/out.log",
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+      merge_logs: true,
+      max_memory_restart: "1G",
+      autorestart: true,
+      watch: false,
     },
-    error_file: './logs/err.log',
-    out_file: './logs/out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-    merge_logs: true,
-    max_memory_restart: '1G',
-    autorestart: true,
-    watch: false,
-  }],
+  ],
 };
 ```
 
@@ -371,7 +375,7 @@ CMD ["node", "dist/main.js"]
 **docker-compose.yml:**
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   backend:
@@ -468,7 +472,7 @@ npm run export
 
 ```javascript
 module.exports = {
-  output: 'standalone',
+  output: "standalone",
   // ... 其他配置
 };
 ```
@@ -630,42 +634,42 @@ spec:
         app: deepdive-backend
     spec:
       containers:
-      - name: backend
-        image: deepdive/backend:latest
-        ports:
-        - containerPort: 4000
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: deepdive-secrets
-              key: database-url
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: deepdive-secrets
-              key: jwt-secret
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 4000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 4000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: backend
+          image: deepdive/backend:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: deepdive-secrets
+                  key: database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: deepdive-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -675,9 +679,9 @@ spec:
   selector:
     app: deepdive-backend
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 4000
+    - protocol: TCP
+      port: 80
+      targetPort: 4000
   type: LoadBalancer
 ```
 
@@ -703,20 +707,20 @@ spec:
         app: deepdive-frontend
     spec:
       containers:
-      - name: frontend
-        image: deepdive/frontend:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: NEXT_PUBLIC_API_BASE_URL
-          value: "https://api.deepdive.com"
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
+        - name: frontend
+          image: deepdive/frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "https://api.deepdive.com"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -726,9 +730,9 @@ spec:
   selector:
     app: deepdive-frontend
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 3000
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
   type: LoadBalancer
 ```
 
@@ -765,10 +769,10 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'deepdive-backend'
+  - job_name: "deepdive-backend"
     static_configs:
-      - targets: ['backend:9090']
-    metrics_path: '/metrics'
+      - targets: ["backend:9090"]
+    metrics_path: "/metrics"
 ```
 
 **后端集成:**
@@ -779,23 +783,23 @@ npm install prom-client
 
 ```typescript
 // backend/src/metrics/metrics.service.ts
-import { Registry, Counter, Histogram } from 'prom-client';
+import { Registry, Counter, Histogram } from "prom-client";
 
 const register = new Registry();
 
 // 请求计数器
 const httpRequestCounter = new Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status'],
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status"],
   registers: [register],
 });
 
 // 响应时间直方图
 const httpRequestDuration = new Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route'],
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route"],
   registers: [register],
 });
 
@@ -808,7 +812,7 @@ export { register, httpRequestCounter, httpRequestDuration };
 
 ```typescript
 // backend/src/main.ts
-import * as Sentry from '@sentry/node';
+import * as Sentry from "@sentry/node";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -821,7 +825,7 @@ Sentry.init({
 
 ```typescript
 // frontend/pages/_app.tsx
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -870,7 +874,7 @@ const prisma = new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
-  log: ['error', 'warn'],
+  log: ["error", "warn"],
 });
 
 // 连接池配置（在 DATABASE_URL 中）
@@ -881,8 +885,8 @@ const prisma = new PrismaClient({
 
 ```typescript
 // backend/src/cache/cache.service.ts
-import { Injectable } from '@nestjs/common';
-import { Redis } from 'ioredis';
+import { Injectable } from "@nestjs/common";
+import { Redis } from "ioredis";
 
 @Injectable()
 export class CacheService {
@@ -1063,6 +1067,7 @@ npx prisma migrate resolve --rolled-back <migration-name>
 ✅ 备份和回滚策略
 
 **推荐部署方案：**
+
 - 开发/测试：Docker Compose
 - 生产环境：Kubernetes + 云服务（AWS/GCP）
 - CI/CD：GitHub Actions + ArgoCD

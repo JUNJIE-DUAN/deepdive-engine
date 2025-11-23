@@ -11,7 +11,10 @@ import {
 } from "@nestjs/common";
 import { Response } from "express";
 import { YoutubeService } from "./youtube.service";
-import { PdfGeneratorService, SubtitleExportOptions } from "./pdf-generator.service";
+import {
+  PdfGeneratorService,
+  SubtitleExportOptions,
+} from "./pdf-generator.service";
 
 interface SubtitlesRequestDto {
   videoId: string;
@@ -65,14 +68,22 @@ export class YoutubeController {
 
     try {
       // Fetch English subtitles
-      const englishTranscript = await this.youtubeService.getTranscript(cleanVideoId, "en");
+      const englishTranscript = await this.youtubeService.getTranscript(
+        cleanVideoId,
+        "en",
+      );
 
       // Fetch Chinese subtitles
       let chineseTranscript;
       try {
-        chineseTranscript = await this.youtubeService.getTranscript(cleanVideoId, "zh");
+        chineseTranscript = await this.youtubeService.getTranscript(
+          cleanVideoId,
+          "zh",
+        );
       } catch (error) {
-        this.logger.warn(`Chinese subtitles not available for ${cleanVideoId}, using empty array`);
+        this.logger.warn(
+          `Chinese subtitles not available for ${cleanVideoId}, using empty array`,
+        );
         chineseTranscript = {
           videoId: cleanVideoId,
           title: englishTranscript.title,
@@ -94,9 +105,12 @@ export class YoutubeController {
         chinese: aligned.chinese,
       };
     } catch (error) {
-      this.logger.error(`Failed to fetch bilingual subtitles for ${cleanVideoId}:`, error);
+      this.logger.error(
+        `Failed to fetch bilingual subtitles for ${cleanVideoId}:`,
+        error,
+      );
       throw new BadRequestException(
-        `Failed to fetch subtitles: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to fetch subtitles: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
@@ -106,7 +120,8 @@ export class YoutubeController {
    */
   @Post("export-pdf")
   async exportPdf(@Body() body: ExportPdfRequestDto, @Res() res: Response) {
-    const { videoId, title, englishSubtitles, chineseSubtitles, options } = body;
+    const { videoId, title, englishSubtitles, chineseSubtitles, options } =
+      body;
 
     this.logger.log(`Exporting PDF for video: ${videoId}`);
 
@@ -115,7 +130,9 @@ export class YoutubeController {
     }
 
     if (!englishSubtitles && !chineseSubtitles) {
-      throw new BadRequestException("At least one subtitle language is required");
+      throw new BadRequestException(
+        "At least one subtitle language is required",
+      );
     }
 
     try {
@@ -131,26 +148,33 @@ export class YoutubeController {
         chinese: chineseSubtitles || [],
       };
 
-      const pdfStream = await this.pdfGeneratorService.generatePdf(transcript, metadata, options);
+      const pdfStream = await this.pdfGeneratorService.generatePdf(
+        transcript,
+        metadata,
+        options,
+      );
 
       // Set response headers
       const filename = `youtube-subtitles-${videoId}.pdf`;
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
       res.status(HttpStatus.OK);
 
       // Pipe the PDF stream to response
       pdfStream.pipe(res);
 
-      pdfStream.on('end', () => {
+      pdfStream.on("end", () => {
         this.logger.log(`PDF export completed for video: ${videoId}`);
       });
 
-      pdfStream.on('error', (error) => {
+      pdfStream.on("error", (error) => {
         this.logger.error(`PDF generation error for video ${videoId}:`, error);
         if (!res.headersSent) {
           res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-            message: 'Failed to generate PDF',
+            message: "Failed to generate PDF",
             error: error.message,
           });
         }
@@ -158,7 +182,7 @@ export class YoutubeController {
     } catch (error) {
       this.logger.error(`Failed to export PDF for ${videoId}:`, error);
       throw new BadRequestException(
-        `Failed to export PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to export PDF: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }

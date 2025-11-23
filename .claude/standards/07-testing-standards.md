@@ -37,6 +37,7 @@ DeepDive Engine采用**Testing Trophy**策略（优化版的测试金字塔）�
 ```
 
 **测试分配原则**:
+
 - **30% 单元测试**: 纯函数、工具函数、复杂算法
 - **60% 集成测试**: API endpoints、React组件、数据库交互
 - **10% E2E测试**: 关键用户流程（登录、创建资源、搜索）
@@ -45,13 +46,14 @@ DeepDive Engine采用**Testing Trophy**策略（优化版的测试金字塔）�
 
 **阶段性目标** 🔴 MUST:
 
-| 阶段 | 时间线 | 目标覆盖率 | 重点 |
-|------|--------|-----------|------|
-| Phase 1 | Week 1-2 | 50% | 核心services, utils |
-| Phase 2 | Week 3-6 | 70% | 所有services, 主要组件 |
-| Phase 3 | Week 7+ | 85%+ | 完整覆盖 + E2E |
+| 阶段    | 时间线   | 目标覆盖率 | 重点                   |
+| ------- | -------- | ---------- | ---------------------- |
+| Phase 1 | Week 1-2 | 50%        | 核心services, utils    |
+| Phase 2 | Week 3-6 | 70%        | 所有services, 主要组件 |
+| Phase 3 | Week 7+  | 85%+       | 完整覆盖 + E2E         |
 
 **强制要求**:
+
 - 🔴 MUST: 新代码必须达到目标覆盖率
 - 🔴 MUST: PR必须包含相关测试
 - 🔴 MUST: CI失败如果覆盖率下降
@@ -65,11 +67,11 @@ DeepDive Engine采用**Testing Trophy**策略（优化版的测试金字塔）�
 使用**AAA模式**（Arrange-Act-Assert）：
 
 ```typescript
-describe('calculateSimilarity', () => {
-  it('should return 1.0 for identical texts', () => {
+describe("calculateSimilarity", () => {
+  it("should return 1.0 for identical texts", () => {
     // Arrange - 准备测试数据
-    const text1 = 'hello world';
-    const text2 = 'hello world';
+    const text1 = "hello world";
+    const text2 = "hello world";
 
     // Act - 执行被测试的代码
     const result = calculateSimilarity(text1, text2);
@@ -78,25 +80,25 @@ describe('calculateSimilarity', () => {
     expect(result).toBe(1.0);
   });
 
-  it('should return 0.0 for completely different texts', () => {
-    const text1 = 'hello';
-    const text2 = 'world';
+  it("should return 0.0 for completely different texts", () => {
+    const text1 = "hello";
+    const text2 = "world";
 
     const result = calculateSimilarity(text1, text2);
 
     expect(result).toBeLessThan(0.3);
   });
 
-  it('should handle empty strings', () => {
-    const result = calculateSimilarity('', '');
+  it("should handle empty strings", () => {
+    const result = calculateSimilarity("", "");
 
     expect(result).toBe(0);
   });
 
-  it('should throw error for invalid method', () => {
+  it("should throw error for invalid method", () => {
     expect(() => {
-      calculateSimilarity('a', 'b', 'invalid');
-    }).toThrow('Unsupported similarity method');
+      calculateSimilarity("a", "b", "invalid");
+    }).toThrow("Unsupported similarity method");
   });
 });
 ```
@@ -105,30 +107,31 @@ describe('calculateSimilarity', () => {
 
 ```typescript
 // ✅ 正确 - 描述性的测试名称
-describe('UserService', () => {
-  describe('createUser', () => {
-    it('should create user with valid data', async () => { });
-    it('should throw ValidationError for invalid email', async () => { });
-    it('should throw ConflictError if user already exists', async () => { });
-    it('should hash password before saving', async () => { });
+describe("UserService", () => {
+  describe("createUser", () => {
+    it("should create user with valid data", async () => {});
+    it("should throw ValidationError for invalid email", async () => {});
+    it("should throw ConflictError if user already exists", async () => {});
+    it("should hash password before saving", async () => {});
   });
 
-  describe('getUserById', () => {
-    it('should return user if found', async () => { });
-    it('should return null if user not found', async () => { });
-    it('should throw error if id is invalid', async () => { });
+  describe("getUserById", () => {
+    it("should return user if found", async () => {});
+    it("should return null if user not found", async () => {});
+    it("should throw error if id is invalid", async () => {});
   });
 });
 
 // ❌ 错误 - 模糊的测试名称
-describe('UserService', () => {
-  it('test1', () => { });
-  it('should work', () => { });
-  it('test user creation', () => { });
+describe("UserService", () => {
+  it("test1", () => {});
+  it("should work", () => {});
+  it("test user creation", () => {});
 });
 ```
 
 **命名规则**:
+
 - 使用`describe`描述被测试的单元（类/函数）
 - 嵌套`describe`描述具体方法
 - `it`描述具体行为，使用`should`开头
@@ -143,29 +146,29 @@ export function formatDate(date: Date, format: string): string {
 }
 
 // src/lib/utils.spec.ts
-import { formatDate } from './utils';
+import { formatDate } from "./utils";
 
-describe('formatDate', () => {
-  it('should format date to ISO string', () => {
-    const date = new Date('2024-01-15T10:30:00Z');
+describe("formatDate", () => {
+  it("should format date to ISO string", () => {
+    const date = new Date("2024-01-15T10:30:00Z");
 
-    const result = formatDate(date, 'ISO');
+    const result = formatDate(date, "ISO");
 
-    expect(result).toBe('2024-01-15T10:30:00.000Z');
+    expect(result).toBe("2024-01-15T10:30:00.000Z");
   });
 
-  it('should format date to readable string', () => {
-    const date = new Date('2024-01-15');
+  it("should format date to readable string", () => {
+    const date = new Date("2024-01-15");
 
-    const result = formatDate(date, 'READABLE');
+    const result = formatDate(date, "READABLE");
 
-    expect(result).toBe('January 15, 2024');
+    expect(result).toBe("January 15, 2024");
   });
 
-  it('should handle invalid date', () => {
-    const invalidDate = new Date('invalid');
+  it("should handle invalid date", () => {
+    const invalidDate = new Date("invalid");
 
-    expect(() => formatDate(invalidDate, 'ISO')).toThrow('Invalid date');
+    expect(() => formatDate(invalidDate, "ISO")).toThrow("Invalid date");
   });
 });
 ```
@@ -174,11 +177,11 @@ describe('formatDate', () => {
 
 ```typescript
 // backend/src/resources/resources.service.spec.ts
-import { Test, TestingModule } from '@nestjs/testing';
-import { ResourcesService } from './resources.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { ResourcesService } from "./resources.service";
+import { PrismaService } from "../prisma/prisma.service";
 
-describe('ResourcesService', () => {
+describe("ResourcesService", () => {
   let service: ResourcesService;
   let prisma: PrismaService;
 
@@ -205,15 +208,15 @@ describe('ResourcesService', () => {
     prisma = module.get<PrismaService>(PrismaService);
   });
 
-  describe('findAll', () => {
-    it('should return paginated resources', async () => {
+  describe("findAll", () => {
+    it("should return paginated resources", async () => {
       const mockResources = [
-        { id: '1', title: 'Resource 1' },
-        { id: '2', title: 'Resource 2' },
+        { id: "1", title: "Resource 1" },
+        { id: "2", title: "Resource 2" },
       ];
 
-      jest.spyOn(prisma.resource, 'findMany').mockResolvedValue(mockResources);
-      jest.spyOn(prisma.resource, 'count').mockResolvedValue(2);
+      jest.spyOn(prisma.resource, "findMany").mockResolvedValue(mockResources);
+      jest.spyOn(prisma.resource, "count").mockResolvedValue(2);
 
       const result = await service.findAll({ page: 1, limit: 10 });
 
@@ -222,33 +225,33 @@ describe('ResourcesService', () => {
       expect(prisma.resource.findMany).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       });
     });
 
-    it('should filter by resource type', async () => {
-      jest.spyOn(prisma.resource, 'findMany').mockResolvedValue([]);
+    it("should filter by resource type", async () => {
+      jest.spyOn(prisma.resource, "findMany").mockResolvedValue([]);
 
-      await service.findAll({ type: 'ARTICLE' });
+      await service.findAll({ type: "ARTICLE" });
 
       expect(prisma.resource.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { type: 'ARTICLE' },
-        })
+          where: { type: "ARTICLE" },
+        }),
       );
     });
   });
 
-  describe('create', () => {
-    it('should create resource with valid data', async () => {
+  describe("create", () => {
+    it("should create resource with valid data", async () => {
       const createDto = {
-        title: 'New Resource',
-        type: 'ARTICLE',
-        sourceUrl: 'https://example.com',
+        title: "New Resource",
+        type: "ARTICLE",
+        sourceUrl: "https://example.com",
       };
 
-      const mockResource = { id: '123', ...createDto };
-      jest.spyOn(prisma.resource, 'create').mockResolvedValue(mockResource);
+      const mockResource = { id: "123", ...createDto };
+      jest.spyOn(prisma.resource, "create").mockResolvedValue(mockResource);
 
       const result = await service.create(createDto);
 
@@ -258,18 +261,18 @@ describe('ResourcesService', () => {
       });
     });
 
-    it('should throw ConflictError if resource already exists', async () => {
+    it("should throw ConflictError if resource already exists", async () => {
       const createDto = {
-        title: 'Duplicate',
-        type: 'ARTICLE',
-        sourceUrl: 'https://example.com',
+        title: "Duplicate",
+        type: "ARTICLE",
+        sourceUrl: "https://example.com",
       };
 
-      jest.spyOn(prisma.resource, 'create').mockRejectedValue({
-        code: 'P2002',
+      jest.spyOn(prisma.resource, "create").mockRejectedValue({
+        code: "P2002",
       });
 
-      await expect(service.create(createDto)).rejects.toThrow('already exists');
+      await expect(service.create(createDto)).rejects.toThrow("already exists");
     });
   });
 });
@@ -283,13 +286,13 @@ describe('ResourcesService', () => {
 
 ```typescript
 // backend/src/resources/resources.controller.spec.ts
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from '../app.module';
-import { PrismaService } from '../prisma/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { AppModule } from "../app.module";
+import { PrismaService } from "../prisma/prisma.service";
 
-describe('ResourcesController (e2e)', () => {
+describe("ResourcesController (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -314,10 +317,10 @@ describe('ResourcesController (e2e)', () => {
     await prisma.resource.deleteMany();
   });
 
-  describe('GET /api/v1/resources', () => {
-    it('should return empty list initially', () => {
+  describe("GET /api/v1/resources", () => {
+    it("should return empty list initially", () => {
       return request(app.getHttpServer())
-        .get('/api/v1/resources')
+        .get("/api/v1/resources")
         .expect(200)
         .expect((res) => {
           expect(res.body.data).toEqual([]);
@@ -325,17 +328,17 @@ describe('ResourcesController (e2e)', () => {
         });
     });
 
-    it('should return resources with pagination', async () => {
+    it("should return resources with pagination", async () => {
       // 准备测试数据
       await prisma.resource.createMany({
         data: [
-          { title: 'Resource 1', type: 'ARTICLE', sourceUrl: 'https://1.com' },
-          { title: 'Resource 2', type: 'VIDEO', sourceUrl: 'https://2.com' },
+          { title: "Resource 1", type: "ARTICLE", sourceUrl: "https://1.com" },
+          { title: "Resource 2", type: "VIDEO", sourceUrl: "https://2.com" },
         ],
       });
 
       return request(app.getHttpServer())
-        .get('/api/v1/resources?page=1&limit=10')
+        .get("/api/v1/resources?page=1&limit=10")
         .expect(200)
         .expect((res) => {
           expect(res.body.data).toHaveLength(2);
@@ -343,34 +346,34 @@ describe('ResourcesController (e2e)', () => {
         });
     });
 
-    it('should filter resources by type', async () => {
+    it("should filter resources by type", async () => {
       await prisma.resource.createMany({
         data: [
-          { title: 'Article', type: 'ARTICLE', sourceUrl: 'https://1.com' },
-          { title: 'Video', type: 'VIDEO', sourceUrl: 'https://2.com' },
+          { title: "Article", type: "ARTICLE", sourceUrl: "https://1.com" },
+          { title: "Video", type: "VIDEO", sourceUrl: "https://2.com" },
         ],
       });
 
       return request(app.getHttpServer())
-        .get('/api/v1/resources?type=ARTICLE')
+        .get("/api/v1/resources?type=ARTICLE")
         .expect(200)
         .expect((res) => {
           expect(res.body.data).toHaveLength(1);
-          expect(res.body.data[0].type).toBe('ARTICLE');
+          expect(res.body.data[0].type).toBe("ARTICLE");
         });
     });
   });
 
-  describe('POST /api/v1/resources', () => {
-    it('should create resource with valid data', () => {
+  describe("POST /api/v1/resources", () => {
+    it("should create resource with valid data", () => {
       const createDto = {
-        title: 'New Resource',
-        type: 'ARTICLE',
-        sourceUrl: 'https://example.com',
+        title: "New Resource",
+        type: "ARTICLE",
+        sourceUrl: "https://example.com",
       };
 
       return request(app.getHttpServer())
-        .post('/api/v1/resources')
+        .post("/api/v1/resources")
         .send(createDto)
         .expect(201)
         .expect((res) => {
@@ -379,32 +382,32 @@ describe('ResourcesController (e2e)', () => {
         });
     });
 
-    it('should return 400 for invalid data', () => {
+    it("should return 400 for invalid data", () => {
       return request(app.getHttpServer())
-        .post('/api/v1/resources')
-        .send({ title: '' })  // 缺少必需字段
+        .post("/api/v1/resources")
+        .send({ title: "" }) // 缺少必需字段
         .expect(400)
         .expect((res) => {
-          expect(res.body.error.code).toBe('VALIDATION_ERROR');
+          expect(res.body.error.code).toBe("VALIDATION_ERROR");
         });
     });
 
-    it('should return 409 for duplicate resource', async () => {
+    it("should return 409 for duplicate resource", async () => {
       const resourceData = {
-        title: 'Duplicate',
-        type: 'ARTICLE',
-        sourceUrl: 'https://duplicate.com',
+        title: "Duplicate",
+        type: "ARTICLE",
+        sourceUrl: "https://duplicate.com",
       };
 
       // 第一次创建成功
       await request(app.getHttpServer())
-        .post('/api/v1/resources')
+        .post("/api/v1/resources")
         .send(resourceData)
         .expect(201);
 
       // 第二次创建应该失败
       return request(app.getHttpServer())
-        .post('/api/v1/resources')
+        .post("/api/v1/resources")
         .send(resourceData)
         .expect(409);
     });
@@ -540,21 +543,21 @@ describe('useResources', () => {
 
 ```typescript
 // playwright.config.ts
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: "./e2e",
   timeout: 30000,
   retries: process.env.CI ? 2 : 0,
   use: {
-    baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    baseURL: "http://localhost:3000",
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
   },
   projects: [
     {
-      name: 'chromium',
-      use: { browserName: 'chromium' },
+      name: "chromium",
+      use: { browserName: "chromium" },
     },
   ],
 });
@@ -564,64 +567,71 @@ export default defineConfig({
 
 ```typescript
 // e2e/resources.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Resources Page', () => {
+test.describe("Resources Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto("/");
   });
 
-  test('should display resource list', async ({ page }) => {
+  test("should display resource list", async ({ page }) => {
     // 等待资源列表加载
     await page.waitForSelector('[data-testid="resource-card"]');
 
     // 验证至少有一个资源显示
-    const resources = await page.locator('[data-testid="resource-card"]').count();
+    const resources = await page
+      .locator('[data-testid="resource-card"]')
+      .count();
     expect(resources).toBeGreaterThan(0);
   });
 
-  test('should filter resources by type', async ({ page }) => {
+  test("should filter resources by type", async ({ page }) => {
     // 选择过滤器
     await page.click('[data-testid="filter-type"]');
-    await page.click('text=Article');
+    await page.click("text=Article");
 
     // 等待过滤结果
     await page.waitForSelector('[data-testid="resource-card"]');
 
     // 验证所有显示的资源都是文章类型
-    const types = await page.locator('[data-testid="resource-type"]').allTextContents();
-    expect(types.every(type => type === 'ARTICLE')).toBe(true);
+    const types = await page
+      .locator('[data-testid="resource-type"]')
+      .allTextContents();
+    expect(types.every((type) => type === "ARTICLE")).toBe(true);
   });
 
-  test('should search resources', async ({ page }) => {
+  test("should search resources", async ({ page }) => {
     // 输入搜索关键词
-    await page.fill('[data-testid="search-input"]', 'machine learning');
-    await page.press('[data-testid="search-input"]', 'Enter');
+    await page.fill('[data-testid="search-input"]', "machine learning");
+    await page.press('[data-testid="search-input"]', "Enter");
 
     // 等待搜索结果
     await page.waitForSelector('[data-testid="resource-card"]');
 
     // 验证结果包含关键词
-    const firstResult = await page.locator('[data-testid="resource-card"]').first();
+    const firstResult = await page
+      .locator('[data-testid="resource-card"]')
+      .first();
     const text = await firstResult.textContent();
-    expect(text?.toLowerCase()).toContain('machine learning');
+    expect(text?.toLowerCase()).toContain("machine learning");
   });
 
-  test('should bookmark resource', async ({ page }) => {
+  test("should bookmark resource", async ({ page }) => {
     // 点击书签按钮
     await page.click('[data-testid="bookmark-button"]');
 
     // 验证书签状态改变
-    await expect(page.locator('[data-testid="bookmark-button"]')).toHaveAttribute(
-      'data-bookmarked',
-      'true'
-    );
+    await expect(
+      page.locator('[data-testid="bookmark-button"]'),
+    ).toHaveAttribute("data-bookmarked", "true");
 
     // 导航到书签页面验证
     await page.click('[data-testid="nav-bookmarks"]');
     await page.waitForSelector('[data-testid="resource-card"]');
 
-    const bookmarkedResources = await page.locator('[data-testid="resource-card"]').count();
+    const bookmarkedResources = await page
+      .locator('[data-testid="resource-card"]')
+      .count();
     expect(bookmarkedResources).toBeGreaterThan(0);
   });
 });
@@ -637,21 +647,21 @@ test.describe('Resources Page', () => {
 // jest.config.js
 module.exports = {
   collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/*.spec.ts',
-    '!src/**/*.test.ts',
-    '!src/main.ts',
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/**/*.spec.ts",
+    "!src/**/*.test.ts",
+    "!src/main.ts",
   ],
   coverageThreshold: {
     global: {
-      branches: 50,      // Phase 1: 50%
+      branches: 50, // Phase 1: 50%
       functions: 50,
       lines: 50,
       statements: 50,
     },
   },
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ["text", "lcov", "html"],
 };
 ```
 

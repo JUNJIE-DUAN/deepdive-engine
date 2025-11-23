@@ -11,6 +11,7 @@
 定义了 6 种专业模板：
 
 #### 1.1 企业商务 (Corporate Professional)
+
 - **适用场景**: 商务演示、财务报告、企业汇报
 - **设计特点**: 专业稳重、深蓝灰色系
 - **配色方案**:
@@ -19,6 +20,7 @@
   - 强调色: #3B82F6 (亮蓝)
 
 #### 1.2 简约现代 (Minimal Clean)
+
 - **适用场景**: 产品发布、设计展示、创意提案
 - **设计特点**: 简洁优雅、留白充足
 - **配色方案**:
@@ -27,6 +29,7 @@
   - 强调色: #10B981 (翠绿)
 
 #### 1.3 现代渐变 (Modern Gradient)
+
 - **适用场景**: 科技产品、创业路演、趋势分析
 - **设计特点**: 现代时尚、渐变色彩
 - **配色方案**:
@@ -35,6 +38,7 @@
   - 强调色: #EC4899 (粉红)
 
 #### 1.4 创意活泼 (Creative Vibrant)
+
 - **适用场景**: 创意设计、营销策划、品牌宣传
 - **设计特点**: 色彩丰富、个性鲜明
 - **配色方案**:
@@ -43,6 +47,7 @@
   - 强调色: #8B5CF6 (紫色)
 
 #### 1.5 学术专业 (Academic Professional)
+
 - **适用场景**: 学术报告、研究成果、教学演示
 - **设计特点**: 严谨清晰、传统配色
 - **配色方案**:
@@ -51,6 +56,7 @@
   - 强调色: #059669 (绿色)
 
 #### 1.6 科技蓝 (Tech Blue)
+
 - **适用场景**: 技术分享、产品演示、数据分析
 - **设计特点**: 科技感十足、蓝色系
 - **配色方案**:
@@ -67,6 +73,7 @@
 - ✅ 自动应用模板颜色、字体、样式
 
 #### PPT 导出特性：
+
 - 封面幻灯片（应用模板主色）
 - 内容幻灯片（应用模板配色）
 - 装饰性色块（Modern、Creative 模板）
@@ -81,6 +88,7 @@
 - ✅ 正确的 MIME 类型和文件扩展名
 
 #### API 参数：
+
 ```typescript
 {
   format: 'word' | 'ppt' | 'pdf' | 'markdown',
@@ -107,6 +115,7 @@
 **位置**: `frontend/components/ai-office/chat/TemplateSelector.tsx`
 
 **功能需求**:
+
 - 展示所有可用模板的网格视图
 - 模板预览卡片（显示配色、名称、描述）
 - 选中状态标识
@@ -114,6 +123,7 @@
 - 响应式设计
 
 **UI 设计参考**:
+
 ```
 ┌────────────────────────────────────────┐
 │ 选择PPT模板                              │
@@ -131,15 +141,17 @@
 **需要修改**: `frontend/components/ai-office/chat/ChatPanel.tsx`
 
 **实现要点**:
+
 1. 添加模板选择状态：`const [selectedTemplateId, setSelectedTemplateId] = useState('corporate')`
 2. 在检测到 PPT 生成请求时，显示模板选择器
 3. 创建文档时包含模板ID：
+
 ```typescript
 const newDocument = {
   // ... other fields
   template: {
     id: selectedTemplateId,
-    version: '1.0',
+    version: "1.0",
   },
 };
 ```
@@ -149,9 +161,11 @@ const newDocument = {
 **需要修改**: `frontend/components/ai-office/document/DocumentEditor.tsx`
 
 **实现要点**:
+
 1. 从 document 中读取 templateId
 2. 使用 `getTemplateById()` 获取模板配置
 3. 应用模板 CSS 变量到预览区域：
+
 ```typescript
 const template = getTemplateById(document?.template?.id || 'corporate');
 const styles = getTemplateStyles(template);
@@ -162,6 +176,7 @@ const styles = getTemplateStyles(template);
 ```
 
 4. 更新 CSS 类使用模板变量：
+
 ```css
 .slide-title {
   color: var(--template-primary);
@@ -179,15 +194,16 @@ const styles = getTemplateStyles(template);
 **需要修改**: `frontend/components/ai-office/document/DocumentEditor.tsx` 中的 `handleExport` 函数
 
 **实现要点**:
+
 ```typescript
-const handleExport = async (format: 'word' | 'pdf' | 'ppt' | 'markdown') => {
-  const response = await fetch('/api/ai-office/export', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+const handleExport = async (format: "word" | "pdf" | "ppt" | "markdown") => {
+  const response = await fetch("/api/ai-office/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       format,
       content,
-      title: document?.title || '未命名文档',
+      title: document?.title || "未命名文档",
       templateId: document?.template?.id, // 传递模板ID
     }),
   });
@@ -211,7 +227,7 @@ const handleExport = async (format: 'word' | 'pdf' | 'ppt' | 'markdown') => {
 ### 1. 获取所有模板
 
 ```typescript
-import { getAllTemplates } from '@/lib/ppt-templates';
+import { getAllTemplates } from "@/lib/ppt-templates";
 
 const templates = getAllTemplates();
 // 返回包含 6 个模板的数组
@@ -220,9 +236,9 @@ const templates = getAllTemplates();
 ### 2. 按类别筛选模板
 
 ```typescript
-import { getTemplatesByCategory } from '@/lib/ppt-templates';
+import { getTemplatesByCategory } from "@/lib/ppt-templates";
 
-const modernTemplates = getTemplatesByCategory('modern');
+const modernTemplates = getTemplatesByCategory("modern");
 // 返回 Modern Gradient 和 Tech Blue 模板
 ```
 
@@ -244,14 +260,14 @@ const styles = getTemplateStyles(template);
 ### 4. 导出带模板的 PPT
 
 ```typescript
-const response = await fetch('/api/ai-office/export', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+const response = await fetch("/api/ai-office/export", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    format: 'ppt',
-    title: '我的演示文稿',
-    content: '### Slide 1: 标题\n- 要点1\n- 要点2',
-    templateId: 'modern',
+    format: "ppt",
+    title: "我的演示文稿",
+    content: "### Slide 1: 标题\n- 要点1\n- 要点2",
+    templateId: "modern",
   }),
 });
 

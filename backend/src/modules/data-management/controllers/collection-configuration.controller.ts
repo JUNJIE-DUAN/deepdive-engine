@@ -23,7 +23,7 @@ export class CollectionConfigurationController {
   private readonly logger = new Logger(CollectionConfigurationController.name);
 
   constructor(
-    private readonly collectionConfigService: CollectionConfigurationService
+    private readonly collectionConfigService: CollectionConfigurationService,
   ) {}
 
   /**
@@ -44,13 +44,13 @@ export class CollectionConfigurationController {
       maxConcurrent?: number;
       timeout?: number;
       isActive?: boolean;
-    }
+    },
   ) {
     try {
       if (!body.resourceType || !body.name) {
         throw new HttpException(
           "Missing required fields: resourceType, name",
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
 
@@ -77,9 +77,10 @@ export class CollectionConfigurationController {
       let configs;
 
       if (resourceType) {
-        configs = await this.collectionConfigService.getConfigsByResourceType(
-          resourceType
-        );
+        configs =
+          await this.collectionConfigService.getConfigsByResourceType(
+            resourceType,
+          );
       } else {
         configs = await this.collectionConfigService.getActiveConfigs();
       }
@@ -106,7 +107,7 @@ export class CollectionConfigurationController {
       if (!config) {
         throw new HttpException(
           "Collection configuration not found",
-          HttpStatus.NOT_FOUND
+          HttpStatus.NOT_FOUND,
         );
       }
 
@@ -138,12 +139,12 @@ export class CollectionConfigurationController {
       maxConcurrent?: number;
       timeout?: number;
       isActive?: boolean;
-    }
+    },
   ) {
     try {
       const config = await this.collectionConfigService.updateConfig(
         configId,
-        body
+        body,
       );
 
       return {
@@ -227,7 +228,7 @@ export class CollectionConfigurationController {
     body: {
       url: string;
       content: string;
-    }
+    },
   ) {
     try {
       const config = await this.collectionConfigService.getConfig(configId);
@@ -235,7 +236,7 @@ export class CollectionConfigurationController {
       if (!config) {
         throw new HttpException(
           "Collection configuration not found",
-          HttpStatus.NOT_FOUND
+          HttpStatus.NOT_FOUND,
         );
       }
 
@@ -245,12 +246,12 @@ export class CollectionConfigurationController {
 
       const urlMatches = this.collectionConfigService.matchesUrlPatterns(
         body.url,
-        urlPatterns
+        urlPatterns,
       );
       const contentMatches = this.collectionConfigService.matchesKeywords(
         body.content,
         keywords,
-        excludeKeywords
+        excludeKeywords,
       );
 
       return {

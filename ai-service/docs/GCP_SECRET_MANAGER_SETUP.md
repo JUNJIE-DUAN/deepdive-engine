@@ -112,6 +112,7 @@ python main.py
 ```
 
 查看日志输出：
+
 - ✅ 成功: `GCP Secret Manager initialized (project: your-project-id)`
 - ✅ 成功: `Retrieved secret GROK_API_KEY from GCP Secret Manager`
 - ❌ 失败: `Failed to initialize GCP Secret Manager: ...`
@@ -123,6 +124,7 @@ python main.py
 **错误**: `Failed to initialize GCP Secret Manager: 403 Permission denied`
 
 **解决方案**:
+
 1. 确认 Service Account 有 `roles/secretmanager.secretAccessor` 角色
 2. 确认 `GOOGLE_APPLICATION_CREDENTIALS` 指向正确的 key 文件
 3. 运行 `gcloud auth application-default login` （开发环境）
@@ -132,6 +134,7 @@ python main.py
 **错误**: `Failed to get secret GROK_API_KEY from GCP: 404 Secret not found`
 
 **解决方案**:
+
 1. 确认密钥名称拼写正确（区分大小写）
 2. 确认项目 ID 正确
 3. 使用 `gcloud secrets list --project=your-project-id` 查看所有密钥
@@ -141,6 +144,7 @@ python main.py
 **错误**: `google-cloud-secret-manager not installed`
 
 **解决方案**:
+
 ```bash
 pip install google-cloud-secret-manager==2.20.2
 ```

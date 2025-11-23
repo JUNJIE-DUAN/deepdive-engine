@@ -121,7 +121,10 @@ class DocumentExportService {
     // 顶部装饰条
     if (template.decorations.showTopBar) {
       titleSlide.addShape(pptx.ShapeType.rect, {
-        x: 0, y: 0, w: '100%', h: 0.08,
+        x: 0,
+        y: 0,
+        w: '100%',
+        h: 0.08,
         fill: { color: accentColor },
         line: { type: 'none' },
       });
@@ -130,7 +133,10 @@ class DocumentExportService {
     // 底部装饰条
     if (template.decorations.showBottomBar) {
       titleSlide.addShape(pptx.ShapeType.rect, {
-        x: 0, y: 7.42, w: '100%', h: 0.08,
+        x: 0,
+        y: 7.42,
+        w: '100%',
+        h: 0.08,
         fill: { color: accentColor },
         line: { type: 'none' },
       });
@@ -142,7 +148,8 @@ class DocumentExportService {
       w: '90%',
       fontSize: template.typography.title,
       bold: true,
-      color: template.style.layoutStyle === 'dark' ? textLightColor : primaryColor,
+      color:
+        template.style.layoutStyle === 'dark' ? textLightColor : primaryColor,
       align: 'center',
       fontFace: template.fonts.heading,
     });
@@ -151,7 +158,10 @@ class DocumentExportService {
       y: '55%',
       w: '90%',
       fontSize: template.typography.caption,
-      color: template.style.layoutStyle === 'dark' ? textSecondaryColor : textTertiaryColor,
+      color:
+        template.style.layoutStyle === 'dark'
+          ? textSecondaryColor
+          : textTertiaryColor,
       align: 'center',
       fontFace: template.fonts.body,
     });
@@ -166,7 +176,10 @@ class DocumentExportService {
       // 顶部装饰条
       if (template.decorations.showTopBar) {
         slide.addShape(pptx.ShapeType.rect, {
-          x: 0, y: 0, w: '100%', h: 0.08,
+          x: 0,
+          y: 0,
+          w: '100%',
+          h: 0.08,
           fill: { color: accentColor },
           line: { type: 'none' },
         });
@@ -175,22 +188,35 @@ class DocumentExportService {
       // 底部装饰条
       if (template.decorations.showBottomBar) {
         slide.addShape(pptx.ShapeType.rect, {
-          x: 0, y: 7.42, w: '100%', h: 0.08,
+          x: 0,
+          y: 7.42,
+          w: '100%',
+          h: 0.08,
           fill: { color: accentColor },
           line: { type: 'none' },
         });
       }
 
       // 半透明右侧覆盖层（深色主题专用，Genspark风格）
-      if (template.style.layoutStyle === 'dark' && template.colors.backgroundOverlay &&
-          !template.colors.backgroundOverlay.startsWith('linear')) {
+      if (
+        template.style.layoutStyle === 'dark' &&
+        template.colors.backgroundOverlay &&
+        !template.colors.backgroundOverlay.startsWith('linear')
+      ) {
         const overlayColor = template.colors.backgroundOverlay;
         // 提取rgba值并转换为透明度百分比
-        const alphaMatch = overlayColor.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
-        const alpha = alphaMatch ? Math.round(parseFloat(alphaMatch[1]) * 100) : 50;
+        const alphaMatch = overlayColor.match(
+          /rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/
+        );
+        const alpha = alphaMatch
+          ? Math.round(parseFloat(alphaMatch[1]) * 100)
+          : 50;
 
         slide.addShape(pptx.ShapeType.rect, {
-          x: '33%', y: 0, w: '67%', h: '100%',
+          x: '33%',
+          y: 0,
+          w: '67%',
+          h: '100%',
           fill: {
             color: secondaryColor,
             transparency: 100 - alpha,
@@ -209,7 +235,10 @@ class DocumentExportService {
           w: '90%',
           fontSize: template.typography.heading1 * 2, // PPT中需要更大的字号
           bold: true,
-          color: template.style.layoutStyle === 'dark' ? textLightColor : primaryColor,
+          color:
+            template.style.layoutStyle === 'dark'
+              ? textLightColor
+              : primaryColor,
           fontFace: template.fonts.heading,
         });
 
@@ -228,12 +257,14 @@ class DocumentExportService {
 
       // 添加内容（卡片布局或普通布局）
       if (slideContent.content && slideContent.content.length > 0) {
-        const contentY = slideContent.title ?
-          (template.decorations.showTitleUnderline ? startY + 0.7 : startY + 0.5) :
-          startY;
+        const contentY = slideContent.title
+          ? template.decorations.showTitleUnderline
+            ? startY + 0.7
+            : startY + 0.5
+          : startY;
 
         // 处理内容文本，移除Markdown符号
-        const processedContent = slideContent.content.map(line => {
+        const processedContent = slideContent.content.map((line) => {
           // 移除列表符号
           let text = line.replace(/^[-•*]\s*/, '');
           // 移除加粗符号
@@ -254,11 +285,18 @@ class DocumentExportService {
 
             // 卡片背景（半透明白色）
             if (template.colors.cardBackground) {
-              const cardBgMatch = template.colors.cardBackground.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
-              const cardAlpha = cardBgMatch ? Math.round(parseFloat(cardBgMatch[1]) * 100) : 10;
+              const cardBgMatch = template.colors.cardBackground.match(
+                /rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/
+              );
+              const cardAlpha = cardBgMatch
+                ? Math.round(parseFloat(cardBgMatch[1]) * 100)
+                : 10;
 
               slide.addShape(pptx.ShapeType.rect, {
-                x: 0.5, y: cardY, w: 9, h: cardHeight,
+                x: 0.5,
+                y: cardY,
+                w: 9,
+                h: cardHeight,
                 fill: {
                   color: 'FFFFFF',
                   transparency: 100 - cardAlpha,
@@ -270,7 +308,10 @@ class DocumentExportService {
             // 卡片左侧蓝色边框
             if (template.decorations.showCardBorder) {
               slide.addShape(pptx.ShapeType.rect, {
-                x: 0.5, y: cardY, w: 0.08, h: cardHeight,
+                x: 0.5,
+                y: cardY,
+                w: 0.08,
+                h: cardHeight,
                 fill: { color: accentColor },
                 line: { type: 'none' },
               });
@@ -283,21 +324,29 @@ class DocumentExportService {
               w: 8.4,
               h: cardHeight - 0.3,
               fontSize: template.typography.body + 2,
-              color: template.style.layoutStyle === 'dark' ? textColor : textColor.replace('E5E7EB', '1F2937'),
+              color:
+                template.style.layoutStyle === 'dark'
+                  ? textColor
+                  : textColor.replace('E5E7EB', '1F2937'),
               fontFace: template.fonts.body,
               valign: 'middle',
             });
           }
         } else {
           // 普通列表布局
-          const contentText = processedContent.map((line, i) => `• ${line}`).join('\n');
+          const contentText = processedContent
+            .map((line, i) => `• ${line}`)
+            .join('\n');
           slide.addText(contentText, {
             x: 0.5,
             y: contentY,
             w: '90%',
             h: 5,
             fontSize: template.typography.body + 2,
-            color: template.style.layoutStyle === 'dark' ? textColor : textColor.replace('E5E7EB', '1F2937'),
+            color:
+              template.style.layoutStyle === 'dark'
+                ? textColor
+                : textColor.replace('E5E7EB', '1F2937'),
             fontFace: template.fonts.body,
             valign: 'top',
           });
@@ -311,7 +360,10 @@ class DocumentExportService {
         w: '6%',
         h: '6%',
         fontSize: template.typography.caption,
-        color: template.style.layoutStyle === 'dark' ? textSecondaryColor : secondaryColor,
+        color:
+          template.style.layoutStyle === 'dark'
+            ? textSecondaryColor
+            : secondaryColor,
         align: 'right',
         fontFace: template.fonts.body,
       });
@@ -691,8 +743,8 @@ ${latexContent}
           level === 1
             ? HeadingLevel.HEADING_1
             : level === 2
-            ? HeadingLevel.HEADING_2
-            : HeadingLevel.HEADING_3;
+              ? HeadingLevel.HEADING_2
+              : HeadingLevel.HEADING_3;
 
         paragraphs.push(
           new Paragraph({
@@ -744,16 +796,21 @@ ${latexContent}
 
       // 检测幻灯片标题（支持多种格式）
       // ### Slide 1, ## 第X页, #### 第X页, ### 封面, ## Slide X: 标题
-      const slideHeaderMatch = trimmed.match(/^#{2,4}\s*(Slide\s*\d+|第\s*\d+\s*[页页]|封面|目录|.*页[:：])/i);
+      const slideHeaderMatch = trimmed.match(
+        /^#{2,4}\s*(Slide\s*\d+|第\s*\d+\s*[页页]|封面|目录|.*页[:：])/i
+      );
 
       if (slideHeaderMatch) {
         if (currentSlide) {
           slides.push(currentSlide);
         }
         // 提取标题（冒号后的内容，或整个标题）
-        const titleMatch = trimmed.match(/[:：]\s*(.+)/) || trimmed.match(/^#{2,4}\s*(.+)/);
+        const titleMatch =
+          trimmed.match(/[:：]\s*(.+)/) || trimmed.match(/^#{2,4}\s*(.+)/);
         currentSlide = {
-          title: titleMatch ? titleMatch[1].trim() : trimmed.replace(/^#{2,4}\s*/, ''),
+          title: titleMatch
+            ? titleMatch[1].trim()
+            : trimmed.replace(/^#{2,4}\s*/, ''),
           content: [],
         };
       } else if (trimmed === '---') {
@@ -769,7 +826,12 @@ ${latexContent}
           // 添加内容行（不在这里移除列表符号，保留原始格式）
           currentSlide.content.push(trimmed);
         }
-      } else if (!currentSlide && trimmed && !trimmed.startsWith('#') && trimmed !== '---') {
+      } else if (
+        !currentSlide &&
+        trimmed &&
+        !trimmed.startsWith('#') &&
+        trimmed !== '---'
+      ) {
         // 如果还没有幻灯片，创建第一张
         currentSlide = {
           title: 'Slide ' + (slides.length + 1),
@@ -856,7 +918,10 @@ ${latexContent}
 
     // 包装列表
     if (listItems.length > 0) {
-      latex = latex.replace(/(\\item .+\n)+/g, '\\begin{itemize}\n$&\\end{itemize}\n');
+      latex = latex.replace(
+        /(\\item .+\n)+/g,
+        '\\begin{itemize}\n$&\\end{itemize}\n'
+      );
     }
 
     // 水平线
@@ -891,9 +956,9 @@ ${latexContent}
       '\\': '\\textbackslash{}',
       '&': '\\&',
       '%': '\\%',
-      '$': '\\$',
+      $: '\\$',
       '#': '\\#',
-      '_': '\\_',
+      _: '\\_',
       '{': '\\{',
       '}': '\\}',
       '~': '\\textasciitilde{}',

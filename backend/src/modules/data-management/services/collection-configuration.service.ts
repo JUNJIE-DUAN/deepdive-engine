@@ -59,12 +59,12 @@ export class CollectionConfigurationService {
       });
 
       this.logger.log(
-        `Created collection configuration: ${config.id} for ${dto.resourceType}`
+        `Created collection configuration: ${config.id} for ${dto.resourceType}`,
       );
       return config;
     } catch (error) {
       this.logger.error(
-        `Failed to create collection config: ${getErrorMessage(error)}`
+        `Failed to create collection config: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -83,7 +83,7 @@ export class CollectionConfigurationService {
       return configs;
     } catch (error) {
       this.logger.error(
-        `Failed to get configs for ${resourceType}: ${getErrorMessage(error)}`
+        `Failed to get configs for ${resourceType}: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -106,7 +106,7 @@ export class CollectionConfigurationService {
       return config;
     } catch (error) {
       this.logger.error(
-        `Failed to get collection config: ${getErrorMessage(error)}`
+        `Failed to get collection config: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -125,7 +125,7 @@ export class CollectionConfigurationService {
       return configs;
     } catch (error) {
       this.logger.error(
-        `Failed to get active configs: ${getErrorMessage(error)}`
+        `Failed to get active configs: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -140,7 +140,9 @@ export class CollectionConfigurationService {
         where: { id },
         data: {
           ...(dto.name && { name: dto.name }),
-          ...(dto.description !== undefined && { description: dto.description }),
+          ...(dto.description !== undefined && {
+            description: dto.description,
+          }),
           ...(dto.keywords && { keywords: dto.keywords }),
           ...(dto.excludeKeywords && { excludeKeywords: dto.excludeKeywords }),
           ...(dto.urlPatterns && { urlPatterns: dto.urlPatterns }),
@@ -156,7 +158,7 @@ export class CollectionConfigurationService {
       return config;
     } catch (error) {
       this.logger.error(
-        `Failed to update collection config: ${getErrorMessage(error)}`
+        `Failed to update collection config: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -174,7 +176,7 @@ export class CollectionConfigurationService {
       this.logger.log(`Deleted collection configuration: ${id}`);
     } catch (error) {
       this.logger.error(
-        `Failed to delete collection config: ${getErrorMessage(error)}`
+        `Failed to delete collection config: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -212,7 +214,7 @@ export class CollectionConfigurationService {
       return config;
     } catch (error) {
       this.logger.error(
-        `Failed to update collection stats: ${getErrorMessage(error)}`
+        `Failed to update collection stats: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -235,7 +237,7 @@ export class CollectionConfigurationService {
   matchesKeywords(
     content: string,
     keywords: string[],
-    excludeKeywords: string[]
+    excludeKeywords: string[],
   ): boolean {
     const lowerContent = content.toLowerCase();
 
@@ -251,7 +253,7 @@ export class CollectionConfigurationService {
     // 检查包含关键词 - 如果有设置关键词，则必须包含至少一个
     if (keywords && keywords.length > 0) {
       return keywords.some((keyword) =>
-        lowerContent.includes(keyword.toLowerCase())
+        lowerContent.includes(keyword.toLowerCase()),
       );
     }
 

@@ -118,21 +118,27 @@ export default function RichTextEditor({
           {/* 标题 */}
           <div className="flex gap-1 border-r border-gray-200 pr-2">
             <MenuButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 1 }).run()
+              }
               active={editor.isActive('heading', { level: 1 })}
               title="标题 1"
             >
               <Heading1 className="h-4 w-4" />
             </MenuButton>
             <MenuButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+              }
               active={editor.isActive('heading', { level: 2 })}
               title="标题 2"
             >
               <Heading2 className="h-4 w-4" />
             </MenuButton>
             <MenuButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 3 }).run()
+              }
               active={editor.isActive('heading', { level: 3 })}
               title="标题 3"
             >

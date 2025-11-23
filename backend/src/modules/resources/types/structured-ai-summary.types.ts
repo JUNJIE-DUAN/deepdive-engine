@@ -11,10 +11,10 @@ export interface StructuredAISummary {
   subcategories: string[];
   keyPoints: string[]; // 3-5 key points
   keywords: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  difficulty: "beginner" | "intermediate" | "advanced" | "expert";
   readingTime: number;
   visualizations?: Array<{
-    type: 'timeline' | 'flowchart' | 'diagram' | 'chart' | 'matrix';
+    type: "timeline" | "flowchart" | "diagram" | "chart" | "matrix";
     description: string;
     dataPoints?: string[];
   }>;
@@ -52,12 +52,12 @@ export interface NewsAISummary extends StructuredAISummary {
     text: string;
     source: string;
   }>;
-  newsFactor: 'breaking' | 'developing' | 'analysis' | 'feature';
-  sentiment: 'positive' | 'neutral' | 'negative';
-  urgency: 'high' | 'medium' | 'low';
+  newsFactor: "breaking" | "developing" | "analysis" | "feature";
+  sentiment: "positive" | "neutral" | "negative";
+  urgency: "high" | "medium" | "low";
   relatedEntities: Array<{
     name: string;
-    type: 'person' | 'organization' | 'location' | 'event';
+    type: "person" | "organization" | "location" | "event";
     relevance: number;
   }>;
 }
@@ -77,9 +77,9 @@ export interface VideoAISummary extends StructuredAISummary {
   }>;
   mainTopic: string;
   subtopics: string[];
-  videoType: 'lecture' | 'tutorial' | 'interview' | 'demo' | 'discussion';
-  pace: 'slow' | 'normal' | 'fast';
-  audience: 'beginner' | 'intermediate' | 'advanced';
+  videoType: "lecture" | "tutorial" | "interview" | "demo" | "discussion";
+  pace: "slow" | "normal" | "fast";
+  audience: "beginner" | "intermediate" | "advanced";
   keyFrames?: Array<{
     timestamp: number;
     description: string;
@@ -107,12 +107,12 @@ export interface ProjectAISummary extends StructuredAISummary {
     lastUpdate: Date;
     isActive: boolean;
   };
-  maturity: 'alpha' | 'beta' | 'stable' | 'mature';
+  maturity: "alpha" | "beta" | "stable" | "mature";
   license: string;
   ecosystem: string;
   gettingStarted: string;
   useCases: string[];
-  learningCurve: 'easy' | 'moderate' | 'steep';
+  learningCurve: "easy" | "moderate" | "steep";
 }
 
 // ============ 联合类型 ============
@@ -131,8 +131,8 @@ export type ResourceAISummary =
  */
 export interface GenerateStructuredSummaryRequest {
   content: string;
-  resourceType: 'PAPER' | 'NEWS' | 'YOUTUBE_VIDEO' | 'PROJECT' | 'OTHER';
-  language?: 'zh' | 'en';
+  resourceType: "PAPER" | "NEWS" | "YOUTUBE_VIDEO" | "PROJECT" | "OTHER";
+  language?: "zh" | "en";
   title?: string;
   abstract?: string;
 }
@@ -156,7 +156,7 @@ export interface GenerateStructuredSummaryResponse {
 export function isPaperSummary(
   summary: ResourceAISummary,
 ): summary is PaperAISummary {
-  return 'contributions' in summary;
+  return "contributions" in summary;
 }
 
 /**
@@ -165,7 +165,7 @@ export function isPaperSummary(
 export function isNewsSummary(
   summary: ResourceAISummary,
 ): summary is NewsAISummary {
-  return 'headline' in summary && 'newsFactor' in summary;
+  return "headline" in summary && "newsFactor" in summary;
 }
 
 /**
@@ -174,7 +174,7 @@ export function isNewsSummary(
 export function isVideoSummary(
   summary: ResourceAISummary,
 ): summary is VideoAISummary {
-  return 'chapters' in summary && 'speakers' in summary;
+  return "chapters" in summary && "speakers" in summary;
 }
 
 /**
@@ -183,7 +183,7 @@ export function isVideoSummary(
 export function isProjectSummary(
   summary: ResourceAISummary,
 ): summary is ProjectAISummary {
-  return 'projectName' in summary && 'techStack' in summary;
+  return "projectName" in summary && "techStack" in summary;
 }
 
 /**
@@ -194,12 +194,12 @@ export function isStructuredAISummary(
 ): summary is ResourceAISummary {
   return (
     summary &&
-    typeof summary === 'object' &&
-    'overview' in summary &&
-    'category' in summary &&
-    'keyPoints' in summary &&
-    'confidence' in summary &&
-    'generatedAt' in summary
+    typeof summary === "object" &&
+    "overview" in summary &&
+    "category" in summary &&
+    "keyPoints" in summary &&
+    "confidence" in summary &&
+    "generatedAt" in summary
   );
 }
 
@@ -211,14 +211,15 @@ export function isStructuredAISummary(
  */
 export function convertToStructuredSummary(
   plainSummary: string,
-  category: string = 'General',
-  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert' = 'intermediate',
+  category: string = "General",
+  difficulty:
+    | "beginner"
+    | "intermediate"
+    | "advanced"
+    | "expert" = "intermediate",
 ): StructuredAISummary {
   // 估算阅读时间（中文约100字/分钟，英文约200字/分钟）
-  const estimatedReadTime = Math.max(
-    1,
-    Math.ceil(plainSummary.length / 150),
-  );
+  const estimatedReadTime = Math.max(1, Math.ceil(plainSummary.length / 150));
 
   return {
     overview: plainSummary,
@@ -234,6 +235,6 @@ export function convertToStructuredSummary(
     readingTime: estimatedReadTime,
     confidence: 0.7, // 转换后的摘要置信度较低
     generatedAt: new Date(),
-    model: 'converted',
+    model: "converted",
   };
 }

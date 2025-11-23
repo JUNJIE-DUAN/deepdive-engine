@@ -62,7 +62,10 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const toggleTaskList = useTaskStore((state) => state.toggleTaskList);
 
   return (
-    <div ref={containerRef} className="relative flex h-full overflow-hidden bg-gray-50">
+    <div
+      ref={containerRef}
+      className="relative flex h-full overflow-hidden bg-gray-50"
+    >
       {/* 中间栏 (资源 + AI交互) */}
       <div
         className="relative flex-shrink-0 border-r border-gray-200 bg-white"
@@ -89,7 +92,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
       {!isTaskListOpen && (
         <button
           onClick={toggleTaskList}
-          className="fixed bottom-6 right-6 z-30 flex items-center space-x-2 rounded-full bg-blue-600 px-5 py-3 text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl hover:scale-105 active:scale-95"
+          className="fixed bottom-6 right-6 z-30 flex items-center space-x-2 rounded-full bg-blue-600 px-5 py-3 text-white shadow-lg transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95"
           title="打开任务列表"
         >
           <ListTodo className="h-5 w-5" />

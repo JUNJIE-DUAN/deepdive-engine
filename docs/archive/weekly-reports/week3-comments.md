@@ -34,6 +34,7 @@ model Comment {
 ```
 
 **关键特性：**
+
 - 自引用关系支持无限嵌套
 - 软删除保持树结构完整性
 - 点赞和回复计数器
@@ -43,15 +44,15 @@ model Comment {
 
 **CommentsController** (backend/src/comments/comments.controller.ts)
 
-| 方法 | 端点 | 功能 |
-|------|------|------|
-| POST | /api/v1/comments | 创建评论/回复 |
-| GET | /api/v1/comments/resource/:resourceId | 获取资源的评论树 |
-| GET | /api/v1/comments/:id | 获取单个评论 |
-| PATCH | /api/v1/comments/:id | 更新评论内容 |
-| DELETE | /api/v1/comments/:id | 软删除评论 |
-| POST | /api/v1/comments/:id/upvote | 点赞评论 |
-| GET | /api/v1/comments/resource/:resourceId/stats | 获取统计数据 |
+| 方法   | 端点                                        | 功能             |
+| ------ | ------------------------------------------- | ---------------- |
+| POST   | /api/v1/comments                            | 创建评论/回复    |
+| GET    | /api/v1/comments/resource/:resourceId       | 获取资源的评论树 |
+| GET    | /api/v1/comments/:id                        | 获取单个评论     |
+| PATCH  | /api/v1/comments/:id                        | 更新评论内容     |
+| DELETE | /api/v1/comments/:id                        | 软删除评论       |
+| POST   | /api/v1/comments/:id/upvote                 | 点赞评论         |
+| GET    | /api/v1/comments/resource/:resourceId/stats | 获取统计数据     |
 
 ### 业务逻辑
 
@@ -107,6 +108,7 @@ CommentsList (容器)
 **位置：** frontend/components/CommentInput.tsx
 
 **功能：**
+
 - 创建新评论
 - 回复已有评论
 - 表单验证
@@ -114,10 +116,11 @@ CommentsList (容器)
 - 取消回复
 
 **Props：**
+
 ```typescript
 interface CommentInputProps {
   resourceId: string;
-  parentId?: string;          // 回复时提供
+  parentId?: string; // 回复时提供
   placeholder?: string;
   onCommentAdded?: (comment: any) => void;
   onCancel?: () => void;
@@ -130,6 +133,7 @@ interface CommentInputProps {
 **位置：** frontend/components/CommentItem.tsx
 
 **功能：**
+
 - 显示评论内容
 - 用户头像和信息
 - 相对时间显示
@@ -171,6 +175,7 @@ const formatTime = (dateString: string) => {
 **位置：** frontend/components/CommentsList.tsx
 
 **功能：**
+
 - 加载评论树
 - 加载统计数据
 - 显示评论输入框
@@ -178,6 +183,7 @@ const formatTime = (dateString: string) => {
 - 实时更新
 
 **状态管理：**
+
 ```typescript
 const [comments, setComments] = useState<any[]>([]);
 const [stats, setStats] = useState({ total: 0, topLevel: 0, replies: 0 });
@@ -231,12 +237,14 @@ const [error, setError] = useState<string | null>(null);
 ### 1. 为什么使用软删除？
 
 **优势：**
+
 - 保持评论树结构完整
 - 子回复仍可见
 - 审计追踪
 - 可恢复
 
 **实现：**
+
 ```typescript
 // 软删除
 isDeleted: true
@@ -251,11 +259,13 @@ if (comment.isDeleted) {
 ### 2. 为什么限制3层嵌套？
 
 **原因：**
+
 - 防止无限嵌套导致UI问题
 - 移动端显示友好
 - 性能优化
 
 **实现：**
+
 ```typescript
 const maxNestingLevel = 3;
 
@@ -269,15 +279,18 @@ const maxNestingLevel = 3;
 ### 3. 为什么使用树形结构？
 
 **优势：**
+
 - 一次加载所有数据
 - 减少API调用
 - 更好的用户体验
 
 **缺点：**
+
 - 大量评论时数据量大
 - 需要递归处理
 
 **优化：**
+
 - 后端限制嵌套深度为3层
 - 前端虚拟滚动（待实现）
 - 分页加载（待实现）
@@ -349,6 +362,7 @@ const currentUserId = 'mock-user-id'; // 临时方案
 ## 部署注意事项
 
 1. **数据库迁移**
+
    ```bash
    cd backend
    npx prisma migrate deploy
@@ -358,6 +372,7 @@ const currentUserId = 'mock-user-id'; // 临时方案
    - 无新增环境变量
 
 3. **依赖安装**
+
    ```bash
    # 后端无新增依赖
    # 前端无新增依赖

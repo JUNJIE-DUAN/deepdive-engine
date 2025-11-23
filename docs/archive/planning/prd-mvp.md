@@ -12,6 +12,7 @@
 **DeepDive Engine** = AlphaXiv + Grok AI + 个性化推荐
 
 **核心价值**:
+
 - 📄 聚合Papers/Projects/News
 - 🤖 Grok AI智能问答和摘要
 - 🎯 个性化收藏和推荐
@@ -26,6 +27,7 @@
 #### 1. 左侧导航（完整实现）
 
 **已有**:
+
 - ✓ Explore（主页）
 - ✓ My Library
 - ✓ Notifications
@@ -36,6 +38,7 @@
 - ✓ 侧边栏折叠
 
 **需补充**:
+
 - ❌ 各页面的实际功能实现
 - ❌ Notifications的消息提醒
 - ❌ Profile的用户设置
@@ -43,6 +46,7 @@
 #### 2. 智能搜索框（参考AlphaXiv）
 
 **功能要求**:
+
 ```
 ┌─────────────────────────────────────────┐
 │ ∞ agent ▼  │ AI                        │
@@ -61,6 +65,7 @@
 ```
 
 **技术实现**:
+
 - Agent模式切换（agent/search）
 - 实时搜索建议（debounce 300ms）
 - 向量搜索匹配（top 5）
@@ -69,6 +74,7 @@
 #### 3. 论文卡片（带缩略图）
 
 **卡片布局**:
+
 ```
 ┌─────────────────────────────────────────────┐
 │ 📊 1,470 ⬆   04 Nov 2025                    │
@@ -85,6 +91,7 @@
 ```
 
 **数据展示**:
+
 - PDF缩略图（第一页截图）
 - 阅读数/引用数
 - 发布日期
@@ -94,12 +101,14 @@
 #### 4. 右侧AI面板（Grok默认）
 
 **功能**:
+
 - Tab切换：Assistant | Notes | Comments | Similar
 - Assistant默认显示Grok
 - 快速操作：Summary, Insights, Q&A
 - 模型切换：Grok | GPT-4
 
 **交互流程**:
+
 ```
 用户选择论文 →
   自动加载到AI面板 →
@@ -117,6 +126,7 @@
 #### 1. My Library（收藏管理）
 
 **功能**:
+
 - 查看所有收藏的资源
 - 智能分类（AI自动打标签）
 - 按标签/类型/时间筛选
@@ -125,6 +135,7 @@
 #### 2. 个性化推荐
 
 **推荐策略**:
+
 ```python
 def recommend(user_id):
     # 1. 基于收藏的标签
@@ -151,12 +162,14 @@ def recommend(user_id):
 #### 3. 筛选和排序
 
 **筛选维度**:
+
 - 类型：Papers | Projects | News
 - 时间：Today | Week | Month | Year
 - 标签：AI/ML, Web Dev, Cloud等
 - 难度：Beginner | Intermediate | Advanced
 
 **排序方式**:
+
 - Hot（综合评分）
 - Latest（最新）
 - Most Viewed（最多阅读）
@@ -171,6 +184,7 @@ def recommend(user_id):
 **核心价值**: 让用户能够选择多份素材，AI自动生成结构化的综合分析报告
 
 **适用场景**:
+
 - 技术选型：对比3-5个类似技术/框架
 - 趋势分析：分析10篇最新论文，总结研究趋势
 - 学习路径：选择由浅入深的资源，生成学习计划
@@ -178,6 +192,7 @@ def recommend(user_id):
 ### 1. 多选交互UI
 
 **功能要求**:
+
 ```
 ┌───────────────────────────────────────────────┐
 │ ☑ 已选择 3 项  [取消选择] [生成报告 →]        │
@@ -194,19 +209,21 @@ def recommend(user_id):
 ```
 
 **交互规则**:
+
 - 最少选择2项，最多选择10项
 - 顶部显示已选数量和操作按钮
 - 点击"生成报告"弹出模板选择对话框
 - 支持快捷键：`Ctrl+A` 全选，`Esc` 取消
 
 **技术实现**:
+
 ```typescript
 // frontend/lib/use-multi-select.ts
 export function useMultiSelect(maxItems = 10) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -240,57 +257,59 @@ export function useMultiSelect(maxItems = 10) {
 ### 2. 报告模板选择
 
 **模板配置**:
+
 ```typescript
 // frontend/lib/report-templates.ts
 export const REPORT_TEMPLATES = [
   {
-    id: 'comparison',
-    name: '对比分析',
-    description: '多维度对比各素材的特点、优劣势和适用场景',
-    icon: '📊',
+    id: "comparison",
+    name: "对比分析",
+    description: "多维度对比各素材的特点、优劣势和适用场景",
+    icon: "📊",
     minItems: 2,
     maxItems: 5,
-    sections: ['概述', '详细对比表', '关键洞察', '选型建议'],
-    estimatedTime: '60秒',
-    model: 'gpt-4', // 需要复杂推理
+    sections: ["概述", "详细对比表", "关键洞察", "选型建议"],
+    estimatedTime: "60秒",
+    model: "gpt-4", // 需要复杂推理
   },
   {
-    id: 'trend',
-    name: '趋势报告',
-    description: '分析技术演进轨迹和未来发展方向',
-    icon: '📈',
+    id: "trend",
+    name: "趋势报告",
+    description: "分析技术演进轨迹和未来发展方向",
+    icon: "📈",
     minItems: 3,
     maxItems: 10,
-    sections: ['时间轴', '关键突破', '趋势预测', '机会分析'],
-    estimatedTime: '45秒',
-    model: 'grok',
+    sections: ["时间轴", "关键突破", "趋势预测", "机会分析"],
+    estimatedTime: "45秒",
+    model: "grok",
   },
   {
-    id: 'learning-path',
-    name: '学习路径',
-    description: '生成由浅入深的学习计划和实践建议',
-    icon: '🗺️',
+    id: "learning-path",
+    name: "学习路径",
+    description: "生成由浅入深的学习计划和实践建议",
+    icon: "🗺️",
     minItems: 3,
     maxItems: 8,
-    sections: ['前置知识', '学习顺序', '难度分析', '实践建议'],
-    estimatedTime: '50秒',
-    model: 'grok',
+    sections: ["前置知识", "学习顺序", "难度分析", "实践建议"],
+    estimatedTime: "50秒",
+    model: "grok",
   },
   {
-    id: 'literature-review',
-    name: '文献综述',
-    description: '学术风格的文献综述报告',
-    icon: '📝',
+    id: "literature-review",
+    name: "文献综述",
+    description: "学术风格的文献综述报告",
+    icon: "📝",
     minItems: 5,
     maxItems: 10,
-    sections: ['研究背景', '方法演进', '结果对比', '未来方向'],
-    estimatedTime: '90秒',
-    model: 'gpt-4',
+    sections: ["研究背景", "方法演进", "结果对比", "未来方向"],
+    estimatedTime: "90秒",
+    model: "gpt-4",
   },
 ] as const;
 ```
 
 **模板选择对话框**:
+
 ```typescript
 // frontend/components/ReportTemplateDialog.tsx
 <Dialog>
@@ -329,16 +348,17 @@ export const REPORT_TEMPLATES = [
 ### 3. AI报告生成服务
 
 **后端API设计**:
+
 ```typescript
 // backend/src/reports/reports.controller.ts
 
-@Controller('reports')
+@Controller("reports")
 export class ReportsController {
-  @Post('generate')
+  @Post("generate")
   async generateReport(@Body() dto: GenerateReportDto) {
     // 1. 验证资源数量
     if (dto.resourceIds.length < 2 || dto.resourceIds.length > 10) {
-      throw new BadRequestException('Please select 2-10 resources');
+      throw new BadRequestException("Please select 2-10 resources");
     }
 
     // 2. 获取资源详情
@@ -348,7 +368,7 @@ export class ReportsController {
     const report = await this.aiService.generateReport({
       resources,
       template: dto.template,
-      model: dto.model || 'grok',
+      model: dto.model || "grok",
     });
 
     // 4. 保存报告
@@ -361,19 +381,20 @@ export class ReportsController {
     return savedReport;
   }
 
-  @Get(':id')
-  async getReport(@Param('id') id: string) {
+  @Get(":id")
+  async getReport(@Param("id") id: string) {
     return this.reportsService.findOne(id);
   }
 
   @Get()
-  async getUserReports(@Query('userId') userId: string) {
+  async getUserReports(@Query("userId") userId: string) {
     return this.reportsService.findByUser(userId);
   }
 }
 ```
 
 **AI Service实现**:
+
 ```python
 # ai-service/routers/report.py
 
@@ -549,6 +570,7 @@ Resource {i}:
 **页面路由**: `/report/[id]`
 
 **布局设计**:
+
 ```typescript
 // frontend/app/report/[id]/page.tsx
 
@@ -683,12 +705,12 @@ model Report {
 
 ### 关键指标
 
-| 指标 | Week 5目标 | Week 6目标 |
-|-----|-----------|-----------|
-| 报告生成成功率 | 85% | 95% |
-| 平均生成时间 | <60s | <45s |
-| 模板覆盖率 | 2个模板 | 4个模板 |
-| 用户使用率 | 20% | 35% |
+| 指标           | Week 5目标 | Week 6目标 |
+| -------------- | ---------- | ---------- |
+| 报告生成成功率 | 85%        | 95%        |
+| 平均生成时间   | <60s       | <45s       |
+| 模板覆盖率     | 2个模板    | 4个模板    |
+| 用户使用率     | 20%        | 35%        |
 
 ---
 
@@ -698,36 +720,39 @@ model Report {
 
 ```css
 /* 主题色 */
---primary: #991B1B;      /* 深红色 */
---primary-light: #FEE2E2;
---primary-dark: #7F1D1D;
+--primary: #991b1b; /* 深红色 */
+--primary-light: #fee2e2;
+--primary-dark: #7f1d1d;
 
 /* 中性色 */
---gray-50: #F9FAFB;
---gray-100: #F3F4F6;
---gray-500: #6B7280;
+--gray-50: #f9fafb;
+--gray-100: #f3f4f6;
+--gray-500: #6b7280;
 --gray-900: #111827;
 
 /* 语义色 */
---success: #10B981;
---warning: #F59E0B;
---error: #EF4444;
+--success: #10b981;
+--warning: #f59e0b;
+--error: #ef4444;
 ```
 
 ### 组件规范
 
 **卡片阴影**:
+
 ```css
 box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 hover: box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 ```
 
 **圆角**:
+
 - 小组件：4px
 - 卡片：8px
 - 模态框：12px
 
 **间距**:
+
 - 卡片间距：16px
 - 内边距：12px (小) | 16px (中) | 24px (大)
 
@@ -738,6 +763,7 @@ hover: box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 ### 1. PDF缩略图生成
 
 **方案**:
+
 ```typescript
 // 使用pdf.js生成缩略图
 async function generateThumbnail(pdfUrl: string) {
@@ -745,25 +771,27 @@ async function generateThumbnail(pdfUrl: string) {
   const page = await pdf.getPage(1);
 
   const viewport = page.getViewport({ scale: 0.5 });
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
 
   canvas.width = viewport.width;
   canvas.height = viewport.height;
 
   await page.render({ canvasContext: context, viewport }).promise;
 
-  return canvas.toDataURL('image/jpeg', 0.8);
+  return canvas.toDataURL("image/jpeg", 0.8);
 }
 ```
 
 **存储**:
+
 - 生成后存储到MongoDB（Base64或URL）
 - CDN加速（可选）
 
 ### 2. 智能搜索建议
 
 **后端API**:
+
 ```typescript
 // GET /api/search/suggestions?q=AI&limit=5
 async searchSuggestions(query: string, limit = 5) {
@@ -789,22 +817,25 @@ async searchSuggestions(query: string, limit = 5) {
 ```
 
 **前端实现**:
+
 ```typescript
 const [suggestions, setSuggestions] = useState([]);
 const debouncedSearch = useMemo(
-  () => debounce(async (q) => {
-    if (q.length < 2) return;
-    const res = await fetch(`/api/search/suggestions?q=${q}`);
-    const data = await res.json();
-    setSuggestions(data);
-  }, 300),
-  []
+  () =>
+    debounce(async (q) => {
+      if (q.length < 2) return;
+      const res = await fetch(`/api/search/suggestions?q=${q}`);
+      const data = await res.json();
+      setSuggestions(data);
+    }, 300),
+  [],
 );
 ```
 
 ### 3. Grok集成
 
 **配置**:
+
 ```typescript
 // ai-service/services/grok_client.py
 class GrokClient:
@@ -825,22 +856,23 @@ class GrokClient:
 ```
 
 **前端使用**:
+
 ```typescript
 async function askGrok(question: string, context: Resource) {
   const messages = [
     {
       role: "system",
-      content: "You are a helpful AI assistant analyzing academic papers."
+      content: "You are a helpful AI assistant analyzing academic papers.",
     },
     {
       role: "user",
-      content: `Based on this paper:\n\nTitle: ${context.title}\nAbstract: ${context.abstract}\n\nQuestion: ${question}`
-    }
+      content: `Based on this paper:\n\nTitle: ${context.title}\nAbstract: ${context.abstract}\n\nQuestion: ${question}`,
+    },
   ];
 
-  const response = await fetch('/api/ai/chat', {
-    method: 'POST',
-    body: JSON.stringify({ messages, model: 'grok' })
+  const response = await fetch("/api/ai/chat", {
+    method: "POST",
+    body: JSON.stringify({ messages, model: "grok" }),
   });
 
   return response.body; // Stream
@@ -856,6 +888,7 @@ async function askGrok(question: string, context: Resource) {
 **脚本已有**: `backend/src/scripts/link-raw-data.ts`
 
 **执行**:
+
 ```bash
 cd backend
 npx ts-node src/scripts/link-raw-data.ts
@@ -864,22 +897,24 @@ npx ts-node src/scripts/link-raw-data.ts
 ### 问题2: GitHub数据缺少title
 
 **修复方案**:
+
 ```typescript
 // 使用fullName或name作为title
 await prisma.resource.updateMany({
   where: {
-    type: 'project',
-    title: null
+    type: "project",
+    title: null,
   },
   data: {
     // 从rawData中提取
-  }
+  },
 });
 ```
 
 ### 问题3: 重复数据清理
 
 **去重逻辑**:
+
 - arXiv: 基于externalId（arXiv ID）
 - GitHub: 基于fullName
 - HackerNews: 基于id
@@ -888,13 +923,13 @@ await prisma.resource.updateMany({
 
 ## 关键指标
 
-| 指标 | MVP-1.0目标 | MVP-2.0目标 |
-|-----|------------|------------|
-| 功能完成度 | 80% | 100% |
-| 页面响应时间 | <2s | <1s |
-| AI回复速度 | <5s | <3s |
-| 搜索建议延迟 | <500ms | <300ms |
-| PDF缩略图覆盖率 | 50% | 80% |
+| 指标            | MVP-1.0目标 | MVP-2.0目标 |
+| --------------- | ----------- | ----------- |
+| 功能完成度      | 80%         | 100%        |
+| 页面响应时间    | <2s         | <1s         |
+| AI回复速度      | <5s         | <3s         |
+| 搜索建议延迟    | <500ms      | <300ms      |
+| PDF缩略图覆盖率 | 50%         | 80%         |
 
 ---
 

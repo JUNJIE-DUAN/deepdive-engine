@@ -187,16 +187,16 @@ model Report {
 
 ## 8. 后端接口（BE）
 
-| Method & Path | 描述 | 请求 | 响应/备注 |
-|--------------|------|------|-----------|
-| `POST /api/v1/workspaces` | 创建/更新工作区 | `{ resourceIds: string[] }` | 工作区 DTO |
-| `GET /api/v1/workspaces/:id` | 获取详情 | – | 包含资源、任务状态 |
-| `PATCH /api/v1/workspaces/:id` | 增删资源 | `{ addResourceIds?, removeResourceIds? }` | 更新后的工作区 |
-| `DELETE /api/v1/workspaces/:id` | 归档 | – | success |
-| `POST /api/v1/workspaces/:id/tasks` | 创建任务 | `{ templateId, model, question?, overrides? }` | `{ taskId }`，含限流校验 |
-| `GET /api/v1/workspaces/:id/tasks/:taskId` | 查询任务状态 | – | `{ status, progress, queuePosition, estimatedTime, result?, error? }` |
-| `POST /api/v1/reports/generate` | 生成报告 | `{ taskId, templateId, title?, notes? }` | Report DTO |
-| `GET /api/v1/report-templates` | 模板列表 | `?category` | 模板数组 |
+| Method & Path                              | 描述            | 请求                                           | 响应/备注                                                             |
+| ------------------------------------------ | --------------- | ---------------------------------------------- | --------------------------------------------------------------------- |
+| `POST /api/v1/workspaces`                  | 创建/更新工作区 | `{ resourceIds: string[] }`                    | 工作区 DTO                                                            |
+| `GET /api/v1/workspaces/:id`               | 获取详情        | –                                              | 包含资源、任务状态                                                    |
+| `PATCH /api/v1/workspaces/:id`             | 增删资源        | `{ addResourceIds?, removeResourceIds? }`      | 更新后的工作区                                                        |
+| `DELETE /api/v1/workspaces/:id`            | 归档            | –                                              | success                                                               |
+| `POST /api/v1/workspaces/:id/tasks`        | 创建任务        | `{ templateId, model, question?, overrides? }` | `{ taskId }`，含限流校验                                              |
+| `GET /api/v1/workspaces/:id/tasks/:taskId` | 查询任务状态    | –                                              | `{ status, progress, queuePosition, estimatedTime, result?, error? }` |
+| `POST /api/v1/reports/generate`            | 生成报告        | `{ taskId, templateId, title?, notes? }`       | Report DTO                                                            |
+| `GET /api/v1/report-templates`             | 模板列表        | `?category`                                    | 模板数组                                                              |
 
 - 限流：每用户并发 3、每小时 20 次，返回 429/`retryAfter`。
 - 权限：确认 workspace.userId 与资源归属匹配。
@@ -228,6 +228,7 @@ model Report {
 ## 11. 任务列表（按角色）
 
 **架构 / DevOps**
+
 1. 更新 Prisma schema 与迁移脚本（含模板 seed）。
 2. 输出 OpenAPI / TS DTO。
 3. 设计 AI 服务通信（超时/重试），确定轮询策略。
@@ -235,6 +236,7 @@ model Report {
 5. 更新部署脚本、feature flag、监控仪表。
 
 **后端开发**
+
 1. Workspace Controller/Service + DTO。
 2. WorkspaceTask Service：创建任务、状态更新、AI 调度。
 3. ReportTemplate Service：加载模板、模板 API。
@@ -242,6 +244,7 @@ model Report {
 5. 单元测试、集成测试、限流与权限验证。
 
 **AI 服务开发**
+
 1. 任务队列/状态管理（可先用内存/Redis）。
 2. 模板加载器与 Prompt 生成器。
 3. 抽取/分析/生成 pipeline。
@@ -251,6 +254,7 @@ model Report {
 7. 单元测试、监控与日志脱敏。
 
 **前端开发**
+
 1. `useWorkspace` hook 封装 API。
 2. Workspace UI 改版：资源列表、任务卡、配置抽屉、状态日志。
 3. 轮询任务状态、错误提示、进度展示。
@@ -259,11 +263,13 @@ model Report {
 6. 组件测试与 Playwright E2E。
 
 **QA**
+
 1. 功能/接口/性能用例编写。
 2. 自动化测试脚本（Playwright/CI）。
 3. 回归测试、缺陷跟踪、上线验收报告。
 
 **安全**
+
 1. 权限审计 checklist。
 2. 日志脱敏方案验证。
 3. 限流策略压测与验证。

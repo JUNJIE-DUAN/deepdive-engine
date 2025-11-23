@@ -10,4 +10,8 @@ export { ResourceAnalysisAgent } from './resource-analysis.agent';
 export type { ResourceAnalysis } from './resource-analysis.agent';
 
 export { VerificationAgent } from './verification.agent';
-export type { VerificationResult, VerificationBadge, VerificationStatus } from './verification.agent';
+export type {
+  VerificationResult,
+  VerificationBadge,
+  VerificationStatus,
+} from './verification.agent';

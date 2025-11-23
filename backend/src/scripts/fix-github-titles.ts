@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import { MongoClient } from 'mongodb';
-import { getErrorMessage } from '../common/utils/error.utils';
+import { PrismaClient } from "@prisma/client";
+import { MongoClient } from "mongodb";
+import { getErrorMessage } from "../common/utils/error.utils";
 
 /**
  * 脚本：修复GitHub资源缺失的title
@@ -10,19 +10,21 @@ import { getErrorMessage } from '../common/utils/error.utils';
  */
 async function fixGitHubTitles() {
   const prisma = new PrismaClient();
-  const mongoClient = new MongoClient('mongodb://deepdive:mongo_dev_password@localhost:27017/deepdive?authSource=admin');
+  const mongoClient = new MongoClient(
+    "mongodb://deepdive:mongo_dev_password@localhost:27017/deepdive?authSource=admin",
+  );
 
   try {
     await mongoClient.connect();
     const db = mongoClient.db();
-    const rawDataCollection = db.collection('data_collection_raw_data');
+    const rawDataCollection = db.collection("data_collection_raw_data");
 
-    console.log('🔧 开始修复GitHub资源的title...\n');
+    console.log("🔧 开始修复GitHub资源的title...\n");
 
     // 获取所有type=PROJECT的资源（我们会检查哪些没有title）
     const resources = await prisma.resource.findMany({
       where: {
-        type: 'PROJECT'
+        type: "PROJECT",
       },
       select: {
         id: true,
@@ -38,7 +40,7 @@ async function fixGitHubTitles() {
 
     for (const resource of resources) {
       // 跳过已有title的资源
-      if (resource.title && resource.title.trim() !== '') {
+      if (resource.title && resource.title.trim() !== "") {
         continue;
       }
 
@@ -50,9 +52,9 @@ async function fixGitHubTitles() {
 
       try {
         // 从MongoDB获取raw_data
-        const { ObjectId } = await import('mongodb');
+        const { ObjectId } = await import("mongodb");
         const rawData = await rawDataCollection.findOne({
-          _id: new ObjectId(resource.rawDataId)
+          _id: new ObjectId(resource.rawDataId),
         });
 
         if (!rawData) {
@@ -62,7 +64,10 @@ async function fixGitHubTitles() {
         }
 
         // 提取title（优先使用fullName，其次name）
-        const title = rawData.data?.fullName || rawData.data?.name || rawData.data?.externalId;
+        const title =
+          rawData.data?.fullName ||
+          rawData.data?.name ||
+          rawData.data?.externalId;
 
         if (!title) {
           console.log(`❌ rawData中没有可用的title数据: ${resource.rawDataId}`);
@@ -73,7 +78,7 @@ async function fixGitHubTitles() {
         // 更新resource
         await prisma.resource.update({
           where: { id: resource.id },
-          data: { title: title }
+          data: { title: title },
         });
 
         console.log(`✅ ${title}`);
@@ -89,7 +94,7 @@ async function fixGitHubTitles() {
     console.log(`   成功: ${successCount}`);
     console.log(`   失败: ${failCount}`);
   } catch (error) {
-    console.error('❌ 脚本执行失败:', error);
+    console.error("❌ 脚本执行失败:", error);
   } finally {
     await prisma.$disconnect();
     await mongoClient.close();

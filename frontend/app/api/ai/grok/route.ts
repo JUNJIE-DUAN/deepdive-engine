@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AI_SERVICE_URL = process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
+const AI_SERVICE_URL =
+  process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
 
 /**
  * Grok AI API Proxy

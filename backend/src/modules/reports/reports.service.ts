@@ -66,23 +66,27 @@ export class ReportsService {
       const aiServiceUrl =
         process.env.AI_SERVICE_URL || "http://localhost:5000";
 
-      const response = await axios.post(`${aiServiceUrl}/api/v1/ai/simple-chat`, dto, {
-        timeout: 60000, // 1 minute timeout
-        responseType: dto.stream ? 'stream' : 'json', // Support streaming
-      });
+      const response = await axios.post(
+        `${aiServiceUrl}/api/v1/ai/simple-chat`,
+        dto,
+        {
+          timeout: 60000, // 1 minute timeout
+          responseType: dto.stream ? "stream" : "json", // Support streaming
+        },
+      );
 
       // Handle streaming response
       if (dto.stream && response.data) {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
 
         // Pipe the stream from AI service to the client
         response.data.pipe(res);
 
         // Handle stream errors
-        response.data.on('error', (error: Error) => {
-          console.error('Stream error:', error);
+        response.data.on("error", (error: Error) => {
+          console.error("Stream error:", error);
           res.end();
         });
 
@@ -233,21 +237,23 @@ export class ReportsService {
       if (!format || !content || !title) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: format, content, title',
+          error: "Missing required fields: format, content, title",
         });
       }
 
       // 验证格式
-      const validFormats = ['word', 'ppt', 'pdf', 'markdown'];
+      const validFormats = ["word", "ppt", "pdf", "markdown"];
       if (!validFormats.includes(format)) {
         return res.status(400).json({
           success: false,
-          error: `Invalid format. Supported formats: ${validFormats.join(', ')}`,
+          error: `Invalid format. Supported formats: ${validFormats.join(", ")}`,
         });
       }
 
       // 导入并使用导出服务
-      const { documentExportService } = await import('../../services/document-export.service');
+      const { documentExportService } = await import(
+        "../../services/document-export.service"
+      );
       const buffer = await documentExportService.exportDocument({
         title,
         content,
@@ -256,34 +262,34 @@ export class ReportsService {
 
       // 设置响应头
       const contentType =
-        format === 'word'
-          ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          : format === 'ppt'
-          ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-          : format === 'pdf'
-          ? 'application/pdf'
-          : 'text/markdown';
+        format === "word"
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : format === "ppt"
+            ? "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            : format === "pdf"
+              ? "application/pdf"
+              : "text/markdown";
 
       const filename =
-        format === 'word'
+        format === "word"
           ? `${title}.docx`
-          : format === 'ppt'
-          ? `${title}.pptx`
-          : format === 'pdf'
-          ? `${title}.pdf`
-          : `${title}.md`;
+          : format === "ppt"
+            ? `${title}.pptx`
+            : format === "pdf"
+              ? `${title}.pdf`
+              : `${title}.md`;
 
-      res.setHeader('Content-Type', contentType);
+      res.setHeader("Content-Type", contentType);
       res.setHeader(
-        'Content-Disposition',
+        "Content-Disposition",
         `attachment; filename="${encodeURIComponent(filename)}"`,
       );
       return res.send(buffer);
     } catch (error) {
-      console.error('Export error:', error);
+      console.error("Export error:", error);
       return res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -496,4 +502,3 @@ export class ReportsService {
     }
   }
 }
-

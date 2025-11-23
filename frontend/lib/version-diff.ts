@@ -87,7 +87,10 @@ export function comparePPTVersions(
       stats.added++;
     } else {
       // 比较内容
-      const slideChanges = compareSlideContent(oldSlide.content, newSlide.content);
+      const slideChanges = compareSlideContent(
+        oldSlide.content,
+        newSlide.content
+      );
 
       if (slideChanges.length > 0) {
         changes.push({
@@ -182,7 +185,10 @@ export function compareDocVersions(
       });
       stats.added++;
     } else {
-      const chapterChanges = compareTextContent(oldChapter.content, newChapter.content);
+      const chapterChanges = compareTextContent(
+        oldChapter.content,
+        newChapter.content
+      );
 
       if (chapterChanges.length > 0) {
         changes.push({
@@ -234,7 +240,9 @@ export function compareDocVersions(
 /**
  * 解析PPT slides
  */
-function parsePPTSlides(content: string): Array<{ title: string; content: string }> {
+function parsePPTSlides(
+  content: string
+): Array<{ title: string; content: string }> {
   const slides: Array<{ title: string; content: string }> = [];
 
   // 按 --- 分割slides
@@ -260,7 +268,9 @@ function parsePPTSlides(content: string): Array<{ title: string; content: string
 /**
  * 解析文档章节
  */
-function parseDocChapters(content: string): Array<{ title: string; content: string }> {
+function parseDocChapters(
+  content: string
+): Array<{ title: string; content: string }> {
   const chapters: Array<{ title: string; content: string }> = [];
 
   // 按 ## 分割章节

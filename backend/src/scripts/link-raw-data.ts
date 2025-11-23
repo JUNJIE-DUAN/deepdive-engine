@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import { MongoClient } from 'mongodb';
-import { getErrorMessage } from '../common/utils/error.utils';
+import { PrismaClient } from "@prisma/client";
+import { MongoClient } from "mongodb";
+import { getErrorMessage } from "../common/utils/error.utils";
 
 /**
  * 脚本：为现有的 MongoDB raw_data 添加 resourceId 反向引用
@@ -11,14 +11,16 @@ import { getErrorMessage } from '../common/utils/error.utils';
  */
 async function linkRawDataToResources() {
   const prisma = new PrismaClient();
-  const mongoClient = new MongoClient('mongodb://deepdive:mongo_dev_password@localhost:27017/deepdive?authSource=admin');
+  const mongoClient = new MongoClient(
+    "mongodb://deepdive:mongo_dev_password@localhost:27017/deepdive?authSource=admin",
+  );
 
   try {
     await mongoClient.connect();
     const db = mongoClient.db();
-    const rawDataCollection = db.collection('data_collection_raw_data');
+    const rawDataCollection = db.collection("data_collection_raw_data");
 
-    console.log('🔗 开始链接 raw_data 到 resources...\n');
+    console.log("🔗 开始链接 raw_data 到 resources...\n");
 
     // 获取所有有 rawDataId 的 resources
     const resources = await prisma.resource.findMany({
@@ -39,7 +41,7 @@ async function linkRawDataToResources() {
     let successCount = 0;
     let failCount = 0;
 
-    const { ObjectId } = await import('mongodb');
+    const { ObjectId } = await import("mongodb");
 
     for (const resource of resources) {
       if (!resource.rawDataId) {
@@ -61,7 +63,9 @@ async function linkRawDataToResources() {
 
         if (result.matchedCount > 0) {
           console.log(`✅ ${resource.title.substring(0, 60)}...`);
-          console.log(`   rawDataId: ${resource.rawDataId} → resourceId: ${resource.id}`);
+          console.log(
+            `   rawDataId: ${resource.rawDataId} → resourceId: ${resource.id}`,
+          );
           successCount++;
         } else {
           console.log(`❌ 未找到 rawData: ${resource.rawDataId}`);
@@ -77,7 +81,7 @@ async function linkRawDataToResources() {
     console.log(`   成功: ${successCount}`);
     console.log(`   失败: ${failCount}`);
   } catch (error) {
-    console.error('❌ 脚本执行失败:', error);
+    console.error("❌ 脚本执行失败:", error);
   } finally {
     await prisma.$disconnect();
     await mongoClient.close();

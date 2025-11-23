@@ -33,7 +33,7 @@ export interface WorkspaceResourceSummary {
     title: string;
     type: string;
     primaryCategory?: string | null;
-     abstract?: string | null;
+    abstract?: string | null;
     tags?: unknown;
     publishedAt?: string | null;
     aiSummary?: string | null;
@@ -94,20 +94,24 @@ export interface CreateWorkspaceTaskPayload {
   resourceIds?: string[];
 }
 
-export async function createWorkspace(resourceIds: string[]): Promise<WorkspaceResponse> {
+export async function createWorkspace(
+  resourceIds: string[]
+): Promise<WorkspaceResponse> {
   return request<WorkspaceResponse>('/workspaces', {
     method: 'POST',
     body: JSON.stringify({ resourceIds }),
   });
 }
 
-export async function getWorkspace(workspaceId: string): Promise<WorkspaceResponse> {
+export async function getWorkspace(
+  workspaceId: string
+): Promise<WorkspaceResponse> {
   return request<WorkspaceResponse>(`/workspaces/${workspaceId}`);
 }
 
 export async function updateWorkspaceResources(
   workspaceId: string,
-  payload: { addResourceIds?: string[]; removeResourceIds?: string[] },
+  payload: { addResourceIds?: string[]; removeResourceIds?: string[] }
 ): Promise<WorkspaceResponse> {
   return request<WorkspaceResponse>(`/workspaces/${workspaceId}`, {
     method: 'PATCH',
@@ -117,7 +121,7 @@ export async function updateWorkspaceResources(
 
 export async function createWorkspaceTask(
   workspaceId: string,
-  payload: CreateWorkspaceTaskPayload,
+  payload: CreateWorkspaceTaskPayload
 ): Promise<WorkspaceTaskSummary> {
   return request<WorkspaceTaskSummary>(`/workspaces/${workspaceId}/tasks`, {
     method: 'POST',
@@ -127,12 +131,16 @@ export async function createWorkspaceTask(
 
 export async function getWorkspaceTask(
   workspaceId: string,
-  taskId: string,
+  taskId: string
 ): Promise<WorkspaceTaskSummary> {
-  return request<WorkspaceTaskSummary>(`/workspaces/${workspaceId}/tasks/${taskId}`);
+  return request<WorkspaceTaskSummary>(
+    `/workspaces/${workspaceId}/tasks/${taskId}`
+  );
 }
 
-export async function listWorkspaceTemplates(category?: string): Promise<WorkspaceTemplate[]> {
+export async function listWorkspaceTemplates(
+  category?: string
+): Promise<WorkspaceTemplate[]> {
   const query = category ? `?category=${encodeURIComponent(category)}` : '';
   return request<WorkspaceTemplate[]>(`/workspaces/templates${query}`);
 }
@@ -145,7 +153,9 @@ export interface GenerateWorkspaceReportPayload {
   notes?: string;
 }
 
-export async function generateWorkspaceReport(payload: GenerateWorkspaceReportPayload) {
+export async function generateWorkspaceReport(
+  payload: GenerateWorkspaceReportPayload
+) {
   return request('/reports/generate', {
     method: 'POST',
     body: JSON.stringify(payload),

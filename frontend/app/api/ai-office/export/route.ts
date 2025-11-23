@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
     const validFormats = ['word', 'ppt', 'pdf', 'markdown', 'html', 'latex'];
     if (!validFormats.includes(format)) {
       return NextResponse.json(
-        { error: `Invalid format. Supported formats: ${validFormats.join(', ')}` },
+        {
+          error: `Invalid format. Supported formats: ${validFormats.join(', ')}`,
+        },
         { status: 400 }
       );
     }
@@ -72,7 +74,6 @@ export async function POST(request: NextRequest) {
         'Content-Length': buffer.length.toString(),
       },
     });
-
   } catch (error) {
     console.error('Export API error:', error);
     return NextResponse.json(

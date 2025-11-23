@@ -34,6 +34,7 @@ Types: `frontend/types/ai-office.ts`
 Location: `backend/src/modules/resources/types/structured-ai-summary.types.ts`
 
 Defines all TypeScript interfaces for:
+
 - Base `StructuredAISummary` interface
 - Resource-specific types: `PaperAISummary`, `NewsAISummary`, `VideoAISummary`, `ProjectAISummary`
 - Type guards: `isPaperSummary()`, `isNewsSummary()`, etc.
@@ -44,6 +45,7 @@ Defines all TypeScript interfaces for:
 Location: `backend/src/modules/resources/ai-enrichment.service.ts`
 
 New methods:
+
 - `generateStructuredSummary()`: Generates structured summary for any resource type
 - `enrichResourceWithStructured()`: Complete enrichment combining traditional and structured fields
 - `mapResourceTypeToCategory()`: Maps Prisma resource types to category strings
@@ -53,6 +55,7 @@ New methods:
 Location: `backend/src/modules/resources/resources.controller.ts`
 
 New endpoint:
+
 - **POST** `/api/v1/resources/:id/enrich-structured`
   - Generates and stores structured AI summary
   - Maintains backward compatibility with existing `aiSummary` field
@@ -63,12 +66,14 @@ New endpoint:
 Location: `backend/src/modules/resources/config/ai-prompts.config.ts`
 
 Optimized prompts for:
+
 - **PaperSummaryPrompt**: Academic paper analysis
 - **NewsSummaryPrompt**: News article analysis
 - **VideoSummaryPrompt**: Video transcript analysis
 - **ProjectSummaryPrompt**: Open source project analysis
 
 Includes:
+
 - System prompt for each type
 - User prompt template
 - Response validation function
@@ -79,6 +84,7 @@ Includes:
 Location: `backend/prisma/schema.prisma`
 
 Added field to Resource model:
+
 ```prisma
 structuredAISummary Json?    @map("structured_ai_summary")
 ```
@@ -88,15 +94,18 @@ structuredAISummary Json?    @map("structured_ai_summary")
 ### Endpoint: Generate Structured Summary
 
 **Request:**
+
 ```http
 POST /api/v1/resources/:id/enrich-structured
 Content-Type: application/json
 ```
 
 **Parameters:**
+
 - `id` (path): Resource ID (UUID)
 
 **Response:**
+
 ```json
 {
   "id": "resource-uuid",
@@ -169,9 +178,12 @@ Each prompt consists of:
 ### Using Prompts
 
 ```typescript
-import { getPromptTemplate, validateStructuredResponse } from './config/ai-prompts.config';
+import {
+  getPromptTemplate,
+  validateStructuredResponse,
+} from "./config/ai-prompts.config";
 
-const template = getPromptTemplate('PAPER');
+const template = getPromptTemplate("PAPER");
 
 const userMessage = template.user({
   title: paper.title,
@@ -183,9 +195,9 @@ const userMessage = template.user({
 const response = await callAIService(template.system, userMessage);
 
 // Validate response
-const validation = validateStructuredResponse(response, 'PAPER');
+const validation = validateStructuredResponse(response, "PAPER");
 if (!validation.valid) {
-  console.error('Invalid response:', validation.errors);
+  console.error("Invalid response:", validation.errors);
   // Use fallback strategy
 }
 ```
@@ -193,12 +205,12 @@ if (!validation.valid) {
 ### Response Validation
 
 ```typescript
-import { validateStructuredResponse } from './config/ai-prompts.config';
+import { validateStructuredResponse } from "./config/ai-prompts.config";
 
 const { valid, errors } = validateStructuredResponse(aiResponse, resourceType);
 
 if (!valid) {
-  console.log('Validation errors:', errors);
+  console.log("Validation errors:", errors);
   // Implement fallback strategy
 }
 ```
@@ -235,6 +247,7 @@ The implementation maintains full backward compatibility:
 ### Caching Strategy
 
 Recommended implementation:
+
 - Cache structured summaries for 24 hours
 - Invalidate on resource update
 - Store in Redis for fast retrieval
@@ -242,6 +255,7 @@ Recommended implementation:
 ### Parallel Processing
 
 The backend already supports:
+
 - Parallel summary + insights + classification + structured generation
 - Reduces total time from sequential ~20s to parallel ~12s
 
@@ -250,8 +264,8 @@ The backend already supports:
 ### Frontend Type Checking
 
 ```typescript
-import type { ResourceAISummary, PaperAISummary } from '@/types/ai-office';
-import { isPaperSummary } from '@/components/features/StructuredAISummary/StructuredAISummaryRouter';
+import type { ResourceAISummary, PaperAISummary } from "@/types/ai-office";
+import { isPaperSummary } from "@/components/features/StructuredAISummary/StructuredAISummaryRouter";
 
 const summary: ResourceAISummary = resource.structuredAISummary;
 
@@ -264,9 +278,9 @@ if (isPaperSummary(summary)) {
 ### Backend Type Checking
 
 ```typescript
-import { isPaperSummary } from './types/structured-ai-summary.types';
+import { isPaperSummary } from "./types/structured-ai-summary.types";
 
-const summary = await aiService.generateStructuredSummary(resource, 'PAPER');
+const summary = await aiService.generateStructuredSummary(resource, "PAPER");
 
 if (isPaperSummary(summary)) {
   // Safe to access paper-specific fields
@@ -313,6 +327,7 @@ if (isPaperSummary(summary)) {
 ## Monitoring and Metrics
 
 Key metrics to track:
+
 - Structured summary generation success rate
 - Average generation time by resource type
 - Cache hit rate for structured summaries

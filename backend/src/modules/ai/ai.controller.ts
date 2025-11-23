@@ -5,8 +5,8 @@ import {
   BadRequestException,
   HttpException,
   Logger,
-} from '@nestjs/common';
-import { AiService } from './ai.service';
+} from "@nestjs/common";
+import { AiService } from "./ai.service";
 
 interface TranslateSingleRequest {
   text: string;
@@ -14,28 +14,30 @@ interface TranslateSingleRequest {
   sourceLang?: string;
 }
 
-@Controller('ai')
+@Controller("ai")
 export class AiController {
   private readonly logger = new Logger(AiController.name);
 
   constructor(private readonly aiService: AiService) {}
 
-  @Post('translate-single')
+  @Post("translate-single")
   async translateSingle(@Body() body: TranslateSingleRequest) {
-    this.logger.log(`Received translation request for text: ${body.text?.substring(0, 50)}...`);
+    this.logger.log(
+      `Received translation request for text: ${body.text?.substring(0, 50)}...`,
+    );
 
     if (!body.text || body.text.trim().length === 0) {
-      throw new BadRequestException('Text is required for translation');
+      throw new BadRequestException("Text is required for translation");
     }
 
-    const targetLang = body.targetLang || 'zh-CN';
-    const sourceLang = body.sourceLang || 'en';
+    const targetLang = body.targetLang || "zh-CN";
+    const sourceLang = body.sourceLang || "en";
 
     try {
       const translation = await this.aiService.translateText(
         body.text,
         sourceLang,
-        targetLang
+        targetLang,
       );
 
       return {
@@ -54,7 +56,7 @@ export class AiController {
 
       // 其他未知错误作为500处理
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+        error instanceof Error ? error.message : "Unknown error";
       this.logger.error(`Unexpected translation error: ${errorMessage}`);
       throw new BadRequestException(`Translation failed: ${errorMessage}`);
     }

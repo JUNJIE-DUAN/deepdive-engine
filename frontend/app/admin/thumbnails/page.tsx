@@ -24,11 +24,8 @@ export default function ThumbnailsAdminPage() {
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [statusMessage, setStatusMessage] = useState<string>('');
 
-  const {
-    generateAndUploadThumbnail,
-    batchGenerateThumbnails,
-    isGenerating,
-  } = useThumbnailGenerator();
+  const { generateAndUploadThumbnail, batchGenerateThumbnails, isGenerating } =
+    useThumbnailGenerator();
 
   useEffect(() => {
     void fetchResources();
@@ -37,7 +34,9 @@ export default function ThumbnailsAdminPage() {
   const fetchResources = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${config.apiBaseUrl}/api/v1/resources?take=100`);
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/resources?take=100`
+      );
       if (response.ok) {
         const data = (await response.json()) as ApiResponse;
         setResources(data.resources || []);
@@ -96,7 +95,11 @@ export default function ThumbnailsAdminPage() {
 
   const handleGenerateSingle = async (id: string, pdfUrl: string) => {
     const success = await generateAndUploadThumbnail(id, pdfUrl);
-    setStatusMessage(success ? 'Thumbnail generated successfully!' : 'Failed to generate thumbnail');
+    setStatusMessage(
+      success
+        ? 'Thumbnail generated successfully!'
+        : 'Failed to generate thumbnail'
+    );
     void fetchResources();
   };
 
@@ -112,14 +115,14 @@ export default function ThumbnailsAdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+      <div className="mx-auto max-w-7xl">
+        <div className="rounded-lg bg-white p-6 shadow-lg">
+          <h1 className="mb-6 text-3xl font-bold text-gray-900">
             PDF Thumbnail Generator
           </h1>
 
           {statusMessage && (
-            <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+            <div className="mb-4 rounded border border-blue-400 bg-blue-100 px-4 py-3 text-blue-700">
               <p className="whitespace-pre-line">{statusMessage}</p>
               <button
                 onClick={() => setStatusMessage('')}
@@ -131,14 +134,14 @@ export default function ThumbnailsAdminPage() {
           )}
 
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="py-12 text-center">
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
               <p className="mt-4 text-gray-600">Loading resources...</p>
             </div>
           ) : (
             <>
               {/* Summary */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <p className="text-sm text-gray-600">Total Resources</p>
@@ -163,22 +166,24 @@ export default function ThumbnailsAdminPage() {
 
               {/* Progress */}
               {isGenerating && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-gray-700 mb-2">
+                <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                  <p className="mb-2 text-sm text-gray-700">
                     Generating thumbnails...
                   </p>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full animate-pulse w-full"></div>
+                  <div className="h-2 w-full rounded-full bg-gray-200">
+                    <div className="h-2 w-full animate-pulse rounded-full bg-blue-600"></div>
                   </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="flex gap-4 mb-6">
+              <div className="mb-6 flex gap-4">
                 <button
                   onClick={() => void handleGenerateAll()}
-                  disabled={resourcesNeedingThumbnails.length === 0 || isGenerating}
-                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  disabled={
+                    resourcesNeedingThumbnails.length === 0 || isGenerating
+                  }
+                  className="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
                   Generate All ({resourcesNeedingThumbnails.length})
                 </button>
@@ -186,7 +191,7 @@ export default function ThumbnailsAdminPage() {
                 <button
                   onClick={selectAllNeedingThumbnails}
                   disabled={resourcesNeedingThumbnails.length === 0}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                  className="rounded-lg bg-gray-200 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:bg-gray-100"
                 >
                   Select All Needing Thumbnails
                 </button>
@@ -195,7 +200,7 @@ export default function ThumbnailsAdminPage() {
                   <button
                     onClick={() => void handleGenerateSelected()}
                     disabled={isGenerating}
-                    className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg bg-green-600 px-6 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                   >
                     Generate Selected ({selectedResources.length})
                   </button>
@@ -203,7 +208,7 @@ export default function ThumbnailsAdminPage() {
               </div>
 
               {/* Resources List */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="overflow-hidden rounded-lg border border-gray-200">
                 <table className="w-full">
                   <thead className="bg-gray-100">
                     <tr>
@@ -232,28 +237,32 @@ export default function ThumbnailsAdminPage() {
                             {hasPdf && !hasThumbnail && (
                               <input
                                 type="checkbox"
-                                checked={selectedResources.includes(resource.id)}
+                                checked={selectedResources.includes(
+                                  resource.id
+                                )}
                                 onChange={() => toggleSelection(resource.id)}
-                                className="w-4 h-4"
+                                className="h-4 w-4"
                               />
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            <div className="max-w-md truncate">{resource.title}</div>
+                            <div className="max-w-md truncate">
+                              {resource.title}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             {hasThumbnail && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                                 Has Thumbnail
                               </span>
                             )}
                             {!hasThumbnail && hasPdf && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
                                 Needs Thumbnail
                               </span>
                             )}
                             {!hasPdf && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
                                 No PDF
                               </span>
                             )}
@@ -261,9 +270,14 @@ export default function ThumbnailsAdminPage() {
                           <td className="px-4 py-3">
                             {hasPdf && !hasThumbnail && resource.pdfUrl && (
                               <button
-                                onClick={() => void handleGenerateSingle(resource.id, resource.pdfUrl as string)}
+                                onClick={() =>
+                                  void handleGenerateSingle(
+                                    resource.id,
+                                    resource.pdfUrl as string
+                                  )
+                                }
                                 disabled={isGenerating}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:text-gray-400"
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800 disabled:text-gray-400"
                               >
                                 Generate
                               </button>
@@ -273,7 +287,7 @@ export default function ThumbnailsAdminPage() {
                                 href={`${config.apiBaseUrl}${resource.thumbnailUrl}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800"
                               >
                                 View
                               </a>

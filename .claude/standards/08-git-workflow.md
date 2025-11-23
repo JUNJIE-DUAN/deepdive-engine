@@ -23,6 +23,7 @@
 ### 🔴 MUST - 严格遵守
 
 1. **主分支**
+
    ```
    main          - 生产环境代码，每个提交都是一个发布版本
    develop       - 开发环境代码，所有功能都在这里集成
@@ -32,6 +33,7 @@
    ```
 
 2. **功能分支命名**
+
    ```
    feature/001-add-rss-parser
    feature/002-implement-ai-scoring
@@ -45,6 +47,7 @@
    ```
 
 3. **Bug修复分支**
+
    ```
    bugfix/fix-timeout-error
    bugfix/001-fix-simhash-collision
@@ -53,6 +56,7 @@
    ```
 
 4. **紧急修复分支**
+
    ```
    hotfix/fix-critical-security-issue
    hotfix/001-critical-database-bug
@@ -69,6 +73,7 @@
 ### 🔴 MUST - 严格遵守
 
 **基本格式：**
+
 ```
 <type>(<scope>): <subject>
 
@@ -78,6 +83,7 @@
 ```
 
 ### Type（类型）
+
 ```
 feat:      新功能
 fix:       bug修复
@@ -92,6 +98,7 @@ revert:    撤销之前的提交
 ```
 
 ### Scope（作用域）
+
 ```
 frontend   - 前端相关
 backend    - 后端相关
@@ -107,6 +114,7 @@ config     - 配置
 ```
 
 ### Subject（主题）规则
+
 - 使用祈使语：add, fix, refactor（不是 added, fixed, refactored）
 - 首字母小写
 - 不以句号结尾
@@ -154,6 +162,7 @@ Related-To #789
 ### 🔴 MUST - 严格遵守
 
 1. **创建 PR 前**
+
    ```bash
    # 1. 更新本地develop
    git checkout develop
@@ -173,6 +182,7 @@ Related-To #789
    ```
 
 2. **PR 标题清晰**
+
    ```
    ✅ [FEATURE] Add PDF proxy support for research papers
    ✅ [BUGFIX] Fix timeout error in AI processing
@@ -184,28 +194,35 @@ Related-To #789
    ```
 
 3. **PR 描述模板**
+
    ```markdown
    ## Description
+
    清晰的功能/修复描述
 
    ## Related Issues
+
    Closes #123
    Related-To #456
 
    ## Changes
+
    - 改动1
    - 改动2
    - 改动3
 
    ## How to Test
+
    1. 步骤1
    2. 步骤2
    3. 验证结果
 
    ## Screenshots (if applicable)
+
    [截图]
 
    ## Checklist
+
    - [ ] 代码遵循编码规范
    - [ ] 所有新代码都有测试
    - [ ] 测试覆盖率 > 85%
@@ -251,6 +268,7 @@ git push origin feature/001-add-feature
 ```
 
 ### 提交前检查
+
 ```bash
 # Frontend
 cd frontend && npm run lint && npm run type-check && npm test
@@ -286,6 +304,7 @@ git push origin feature/001-add-feature
 ```
 
 **不允许的操作：**
+
 ```
 ❌ git push --force (强制推送，会丢失历史)
 ❌ git rebase develop (变基，改写历史)

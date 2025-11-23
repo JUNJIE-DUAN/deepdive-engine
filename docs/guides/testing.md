@@ -49,11 +49,11 @@ DATABASE_URL="postgresql://user:password@localhost:5432/deepdive_test" npx prism
 **位置:** `backend/src/notes/notes.service.spec.ts`
 
 ```typescript
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotesService } from './notes.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { NotesService } from "./notes.service";
+import { PrismaService } from "../prisma/prisma.service";
 
-describe('NotesService', () => {
+describe("NotesService", () => {
   let service: NotesService;
   let prisma: PrismaService;
 
@@ -86,28 +86,28 @@ describe('NotesService', () => {
     jest.clearAllMocks();
   });
 
-  describe('create', () => {
-    it('should create a note', async () => {
+  describe("create", () => {
+    it("should create a note", async () => {
       const createDto = {
-        resourceId: 'resource-1',
-        title: 'Test Note',
-        content: 'Test content',
+        resourceId: "resource-1",
+        title: "Test Note",
+        content: "Test content",
       };
 
-      const mockResource = { id: 'resource-1', title: 'Resource 1' };
-      const mockNote = { id: 'note-1', ...createDto, userId: 'user-1' };
+      const mockResource = { id: "resource-1", title: "Resource 1" };
+      const mockNote = { id: "note-1", ...createDto, userId: "user-1" };
 
       mockPrismaService.resource.findUnique.mockResolvedValue(mockResource);
       mockPrismaService.note.create.mockResolvedValue(mockNote);
 
-      const result = await service.create('user-1', createDto);
+      const result = await service.create("user-1", createDto);
 
       expect(prisma.resource.findUnique).toHaveBeenCalledWith({
         where: { id: createDto.resourceId },
       });
       expect(prisma.note.create).toHaveBeenCalledWith({
         data: {
-          userId: 'user-1',
+          userId: "user-1",
           ...createDto,
         },
         include: { resource: true },
@@ -115,67 +115,67 @@ describe('NotesService', () => {
       expect(result).toEqual(mockNote);
     });
 
-    it('should throw error if resource not found', async () => {
+    it("should throw error if resource not found", async () => {
       mockPrismaService.resource.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create('user-1', {
-          resourceId: 'invalid',
-          title: 'Test',
-          content: 'Test',
-        })
-      ).rejects.toThrow('Resource not found');
+        service.create("user-1", {
+          resourceId: "invalid",
+          title: "Test",
+          content: "Test",
+        }),
+      ).rejects.toThrow("Resource not found");
     });
   });
 
-  describe('findUserNotes', () => {
-    it('should return user notes', async () => {
+  describe("findUserNotes", () => {
+    it("should return user notes", async () => {
       const mockNotes = [
-        { id: 'note-1', title: 'Note 1', userId: 'user-1' },
-        { id: 'note-2', title: 'Note 2', userId: 'user-1' },
+        { id: "note-1", title: "Note 1", userId: "user-1" },
+        { id: "note-2", title: "Note 2", userId: "user-1" },
       ];
 
       mockPrismaService.note.findMany.mockResolvedValue(mockNotes);
 
-      const result = await service.findUserNotes('user-1');
+      const result = await service.findUserNotes("user-1");
 
       expect(prisma.note.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1' },
+        where: { userId: "user-1" },
         include: { resource: true },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { updatedAt: "desc" },
       });
       expect(result).toEqual(mockNotes);
     });
   });
 
-  describe('update', () => {
-    it('should update a note', async () => {
-      const updateDto = { title: 'Updated Title' };
-      const mockNote = { id: 'note-1', userId: 'user-1', ...updateDto };
+  describe("update", () => {
+    it("should update a note", async () => {
+      const updateDto = { title: "Updated Title" };
+      const mockNote = { id: "note-1", userId: "user-1", ...updateDto };
 
       mockPrismaService.note.findUnique.mockResolvedValue(mockNote);
       mockPrismaService.note.update.mockResolvedValue(mockNote);
 
-      const result = await service.update('note-1', 'user-1', updateDto);
+      const result = await service.update("note-1", "user-1", updateDto);
 
       expect(result).toEqual(mockNote);
     });
 
-    it('should throw error if note not found', async () => {
+    it("should throw error if note not found", async () => {
       mockPrismaService.note.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update('invalid', 'user-1', { title: 'Test' })
-      ).rejects.toThrow('Note not found');
+        service.update("invalid", "user-1", { title: "Test" }),
+      ).rejects.toThrow("Note not found");
     });
   });
 
-  describe('requestAIExplanation', () => {
-    it('should return AI explanation', async () => {
+  describe("requestAIExplanation", () => {
+    it("should return AI explanation", async () => {
       const mockNote = {
-        id: 'note-1',
-        userId: 'user-1',
-        resource: { title: 'Resource 1' },
+        id: "note-1",
+        userId: "user-1",
+        resource: { title: "Resource 1" },
       };
 
       mockPrismaService.note.findUnique.mockResolvedValue(mockNote);
@@ -183,29 +183,29 @@ describe('NotesService', () => {
       // Mock fetch
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ response: 'AI explanation' }),
+        json: async () => ({ response: "AI explanation" }),
       });
 
-      const result = await service.requestAIExplanation('note-1', {
-        text: 'Test text',
+      const result = await service.requestAIExplanation("note-1", {
+        text: "Test text",
       });
 
-      expect(result.explanation).toBe('AI explanation');
+      expect(result.explanation).toBe("AI explanation");
     });
 
-    it('should handle AI service error', async () => {
+    it("should handle AI service error", async () => {
       mockPrismaService.note.findUnique.mockResolvedValue({
-        id: 'note-1',
-        userId: 'user-1',
+        id: "note-1",
+        userId: "user-1",
       });
 
-      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+      global.fetch = jest.fn().mockRejectedValue(new Error("Network error"));
 
-      const result = await service.requestAIExplanation('note-1', {
-        text: 'Test text',
+      const result = await service.requestAIExplanation("note-1", {
+        text: "Test text",
       });
 
-      expect(result.explanation).toBe('AI服务暂时不可用，请稍后再试');
+      expect(result.explanation).toBe("AI服务暂时不可用，请稍后再试");
     });
   });
 });
@@ -216,11 +216,11 @@ describe('NotesService', () => {
 **位置:** `backend/src/comments/comments.service.spec.ts`
 
 ```typescript
-import { Test, TestingModule } from '@nestjs/testing';
-import { CommentsService } from './comments.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { CommentsService } from "./comments.service";
+import { PrismaService } from "../prisma/prisma.service";
 
-describe('CommentsService', () => {
+describe("CommentsService", () => {
   let service: CommentsService;
   let prisma: PrismaService;
 
@@ -250,42 +250,42 @@ describe('CommentsService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createComment', () => {
-    it('should create a top-level comment', async () => {
+  describe("createComment", () => {
+    it("should create a top-level comment", async () => {
       const createDto = {
-        resourceId: 'resource-1',
-        content: 'Test comment',
+        resourceId: "resource-1",
+        content: "Test comment",
       };
 
       const mockComment = {
-        id: 'comment-1',
-        userId: 'user-1',
+        id: "comment-1",
+        userId: "user-1",
         ...createDto,
       };
 
       mockPrismaService.comment.create.mockResolvedValue(mockComment);
 
-      const result = await service.createComment('user-1', createDto);
+      const result = await service.createComment("user-1", createDto);
 
       expect(prisma.comment.create).toHaveBeenCalled();
       expect(result).toEqual(mockComment);
     });
 
-    it('should create a reply and increment parent reply count', async () => {
+    it("should create a reply and increment parent reply count", async () => {
       const createDto = {
-        resourceId: 'resource-1',
-        content: 'Test reply',
-        parentId: 'comment-1',
+        resourceId: "resource-1",
+        content: "Test reply",
+        parentId: "comment-1",
       };
 
       const mockParent = {
-        id: 'comment-1',
+        id: "comment-1",
         replyCount: 5,
       };
 
       mockPrismaService.comment.findUnique.mockResolvedValue(mockParent);
       mockPrismaService.comment.create.mockResolvedValue({
-        id: 'comment-2',
+        id: "comment-2",
         ...createDto,
       });
       mockPrismaService.comment.update.mockResolvedValue({
@@ -293,41 +293,41 @@ describe('CommentsService', () => {
         replyCount: 6,
       });
 
-      const result = await service.createComment('user-1', createDto);
+      const result = await service.createComment("user-1", createDto);
 
       expect(prisma.comment.update).toHaveBeenCalledWith({
-        where: { id: 'comment-1' },
+        where: { id: "comment-1" },
         data: { replyCount: { increment: 1 } },
       });
     });
 
-    it('should throw error if parent not found', async () => {
+    it("should throw error if parent not found", async () => {
       mockPrismaService.comment.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.createComment('user-1', {
-          resourceId: 'resource-1',
-          content: 'Test',
-          parentId: 'invalid',
-        })
-      ).rejects.toThrow('Parent comment not found');
+        service.createComment("user-1", {
+          resourceId: "resource-1",
+          content: "Test",
+          parentId: "invalid",
+        }),
+      ).rejects.toThrow("Parent comment not found");
     });
   });
 
-  describe('getResourceComments', () => {
-    it('should return nested comments tree', async () => {
+  describe("getResourceComments", () => {
+    it("should return nested comments tree", async () => {
       const mockComments = [
         {
-          id: 'comment-1',
-          content: 'Top comment',
+          id: "comment-1",
+          content: "Top comment",
           replies: [
             {
-              id: 'comment-2',
-              content: 'Reply 1',
+              id: "comment-2",
+              content: "Reply 1",
               replies: [
                 {
-                  id: 'comment-3',
-                  content: 'Reply 2',
+                  id: "comment-3",
+                  content: "Reply 2",
                   replies: [],
                 },
               ],
@@ -338,29 +338,29 @@ describe('CommentsService', () => {
 
       mockPrismaService.comment.findMany.mockResolvedValue(mockComments);
 
-      const result = await service.getResourceComments('resource-1');
+      const result = await service.getResourceComments("resource-1");
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith({
         where: {
-          resourceId: 'resource-1',
+          resourceId: "resource-1",
           parentId: null,
         },
         include: expect.objectContaining({
           user: true,
           replies: expect.any(Object),
         }),
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       });
       expect(result).toEqual(mockComments);
     });
   });
 
-  describe('deleteComment', () => {
-    it('should soft delete comment', async () => {
+  describe("deleteComment", () => {
+    it("should soft delete comment", async () => {
       const mockComment = {
-        id: 'comment-1',
-        userId: 'user-1',
-        content: 'Test comment',
+        id: "comment-1",
+        userId: "user-1",
+        content: "Test comment",
         isDeleted: false,
       };
 
@@ -368,25 +368,25 @@ describe('CommentsService', () => {
       mockPrismaService.comment.update.mockResolvedValue({
         ...mockComment,
         isDeleted: true,
-        content: '[此评论已被删除]',
+        content: "[此评论已被删除]",
       });
 
-      await service.deleteComment('comment-1', 'user-1');
+      await service.deleteComment("comment-1", "user-1");
 
       expect(prisma.comment.update).toHaveBeenCalledWith({
-        where: { id: 'comment-1' },
+        where: { id: "comment-1" },
         data: {
           isDeleted: true,
-          content: '[此评论已被删除]',
+          content: "[此评论已被删除]",
         },
       });
     });
   });
 
-  describe('upvoteComment', () => {
-    it('should increment upvote count', async () => {
+  describe("upvoteComment", () => {
+    it("should increment upvote count", async () => {
       const mockComment = {
-        id: 'comment-1',
+        id: "comment-1",
         upvoteCount: 5,
       };
 
@@ -395,24 +395,24 @@ describe('CommentsService', () => {
         upvoteCount: 6,
       });
 
-      const result = await service.upvoteComment('comment-1');
+      const result = await service.upvoteComment("comment-1");
 
       expect(prisma.comment.update).toHaveBeenCalledWith({
-        where: { id: 'comment-1' },
+        where: { id: "comment-1" },
         data: { upvoteCount: { increment: 1 } },
       });
       expect(result.upvoteCount).toBe(6);
     });
   });
 
-  describe('getCommentStats', () => {
-    it('should return comment statistics', async () => {
+  describe("getCommentStats", () => {
+    it("should return comment statistics", async () => {
       mockPrismaService.comment.count
         .mockResolvedValueOnce(25) // total
         .mockResolvedValueOnce(10) // topLevel
         .mockResolvedValueOnce(15); // replies
 
-      const result = await service.getCommentStats('resource-1');
+      const result = await service.getCommentStats("resource-1");
 
       expect(result).toEqual({
         total: 25,
@@ -446,13 +446,13 @@ npm test -- --coverage
 **位置:** `backend/test/notes.e2e-spec.ts`
 
 ```typescript
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from './../src/app.module';
-import { PrismaService } from './../src/prisma/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { AppModule } from "./../src/app.module";
+import { PrismaService } from "./../src/prisma/prisma.service";
 
-describe('Notes API (e2e)', () => {
+describe("Notes API (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -478,105 +478,105 @@ describe('Notes API (e2e)', () => {
     await prisma.user.deleteMany();
   });
 
-  describe('/api/v1/notes (POST)', () => {
-    it('should create a note', async () => {
+  describe("/api/v1/notes (POST)", () => {
+    it("should create a note", async () => {
       // 创建测试资源
       const resource = await prisma.resource.create({
         data: {
-          title: 'Test Resource',
-          type: 'PDF',
-          url: 'https://example.com/test.pdf',
+          title: "Test Resource",
+          type: "PDF",
+          url: "https://example.com/test.pdf",
         },
       });
 
       const response = await request(app.getHttpServer())
-        .post('/api/v1/notes')
+        .post("/api/v1/notes")
         .send({
           resourceId: resource.id,
-          title: 'Test Note',
-          content: '# Test Content',
+          title: "Test Note",
+          content: "# Test Content",
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.title).toBe('Test Note');
-      expect(response.body.content).toBe('# Test Content');
+      expect(response.body).toHaveProperty("id");
+      expect(response.body.title).toBe("Test Note");
+      expect(response.body.content).toBe("# Test Content");
     });
 
-    it('should return 400 if resource not found', async () => {
+    it("should return 400 if resource not found", async () => {
       await request(app.getHttpServer())
-        .post('/api/v1/notes')
+        .post("/api/v1/notes")
         .send({
-          resourceId: 'invalid-id',
-          title: 'Test',
-          content: 'Test',
+          resourceId: "invalid-id",
+          title: "Test",
+          content: "Test",
         })
         .expect(400);
     });
   });
 
-  describe('/api/v1/notes/my (GET)', () => {
-    it('should return user notes', async () => {
+  describe("/api/v1/notes/my (GET)", () => {
+    it("should return user notes", async () => {
       // 创建测试数据
       const resource = await prisma.resource.create({
-        data: { title: 'Resource 1', type: 'PDF', url: 'https://...' },
+        data: { title: "Resource 1", type: "PDF", url: "https://..." },
       });
 
       await prisma.note.create({
         data: {
-          userId: 'test-user',
+          userId: "test-user",
           resourceId: resource.id,
-          title: 'Note 1',
-          content: 'Content 1',
+          title: "Note 1",
+          content: "Content 1",
         },
       });
 
       const response = await request(app.getHttpServer())
-        .get('/api/v1/notes/my')
+        .get("/api/v1/notes/my")
         .expect(200);
 
       expect(response.body).toHaveLength(1);
-      expect(response.body[0].title).toBe('Note 1');
+      expect(response.body[0].title).toBe("Note 1");
     });
   });
 
-  describe('/api/v1/notes/:id (PATCH)', () => {
-    it('should update a note', async () => {
+  describe("/api/v1/notes/:id (PATCH)", () => {
+    it("should update a note", async () => {
       const resource = await prisma.resource.create({
-        data: { title: 'Resource 1', type: 'PDF', url: 'https://...' },
+        data: { title: "Resource 1", type: "PDF", url: "https://..." },
       });
 
       const note = await prisma.note.create({
         data: {
-          userId: 'test-user',
+          userId: "test-user",
           resourceId: resource.id,
-          title: 'Original Title',
-          content: 'Original Content',
+          title: "Original Title",
+          content: "Original Content",
         },
       });
 
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/notes/${note.id}`)
-        .send({ title: 'Updated Title' })
+        .send({ title: "Updated Title" })
         .expect(200);
 
-      expect(response.body.title).toBe('Updated Title');
-      expect(response.body.content).toBe('Original Content');
+      expect(response.body.title).toBe("Updated Title");
+      expect(response.body.content).toBe("Original Content");
     });
   });
 
-  describe('/api/v1/notes/:id (DELETE)', () => {
-    it('should delete a note', async () => {
+  describe("/api/v1/notes/:id (DELETE)", () => {
+    it("should delete a note", async () => {
       const resource = await prisma.resource.create({
-        data: { title: 'Resource 1', type: 'PDF', url: 'https://...' },
+        data: { title: "Resource 1", type: "PDF", url: "https://..." },
       });
 
       const note = await prisma.note.create({
         data: {
-          userId: 'test-user',
+          userId: "test-user",
           resourceId: resource.id,
-          title: 'Test Note',
-          content: 'Test Content',
+          title: "Test Note",
+          content: "Test Content",
         },
       });
 
@@ -828,15 +828,15 @@ npx playwright install
 **配置:** `frontend/playwright.config.ts`
 
 ```typescript
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: "./e2e",
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: "http://localhost:3000",
   },
   webServer: {
-    command: 'npm run dev',
+    command: "npm run dev",
     port: 3000,
   },
 });
@@ -847,51 +847,56 @@ export default defineConfig({
 **位置:** `frontend/e2e/notes.spec.ts`
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Notes Feature', () => {
-  test('create and edit note', async ({ page }) => {
+test.describe("Notes Feature", () => {
+  test("create and edit note", async ({ page }) => {
     // 导航到资源详情页
-    await page.goto('/resources/test-resource-id');
+    await page.goto("/resources/test-resource-id");
 
     // 等待 ResourceDetailPanel 加载
-    await expect(page.locator('text=笔记')).toBeVisible();
+    await expect(page.locator("text=笔记")).toBeVisible();
 
     // 输入笔记标题
-    await page.fill('[placeholder="笔记标题"]', 'My Test Note');
+    await page.fill('[placeholder="笔记标题"]', "My Test Note");
 
     // 输入笔记内容
-    await page.fill('[placeholder="开始记笔记..."]', '# Chapter 1\n\nTest content');
+    await page.fill(
+      '[placeholder="开始记笔记..."]',
+      "# Chapter 1\n\nTest content",
+    );
 
     // 保存笔记
-    await page.click('text=保存');
+    await page.click("text=保存");
 
     // 验证保存成功
-    await expect(page.locator('text=保存成功')).toBeVisible();
+    await expect(page.locator("text=保存成功")).toBeVisible();
 
     // 切换到 AI 助手标签
-    await page.click('text=AI助手');
+    await page.click("text=AI助手");
 
     // 请求 AI 解释
-    await page.fill('[placeholder="输入要解释的文本"]', 'Test content');
-    await page.click('text=请求解释');
+    await page.fill('[placeholder="输入要解释的文本"]', "Test content");
+    await page.click("text=请求解释");
 
     // 等待 AI 响应
-    await expect(page.locator('.ai-explanation')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".ai-explanation")).toBeVisible({
+      timeout: 10000,
+    });
   });
 
-  test('view notes in library', async ({ page }) => {
+  test("view notes in library", async ({ page }) => {
     // 导航到图书馆页面
-    await page.goto('/library');
+    await page.goto("/library");
 
     // 等待笔记列表加载
-    await expect(page.locator('text=我的笔记')).toBeVisible();
+    await expect(page.locator("text=我的笔记")).toBeVisible();
 
     // 验证笔记显示
-    await expect(page.locator('.note-item').first()).toBeVisible();
+    await expect(page.locator(".note-item").first()).toBeVisible();
 
     // 点击笔记查看详情
-    await page.click('.note-item:first-child');
+    await page.click(".note-item:first-child");
 
     // 验证导航到笔记详情
     await expect(page).toHaveURL(/\/resources\//);
@@ -902,69 +907,72 @@ test.describe('Notes Feature', () => {
 **位置:** `frontend/e2e/comments.spec.ts`
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Comments Feature', () => {
-  test('post and reply to comment', async ({ page }) => {
+test.describe("Comments Feature", () => {
+  test("post and reply to comment", async ({ page }) => {
     // 导航到资源详情页
-    await page.goto('/resources/test-resource-id');
+    await page.goto("/resources/test-resource-id");
 
     // 切换到评论标签
-    await page.click('text=评论');
+    await page.click("text=评论");
 
     // 发表评论
-    await page.fill('[placeholder="写下你的评论..."]', 'This is a great resource!');
-    await page.click('text=评论');
+    await page.fill(
+      '[placeholder="写下你的评论..."]',
+      "This is a great resource!",
+    );
+    await page.click("text=评论");
 
     // 验证评论显示
-    await expect(page.locator('text=This is a great resource!')).toBeVisible();
+    await expect(page.locator("text=This is a great resource!")).toBeVisible();
 
     // 点击回复按钮
-    await page.click('text=回复');
+    await page.click("text=回复");
 
     // 输入回复内容
-    await page.fill('[placeholder*="回复 @"]', 'I agree!');
-    await page.click('text=回复', { nth: 1 });
+    await page.fill('[placeholder*="回复 @"]', "I agree!");
+    await page.click("text=回复", { nth: 1 });
 
     // 验证回复显示
-    await expect(page.locator('text=I agree!')).toBeVisible();
+    await expect(page.locator("text=I agree!")).toBeVisible();
   });
 
-  test('edit and delete comment', async ({ page }) => {
-    await page.goto('/resources/test-resource-id');
-    await page.click('text=评论');
+  test("edit and delete comment", async ({ page }) => {
+    await page.goto("/resources/test-resource-id");
+    await page.click("text=评论");
 
     // 发表评论
-    await page.fill('[placeholder="写下你的评论..."]', 'Original comment');
-    await page.click('text=评论');
+    await page.fill('[placeholder="写下你的评论..."]', "Original comment");
+    await page.click("text=评论");
 
     // 编辑评论
-    await page.click('text=编辑');
-    await page.fill('textarea', 'Updated comment');
-    await page.click('text=保存');
+    await page.click("text=编辑");
+    await page.fill("textarea", "Updated comment");
+    await page.click("text=保存");
 
     // 验证更新
-    await expect(page.locator('text=Updated comment')).toBeVisible();
-    await expect(page.locator('text=(已编辑)')).toBeVisible();
+    await expect(page.locator("text=Updated comment")).toBeVisible();
+    await expect(page.locator("text=(已编辑)")).toBeVisible();
 
     // 删除评论
-    page.on('dialog', dialog => dialog.accept());
-    await page.click('text=删除');
+    page.on("dialog", (dialog) => dialog.accept());
+    await page.click("text=删除");
 
     // 验证软删除
-    await expect(page.locator('text=[此评论已被删除]')).toBeVisible();
+    await expect(page.locator("text=[此评论已被删除]")).toBeVisible();
   });
 
-  test('upvote comment', async ({ page }) => {
-    await page.goto('/resources/test-resource-id');
-    await page.click('text=评论');
+  test("upvote comment", async ({ page }) => {
+    await page.goto("/resources/test-resource-id");
+    await page.click("text=评论");
 
     // 找到点赞按钮
     const upvoteButton = page.locator('button:has-text("0")').first();
     await upvoteButton.click();
 
     // 验证点赞数增加
-    await expect(page.locator('text=1').first()).toBeVisible();
+    await expect(page.locator("text=1").first()).toBeVisible();
   });
 });
 ```
@@ -1007,34 +1015,34 @@ sudo apt-get install k6
 **测试脚本:** `backend/test/load/notes.js`
 
 ```javascript
-import http from 'k6/http';
-import { check, sleep } from 'k6';
+import http from "k6/http";
+import { check, sleep } from "k6";
 
 export const options = {
   stages: [
-    { duration: '30s', target: 10 },  // 10用户30秒
-    { duration: '1m', target: 50 },   // 50用户1分钟
-    { duration: '30s', target: 0 },   // 逐渐降到0
+    { duration: "30s", target: 10 }, // 10用户30秒
+    { duration: "1m", target: 50 }, // 50用户1分钟
+    { duration: "30s", target: 0 }, // 逐渐降到0
   ],
 };
 
-const BASE_URL = 'http://localhost:4000/api/v1';
+const BASE_URL = "http://localhost:4000/api/v1";
 
 export default function () {
   // 创建笔记
   let createRes = http.post(
     `${BASE_URL}/notes`,
     JSON.stringify({
-      resourceId: 'test-resource-id',
-      title: 'Load Test Note',
-      content: '# Test Content',
+      resourceId: "test-resource-id",
+      title: "Load Test Note",
+      content: "# Test Content",
     }),
-    { headers: { 'Content-Type': 'application/json' } }
+    { headers: { "Content-Type": "application/json" } },
   );
 
   check(createRes, {
-    'note created': (r) => r.status === 201,
-    'response time < 500ms': (r) => r.timings.duration < 500,
+    "note created": (r) => r.status === 201,
+    "response time < 500ms": (r) => r.timings.duration < 500,
   });
 
   let noteId = JSON.parse(createRes.body).id;
@@ -1045,8 +1053,8 @@ export default function () {
   let getRes = http.get(`${BASE_URL}/notes/${noteId}`);
 
   check(getRes, {
-    'note retrieved': (r) => r.status === 200,
-    'response time < 200ms': (r) => r.timings.duration < 200,
+    "note retrieved": (r) => r.status === 200,
+    "response time < 200ms": (r) => r.timings.duration < 200,
   });
 
   sleep(1);
@@ -1054,13 +1062,13 @@ export default function () {
   // 更新笔记
   let updateRes = http.patch(
     `${BASE_URL}/notes/${noteId}`,
-    JSON.stringify({ title: 'Updated Title' }),
-    { headers: { 'Content-Type': 'application/json' } }
+    JSON.stringify({ title: "Updated Title" }),
+    { headers: { "Content-Type": "application/json" } },
   );
 
   check(updateRes, {
-    'note updated': (r) => r.status === 200,
-    'response time < 300ms': (r) => r.timings.duration < 300,
+    "note updated": (r) => r.status === 200,
+    "response time < 300ms": (r) => r.timings.duration < 300,
   });
 
   sleep(1);
@@ -1077,10 +1085,10 @@ k6 run backend/test/load/notes.js
 
 ## 测试覆盖率目标
 
-| 类型 | 目标覆盖率 |
-|------|-----------|
-| 单元测试 | ≥ 80% |
-| 集成测试 | ≥ 70% |
+| 类型     | 目标覆盖率    |
+| -------- | ------------- |
+| 单元测试 | ≥ 80%         |
+| 集成测试 | ≥ 70%         |
 | E2E 测试 | 关键路径 100% |
 
 ---
@@ -1122,7 +1130,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install dependencies
         run: |
@@ -1157,7 +1165,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install dependencies
         run: |
@@ -1183,7 +1191,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install dependencies
         run: |
@@ -1211,16 +1219,16 @@ jobs:
 
 ```typescript
 // Good
-describe('NotesService', () => {
-  describe('create', () => {
-    it('should create a note with valid data', () => {});
-    it('should throw error if resource not found', () => {});
+describe("NotesService", () => {
+  describe("create", () => {
+    it("should create a note with valid data", () => {});
+    it("should throw error if resource not found", () => {});
   });
 });
 
 // Bad
-describe('test', () => {
-  it('works', () => {});
+describe("test", () => {
+  it("works", () => {});
 });
 ```
 
@@ -1235,7 +1243,7 @@ beforeEach(async () => {
 // 使用独立的测试数据
 const createTestNote = () => ({
   title: `Test Note ${Date.now()}`,
-  content: 'Test content',
+  content: "Test content",
 });
 ```
 
@@ -1243,8 +1251,8 @@ const createTestNote = () => ({
 
 ```typescript
 // Mock AI service
-jest.mock('@/lib/ai-service', () => ({
-  getExplanation: jest.fn().mockResolvedValue('Mock explanation'),
+jest.mock("@/lib/ai-service", () => ({
+  getExplanation: jest.fn().mockResolvedValue("Mock explanation"),
 }));
 ```
 
@@ -1254,8 +1262,8 @@ jest.mock('@/lib/ai-service', () => ({
 // Good
 expect(response.body).toEqual({
   id: expect.any(String),
-  title: 'Test Note',
-  content: 'Test content',
+  title: "Test Note",
+  content: "Test content",
   createdAt: expect.any(String),
 });
 
@@ -1277,6 +1285,7 @@ expect(response.status).toBe(200);
 ✅ CI/CD 集成
 
 **目标覆盖率:**
+
 - 后端：80%+
 - 前端：70%+
 - 关键路径：100%

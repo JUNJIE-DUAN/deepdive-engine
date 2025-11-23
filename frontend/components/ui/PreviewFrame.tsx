@@ -50,14 +50,16 @@ export default function PreviewFrame({
   const handleError = () => {
     console.error(`Preview failed to load: ${type} from ${url}`);
     setLoading(false);
-    setError('Failed to load preview. The content may be unavailable or blocked.');
+    setError(
+      'Failed to load preview. The content may be unavailable or blocked.'
+    );
   };
 
   // 重试加载
   const handleRetry = () => {
     setLoading(true);
     setError(null);
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
   };
 
   // 在新标签页打开
@@ -72,8 +74,12 @@ export default function PreviewFrame({
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white">
           <div className="text-center">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
-            <p className="mt-4 text-sm text-gray-600">Loading {type.toUpperCase()}...</p>
-            <p className="mt-2 text-xs text-gray-500">This may take a few seconds</p>
+            <p className="mt-4 text-sm text-gray-600">
+              Loading {type.toUpperCase()}...
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              This may take a few seconds
+            </p>
           </div>
         </div>
       )}

@@ -65,13 +65,16 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
  * 根据ID获取模板
  */
 export function getTemplateById(id: string): ReportTemplate | undefined {
-  return REPORT_TEMPLATES.find(t => t.id === id);
+  return REPORT_TEMPLATES.find((t) => t.id === id);
 }
 
 /**
  * 验证选择的资源数量是否符合模板要求
  */
-export function validateResourceCount(template: ReportTemplate, count: number): {
+export function validateResourceCount(
+  template: ReportTemplate,
+  count: number
+): {
   valid: boolean;
   message?: string;
 } {

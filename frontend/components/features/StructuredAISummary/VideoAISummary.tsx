@@ -16,16 +16,38 @@ interface VideoAISummaryProps {
 
 const VideoTypeBadge: React.FC<{ type: string }> = ({ type }) => {
   const types = {
-    lecture: { emoji: '🎓', label: 'Lecture', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-    tutorial: { emoji: '📖', label: 'Tutorial', color: 'bg-green-50 text-green-700 border-green-200' },
-    interview: { emoji: '🎤', label: 'Interview', color: 'bg-purple-50 text-purple-700 border-purple-200' },
-    demo: { emoji: '🎬', label: 'Demo', color: 'bg-orange-50 text-orange-700 border-orange-200' },
-    discussion: { emoji: '💬', label: 'Discussion', color: 'bg-pink-50 text-pink-700 border-pink-200' },
+    lecture: {
+      emoji: '🎓',
+      label: 'Lecture',
+      color: 'bg-blue-50 text-blue-700 border-blue-200',
+    },
+    tutorial: {
+      emoji: '📖',
+      label: 'Tutorial',
+      color: 'bg-green-50 text-green-700 border-green-200',
+    },
+    interview: {
+      emoji: '🎤',
+      label: 'Interview',
+      color: 'bg-purple-50 text-purple-700 border-purple-200',
+    },
+    demo: {
+      emoji: '🎬',
+      label: 'Demo',
+      color: 'bg-orange-50 text-orange-700 border-orange-200',
+    },
+    discussion: {
+      emoji: '💬',
+      label: 'Discussion',
+      color: 'bg-pink-50 text-pink-700 border-pink-200',
+    },
   };
 
   const t = types[type as keyof typeof types] || types.lecture;
   return (
-    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${t.color}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium ${t.color}`}
+    >
       <span>{t.emoji}</span>
       {t.label}
     </span>
@@ -52,26 +74,26 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
   const [isExpanded, setIsExpanded] = React.useState(!compact);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
       {/* 头部 */}
-      <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-red-50 to-pink-50">
+      <div className="border-b border-gray-100 bg-gradient-to-r from-red-50 to-pink-50 p-4">
         {/* 视频类型和难度 */}
-        <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="mb-3 flex items-center justify-between gap-2">
           <VideoTypeBadge type={summary.videoType} />
           <div className="flex items-center gap-2 text-xs">
-            <span className="px-2 py-1 rounded bg-white border border-gray-200">
+            <span className="rounded border border-gray-200 bg-white px-2 py-1">
               {summary.pace}
             </span>
           </div>
         </div>
 
         {/* 主题 */}
-        <h3 className="text-base font-bold text-gray-900 mb-2">
+        <h3 className="mb-2 text-base font-bold text-gray-900">
           {summary.mainTopic}
         </h3>
 
         {/* 核心概览 */}
-        <p className="text-sm text-gray-700 leading-relaxed">
+        <p className="text-sm leading-relaxed text-gray-700">
           {compact && !isExpanded ? (
             <>{summary.overview.substring(0, 150)}...</>
           ) : (
@@ -84,7 +106,7 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
           <span>⏱️ {summary.estimatedWatchTime} min watch</span>
           <span>🎯 {summary.audience}</span>
           <span>📖 {summary.readingTime} min read</span>
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="ml-auto flex items-center gap-1">
             <span className="text-yellow-500">⭐</span>
             <span>{(summary.confidence * 100).toFixed(0)}%</span>
           </div>
@@ -93,16 +115,19 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
 
       {/* 内容区域 */}
       {isExpanded && (
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           {/* 讲者信息 */}
           {summary.speakers.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 🎤 Speakers
               </h4>
               <div className="grid grid-cols-1 gap-2">
                 {summary.speakers.map((speaker, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-2 rounded bg-gray-50">
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 rounded bg-gray-50 p-2"
+                  >
                     <span className="text-lg">👤</span>
                     <div>
                       <p className="text-sm font-medium text-gray-900">
@@ -126,7 +151,7 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
           {/* 章节 */}
           {summary.chapters.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 📑 Chapters & Timeline
               </h4>
               <div className="space-y-2">
@@ -134,18 +159,18 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
                   <button
                     key={idx}
                     onClick={() => onTimestampClick?.(chapter.timestamp)}
-                    className="w-full text-left p-2.5 rounded bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                    className="w-full rounded border border-blue-200 bg-blue-50 p-2.5 text-left transition-colors hover:bg-blue-100"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">
                           {chapter.title}
                         </p>
-                        <p className="text-xs text-gray-600 mt-0.5">
+                        <p className="mt-0.5 text-xs text-gray-600">
                           {chapter.summary}
                         </p>
                       </div>
-                      <span className="flex-shrink-0 text-xs font-mono text-blue-700 bg-white px-2 py-1 rounded border border-blue-200">
+                      <span className="flex-shrink-0 rounded border border-blue-200 bg-white px-2 py-1 font-mono text-xs text-blue-700">
                         {formatTimestamp(chapter.timestamp)}
                       </span>
                     </div>
@@ -158,14 +183,14 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
           {/* 主题和子主题 */}
           {summary.subtopics.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 📚 Topics Covered
               </h4>
               <div className="flex flex-wrap gap-2">
                 {summary.subtopics.map((topic, idx) => (
                   <span
                     key={idx}
-                    className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-200"
+                    className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
                   >
                     {topic}
                   </span>
@@ -177,7 +202,7 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
           {/* 关键要点 */}
           {summary.keyPoints.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 📌 Key Takeaways
               </h4>
               <ul className="space-y-1.5">
@@ -194,7 +219,7 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
           {/* 关键帧 */}
           {summary.keyFrames && summary.keyFrames.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 🎬 Key Moments
               </h4>
               <div className="space-y-2">
@@ -202,17 +227,17 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
                   <button
                     key={idx}
                     onClick={() => onTimestampClick?.(frame.timestamp)}
-                    className="w-full text-left p-2 rounded bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"
+                    className="w-full rounded border border-purple-200 bg-purple-50 p-2 text-left transition-colors hover:bg-purple-100"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-xs font-medium text-purple-900">
                           {frame.description}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="w-full bg-gray-200 rounded h-1">
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="h-1 w-full rounded bg-gray-200">
                             <div
-                              className="bg-purple-500 h-1 rounded"
+                              className="h-1 rounded bg-purple-500"
                               style={{
                                 width: `${(frame.importance * 100).toFixed(0)}%`,
                               }}
@@ -220,7 +245,7 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
                           </div>
                         </div>
                       </div>
-                      <span className="flex-shrink-0 text-xs font-mono text-purple-700 bg-white px-2 py-1 rounded">
+                      <span className="flex-shrink-0 rounded bg-white px-2 py-1 font-mono text-xs text-purple-700">
                         {formatTimestamp(frame.timestamp)}
                       </span>
                     </div>
@@ -233,14 +258,14 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
           {/* 关键词 */}
           {summary.keywords.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 🏷️ Keywords
               </h4>
               <div className="flex flex-wrap gap-2">
                 {summary.keywords.map((keyword, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-xs font-medium border border-red-200"
+                    className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
                   >
                     {keyword}
                   </span>
@@ -250,9 +275,10 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
           )}
 
           {/* 元信息 */}
-          <div className="pt-2 border-t border-gray-100">
+          <div className="border-t border-gray-100 pt-2">
             <p className="text-xs text-gray-500">
-              AI-analyzed on {summary.generatedAt.toLocaleDateString()} using {summary.model}
+              AI-analyzed on {summary.generatedAt.toLocaleDateString()} using{' '}
+              {summary.model}
             </p>
           </div>
         </div>
@@ -260,10 +286,10 @@ export const VideoAISummaryComponent: React.FC<VideoAISummaryProps> = ({
 
       {/* 展开/收起按钮 */}
       {expandable && (
-        <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+        <div className="border-t border-gray-100 bg-gray-50 px-4 py-2">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full text-sm font-medium text-red-600 hover:text-red-700 py-1 transition-colors"
+            className="w-full py-1 text-sm font-medium text-red-600 transition-colors hover:text-red-700"
           >
             {isExpanded ? '▼ Collapse' : '▶ View Chapters & Timeline'}
           </button>

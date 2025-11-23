@@ -30,9 +30,8 @@ export class FeatureChecker {
   async checkMultiAgentSystem(): Promise<FeatureCheckResult> {
     try {
       // 检查Agent模块是否可导入
-      const { CoordinatorAgent, ResourceAnalysisAgent, VerificationAgent } = await import(
-        '@/lib/ai-agents'
-      );
+      const { CoordinatorAgent, ResourceAnalysisAgent, VerificationAgent } =
+        await import('@/lib/ai-agents');
 
       if (!CoordinatorAgent || !ResourceAnalysisAgent || !VerificationAgent) {
         return {
@@ -142,7 +141,11 @@ export class FeatureChecker {
         { id: '2', timestamp: new Date(), title: 'V2' }
       );
 
-      if (!testResult || !testResult.changes || testResult.changes.length === 0) {
+      if (
+        !testResult ||
+        !testResult.changes ||
+        testResult.changes.length === 0
+      ) {
         return {
           feature: 'Version Diff System',
           status: 'warn',
@@ -183,7 +186,9 @@ export class FeatureChecker {
       }
 
       // 检查导出API端点
-      const exportApiExists = await this.checkApiEndpoint('/api/ai-office/export');
+      const exportApiExists = await this.checkApiEndpoint(
+        '/api/ai-office/export'
+      );
 
       if (!exportApiExists) {
         return {
@@ -352,7 +357,13 @@ export class FeatureChecker {
     };
 
     console.log('✅ 健康检查完成');
-    console.table(this.results.map((r) => ({ 功能: r.feature, 状态: r.status, 信息: r.message })));
+    console.table(
+      this.results.map((r) => ({
+        功能: r.feature,
+        状态: r.status,
+        信息: r.message,
+      }))
+    );
     console.log(`📊 总体评分: ${score}/100`);
     console.log(`📈 状态: ${overallStatus}`);
 

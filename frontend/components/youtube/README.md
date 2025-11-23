@@ -9,6 +9,7 @@ React components for exporting YouTube subtitles to PDF with bilingual support.
 A button component that triggers the subtitle export workflow.
 
 **Props:**
+
 - `videoId` (string, required): YouTube video ID
 - `className` (string, optional): Additional CSS classes
 - `variant` ('primary' | 'secondary' | 'icon', optional): Button style variant
@@ -42,6 +43,7 @@ import { SubtitleExportButton } from '@/components/youtube';
 A dialog component for configuring PDF export options.
 
 **Props:**
+
 - `isOpen` (boolean, required): Dialog open state
 - `onClose` (function, required): Close handler
 - `onExport` (function, required): Export handler with options
@@ -65,7 +67,7 @@ const handleExport = (options: ExportOptions) => {
   onClose={() => setIsOpen(false)}
   onExport={handleExport}
   isLoading={false}
-/>
+/>;
 ```
 
 ## Hooks
@@ -75,6 +77,7 @@ const handleExport = (options: ExportOptions) => {
 Custom hook for managing subtitle fetching and PDF export.
 
 **Returns:**
+
 - `isLoading` (boolean): Loading state
 - `error` (string | null): Error message
 - `fetchSubtitles` (function): Fetch bilingual subtitles
@@ -86,7 +89,8 @@ Custom hook for managing subtitle fetching and PDF export.
 import { useYoutubeSubtitleExport } from '@/hooks/useYoutubeSubtitleExport';
 
 function MyComponent() {
-  const { isLoading, error, fetchSubtitles, exportPdf } = useYoutubeSubtitleExport();
+  const { isLoading, error, fetchSubtitles, exportPdf } =
+    useYoutubeSubtitleExport();
 
   const handleFetch = async () => {
     const subtitles = await fetchSubtitles('dQw4w9WgXcQ');
@@ -105,7 +109,7 @@ function MyComponent() {
         format: 'bilingual-side',
         includeTimestamps: true,
         includeVideoUrl: true,
-        includeMetadata: true
+        includeMetadata: true,
       }
     );
   };
@@ -164,10 +168,7 @@ export default function VideoPage({ videoId }: { videoId: string }) {
 
       {/* Or as inline button below video */}
       <div className="mt-4 flex justify-end">
-        <SubtitleExportButton
-          videoId={videoId}
-          variant="secondary"
-        />
+        <SubtitleExportButton videoId={videoId} variant="secondary" />
       </div>
     </div>
   );
@@ -193,6 +194,7 @@ NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
 ## Error Handling
 
 The components include built-in error handling with:
+
 - Toast notifications for errors
 - Retry functionality for failed subtitle fetches
 - Loading states during async operations

@@ -28,11 +28,13 @@ cd ai-service && python -m uvicorn main:app --host 0.0.0.0 --port 5000 --reload
 ### 3. 使用流程
 
 #### 步骤1: 选择资源
+
 - 页面会自动加载最近的20条资源
 - 点击资源卡片进行选择（勾选框会高亮显示）
 - 可以选择2-10个资源
 
 #### 步骤2: 选择报告模板
+
 - 选择足够的资源后，顶部会出现红色工具栏
 - 点击"生成报告"按钮
 - 在弹出的对话框中选择一个报告模板：
@@ -42,11 +44,13 @@ cd ai-service && python -m uvicorn main:app --host 0.0.0.0 --port 5000 --reload
   - **文献综述** (5-10项，GPT-4，75-120秒)
 
 #### 步骤3: 等待AI生成
+
 - 点击"开始生成"后会显示加载动画
 - AI需要30-120秒处理（取决于模板和资源数量）
 - 请耐心等待，不要关闭页面
 
 #### 步骤4: 查看报告
+
 - 生成完成后会自动跳转到报告详情页
 - 报告包含：
   - 标题和概要
@@ -61,6 +65,7 @@ cd ai-service && python -m uvicorn main:app --host 0.0.0.0 --port 5000 --reload
 **可能原因**: 前端API配置错误或后端未返回数据
 
 **解决方法**:
+
 ```bash
 # 检查后端API
 curl http://localhost:4000/api/v1/resources?take=5
@@ -74,6 +79,7 @@ curl http://localhost:4000/api/v1/resources?take=5
 **可能原因**: AI服务未启动或路由未注册
 
 **解决方法**:
+
 ```bash
 # 检查AI服务
 curl http://localhost:5000/docs
@@ -87,6 +93,7 @@ curl http://localhost:5000/docs
 **可能原因**: 端口4000被占用
 
 **解决方法** (Windows):
+
 ```bash
 # 查找占用端口的进程
 netstat -ano | findstr ":4000"
@@ -101,11 +108,13 @@ cd backend && npm run dev
 ### 问题4: 报告生成失败
 
 **可能原因**:
+
 - AI服务配置问题
 - API keys未正确设置
 - 网络问题
 
 **解决方法**:
+
 1. 检查 `ai-service/.env` 文件是否包含正确的API keys
 2. 查看 AI服务控制台日志
 3. 确认GCP Secret Manager配置正确
@@ -113,6 +122,7 @@ cd backend && npm run dev
 ## 已实现功能清单
 
 ### 前端
+
 - [x] 多选功能 Hook (`useMultiSelect.ts`)
 - [x] 报告模板配置 (`report-templates.ts`)
 - [x] 模板选择对话框组件 (`ReportTemplateDialog.tsx`)
@@ -121,6 +131,7 @@ cd backend && npm run dev
 - [x] 修复资源列表加载 (data.data 路径)
 
 ### 后端
+
 - [x] Report数据模型 (Prisma Schema)
 - [x] 数据库迁移
 - [x] Reports Module/Controller/Service
@@ -132,6 +143,7 @@ cd backend && npm run dev
   - DELETE /api/v1/reports/:id
 
 ### AI服务
+
 - [x] Report Router (`report.py`)
 - [x] 4个报告模板提示词
 - [x] JSON结构化输出
@@ -153,3 +165,4 @@ cd backend && npm run dev
       ▼                       ▼                         ▼
   User选择资源            PostgreSQL               Grok / GPT-4
    触发报告生成           (Prisma ORM)              AI Models
+```

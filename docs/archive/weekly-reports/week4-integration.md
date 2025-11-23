@@ -33,16 +33,18 @@ ResourceDetailPanel
 
 ```typescript
 interface ResourceDetailPanelProps {
-  resourceId: string;    // 资源ID
-  noteId?: string;       // 笔记ID（可选）
-  defaultTab?: 'notes' | 'comments' | 'ai' | 'graph'; // 默认标签
+  resourceId: string; // 资源ID
+  noteId?: string; // 笔记ID（可选）
+  defaultTab?: "notes" | "comments" | "ai" | "graph"; // 默认标签
 }
 ```
 
 **状态管理：**
 
 ```typescript
-const [activeTab, setActiveTab] = useState<'notes' | 'comments' | 'ai' | 'graph'>(defaultTab);
+const [activeTab, setActiveTab] = useState<
+  "notes" | "comments" | "ai" | "graph"
+>(defaultTab);
 const [note, setNote] = useState<any>(null); // 共享笔记数据
 ```
 
@@ -60,6 +62,7 @@ const [note, setNote] = useState<any>(null); // 共享笔记数据
    - AI和图谱标签依赖笔记数据
 
 3. **条件渲染**
+
    ```typescript
    // AI助手需要笔记
    {activeTab === 'ai' && note && (
@@ -116,7 +119,7 @@ LibraryPage
 **状态管理：**
 
 ```typescript
-const [activeTab, setActiveTab] = useState<'notes' | 'collections'>('notes');
+const [activeTab, setActiveTab] = useState<"notes" | "collections">("notes");
 const [collections, setCollections] = useState<Collection[]>([]);
 const [loading, setLoading] = useState(true);
 ```
@@ -148,6 +151,7 @@ interface Collection {
    - 悬停效果
 
 3. **加载状态**
+
    ```typescript
    {loading ? (
      <Spinner />
@@ -174,14 +178,14 @@ const loadCollections = async () => {
 
 ## 组件集成矩阵
 
-| 功能 | 组件 | 依赖 | API |
-|------|------|------|-----|
-| 笔记编辑 | NoteEditor | resourceId, noteId | /api/v1/notes |
-| 评论列表 | CommentsList | resourceId | /api/v1/comments |
-| AI助手 | AIAssistant | noteId | /api/v1/notes/:id/ai |
+| 功能     | 组件                 | 依赖               | API                     |
+| -------- | -------------------- | ------------------ | ----------------------- |
+| 笔记编辑 | NoteEditor           | resourceId, noteId | /api/v1/notes           |
+| 评论列表 | CommentsList         | resourceId         | /api/v1/comments        |
+| AI助手   | AIAssistant          | noteId             | /api/v1/notes/:id/ai    |
 | 知识图谱 | KnowledgeGraphLinker | noteId, resourceId | /api/v1/notes/:id/graph |
-| 笔记列表 | NotesList | 无 | /api/v1/notes/my |
-| 收藏集 | CollectionsGrid | 无 | /api/v1/collections |
+| 笔记列表 | NotesList            | 无                 | /api/v1/notes/my        |
+| 收藏集   | CollectionsGrid      | 无                 | /api/v1/collections     |
 
 ## 用户体验流程
 
@@ -248,11 +252,13 @@ const loadCollections = async () => {
 ### ResourceDetailPanel
 
 **桌面端（≥640px）：**
+
 - 显示图标 + 文字标签
 - 宽度自适应
 - 4列标签栏
 
 **移动端（<640px）：**
+
 - 仅显示图标
 - 全宽布局
 - 4列紧凑标签栏
@@ -260,14 +266,17 @@ const loadCollections = async () => {
 ### Library Page
 
 **桌面端（≥1024px）：**
+
 - 收藏集 3列网格
 - 左右padding 8
 
 **平板端（≥768px）：**
+
 - 收藏集 2列网格
 - 左右padding 6
 
 **移动端（<768px）：**
+
 - 收藏集 1列网格
 - 左右padding 4
 
@@ -278,7 +287,7 @@ const loadCollections = async () => {
 ```typescript
 // 仅在切换到收藏标签时加载
 useEffect(() => {
-  if (activeTab === 'collections') {
+  if (activeTab === "collections") {
     void loadCollections();
   }
 }, [activeTab]);
@@ -385,9 +394,9 @@ const [note, setNote] = useState<any>(null);
 ```typescript
 // 笔记排序
 const sortOptions = [
-  { label: '最新更新', value: 'updatedAt' },
-  { label: '创建时间', value: 'createdAt' },
-  { label: '标题', value: 'title' },
+  { label: "最新更新", value: "updatedAt" },
+  { label: "创建时间", value: "createdAt" },
+  { label: "标题", value: "title" },
 ];
 ```
 
@@ -415,7 +424,7 @@ const sortOptions = [
 
 ```typescript
 // TODO: 替换 mock user ID
-const currentUserId = 'mock-user-id';
+const currentUserId = "mock-user-id";
 
 // 应该从 JWT token 获取
 const { userId } = useAuth();
@@ -482,8 +491,8 @@ NEXT_PUBLIC_API_BASE_URL=https://api.deepdive.com
 ```typescript
 // app/library/page.tsx
 export const metadata = {
-  title: '我的图书馆 - DeepDive',
-  description: '管理您的笔记和收藏',
+  title: "我的图书馆 - DeepDive",
+  description: "管理您的笔记和收藏",
 };
 ```
 
@@ -491,9 +500,9 @@ export const metadata = {
 
 ```typescript
 // 添加分析跟踪
-analytics.track('Library Page Viewed');
-analytics.track('Note Created');
-analytics.track('Comment Posted');
+analytics.track("Library Page Viewed");
+analytics.track("Note Created");
+analytics.track("Comment Posted");
 ```
 
 ## 监控指标
@@ -522,13 +531,13 @@ analytics.track('Comment Posted');
 
 ## API 使用统计
 
-| 端点 | 调用频率 | 平均响应时间 |
-|------|---------|-------------|
-| GET /api/v1/notes/my | 高 | <100ms |
-| GET /api/v1/collections | 中 | <200ms |
-| GET /api/v1/comments/resource/:id | 高 | <150ms |
-| POST /api/v1/notes | 中 | <300ms |
-| POST /api/v1/comments | 中 | <250ms |
+| 端点                              | 调用频率 | 平均响应时间 |
+| --------------------------------- | -------- | ------------ |
+| GET /api/v1/notes/my              | 高       | <100ms       |
+| GET /api/v1/collections           | 中       | <200ms       |
+| GET /api/v1/comments/resource/:id | 高       | <150ms       |
+| POST /api/v1/notes                | 中       | <300ms       |
+| POST /api/v1/comments             | 中       | <250ms       |
 
 ## 总结
 
@@ -545,12 +554,14 @@ Week 4 成功完成：
 ✅ 加载状态管理
 
 **整体进度：**
+
 - Week 1: 83% (AI密钥配置待完成)
 - Week 2: 100% (笔记系统)
 - Week 3: 100% (评论系统)
 - Week 4: 100% (集成)
 
 **下一步：**
+
 - 端到端测试
 - 用户验收测试
 - 生产环境部署

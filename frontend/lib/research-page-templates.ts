@@ -41,7 +41,8 @@ const academicResearchTemplate: ResearchPageTemplate = {
       id: 'abstract',
       title: 'Abstract',
       description: '研究摘要',
-      aiPrompt: '生成简洁的研究摘要（150-250字），包含：研究背景、研究问题、主要方法、关键发现、结论意义',
+      aiPrompt:
+        '生成简洁的研究摘要（150-250字），包含：研究背景、研究问题、主要方法、关键发现、结论意义',
       required: true,
       order: 1,
     },
@@ -49,7 +50,8 @@ const academicResearchTemplate: ResearchPageTemplate = {
       id: 'introduction',
       title: 'Introduction',
       description: '引言与研究背景',
-      aiPrompt: '撰写引言部分：介绍研究领域背景、现有研究不足、本研究的动机和目标、研究问题定义、论文结构概览',
+      aiPrompt:
+        '撰写引言部分：介绍研究领域背景、现有研究不足、本研究的动机和目标、研究问题定义、论文结构概览',
       required: true,
       order: 2,
     },
@@ -57,7 +59,8 @@ const academicResearchTemplate: ResearchPageTemplate = {
       id: 'literature-review',
       title: 'Literature Review',
       description: '文献综述',
-      aiPrompt: '系统回顾相关文献：按主题分类总结现有研究、识别研究空白、分析理论框架、突出本研究的创新点',
+      aiPrompt:
+        '系统回顾相关文献：按主题分类总结现有研究、识别研究空白、分析理论框架、突出本研究的创新点',
       required: true,
       order: 3,
     },
@@ -65,7 +68,8 @@ const academicResearchTemplate: ResearchPageTemplate = {
       id: 'methodology',
       title: 'Methodology',
       description: '研究方法',
-      aiPrompt: '详细描述研究方法：研究设计、数据来源、分析方法、实验设置（如适用）、评估指标',
+      aiPrompt:
+        '详细描述研究方法：研究设计、数据来源、分析方法、实验设置（如适用）、评估指标',
       required: true,
       order: 4,
     },
@@ -73,7 +77,8 @@ const academicResearchTemplate: ResearchPageTemplate = {
       id: 'results',
       title: 'Results',
       description: '研究结果',
-      aiPrompt: '呈现研究结果：数据分析结果、统计显著性、可视化图表、关键发现的客观描述',
+      aiPrompt:
+        '呈现研究结果：数据分析结果、统计显著性、可视化图表、关键发现的客观描述',
       required: true,
       order: 5,
     },
@@ -81,7 +86,8 @@ const academicResearchTemplate: ResearchPageTemplate = {
       id: 'discussion',
       title: 'Discussion',
       description: '讨论与分析',
-      aiPrompt: '深入讨论：解释研究结果的意义、与现有文献的关系、研究局限性、未来研究方向',
+      aiPrompt:
+        '深入讨论：解释研究结果的意义、与现有文献的关系、研究局限性、未来研究方向',
       required: true,
       order: 6,
     },
@@ -97,7 +103,8 @@ const academicResearchTemplate: ResearchPageTemplate = {
       id: 'references',
       title: 'References',
       description: '参考文献',
-      aiPrompt: '列出所有引用的参考文献，按学术规范格式化（基于所选citation style）',
+      aiPrompt:
+        '列出所有引用的参考文献，按学术规范格式化（基于所选citation style）',
       required: true,
       order: 8,
     },
@@ -284,7 +291,10 @@ export function getAllResearchPageTemplates(): ResearchPageTemplate[] {
 /**
  * 生成Research Page的Markdown结构
  */
-export function generateResearchPageStructure(template: ResearchPageTemplate, title: string): string {
+export function generateResearchPageStructure(
+  template: ResearchPageTemplate,
+  title: string
+): string {
   const sections = template.sections
     .sort((a, b) => a.order - b.order)
     .map((section) => {

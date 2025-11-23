@@ -15,7 +15,11 @@ export interface BilingualSubtitles {
 }
 
 export interface ExportOptions {
-  format: 'bilingual-side' | 'bilingual-stack' | 'english-only' | 'chinese-only';
+  format:
+    | 'bilingual-side'
+    | 'bilingual-stack'
+    | 'english-only'
+    | 'chinese-only';
   includeTimestamps: boolean;
   includeVideoUrl: boolean;
   includeMetadata: boolean;
@@ -30,7 +34,7 @@ interface UseYoutubeSubtitleExportReturn {
     title: string,
     englishSubtitles: SubtitleSegment[],
     chineseSubtitles: SubtitleSegment[],
-    options: ExportOptions,
+    options: ExportOptions
   ) => Promise<void>;
 }
 
@@ -47,35 +51,41 @@ export function useYoutubeSubtitleExport(): UseYoutubeSubtitleExportReturn {
   /**
    * Fetch bilingual subtitles from API
    */
-  const fetchSubtitles = useCallback(async (videoId: string): Promise<BilingualSubtitles | null> => {
-    setIsLoading(true);
-    setError(null);
+  const fetchSubtitles = useCallback(
+    async (videoId: string): Promise<BilingualSubtitles | null> => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/youtube/subtitles`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ videoId }),
-      });
+      try {
+        const response = await fetch(`${API_BASE_URL}/youtube/subtitles`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ videoId }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch subtitles' }));
-        throw new Error(errorData.message || `HTTP error ${response.status}`);
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ message: 'Failed to fetch subtitles' }));
+          throw new Error(errorData.message || `HTTP error ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data as BilingualSubtitles;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(errorMessage);
+        console.error('Failed to fetch subtitles:', err);
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-
-      const data = await response.json();
-      return data as BilingualSubtitles;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(errorMessage);
-      console.error('Failed to fetch subtitles:', err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   /**
    * Export subtitles as PDF
@@ -86,7 +96,7 @@ export function useYoutubeSubtitleExport(): UseYoutubeSubtitleExportReturn {
       title: string,
       englishSubtitles: SubtitleSegment[],
       chineseSubtitles: SubtitleSegment[],
-      options: ExportOptions,
+      options: ExportOptions
     ): Promise<void> => {
       setIsLoading(true);
       setError(null);
@@ -107,7 +117,9 @@ export function useYoutubeSubtitleExport(): UseYoutubeSubtitleExportReturn {
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: 'Failed to export PDF' }));
+          const errorData = await response
+            .json()
+            .catch(() => ({ message: 'Failed to export PDF' }));
           throw new Error(errorData.message || `HTTP error ${response.status}`);
         }
 
@@ -122,7 +134,8 @@ export function useYoutubeSubtitleExport(): UseYoutubeSubtitleExportReturn {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error occurred';
         setError(errorMessage);
         console.error('Failed to export PDF:', err);
         throw err;
@@ -130,7 +143,7 @@ export function useYoutubeSubtitleExport(): UseYoutubeSubtitleExportReturn {
         setIsLoading(false);
       }
     },
-    [],
+    []
   );
 
   return {

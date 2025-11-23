@@ -44,6 +44,7 @@ POST   /api/v1/deleteResource
 ### 2. 统一接口 🔴 MUST
 
 所有API必须遵循统一的接口约定：
+
 - 使用标准HTTP方法
 - 使用标准HTTP状态码
 - 统一的响应格式
@@ -66,6 +67,7 @@ POST   /api/v1/deleteResource
 ```
 
 **规则**:
+
 - 🔴 MUST: 使用小写字母
 - 🔴 MUST: 使用连字符（kebab-case）分隔单词
 - 🔴 MUST: 集合名使用复数形式
@@ -106,14 +108,14 @@ GET /api/v1/resources?
 
 **标准查询参数**:
 
-| 参数 | 类型 | 说明 | 示例 |
-|------|------|------|------|
-| `page` | integer | 页码（从1开始） | `page=1` |
-| `limit` | integer | 每页数量（默认20，最大100） | `limit=50` |
-| `sort` | string | 排序字段（-表示降序） | `sort=-createdAt` |
-| `filter[field]` | string | 字段过滤 | `filter[type]=ARTICLE` |
-| `search` | string | 全文搜索 | `search=keyword` |
-| `fields` | string | 指定返回字段 | `fields=id,title,url` |
+| 参数            | 类型    | 说明                        | 示例                   |
+| --------------- | ------- | --------------------------- | ---------------------- |
+| `page`          | integer | 页码（从1开始）             | `page=1`               |
+| `limit`         | integer | 每页数量（默认20，最大100） | `limit=50`             |
+| `sort`          | string  | 排序字段（-表示降序）       | `sort=-createdAt`      |
+| `filter[field]` | string  | 字段过滤                    | `filter[type]=ARTICLE` |
+| `search`        | string  | 全文搜索                    | `search=keyword`       |
+| `fields`        | string  | 指定返回字段                | `fields=id,title,url`  |
 
 ### 3. 特殊端点 🟡 SHOULD
 
@@ -143,13 +145,13 @@ GET /api/v1/statistics/summary
 
 ### 1. 标准方法 🔴 MUST
 
-| 方法 | 用途 | 幂等性 | 安全性 | 示例 |
-|------|------|--------|--------|------|
-| GET | 获取资源 | ✅ | ✅ | `GET /resources/123` |
-| POST | 创建资源 | ❌ | ❌ | `POST /resources` |
-| PUT | 完整替换资源 | ✅ | ❌ | `PUT /resources/123` |
-| PATCH | 部分更新资源 | ❌ | ❌ | `PATCH /resources/123` |
-| DELETE | 删除资源 | ✅ | ❌ | `DELETE /resources/123` |
+| 方法   | 用途         | 幂等性 | 安全性 | 示例                    |
+| ------ | ------------ | ------ | ------ | ----------------------- |
+| GET    | 获取资源     | ✅     | ✅     | `GET /resources/123`    |
+| POST   | 创建资源     | ❌     | ❌     | `POST /resources`       |
+| PUT    | 完整替换资源 | ✅     | ❌     | `PUT /resources/123`    |
+| PATCH  | 部分更新资源 | ❌     | ❌     | `PATCH /resources/123`  |
+| DELETE | 删除资源     | ✅     | ❌     | `DELETE /resources/123` |
 
 ### 2. 使用示例
 
@@ -312,11 +314,13 @@ async create(@Body() createDto: CreateResourceDto) {
 ### 1. HTTP状态码 🔴 MUST
 
 **成功响应**:
+
 - `200 OK` - 成功获取/更新资源
 - `201 Created` - 成功创建资源（需要返回Location header）
 - `204 No Content` - 成功删除资源（无响应体）
 
 **客户端错误 (4xx)**:
+
 - `400 Bad Request` - 请求参数错误
 - `401 Unauthorized` - 未认证
 - `403 Forbidden` - 无权限
@@ -326,6 +330,7 @@ async create(@Body() createDto: CreateResourceDto) {
 - `429 Too Many Requests` - 请求过于频繁
 
 **服务器错误 (5xx)**:
+
 - `500 Internal Server Error` - 服务器内部错误
 - `502 Bad Gateway` - 上游服务错误
 - `503 Service Unavailable` - 服务暂时不可用
@@ -335,12 +340,12 @@ async create(@Body() createDto: CreateResourceDto) {
 ```typescript
 interface ErrorResponse {
   error: {
-    code: string;          // 错误代码（用于程序处理）
-    message: string;       // 用户友好的错误信息
-    details?: any;         // 详细错误信息（可选）
-    timestamp: string;     // ISO 8601格式时间戳
-    path: string;          // 请求路径
-    requestId?: string;    // 请求ID（用于追踪）
+    code: string; // 错误代码（用于程序处理）
+    message: string; // 用户友好的错误信息
+    details?: any; // 详细错误信息（可选）
+    timestamp: string; // ISO 8601格式时间戳
+    path: string; // 请求路径
+    requestId?: string; // 请求ID（用于追踪）
   };
 }
 ```
@@ -404,19 +409,19 @@ interface ErrorResponse {
 
 ### 3. 标准错误代码 🔴 MUST
 
-| 错误代码 | HTTP状态码 | 说明 |
-|----------|-----------|------|
-| `VALIDATION_ERROR` | 400 | 请求参数验证失败 |
-| `INVALID_REQUEST` | 400 | 无效的请求格式 |
-| `UNAUTHORIZED` | 401 | 未认证 |
-| `TOKEN_EXPIRED` | 401 | 令牌过期 |
-| `FORBIDDEN` | 403 | 无权限访问 |
-| `RESOURCE_NOT_FOUND` | 404 | 资源不存在 |
-| `CONFLICT` | 409 | 资源冲突 |
-| `DUPLICATE_RESOURCE` | 409 | 重复的资源 |
-| `BUSINESS_RULE_VIOLATION` | 422 | 违反业务规则 |
-| `RATE_LIMIT_EXCEEDED` | 429 | 超过速率限制 |
-| `INTERNAL_SERVER_ERROR` | 500 | 服务器内部错误 |
+| 错误代码                  | HTTP状态码 | 说明             |
+| ------------------------- | ---------- | ---------------- |
+| `VALIDATION_ERROR`        | 400        | 请求参数验证失败 |
+| `INVALID_REQUEST`         | 400        | 无效的请求格式   |
+| `UNAUTHORIZED`            | 401        | 未认证           |
+| `TOKEN_EXPIRED`           | 401        | 令牌过期         |
+| `FORBIDDEN`               | 403        | 无权限访问       |
+| `RESOURCE_NOT_FOUND`      | 404        | 资源不存在       |
+| `CONFLICT`                | 409        | 资源冲突         |
+| `DUPLICATE_RESOURCE`      | 409        | 重复的资源       |
+| `BUSINESS_RULE_VIOLATION` | 422        | 违反业务规则     |
+| `RATE_LIMIT_EXCEEDED`     | 429        | 超过速率限制     |
+| `INTERNAL_SERVER_ERROR`   | 500        | 服务器内部错误   |
 
 ---
 
@@ -432,6 +437,7 @@ interface ErrorResponse {
 ```
 
 **版本策略**:
+
 - 🔴 MUST: 重大变更（破坏性）增加主版本号
 - 🟡 SHOULD: 保留至少一个旧版本供迁移
 - 🟡 SHOULD: 在响应头中标注版本即将废弃
@@ -447,11 +453,13 @@ Link: </api/v2/resources>; rel="successor-version"
 ### 2. 向后兼容 🔴 MUST
 
 **兼容性变更**（不需要增加版本）:
+
 - ✅ 添加新的可选字段
 - ✅ 添加新的endpoint
 - ✅ 添加新的查询参数（可选）
 
 **破坏性变更**（必须增加版本）:
+
 - ❌ 删除或重命名字段
 - ❌ 更改字段类型
 - ❌ 更改endpoint URL
@@ -473,19 +481,19 @@ Authorization: Bearer <token>
 
 ```typescript
 // ✅ 正确 - 使用装饰器进行权限检查
-@Controller('resources')
+@Controller("resources")
 export class ResourcesController {
   @Get()
-  @Public()  // 公开访问
-  async findAll() { }
+  @Public() // 公开访问
+  async findAll() {}
 
   @Post()
-  @Roles('user', 'admin')  // 需要user或admin角色
-  async create(@Body() dto: CreateResourceDto) { }
+  @Roles("user", "admin") // 需要user或admin角色
+  async create(@Body() dto: CreateResourceDto) {}
 
-  @Delete(':id')
-  @Roles('admin')  // 仅admin可删除
-  async delete(@Param('id') id: string) { }
+  @Delete(":id")
+  @Roles("admin") // 仅admin可删除
+  async delete(@Param("id") id: string) {}
 }
 ```
 
@@ -515,6 +523,7 @@ Response:
 ```
 
 **规则**:
+
 - 🔴 MUST: 默认分页大小20
 - 🔴 MUST: 最大分页大小100
 - 🔴 MUST: 返回分页元数据
@@ -575,68 +584,76 @@ Retry-After: 3600
 ### Controller示例
 
 ```typescript
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 
-@ApiTags('resources')
-@Controller('api/v1/resources')
+@ApiTags("resources")
+@Controller("api/v1/resources")
 export class ResourcesController {
   constructor(private readonly resourcesService: ResourcesService) {}
 
   @Get()
-  @ApiOperation({ summary: '获取资源列表' })
-  @ApiResponse({ status: 200, description: '成功返回资源列表' })
+  @ApiOperation({ summary: "获取资源列表" })
+  @ApiResponse({ status: 200, description: "成功返回资源列表" })
   async findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
-    @Query('sort') sort?: string,
-    @Query('filter') filter?: Record<string, any>,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 20,
+    @Query("sort") sort?: string,
+    @Query("filter") filter?: Record<string, any>,
   ) {
     return this.resourcesService.findAll({ page, limit, sort, filter });
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: '获取单个资源' })
-  @ApiResponse({ status: 200, description: '成功返回资源' })
-  @ApiResponse({ status: 404, description: '资源不存在' })
-  async findOne(@Param('id') id: string) {
+  @Get(":id")
+  @ApiOperation({ summary: "获取单个资源" })
+  @ApiResponse({ status: 200, description: "成功返回资源" })
+  @ApiResponse({ status: 404, description: "资源不存在" })
+  async findOne(@Param("id") id: string) {
     return this.resourcesService.findOne(id);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建资源' })
-  @ApiResponse({ status: 201, description: '成功创建资源' })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiOperation({ summary: "创建资源" })
+  @ApiResponse({ status: 201, description: "成功创建资源" })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
   async create(@Body() createDto: CreateResourceDto) {
     return this.resourcesService.create(createDto);
   }
 
-  @Put(':id')
-  @ApiOperation({ summary: '完整替换资源' })
-  @ApiResponse({ status: 200, description: '成功更新资源' })
-  async replace(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateResourceDto,
-  ) {
+  @Put(":id")
+  @ApiOperation({ summary: "完整替换资源" })
+  @ApiResponse({ status: 200, description: "成功更新资源" })
+  async replace(@Param("id") id: string, @Body() updateDto: UpdateResourceDto) {
     return this.resourcesService.replace(id, updateDto);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: '部分更新资源' })
-  @ApiResponse({ status: 200, description: '成功更新资源' })
+  @Patch(":id")
+  @ApiOperation({ summary: "部分更新资源" })
+  @ApiResponse({ status: 200, description: "成功更新资源" })
   async update(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() patchDto: Partial<UpdateResourceDto>,
   ) {
     return this.resourcesService.update(id, patchDto);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: '删除资源' })
-  @ApiResponse({ status: 204, description: '成功删除资源' })
-  async delete(@Param('id') id: string) {
+  @ApiOperation({ summary: "删除资源" })
+  @ApiResponse({ status: 204, description: "成功删除资源" })
+  async delete(@Param("id") id: string) {
     await this.resourcesService.delete(id);
   }
 }

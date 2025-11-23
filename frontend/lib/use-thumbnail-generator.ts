@@ -129,7 +129,8 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
         setIsGenerating(false);
         return thumbnailDataUrl;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to generate thumbnail';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to generate thumbnail';
         console.error('Thumbnail generation error:', err);
         setError(errorMessage);
         setIsGenerating(false);
@@ -174,7 +175,8 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
 
         return true;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to upload thumbnail';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to upload thumbnail';
         console.error('Thumbnail upload error:', err);
         setError(errorMessage);
         return false;
@@ -199,7 +201,10 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
 
       for (const resource of resources) {
         try {
-          const result = await generateAndUploadThumbnail(resource.id, resource.pdfUrl);
+          const result = await generateAndUploadThumbnail(
+            resource.id,
+            resource.pdfUrl
+          );
           if (result) {
             success++;
           } else {
@@ -208,7 +213,8 @@ export function useThumbnailGenerator(options: ThumbnailGeneratorOptions = {}) {
           }
         } catch (err) {
           failed++;
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          const errorMessage =
+            err instanceof Error ? err.message : 'Unknown error';
           errors.push(`${resource.id}: ${errorMessage}`);
         }
 
@@ -239,5 +245,7 @@ export function needsThumbnail(resource: {
   pdfUrl?: string | null;
   thumbnailUrl?: string | null;
 }): boolean {
-  return resource.type === 'PAPER' && !!resource.pdfUrl && !resource.thumbnailUrl;
+  return (
+    resource.type === 'PAPER' && !!resource.pdfUrl && !resource.thumbnailUrl
+  );
 }

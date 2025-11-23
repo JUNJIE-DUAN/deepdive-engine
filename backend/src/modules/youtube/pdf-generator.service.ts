@@ -265,9 +265,15 @@ export class PdfGeneratorService {
   ): string {
     switch (options.format) {
       case "bilingual-side":
-        return this.generateBilingualSideBySide(transcript, options.includeTimestamps);
+        return this.generateBilingualSideBySide(
+          transcript,
+          options.includeTimestamps,
+        );
       case "bilingual-stack":
-        return this.generateBilingualStacked(transcript, options.includeTimestamps);
+        return this.generateBilingualStacked(
+          transcript,
+          options.includeTimestamps,
+        );
       case "english-only":
         return this.generateSingleLanguage(
           transcript.english,

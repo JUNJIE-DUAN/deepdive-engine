@@ -92,11 +92,9 @@ export default function VersionDiffViewer({
                   {comparison.oldVersion.title}
                 </span>
                 <span className="text-gray-400">
-                  {format(
-                    comparison.oldVersion.timestamp,
-                    'yyyy-MM-dd HH:mm',
-                    { locale: zhCN }
-                  )}
+                  {format(comparison.oldVersion.timestamp, 'yyyy-MM-dd HH:mm', {
+                    locale: zhCN,
+                  })}
                 </span>
               </div>
               <span className="text-gray-400">→</span>
@@ -106,11 +104,9 @@ export default function VersionDiffViewer({
                   {comparison.newVersion.title}
                 </span>
                 <span className="text-gray-400">
-                  {format(
-                    comparison.newVersion.timestamp,
-                    'yyyy-MM-dd HH:mm',
-                    { locale: zhCN }
-                  )}
+                  {format(comparison.newVersion.timestamp, 'yyyy-MM-dd HH:mm', {
+                    locale: zhCN,
+                  })}
                 </span>
               </div>
             </div>
@@ -169,9 +165,7 @@ export default function VersionDiffViewer({
             {stats.unchanged > 0 && (
               <div className="flex items-center gap-1">
                 <span className="text-gray-400">✓</span>
-                <span className="text-gray-500">
-                  未变 {stats.unchanged}
-                </span>
+                <span className="text-gray-500">未变 {stats.unchanged}</span>
               </div>
             )}
           </div>
@@ -258,7 +252,9 @@ function DiffChangeCard({ change }: { change: DiffChange }) {
                       </div>
                       <div className="rounded bg-green-50 p-2">
                         <span className="font-medium text-green-700">新:</span>{' '}
-                        <span className="text-green-600">{detail.newValue}</span>
+                        <span className="text-green-600">
+                          {detail.newValue}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -308,7 +304,9 @@ function DiffChangeCard({ change }: { change: DiffChange }) {
             </pre>
           </div>
           <div className="rounded bg-green-50 p-3">
-            <p className="mb-2 text-xs font-medium text-green-700">新版本内容</p>
+            <p className="mb-2 text-xs font-medium text-green-700">
+              新版本内容
+            </p>
             <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-xs text-green-600">
               {change.newContent.substring(0, 300)}
               {change.newContent.length > 300 ? '\n...' : ''}

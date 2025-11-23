@@ -64,12 +64,12 @@ export default function TaskList() {
   };
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 z-40 w-96 bg-white border-l border-gray-200 shadow-2xl flex flex-col">
+    <div className="fixed bottom-0 right-0 top-0 z-40 flex w-96 flex-col border-l border-gray-200 bg-white shadow-2xl">
       {/* 头部 */}
-      <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="flex-shrink-0 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-blue-600">
+            <div className="rounded-lg bg-blue-600 p-2">
               <ListTodo className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -79,7 +79,7 @@ export default function TaskList() {
           </div>
           <button
             onClick={toggleTaskList}
-            className="p-2 rounded-lg hover:bg-white/50 transition-colors"
+            className="rounded-lg p-2 transition-colors hover:bg-white/50"
           >
             <X className="h-5 w-5 text-gray-600" />
           </button>
@@ -89,19 +89,17 @@ export default function TaskList() {
       {/* 任务列表 */}
       <div className="flex-1 overflow-y-auto">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-6">
-            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
               <ListTodo className="h-10 w-10 text-gray-400" />
             </div>
-            <p className="text-sm font-medium text-gray-900 mb-1">
-              还没有任务
-            </p>
+            <p className="mb-1 text-sm font-medium text-gray-900">还没有任务</p>
             <p className="text-xs text-gray-500">
               开始创建文档或PPT，任务会自动保存在这里
             </p>
           </div>
         ) : (
-          <div className="p-4 space-y-3">
+          <div className="space-y-3 p-4">
             {tasks.map((task) => {
               const TypeIcon = TASK_TYPE_ICONS[task.type];
               const isHovered = hoveredTaskId === task._id;
@@ -119,24 +117,24 @@ export default function TaskList() {
                   onMouseEnter={() => setHoveredTaskId(task._id)}
                   onMouseLeave={() => setHoveredTaskId(null)}
                   className={`
-                    group relative rounded-xl p-4 cursor-pointer transition-all duration-200
+                    group relative cursor-pointer rounded-xl p-4 transition-all duration-200
                     ${
                       isCurrent
-                        ? 'bg-blue-50 border-2 border-blue-500 shadow-md'
-                        : 'bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md'
+                        ? 'border-2 border-blue-500 bg-blue-50 shadow-md'
+                        : 'border border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
                     }
                   `}
                 >
                   {/* 左侧装饰条 */}
                   {isCurrent && (
-                    <div className="absolute left-0 top-4 bottom-4 w-1 bg-blue-600 rounded-r-full" />
+                    <div className="absolute bottom-4 left-0 top-4 w-1 rounded-r-full bg-blue-600" />
                   )}
 
                   <div className="flex items-start space-x-3">
                     {/* 图标 */}
                     <div
                       className={`
-                      flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center
+                      flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg
                       ${isCurrent ? 'bg-blue-600' : 'bg-gray-100 group-hover:bg-blue-100'}
                     `}
                     >
@@ -150,11 +148,11 @@ export default function TaskList() {
                     </div>
 
                     {/* 内容 */}
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       {/* 标题 */}
                       <h3
                         className={`
-                        text-sm font-semibold mb-1 truncate
+                        mb-1 truncate text-sm font-semibold
                         ${isCurrent ? 'text-blue-900' : 'text-gray-900'}
                       `}
                       >
@@ -162,12 +160,12 @@ export default function TaskList() {
                       </h3>
 
                       {/* 类型标签 */}
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                      <div className="mb-2 flex items-center space-x-2">
+                        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
                           {TASK_TYPE_NAMES[task.type]}
                         </span>
                         {task.metadata.description && (
-                          <span className="text-xs text-gray-400 truncate max-w-[150px]">
+                          <span className="max-w-[150px] truncate text-xs text-gray-400">
                             {task.metadata.description}
                           </span>
                         )}
@@ -212,7 +210,7 @@ export default function TaskList() {
                     {isHovered && !isCurrent && (
                       <button
                         onClick={(e) => handleDeleteTask(e, task._id)}
-                        className="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                        className="flex-shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

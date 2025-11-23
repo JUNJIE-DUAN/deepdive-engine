@@ -57,7 +57,11 @@ export class ResourceAnalysisAgent {
    */
   async analyze(input: AnalysisInput): Promise<ResourceAnalysis> {
     try {
-      const prompt = this.buildPrompt(input.resources, input.focus, input.analysisDepth);
+      const prompt = this.buildPrompt(
+        input.resources,
+        input.focus,
+        input.analysisDepth
+      );
 
       const response = await fetch('/api/ai/grok', {
         method: 'POST',
@@ -213,7 +217,9 @@ ${depthInstruction}
    */
   private validateAnalysis(raw: any): Omit<ResourceAnalysis, 'analyzedAt'> {
     return {
-      insights: Array.isArray(raw.insights) ? raw.insights.filter((i: any) => typeof i === 'string') : [],
+      insights: Array.isArray(raw.insights)
+        ? raw.insights.filter((i: any) => typeof i === 'string')
+        : [],
       findings: Array.isArray(raw.findings)
         ? raw.findings.map((f: any) => ({
             claim: f.claim || '',
@@ -224,7 +230,9 @@ ${depthInstruction}
         : [],
       visualOpportunities: Array.isArray(raw.visualOpportunities)
         ? raw.visualOpportunities.map((v: any) => ({
-            type: ['flow', 'chart', 'matrix', 'diagram'].includes(v.type) ? v.type : 'chart',
+            type: ['flow', 'chart', 'matrix', 'diagram'].includes(v.type)
+              ? v.type
+              : 'chart',
             description: v.description || '',
             dataHint: v.dataHint,
           }))
@@ -303,7 +311,9 @@ ${depthInstruction}
     const sections: string[] = [];
 
     if (analysis.insights.length > 0) {
-      sections.push(`【核心洞察】\n${analysis.insights.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}`);
+      sections.push(
+        `【核心洞察】\n${analysis.insights.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}`
+      );
     }
 
     if (analysis.findings.length > 0) {

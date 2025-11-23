@@ -7,6 +7,7 @@ Architecture Decision Records - 记录DeepDive Engine项目的重要技术决策
 ## 什么是ADR？
 
 架构决策记录（ADR）是一种文档格式，用于记录项目中做出的重要架构和技术决策。每个ADR描述：
+
 - **为什么**做出这个决策（上下文）
 - 考虑了**哪些选项**
 - **选择了什么**方案
@@ -26,23 +27,23 @@ Architecture Decision Records - 记录DeepDive Engine项目的重要技术决策
 
 ### 已接受 (Accepted)
 
-| ADR | 标题 | 日期 | 状态 |
-|-----|------|------|------|
-| [ADR-0001](0001-monorepo-architecture.md) | 采用Monorepo架构 | 2025-01-01 | ✅ 已接受 |
-| [ADR-0002](0002-typescript-strict-mode.md) | 启用TypeScript严格模式 | 2025-11-09 | ✅ 已接受 |
+| ADR                                        | 标题                               | 日期       | 状态      |
+| ------------------------------------------ | ---------------------------------- | ---------- | --------- |
+| [ADR-0001](0001-monorepo-architecture.md)  | 采用Monorepo架构                   | 2025-01-01 | ✅ 已接受 |
+| [ADR-0002](0002-typescript-strict-mode.md) | 启用TypeScript严格模式             | 2025-11-09 | ✅ 已接受 |
 | [ADR-0003](0003-dual-database-strategy.md) | 使用PostgreSQL+MongoDB双数据库策略 | 2025-01-01 | ✅ 已接受 |
 
 ### 提议中 (Proposed)
 
 | ADR | 标题 | 日期 | 状态 |
-|-----|------|------|------|
-| - | - | - | - |
+| --- | ---- | ---- | ---- |
+| -   | -    | -    | -    |
 
 ### 已弃用 (Deprecated)
 
 | ADR | 标题 | 日期 | 被替代者 |
-|-----|------|------|----------|
-| - | - | - | - |
+| --- | ---- | ---- | -------- |
+| -   | -    | -    | -        |
 
 ---
 
@@ -59,6 +60,7 @@ cp .claude/adrs/template.md .claude/adrs/NNNN-your-decision-title.md
 ### 2. 填写内容
 
 按照模板结构填写：
+
 - 更新状态（提议中 / 已接受 / 已弃用）
 - 描述决策上下文和问题
 - 列出考虑的所有方案
@@ -87,6 +89,7 @@ cp .claude/adrs/template.md .claude/adrs/NNNN-your-decision-title.md
 ```
 
 **命名规则**:
+
 - 使用4位数字编号（从0001开始）
 - 使用kebab-case（小写+连字符）
 - 标题简洁但具有描述性

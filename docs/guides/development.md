@@ -108,16 +108,19 @@ npm run dev:ai         # http://localhost:5000
 ### 核心原则
 
 #### 1. 类型安全 🔴 MUST
+
 - ✅ TypeScript严格模式已启用
 - ❌ 禁止使用`any`类型
 - ✅ 所有公共函数必须有类型标注
 
 #### 2. 代码质量 🔴 MUST
+
 - ✅ ESLint检查必须通过
 - ✅ Prettier格式化必须通过
 - ✅ 测试覆盖率必须达标（当前50%）
 
 #### 3. 提交规范 🔴 MUST
+
 - ✅ 遵循Conventional Commits
 - ✅ 格式：`<type>(<scope>): <subject>`
 - ✅ 示例：`feat(resources): add thumbnail generation`
@@ -192,18 +195,22 @@ EOF
 ### 自动化检查
 
 #### Pre-commit（提交前）
+
 - ✅ Prettier自动格式化
 - ✅ ESLint自动检查和修复
 - ✅ TypeScript类型检查
 
 #### Commit-msg（提交消息验证）
+
 - ✅ Conventional Commits规范验证
 
 #### Pre-push（推送前）
+
 - ✅ 运行所有测试
 - ✅ 检查测试覆盖率
 
 #### CI/CD（GitHub Actions）
+
 - ✅ 代码质量检查
 - ✅ 运行完整测试套件
 - ✅ 构建检查
@@ -218,6 +225,7 @@ EOF
 **问题**: 提交消息不符合Conventional Commits规范
 
 **解决方案**:
+
 ```bash
 # ❌ 错误示例
 git commit -m "add new feature"
@@ -231,6 +239,7 @@ git commit -m "docs(api): update API documentation"
 ```
 
 **提交类型**:
+
 - `feat`: 新功能
 - `fix`: Bug修复
 - `docs`: 文档变更
@@ -245,9 +254,10 @@ git commit -m "docs(api): update API documentation"
 **问题**: 路径别名未正确配置
 
 **解决方案**:
+
 ```typescript
 // ❌ 错误
-import { something } from '@/utils/helper';
+import { something } from "@/utils/helper";
 
 // ✅ 正确 - 检查tsconfig.json中的paths配置
 // Backend: "@/*": ["src/*"]
@@ -259,6 +269,7 @@ import { something } from '@/utils/helper';
 **问题**: 启用严格模式后禁止使用`any`类型
 
 **解决方案**:
+
 ```typescript
 // ❌ 错误
 function process(data: any) {
@@ -275,10 +286,10 @@ function process(data: Data) {
 
 // ✅ 正确 - 或使用unknown（更安全）
 function process(data: unknown) {
-  if (typeof data === 'object' && data !== null && 'value' in data) {
+  if (typeof data === "object" && data !== null && "value" in data) {
     return (data as Data).value;
   }
-  throw new Error('Invalid data');
+  throw new Error("Invalid data");
 }
 ```
 
@@ -287,6 +298,7 @@ function process(data: unknown) {
 **问题**: PR被CI拒绝，提示coverage below threshold
 
 **解决方案**:
+
 ```bash
 # 1. 运行测试查看覆盖率
 npm run test:coverage
@@ -303,6 +315,7 @@ start coverage/lcov-report/index.html # Windows
 **问题**: `prisma migrate dev`失败
 
 **解决方案**:
+
 ```bash
 # 1. 检查数据库是否运行
 docker ps | grep postgres
@@ -324,6 +337,7 @@ npx prisma generate
 **问题**: 无法连接到MongoDB
 
 **解决方案**:
+
 ```bash
 # 1. 检查MongoDB是否运行
 docker ps | grep mongo
@@ -340,6 +354,7 @@ mongosh mongodb://localhost:27017/deepdive
 **问题**: 每次commit都很慢
 
 **解决方案**:
+
 ```bash
 # Lint-staged只检查staged文件，不应该很慢
 # 如果确实太慢，可以临时跳过（不推荐）
@@ -368,6 +383,7 @@ git push --no-verify
 **问题**: 不理解为什么用双数据库/monorepo等架构
 
 **解决方案**:
+
 ```bash
 # 查看所有ADR（架构决策记录）
 ls .claude/adrs/
@@ -381,6 +397,7 @@ cat .claude/adrs/0003-dual-database-strategy.md
 **问题**: 避免重复定义类型
 
 **解决方案**:
+
 ```typescript
 // 方案1: Backend导出类型，Frontend导入（推荐）
 // backend/src/resources/dto/resource.dto.ts
@@ -391,7 +408,7 @@ export class ResourceDto {
 }
 
 // frontend使用
-import type { ResourceDto } from '@/types/resource';
+import type { ResourceDto } from "@/types/resource";
 
 // 方案2: 创建共享types包（未来考虑）
 // packages/shared-types/
@@ -404,6 +421,7 @@ import type { ResourceDto } from '@/types/resource';
 ### 常见错误和解决方案
 
 #### 错误1: "Module not found"
+
 ```bash
 # 清理并重新安装
 rm -rf node_modules package-lock.json
@@ -411,6 +429,7 @@ npm install
 ```
 
 #### 错误2: "Port already in use"
+
 ```bash
 # 查找占用端口的进程
 # Windows
@@ -422,6 +441,7 @@ lsof -ti:3000 | xargs kill -9
 ```
 
 #### 错误3: Docker容器无法启动
+
 ```bash
 # 停止所有容器
 docker-compose down
@@ -431,6 +451,7 @@ docker-compose up -d --force-recreate
 ```
 
 #### 错误4: Prisma Client版本不匹配
+
 ```bash
 cd backend
 npx prisma generate

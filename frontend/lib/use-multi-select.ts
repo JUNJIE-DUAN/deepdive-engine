@@ -12,27 +12,33 @@ export function useMultiSelect(maxItems = 10) {
   /**
    * 切换选择状态
    */
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else if (newSet.size < maxItems) {
-        newSet.add(id);
-      } else {
-        // 已达到最大选择数量
-        return prev;
-      }
-      return newSet;
-    });
-  }, [maxItems]);
+  const toggleSelect = useCallback(
+    (id: string) => {
+      setSelectedIds((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+          newSet.delete(id);
+        } else if (newSet.size < maxItems) {
+          newSet.add(id);
+        } else {
+          // 已达到最大选择数量
+          return prev;
+        }
+        return newSet;
+      });
+    },
+    [maxItems]
+  );
 
   /**
    * 全选（最多maxItems项）
    */
-  const selectAll = useCallback((ids: string[]) => {
-    setSelectedIds(new Set(ids.slice(0, maxItems)));
-  }, [maxItems]);
+  const selectAll = useCallback(
+    (ids: string[]) => {
+      setSelectedIds(new Set(ids.slice(0, maxItems)));
+    },
+    [maxItems]
+  );
 
   /**
    * 清除所有选择
@@ -44,9 +50,12 @@ export function useMultiSelect(maxItems = 10) {
   /**
    * 检查是否已选择
    */
-  const isSelected = useCallback((id: string) => {
-    return selectedIds.has(id);
-  }, [selectedIds]);
+  const isSelected = useCallback(
+    (id: string) => {
+      return selectedIds.has(id);
+    },
+    [selectedIds]
+  );
 
   return {
     selectedIds: Array.from(selectedIds),

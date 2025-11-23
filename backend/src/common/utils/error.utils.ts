@@ -36,7 +36,10 @@ export function ensureError(error: unknown): Error {
 /**
  * 格式化错误用于日志输出
  */
-export function formatErrorForLog(error: unknown): { message: string; stack?: string } {
+export function formatErrorForLog(error: unknown): {
+  message: string;
+  stack?: string;
+} {
   if (error instanceof Error) {
     return {
       message: error.message,

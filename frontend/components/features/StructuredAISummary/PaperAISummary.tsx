@@ -15,16 +15,37 @@ interface PaperAISummaryProps {
 
 const DifficultyBadge: React.FC<{ difficulty: string }> = ({ difficulty }) => {
   const colors = {
-    beginner: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', emoji: '🌱' },
-    intermediate: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', emoji: '📚' },
-    advanced: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', emoji: '🚀' },
-    expert: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', emoji: '⚡' },
+    beginner: {
+      bg: 'bg-green-50',
+      text: 'text-green-700',
+      border: 'border-green-200',
+      emoji: '🌱',
+    },
+    intermediate: {
+      bg: 'bg-blue-50',
+      text: 'text-blue-700',
+      border: 'border-blue-200',
+      emoji: '📚',
+    },
+    advanced: {
+      bg: 'bg-orange-50',
+      text: 'text-orange-700',
+      border: 'border-orange-200',
+      emoji: '🚀',
+    },
+    expert: {
+      bg: 'bg-red-50',
+      text: 'text-red-700',
+      border: 'border-red-200',
+      emoji: '⚡',
+    },
   };
 
-  const style = colors[difficulty as keyof typeof colors] || colors.intermediate;
+  const style =
+    colors[difficulty as keyof typeof colors] || colors.intermediate;
   return (
     <span
-      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border text-sm font-medium ${style.bg} ${style.text} ${style.border}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium ${style.bg} ${style.text} ${style.border}`}
     >
       <span>{style.emoji}</span>
       {difficulty}
@@ -40,13 +61,13 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
   const [isExpanded, setIsExpanded] = React.useState(!compact);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
       {/* 头部 */}
-      <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
         {/* 分类和难度 */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-white text-blue-700 text-xs font-medium border border-blue-200">
+            <span className="rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-medium text-blue-700">
               {summary.field}
             </span>
             {summary.subfield && (
@@ -57,7 +78,7 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
         </div>
 
         {/* 核心概览 */}
-        <p className="text-sm text-gray-700 leading-relaxed font-medium">
+        <p className="text-sm font-medium leading-relaxed text-gray-700">
           {compact && !isExpanded ? (
             <>{summary.overview.substring(0, 150)}...</>
           ) : (
@@ -76,7 +97,7 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
               )}
             </>
           )}
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="ml-auto flex items-center gap-1">
             <span className="text-yellow-500">⭐</span>
             <span>{(summary.confidence * 100).toFixed(0)}%</span>
           </div>
@@ -85,11 +106,11 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
 
       {/* 内容区域 */}
       {isExpanded && (
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           {/* 主要贡献 */}
           {summary.contributions.length > 0 && (
             <div className="border-l-4 border-blue-500 pl-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 💡 Main Contributions
               </h4>
               <ul className="space-y-1.5">
@@ -106,10 +127,10 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
           {/* 研究方法 */}
           {summary.methodology && (
             <div className="border-l-4 border-purple-500 pl-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 🔬 Methodology
               </h4>
-              <p className="text-sm text-gray-700 leading-relaxed">
+              <p className="text-sm leading-relaxed text-gray-700">
                 {summary.methodology}
               </p>
             </div>
@@ -118,10 +139,10 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
           {/* 主要结果 */}
           {summary.results && (
             <div className="border-l-4 border-green-500 pl-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 📈 Results
               </h4>
-              <p className="text-sm text-gray-700 leading-relaxed">
+              <p className="text-sm leading-relaxed text-gray-700">
                 {summary.results}
               </p>
             </div>
@@ -130,7 +151,7 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
           {/* 关键要点 */}
           {summary.keyPoints.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 📌 Key Takeaways
               </h4>
               <ul className="space-y-1.5">
@@ -146,8 +167,8 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
 
           {/* 局限性 */}
           {summary.limitations.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-              <h4 className="text-sm font-semibold text-yellow-900 mb-2">
+            <div className="rounded border border-yellow-200 bg-yellow-50 p-3">
+              <h4 className="mb-2 text-sm font-semibold text-yellow-900">
                 ⚠️ Limitations
               </h4>
               <ul className="space-y-1">
@@ -162,8 +183,8 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
 
           {/* 后续工作 */}
           {summary.futureWork.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded p-3">
-              <h4 className="text-sm font-semibold text-blue-900 mb-2">
+            <div className="rounded border border-blue-200 bg-blue-50 p-3">
+              <h4 className="mb-2 text-sm font-semibold text-blue-900">
                 🚀 Future Work
               </h4>
               <ul className="space-y-1">
@@ -179,14 +200,14 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
           {/* 关键词 */}
           {summary.keywords.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 🏷️ Keywords
               </h4>
               <div className="flex flex-wrap gap-2">
                 {summary.keywords.map((keyword, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-200"
+                    className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
                   >
                     {keyword}
                   </span>
@@ -198,14 +219,14 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
           {/* 相关主题 */}
           {summary.relatedTopics.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 🔗 Related Topics
               </h4>
               <div className="flex flex-wrap gap-2">
                 {summary.relatedTopics.map((topic, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs"
+                    className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700"
                   >
                     {topic}
                   </span>
@@ -217,21 +238,23 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
           {/* 可视化建议 */}
           {summary.visualizations && summary.visualizations.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+              <h4 className="mb-2 text-sm font-semibold text-gray-900">
                 📊 Visualization Ideas
               </h4>
               <div className="space-y-2">
                 {summary.visualizations.map((viz, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-2 p-2 rounded bg-purple-50 border border-purple-200"
+                    className="flex items-start gap-2 rounded border border-purple-200 bg-purple-50 p-2"
                   >
-                    <span className="text-purple-600 font-bold">▪</span>
+                    <span className="font-bold text-purple-600">▪</span>
                     <div>
                       <p className="text-xs font-medium text-purple-900">
                         {viz.type}
                       </p>
-                      <p className="text-xs text-purple-700">{viz.description}</p>
+                      <p className="text-xs text-purple-700">
+                        {viz.description}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -240,9 +263,10 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
           )}
 
           {/* 元信息 */}
-          <div className="pt-2 border-t border-gray-100">
+          <div className="border-t border-gray-100 pt-2">
             <p className="text-xs text-gray-500">
-              AI-generated on {summary.generatedAt.toLocaleDateString()} using {summary.model}
+              AI-generated on {summary.generatedAt.toLocaleDateString()} using{' '}
+              {summary.model}
             </p>
           </div>
         </div>
@@ -250,10 +274,10 @@ export const PaperAISummaryComponent: React.FC<PaperAISummaryProps> = ({
 
       {/* 展开/收起按钮 */}
       {expandable && (
-        <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+        <div className="border-t border-gray-100 bg-gray-50 px-4 py-2">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full text-sm font-medium text-blue-600 hover:text-blue-700 py-1 transition-colors"
+            className="w-full py-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
           >
             {isExpanded ? '▼ Collapse' : '▶ Expand Full Analysis'}
           </button>

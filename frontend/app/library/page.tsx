@@ -108,6 +108,7 @@ export default function LibraryPage() {
   const loadVideos = async () => {
     try {
       setLoading(true);
+      // Load videos from youtube-videos table
       const response = await fetch(
         `${config.apiBaseUrl}/api/v1/youtube-videos`
       );
@@ -115,6 +116,9 @@ export default function LibraryPage() {
         const data = await response.json();
         setVideos(data);
       }
+
+      // Also load YouTube resources from bookmarks
+      await loadBookmarks();
     } catch (err) {
       console.error('Failed to load videos:', err);
     } finally {
@@ -538,7 +542,7 @@ export default function LibraryPage() {
         </div>
 
         {/* Main card content - clickable link */}
-        <Link href={`/?id=${resource.id}`} className="block">
+        <Link href={`/resource/${resource.id}`} className="block">
           <div className="p-4">
             {/* Type badge */}
             <div className="mb-3 flex items-center gap-2">
@@ -795,69 +799,123 @@ export default function LibraryPage() {
 
             {/* Videos Tab */}
             {activeTab === 'videos' &&
-              (loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                </div>
-              ) : videos.length === 0 ? (
-                <div className="py-12 text-center">
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    No saved videos
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Save videos from the YouTube page after parsing
-                  </p>
-                </div>
-              ) : filteredVideos.length === 0 ? (
-                <div className="py-12 text-center">
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    No videos match your search
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Try adjusting your search terms
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredVideos.map((video) => (
-                      <Link
-                        key={video.id}
-                        href={`/youtube?saved=${video.id}`}
-                        className="block overflow-hidden rounded-lg border border-gray-200 transition-shadow hover:shadow-md"
-                      >
-                        <div className="relative aspect-video bg-gray-900">
-                          <img
-                            src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
-                            alt={video.title}
-                            className="h-full w-full object-cover"
-                          />
-                          <div className="absolute bottom-2 right-2 rounded bg-black bg-opacity-80 px-2 py-1 text-xs text-white">
-                            YouTube
-                          </div>
+              (() => {
+                // Combine YouTube videos and YouTube resources from bookmarks
+                const youtubeBookmarks = bookmarkItems.filter(
+                  (item) =>
+                    item.resource.type === 'YOUTUBE' ||
+                    item.resource.type === 'YOUTUBE_VIDEO'
+                );
+                const hasVideos =
+                  videos.length > 0 || youtubeBookmarks.length > 0;
+                const filteredYoutubeBookmarks = youtubeBookmarks.filter(
+                  (item) =>
+                    item.resource.title
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase())
+                );
+                const allVideosEmpty =
+                  filteredVideos.length === 0 &&
+                  filteredYoutubeBookmarks.length === 0;
+
+                if (loading) {
+                  return (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                    </div>
+                  );
+                }
+
+                if (!hasVideos) {
+                  return (
+                    <div className="py-12 text-center">
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">
+                        No saved videos
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Bookmark YouTube videos from the Explore page
+                      </p>
+                    </div>
+                  );
+                }
+
+                if (allVideosEmpty) {
+                  return (
+                    <div className="py-12 text-center">
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">
+                        No videos match your search
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Try adjusting your search terms
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Bookmarked YouTube Resources */}
+                    {filteredYoutubeBookmarks.length > 0 && (
+                      <div>
+                        <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                          Bookmarked Videos ({filteredYoutubeBookmarks.length})
+                        </h3>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          {filteredYoutubeBookmarks.map((item) => (
+                            <ResourceCard key={item.id} item={item} />
+                          ))}
                         </div>
-                        <div className="p-4">
-                          <h4 className="mb-2 line-clamp-2 font-medium text-gray-900">
-                            {video.title}
-                          </h4>
-                          <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>
-                              {new Date(video.createdAt).toLocaleDateString(
-                                'en-US'
-                              )}
-                            </span>
-                            {video.aiReport && (
-                              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                                Report Generated
-                              </span>
-                            )}
-                          </div>
+                      </div>
+                    )}
+
+                    {/* Saved YouTube Videos */}
+                    {filteredVideos.length > 0 && (
+                      <div>
+                        <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                          Parsed Videos ({filteredVideos.length})
+                        </h3>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                          {filteredVideos.map((video) => (
+                            <Link
+                              key={video.id}
+                              href={`/youtube?saved=${video.id}`}
+                              className="block overflow-hidden rounded-lg border border-gray-200 transition-shadow hover:shadow-md"
+                            >
+                              <div className="relative aspect-video bg-gray-900">
+                                <img
+                                  src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                                  alt={video.title}
+                                  className="h-full w-full object-cover"
+                                />
+                                <div className="absolute bottom-2 right-2 rounded bg-black bg-opacity-80 px-2 py-1 text-xs text-white">
+                                  YouTube
+                                </div>
+                              </div>
+                              <div className="p-4">
+                                <h4 className="mb-2 line-clamp-2 font-medium text-gray-900">
+                                  {video.title}
+                                </h4>
+                                <div className="flex items-center justify-between text-xs text-gray-500">
+                                  <span>
+                                    {new Date(
+                                      video.createdAt
+                                    ).toLocaleDateString('en-US')}
+                                  </span>
+                                  {video.aiReport && (
+                                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                                      Report Generated
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
                         </div>
-                      </Link>
-                    ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })()}
           </div>
         </div>
       </main>
@@ -1005,7 +1063,7 @@ export default function LibraryPage() {
                 Close
               </button>
               <a
-                href={`/?id=${selectedItem.resource.id}`}
+                href={`/resource/${selectedItem.resource.id}`}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
                 View Full Details

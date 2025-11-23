@@ -1,6 +1,6 @@
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { promises as fs } from "fs";
+import * as path from "path";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 interface TemplateFile {
   id: string;
@@ -13,25 +13,31 @@ interface TemplateFile {
 }
 
 const prisma = new PrismaClient();
-const templatesDir = path.resolve(__dirname, '../../../configs/templates');
+const templatesDir = path.resolve(__dirname, "../configs/templates");
 
 async function seedTemplates() {
-  console.log('================================================================================');
-  console.log('🧩 Report Template Seeder');
-  console.log('================================================================================\n');
+  console.log(
+    "================================================================================",
+  );
+  console.log("🧩 Report Template Seeder");
+  console.log(
+    "================================================================================\n",
+  );
 
   try {
     const entries = await fs.readdir(templatesDir);
-    const templateFiles = entries.filter((file) => file.endsWith('.json'));
+    const templateFiles = entries.filter((file) => file.endsWith(".json"));
 
     if (templateFiles.length === 0) {
-      console.warn('⚠️  No template files found. Please add JSON templates to configs/templates first.');
+      console.warn(
+        "⚠️  No template files found. Please add JSON templates to backend/src/configs/templates first.",
+      );
       return;
     }
 
     for (const fileName of templateFiles) {
       const filePath = path.join(templatesDir, fileName);
-      const raw = await fs.readFile(filePath, 'utf-8');
+      const raw = await fs.readFile(filePath, "utf-8");
       let data: TemplateFile;
 
       try {
@@ -41,8 +47,16 @@ async function seedTemplates() {
         continue;
       }
 
-      if (!data.id || !data.name || !data.category || !data.schema || !data.promptConfig) {
-        console.error(`❌ Template file ${fileName} missing required fields (id/name/category/schema/promptConfig).`);
+      if (
+        !data.id ||
+        !data.name ||
+        !data.category ||
+        !data.schema ||
+        !data.promptConfig
+      ) {
+        console.error(
+          `❌ Template file ${fileName} missing required fields (id/name/category/schema/promptConfig).`,
+        );
         continue;
       }
 
@@ -71,16 +85,16 @@ async function seedTemplates() {
       console.log(`✅ Seeded template: ${data.id} (${data.name})`);
     }
 
-    console.log('\n🎉 All templates processed successfully.');
+    console.log("\n🎉 All templates processed successfully.");
   } catch (error) {
-    console.error('❌ Failed to seed report templates:', error);
+    console.error("❌ Failed to seed report templates:", error);
     throw error;
   }
 }
 
 seedTemplates()
   .catch((error) => {
-    console.error('❌ Seeder exited with error:', error);
+    console.error("❌ Seeder exited with error:", error);
     process.exitCode = 1;
   })
   .finally(async () => {

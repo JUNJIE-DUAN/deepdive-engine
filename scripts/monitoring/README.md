@@ -5,7 +5,7 @@
 ## 目录结构
 
 ```
-monitoring/
+scripts/monitoring/
 ├── config/                      # 配置文件
 │   ├── prometheus-staging.yml   # Prometheus配置（Staging）
 │   ├── prometheus-production.yml # Prometheus配置（Production）
@@ -227,7 +227,7 @@ groups:
 ./scripts/monitoring/validate-config.sh prometheus
 
 # 查看日志
-cd monitoring && docker-compose logs prometheus
+cd scripts/monitoring && docker-compose logs prometheus
 ```
 
 ### Exporter无法连接
@@ -306,8 +306,8 @@ groups:
 
 ## 相关文档
 
-- [Monitoring Agent文档](../.claude/agents/monitoring.md)
-- [Scripts使用指南](../scripts/README.md)
+- [Monitoring Agent文档](../../.claude/agents/monitoring.md)
+- [Scripts使用指南](../README.md)
 - [Prometheus文档](https://prometheus.io/docs/)
 - [Grafana文档](https://grafana.com/docs/)
 

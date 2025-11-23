@@ -13,14 +13,20 @@ export default defineConfig({
     testTimeout: 60000, // 60秒
     hookTimeout: 60000, // 60秒
 
-    // Windows环境下使用forks pool更稳定
+    // Windows环境下使用forks pool更稳定，配置更稳定的pool选项
     pool: 'forks',
-    // @ts-expect-error - poolOptions exists at runtime but not in type definitions for vitest 4.0.8
+    // @ts-expect-error - poolOptions type definition issue with vitest 4.0.8
     poolOptions: {
       forks: {
         singleFork: true,
+        maxForks: 1,
+        minForks: 1,
       },
     },
+
+    // 避免首次运行时的超时问题
+    isolate: false,
+    fileParallelism: false,
 
     // 覆盖率配置
     coverage: {

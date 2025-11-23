@@ -73,9 +73,35 @@ jobs:
           echo "Testing GET /api/v1/resources..."
           http_code=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.set-url.outputs.API_URL }}/api/v1/resources)
           if [ "$http_code" != "200" ]; then
-            echo "❌ Resources endpoint failed!"
+            echo "❌ Resources endpoint failed! (HTTP $http_code)"
             exit 1
           fi
+          echo "✅ Resources endpoint OK"
+
+          # Test crawler endpoints
+          echo "Testing crawler endpoints..."
+          for crawler in arxiv github hackernews; do
+            echo "  - Testing /api/v1/proxy/$crawler..."
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.set-url.outputs.API_URL }}/api/v1/proxy/$crawler)
+            if [ "$http_code" != "200" ] && [ "$http_code" != "404" ]; then
+              echo "❌ $crawler endpoint failed! (HTTP $http_code)"
+              exit 1
+            fi
+            echo "  ✅ $crawler endpoint OK"
+          done
+
+          # Test deduplication endpoint
+          echo "Testing POST /api/v1/deduplication/analyze..."
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"urls":["https://example.com"],"contents":["test"]}' \
+            ${{ steps.set-url.outputs.API_URL }}/api/v1/deduplication/analyze)
+          http_code=$(echo "$response" | tail -n1)
+          if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
+            echo "❌ Deduplication endpoint failed! (HTTP $http_code)"
+            exit 1
+          fi
+          echo "✅ Deduplication endpoint OK"
 
           echo "✅ All API endpoints responding"
 

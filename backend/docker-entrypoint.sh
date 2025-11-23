@@ -15,5 +15,13 @@ else
 fi
 
 echo ""
+echo "🌱 Running database seed..."
+if npm run prisma:seed; then
+    echo "✅ Seed completed successfully!"
+else
+    echo "⚠️  Seed failed, but continuing..."
+fi
+
+echo ""
 echo "✅ Starting application..."
 exec node dist/main

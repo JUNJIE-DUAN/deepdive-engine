@@ -1,4 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import {
+  PrismaClient,
+  DataSourceType,
+  DataSourceStatus,
+  ResourceType,
+} from "@prisma/client";
 import { execSync } from "child_process";
 import * as path from "path";
 

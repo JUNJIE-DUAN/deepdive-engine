@@ -12,19 +12,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 开始数据库初始化...");
 
-  // 运行数据源种子脚本（52个高质量数据源）
-  console.log("\n📦 正在加载数据源配置...");
-  try {
-    const seedScriptPath = path.join(__dirname, "seed-data-sources.ts");
-    execSync(`npx tsx "${seedScriptPath}"`, {
-      stdio: "inherit",
-      cwd: path.dirname(__dirname),
-    });
-    console.log("✅ 数据源加载完成");
-  } catch (error) {
-    console.error("❌ 数据源加载失败:", error);
-    // 继续执行，不中断整个种子过程
-  }
+  // 数据源现在通过 SQL migration 自动加载（20251123_seed_predefined_data_sources）
+  // 这是业界最佳实践：使用原始 SQL 而不是 ORM，避免序列化问题
+  console.log(
+    "\n📦 数据源已通过 migration 自动加载（见 migrations/20251123_seed_predefined_data_sources）",
+  );
 
   // 旧的数据源配置（保留作为备份，但会被新的覆盖）
   console.log("\n📝 检查遗留数据源配置...");

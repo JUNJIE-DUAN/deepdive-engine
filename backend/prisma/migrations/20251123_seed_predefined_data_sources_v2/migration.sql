@@ -1,7 +1,7 @@
 -- Insert predefined data sources using raw SQL (industry best practice)
 -- This avoids Prisma serialization issues with complex JSON fields
 
--- Check and insert arXiv
+-- Insert arXiv
 INSERT INTO "data_sources" (
   id, name, description, type, category, base_url, api_endpoint,
   crawler_type, crawler_config, rate_limit, keywords, categories,
@@ -88,5 +88,3 @@ SELECT
 WHERE NOT EXISTS (
   SELECT 1 FROM "data_sources" WHERE name = 'OpenAI Blog'
 );
-
--- More sources can be added here following the same pattern

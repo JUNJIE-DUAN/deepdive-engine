@@ -22,10 +22,13 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "prisma:seed": "ts-node prisma/seed.ts",
     "templates:seed": "ts-node -r tsconfig-paths/register src/scripts/seed-report-templates.ts",
     "thumbnails:generate": "ts-node -r tsconfig-paths/register src/scripts/generate-thumbnails.ts",
     "thumbnails:arxiv": "ts-node -r tsconfig-paths/register src/scripts/update-arxiv-thumbnails.ts",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "postinstall": "prisma generate",
+    "deploy": "prisma migrate deploy && npm run prisma:seed"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

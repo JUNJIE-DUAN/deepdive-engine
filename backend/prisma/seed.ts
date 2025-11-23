@@ -1,17 +1,29 @@
-import {
-  PrismaClient,
-  DataSourceType,
-  DataSourceStatus,
-  ResourceType,
-} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { execSync } from "child_process";
+import * as path from "path";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("开始初始化数据源...");
+  console.log("🌱 开始数据库初始化...");
 
-  // 定义初始数据源
-  const initialDataSources = [
+  // 运行数据源种子脚本（52个高质量数据源）
+  console.log("\n📦 正在加载数据源配置...");
+  try {
+    const seedScriptPath = path.join(__dirname, "seed-data-sources.ts");
+    execSync(`npx tsx "${seedScriptPath}"`, {
+      stdio: "inherit",
+      cwd: path.dirname(__dirname),
+    });
+    console.log("✅ 数据源加载完成");
+  } catch (error) {
+    console.error("❌ 数据源加载失败:", error);
+    // 继续执行，不中断整个种子过程
+  }
+
+  // 旧的数据源配置（保留作为备份，但会被新的覆盖）
+  console.log("\n📝 检查遗留数据源配置...");
+  const legacyDataSources = [
     {
       name: "arXiv",
       type: "ARXIV" as DataSourceType,
@@ -241,44 +253,45 @@ async function main() {
     },
   ];
 
-  // 创建或更新数据源
-  for (const source of initialDataSources) {
-    try {
-      const existing = await prisma.dataSource.findUnique({
-        where: { name: source.name },
-      });
+  // 检查遗留数据源（不再创建，新版本使用 seed-data-sources.ts）
+  console.log("⏩ 跳过遗留数据源配置（已由新版本管理）");
 
-      if (existing) {
-        console.log(`数据源已存在: ${source.name}, 跳过创建`);
-        continue;
-      }
+  // 输出最终统计信息
+  console.log("\n📊 数据库统计信息:");
 
-      await prisma.dataSource.create({
-        data: source,
-      });
-      console.log(`✓ 创建数据源: ${source.name}`);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(`✗ 创建数据源失败 ${source.name}:`, errorMessage);
-    }
-  }
-
-  console.log("\n数据源初始化完成！");
-
-  // 输出统计信息
   const stats = await prisma.dataSource.groupBy({
-    by: ["status"],
+    by: ["status", "category"],
     _count: true,
   });
 
-  console.log("\n数据源统计:");
+  const categoryStats = new Map<string, number>();
+  const statusStats = new Map<string, number>();
+
   stats.forEach((stat) => {
-    console.log(`  ${stat.status}: ${stat._count} 个`);
+    const category = stat.category || "UNKNOWN";
+    const status = stat.status;
+    categoryStats.set(
+      category,
+      (categoryStats.get(category) || 0) + stat._count,
+    );
+    statusStats.set(status, (statusStats.get(status) || 0) + stat._count);
+  });
+
+  console.log("\n按类别统计:");
+  Array.from(categoryStats.entries())
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([category, count]) => {
+      console.log(`  ${category}: ${count} 个`);
+    });
+
+  console.log("\n按状态统计:");
+  Array.from(statusStats.entries()).forEach(([status, count]) => {
+    console.log(`  ${status}: ${count} 个`);
   });
 
   const total = await prisma.dataSource.count();
-  console.log(`  总计: ${total} 个数据源`);
+  console.log(`\n总计: ${total} 个数据源`);
+  console.log("\n✅ 数据库初始化完成！");
 }
 
 main()

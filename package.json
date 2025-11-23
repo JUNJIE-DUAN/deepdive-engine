@@ -9,7 +9,7 @@
     "crawler"
   ],
   "scripts": {
-    "prepare": "husky install",
+    "prepare": "node -e \"process.env.CI === 'true' || require('child_process').execSync('husky install', {stdio: 'inherit'})\"",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:ai\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",

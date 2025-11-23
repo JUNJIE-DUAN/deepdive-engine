@@ -22,15 +22,15 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:seed": "tsx prisma/seed.ts",
     "templates:seed": "ts-node -r tsconfig-paths/register src/scripts/seed-report-templates.ts",
     "thumbnails:generate": "ts-node -r tsconfig-paths/register src/scripts/generate-thumbnails.ts",
     "thumbnails:arxiv": "ts-node -r tsconfig-paths/register src/scripts/update-arxiv-thumbnails.ts",
-    "seed": "ts-node prisma/seed.ts",
+    "seed": "tsx prisma/seed.ts",
     "deploy": "prisma migrate deploy && npm run prisma:seed"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.10.0",
@@ -111,6 +111,7 @@
     "ts-loader": "^9.5.0",
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.3.0"
   }
 }

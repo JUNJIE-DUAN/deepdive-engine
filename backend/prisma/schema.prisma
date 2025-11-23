@@ -949,44 +949,44 @@ model DataSource {
   category    ResourceType // 对应的资源类型
 
   // 连接配置
-  baseUrl     String
-  apiEndpoint String?
-  authType    String? // NONE|API_KEY|OAUTH|COOKIE
+  baseUrl     String  @map("base_url")
+  apiEndpoint String? @map("api_endpoint")
+  authType    String? @map("auth_type") // NONE|API_KEY|OAUTH|COOKIE
   credentials String? @db.Text // 加密存储
 
   // 采集配置
-  crawlerType   String // API|SCRAPER|RSS
-  crawlerConfig Json // {selectors, patterns}
-  rateLimit     Int? // 每秒请求数
+  crawlerType   String @map("crawler_type") // API|SCRAPER|RSS
+  crawlerConfig Json   @map("crawler_config") // {selectors, patterns}
+  rateLimit     Int?   @map("rate_limit") // 每秒请求数
 
   // 内容过滤
   keywords        Json? // ["AI", "Machine Learning"]
   categories      Json? // ["cs.AI", "cs.LG"]
   languages       Json? // ["en", "zh"]
-  minQualityScore Float @default(0)
+  minQualityScore Float @default(0) @map("min_quality_score")
 
   // 去重配置
-  deduplicationConfig Json? // {methods, thresholds}
+  deduplicationConfig Json? @map("deduplication_config") // {methods, thresholds}
 
   // 状态管理
   status           DataSourceStatus @default(ACTIVE)
-  isVerified       Boolean          @default(false)
-  lastTestedAt     DateTime?
-  lastSuccessAt    DateTime?
-  lastErrorMessage String?
+  isVerified       Boolean          @default(false) @map("is_verified")
+  lastTestedAt     DateTime?        @map("last_tested_at")
+  lastSuccessAt    DateTime?        @map("last_success_at")
+  lastErrorMessage String?          @map("last_error")
 
   // 统计信息
-  totalCollected  Int   @default(0)
-  totalSuccess    Int   @default(0)
-  totalFailed     Int   @default(0)
-  totalDuplicates Int   @default(0)
-  successRate     Float @default(0)
-  averageQuality  Float @default(0)
+  totalCollected  Int   @default(0) @map("total_collected")
+  totalSuccess    Int   @default(0) @map("total_success")
+  totalFailed     Int   @default(0) @map("total_failed")
+  totalDuplicates Int   @default(0) @map("total_duplicates")
+  successRate     Float @default(0) @map("success_rate")
+  averageQuality  Float @default(0) @map("average_quality")
 
   // 审计字段
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
 
   // 关系
   tasks CollectionTask[]

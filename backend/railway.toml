@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npx prisma migrate deploy && node dist/main"
+startCommand = "npx prisma migrate deploy && echo '✅ Migration completed' && ls -la dist/ && echo '🚀 Starting application...' && node dist/main"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

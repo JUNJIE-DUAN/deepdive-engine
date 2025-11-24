@@ -9,6 +9,11 @@ import NotesList from '@/components/features/NotesList';
 import CommentsList from '@/components/features/CommentsList';
 import Sidebar from '@/components/layout/Sidebar';
 import dynamic from 'next/dynamic';
+import {
+  StructuredAISummaryRouter,
+  isStructuredAISummary,
+  convertToStructuredSummary,
+} from '@/components/features/StructuredAISummary';
 
 // Dynamic import for PDF viewer (client-side only)
 const PDFViewerClient = dynamic(
@@ -23,6 +28,8 @@ const PDFViewerClient = dynamic(
   }
 );
 
+import type { ResourceAISummary } from '@/types/ai-office';
+
 interface Resource {
   id: string;
   type: string;
@@ -35,7 +42,7 @@ interface Resource {
   codeUrl?: string;
   authors?: Array<{ name?: string; username?: string; platform?: string }>;
   publishedAt: string;
-  aiSummary?: string;
+  aiSummary?: string | ResourceAISummary;
   keyInsights?: Array<{
     title: string;
     importance: string;
@@ -350,66 +357,26 @@ export default function ResourcePage() {
             </div>
           </div>
 
-          {/* AI Summary & Insights */}
-          {(resource.aiSummary ||
-            (resource.keyInsights && resource.keyInsights.length > 0)) && (
-            <div className="mb-6 rounded-lg bg-white p-8 shadow-sm">
-              <h2 className="mb-4 text-xl font-bold text-gray-900">
-                AI Analysis
-              </h2>
-
-              {resource.aiSummary && (
-                <div className="mb-6">
-                  <h3 className="mb-2 text-sm font-semibold text-gray-700">
-                    Summary
-                  </h3>
-                  <div className="prose prose-sm max-w-none text-gray-700">
-                    {resource.aiSummary}
-                  </div>
-                </div>
-              )}
-
-              {resource.keyInsights && resource.keyInsights.length > 0 && (
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-gray-700">
-                    Key Insights
-                  </h3>
-                  <div className="space-y-3">
-                    {resource.keyInsights.map((insight, idx) => (
-                      <div
-                        key={idx}
-                        className={`rounded-lg border-l-4 p-4 ${
-                          insight.importance === 'high'
-                            ? 'border-red-500 bg-red-50'
-                            : insight.importance === 'medium'
-                              ? 'border-yellow-500 bg-yellow-50'
-                              : 'border-blue-500 bg-blue-50'
-                        }`}
-                      >
-                        <div className="mb-1 flex items-center gap-2">
-                          <h4 className="font-semibold text-gray-900">
-                            {insight.title}
-                          </h4>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs ${
-                              insight.importance === 'high'
-                                ? 'bg-red-100 text-red-700'
-                                : insight.importance === 'medium'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-blue-100 text-blue-700'
-                            }`}
-                          >
-                            {insight.importance}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {insight.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* AI Summary - Using Structured AI Summary Components */}
+          {resource.aiSummary && (
+            <div className="mb-6">
+              {isStructuredAISummary(resource.aiSummary) ? (
+                <StructuredAISummaryRouter
+                  summary={resource.aiSummary}
+                  compact={false}
+                  expandable={true}
+                />
+              ) : typeof resource.aiSummary === 'string' ? (
+                <StructuredAISummaryRouter
+                  summary={convertToStructuredSummary(
+                    resource.aiSummary,
+                    resource.type,
+                    'intermediate'
+                  )}
+                  compact={false}
+                  expandable={true}
+                />
+              ) : null}
             </div>
           )}
 

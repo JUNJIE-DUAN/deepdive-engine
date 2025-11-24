@@ -1,6 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+/**
+ * 批量导入数据源到Railway云端数据库
+ * 使用API端点批量创建数据源
+ */
 
-const prisma = new PrismaClient();
+import axios from "axios";
+
+// Railway生产环境API地址
+const RAILWAY_API_URL =
+  process.env.RAILWAY_API_URL ||
+  "https://backend-production-af8e.up.railway.app";
 
 const predefinedDataSources = [
   // ============ PAPER (论文) ============
@@ -18,12 +26,11 @@ const predefinedDataSources = [
       sortBy: "submittedDate",
       sortOrder: "descending",
     },
-    rateLimit: 3, // 3 seconds between requests
+    rateLimit: 3,
     keywords: ["AI", "machine learning", "deep learning", "neural networks"],
     categories: ["cs.AI", "cs.LG", "cs.CL", "cs.CV"],
     minQualityScore: 7.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Semantic Scholar",
@@ -41,7 +48,6 @@ const predefinedDataSources = [
     keywords: ["AI", "ML", "NLP", "computer vision"],
     minQualityScore: 8.0,
     status: "PAUSED" as const,
-    isVerified: false,
   },
   {
     name: "Papers with Code",
@@ -58,59 +64,6 @@ const predefinedDataSources = [
     keywords: ["deep learning", "benchmarks", "state-of-the-art"],
     minQualityScore: 7.5,
     status: "PAUSED" as const,
-    isVerified: false,
-  },
-  {
-    name: "PubMed AI",
-    description: "Biomedical AI and ML research from PubMed",
-    type: "CUSTOM" as const,
-    category: "PAPER" as const,
-    baseUrl: "https://pubmed.ncbi.nlm.nih.gov",
-    apiEndpoint: "/",
-    crawlerType: "API",
-    crawlerConfig: {
-      term: "artificial intelligence OR machine learning",
-      retmax: 50,
-    },
-    rateLimit: 10,
-    keywords: ["medical AI", "healthcare", "biomedical ML"],
-    minQualityScore: 7.5,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
-  {
-    name: "ACL Anthology",
-    description: "Computational linguistics and NLP papers",
-    type: "CUSTOM" as const,
-    category: "PAPER" as const,
-    baseUrl: "https://aclanthology.org",
-    apiEndpoint: "/",
-    crawlerType: "WEB_SCRAPER",
-    crawlerConfig: {
-      selector: ".paper-card",
-    },
-    rateLimit: 10,
-    keywords: ["NLP", "computational linguistics", "language models"],
-    minQualityScore: 8.0,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
-  {
-    name: "IEEE Xplore",
-    description: "IEEE technical literature in engineering and technology",
-    type: "CUSTOM" as const,
-    category: "PAPER" as const,
-    baseUrl: "https://ieeexplore.ieee.org",
-    apiEndpoint: "/",
-    crawlerType: "API",
-    crawlerConfig: {
-      queryText: "artificial intelligence",
-    },
-    rateLimit: 10,
-    keywords: ["IEEE", "engineering", "technology", "AI"],
-    minQualityScore: 8.0,
-    status: "PAUSED" as const,
-    isVerified: false,
   },
 
   // ============ BLOG (企业博客) ============
@@ -129,7 +82,6 @@ const predefinedDataSources = [
     keywords: ["Google AI", "Gemini", "Google Research"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "OpenAI Blog",
@@ -146,7 +98,6 @@ const predefinedDataSources = [
     keywords: ["OpenAI", "GPT", "ChatGPT", "DALL-E"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Meta AI Blog",
@@ -163,7 +114,6 @@ const predefinedDataSources = [
     keywords: ["Meta AI", "LLaMA", "PyTorch"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "DeepMind Blog",
@@ -180,7 +130,6 @@ const predefinedDataSources = [
     keywords: ["DeepMind", "AlphaFold", "Gemini"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Anthropic Blog",
@@ -199,24 +148,6 @@ const predefinedDataSources = [
     keywords: ["Anthropic", "Claude", "AI safety"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: false,
-  },
-  {
-    name: "Microsoft AI Blog",
-    description: "AI innovations from Microsoft",
-    type: "RSS" as const,
-    category: "BLOG" as const,
-    baseUrl: "https://blogs.microsoft.com",
-    apiEndpoint: "/ai/feed/",
-    crawlerType: "RSS",
-    crawlerConfig: {
-      rssUrl: "https://blogs.microsoft.com/ai/feed/",
-    },
-    rateLimit: 60,
-    keywords: ["Microsoft AI", "Azure AI", "Copilot"],
-    minQualityScore: 8.0,
-    status: "PAUSED" as const,
-    isVerified: false,
   },
   {
     name: "Hugging Face Blog",
@@ -233,7 +164,6 @@ const predefinedDataSources = [
     keywords: ["Hugging Face", "transformers", "diffusers", "open source AI"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "AWS Machine Learning Blog",
@@ -250,7 +180,6 @@ const predefinedDataSources = [
     keywords: ["AWS", "SageMaker", "cloud ML"],
     minQualityScore: 7.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "NVIDIA AI Blog",
@@ -267,7 +196,6 @@ const predefinedDataSources = [
     keywords: ["NVIDIA", "GPU", "deep learning", "CUDA"],
     minQualityScore: 8.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Stability AI Blog",
@@ -284,7 +212,6 @@ const predefinedDataSources = [
     keywords: ["Stability AI", "Stable Diffusion", "generative AI"],
     minQualityScore: 8.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Cohere AI Blog",
@@ -301,7 +228,6 @@ const predefinedDataSources = [
     keywords: ["Cohere", "enterprise AI", "LLM"],
     minQualityScore: 8.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Mistral AI Blog",
@@ -318,7 +244,6 @@ const predefinedDataSources = [
     keywords: ["Mistral", "open source LLM", "AI research"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "AI at Meta Engineering",
@@ -335,7 +260,6 @@ const predefinedDataSources = [
     keywords: ["Meta AI", "research", "LLaMA", "PyTorch"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "OpenAI Research Index",
@@ -352,7 +276,6 @@ const predefinedDataSources = [
     keywords: ["OpenAI research", "GPT", "reinforcement learning"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Databricks Blog",
@@ -369,7 +292,6 @@ const predefinedDataSources = [
     keywords: ["Databricks", "data engineering", "MLOps"],
     minQualityScore: 7.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Towards Data Science",
@@ -386,46 +308,9 @@ const predefinedDataSources = [
     keywords: ["data science", "machine learning", "tutorials"],
     minQualityScore: 7.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
 
   // ============ NEWS (行业新闻) ============
-  {
-    name: "TechCrunch AI",
-    description: "AI news from TechCrunch",
-    type: "RSS" as const,
-    category: "NEWS" as const,
-    baseUrl: "https://techcrunch.com",
-    apiEndpoint: "/category/artificial-intelligence/feed/",
-    crawlerType: "RSS",
-    crawlerConfig: {
-      rssUrl: "https://techcrunch.com/category/artificial-intelligence/feed/",
-    },
-    rateLimit: 30,
-    keywords: ["AI news", "startups", "funding"],
-    minQualityScore: 7.0,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
-  {
-    name: "MIT Technology Review AI",
-    description: "AI coverage from MIT Technology Review",
-    type: "RSS" as const,
-    category: "NEWS" as const,
-    baseUrl: "https://www.technologyreview.com",
-    apiEndpoint: "/topic/artificial-intelligence/feed",
-    crawlerType: "RSS",
-    crawlerConfig: {
-      rssUrl:
-        "https://www.technologyreview.com/topic/artificial-intelligence/feed",
-    },
-    rateLimit: 30,
-    keywords: ["AI research", "technology", "innovation"],
-    minQualityScore: 8.0,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
-
   {
     name: "The Verge AI",
     description: "AI and technology news from The Verge",
@@ -442,7 +327,6 @@ const predefinedDataSources = [
     keywords: ["AI news", "technology", "consumer tech"],
     minQualityScore: 7.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Ars Technica",
@@ -459,7 +343,6 @@ const predefinedDataSources = [
     keywords: ["technology", "science", "policy"],
     minQualityScore: 7.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "VentureBeat AI",
@@ -476,7 +359,6 @@ const predefinedDataSources = [
     keywords: ["AI", "enterprise", "business"],
     minQualityScore: 7.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Wired AI",
@@ -493,7 +375,6 @@ const predefinedDataSources = [
     keywords: ["AI", "technology", "culture"],
     minQualityScore: 8.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "AI News (Artificial Intelligence News)",
@@ -510,7 +391,6 @@ const predefinedDataSources = [
     keywords: ["AI news", "industry updates"],
     minQualityScore: 6.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "HackerNews",
@@ -528,44 +408,9 @@ const predefinedDataSources = [
     keywords: ["technology", "startups", "programming"],
     minQualityScore: 6.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
 
   // ============ REPORT (研究报告) ============
-  {
-    name: "OpenAI Research",
-    description: "Research publications from OpenAI",
-    type: "CUSTOM" as const,
-    category: "REPORT" as const,
-    baseUrl: "https://openai.com",
-    apiEndpoint: "/research",
-    crawlerType: "WEB_SCRAPER",
-    crawlerConfig: {
-      selector: ".research-item",
-    },
-    rateLimit: 60,
-    keywords: ["research", "technical reports"],
-    minQualityScore: 9.0,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
-  {
-    name: "Google AI Research",
-    description: "Research publications from Google AI",
-    type: "CUSTOM" as const,
-    category: "REPORT" as const,
-    baseUrl: "https://ai.google",
-    apiEndpoint: "/research/pubs",
-    crawlerType: "WEB_SCRAPER",
-    crawlerConfig: {
-      selector: ".publication",
-    },
-    rateLimit: 60,
-    keywords: ["Google research", "publications"],
-    minQualityScore: 9.0,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
   {
     name: "Stanford AI Lab",
     description: "Stanford Artificial Intelligence Laboratory publications",
@@ -581,7 +426,6 @@ const predefinedDataSources = [
     keywords: ["Stanford", "AI research", "academia"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "MIT CSAIL",
@@ -598,7 +442,6 @@ const predefinedDataSources = [
     keywords: ["MIT", "CS", "AI research"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Berkeley AI Research",
@@ -615,7 +458,6 @@ const predefinedDataSources = [
     keywords: ["Berkeley", "BAIR", "robotics", "AI"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Allen Institute for AI",
@@ -632,7 +474,6 @@ const predefinedDataSources = [
     keywords: ["AI2", "NLP", "common sense AI"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
 
   // ============ YOUTUBE (视频教程) ============
@@ -652,7 +493,6 @@ const predefinedDataSources = [
     keywords: ["AI research", "paper reviews", "tutorials"],
     minQualityScore: 8.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Yannic Kilcher",
@@ -670,7 +510,6 @@ const predefinedDataSources = [
     keywords: ["deep learning", "research", "paper reviews"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Andrej Karpathy",
@@ -688,7 +527,6 @@ const predefinedDataSources = [
     keywords: ["neural networks", "deep learning", "tutorials"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "Lex Fridman Podcast",
@@ -706,7 +544,6 @@ const predefinedDataSources = [
     keywords: ["AI podcast", "interviews", "research"],
     minQualityScore: 8.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "3Blue1Brown",
@@ -724,7 +561,6 @@ const predefinedDataSources = [
     keywords: ["math", "neural networks", "visualization"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "sentdex",
@@ -742,7 +578,6 @@ const predefinedDataSources = [
     keywords: ["Python", "ML tutorials", "practical AI"],
     minQualityScore: 7.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "AI Explained",
@@ -760,35 +595,9 @@ const predefinedDataSources = [
     keywords: ["AI news", "model analysis", "benchmarks"],
     minQualityScore: 7.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
 
   // ============ POLICY (美国科技政策) ============
-  // 注意：政府网站通常有反爬虫保护，需要特殊配置
-  {
-    name: "White House OSTP",
-    description:
-      "Office of Science and Technology Policy - ⚠️ Requires special scraping configuration (anti-bot protection)",
-    type: "CUSTOM" as const,
-    category: "POLICY" as const,
-    baseUrl: "https://www.whitehouse.gov",
-    apiEndpoint: "/ostp/news/",
-    crawlerType: "WEB_SCRAPER",
-    crawlerConfig: {
-      selector: "article, .post",
-      note: "Government site with bot protection - may require proxy or browser automation",
-    },
-    rateLimit: 180,
-    keywords: [
-      "science policy",
-      "technology policy",
-      "AI policy",
-      "White House",
-    ],
-    minQualityScore: 8.5,
-    status: "PAUSED" as const,
-    isVerified: false,
-  },
   {
     name: "FTC Technology Blog",
     description: "Federal Trade Commission technology and AI blog",
@@ -804,7 +613,6 @@ const predefinedDataSources = [
     keywords: ["FTC", "consumer protection", "AI regulation", "privacy"],
     minQualityScore: 8.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "NIST News",
@@ -821,7 +629,6 @@ const predefinedDataSources = [
     keywords: ["NIST", "AI standards", "AI safety", "AI framework"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "US AI Safety Institute",
@@ -838,7 +645,6 @@ const predefinedDataSources = [
     keywords: ["AI safety", "AISI", "AI governance", "standards"],
     minQualityScore: 9.0,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "AI.gov",
@@ -855,7 +661,6 @@ const predefinedDataSources = [
     keywords: ["US AI policy", "government AI", "AI strategy"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
   {
     name: "EU AI Act Updates",
@@ -872,86 +677,60 @@ const predefinedDataSources = [
     keywords: ["EU AI Act", "European regulation", "AI governance"],
     minQualityScore: 8.5,
     status: "ACTIVE" as const,
-    isVerified: true,
   },
 ];
 
-async function seedDataSources() {
-  console.log("🌱 Starting data sources seed...");
+async function importDataSources() {
+  console.log("🚀 开始批量导入数据源到Railway云端...\n");
+  console.log(`目标API: ${RAILWAY_API_URL}`);
+  console.log(`数据源总数: ${predefinedDataSources.length}\n`);
 
-  let created = 0;
-  let skipped = 0;
-
-  for (const source of predefinedDataSources) {
-    try {
-      // Check if source already exists
-      const existing = await prisma.dataSource.findFirst({
-        where: {
-          name: source.name,
-          category: source.category,
+  try {
+    const response = await axios.post(
+      `${RAILWAY_API_URL}/api/data-collection/sources/bulk`,
+      predefinedDataSources,
+      {
+        headers: {
+          "Content-Type": "application/json",
         },
-      });
+        timeout: 120000, // 2分钟超时
+      },
+    );
 
-      if (existing) {
-        console.log(`⏭️  Skipping ${source.name} - already exists`);
-        skipped++;
-        continue;
+    if (response.data.success) {
+      const { created, skipped, failed, errors } = response.data.data;
+
+      console.log("\n✅ 批量导入完成!");
+      console.log(`\n📊 统计摘要:`);
+      console.log(`   ✅ 成功创建: ${created}`);
+      console.log(`   ⏭️  已跳过: ${skipped}`);
+      console.log(`   ❌ 失败: ${failed}`);
+
+      if (errors && errors.length > 0) {
+        console.log(`\n❌ 错误详情:`);
+        errors.forEach((error: any) => {
+          console.log(`   - ${error.name}: ${error.error}`);
+        });
       }
 
-      const data: any = {
-        name: source.name,
-        type: source.type,
-        category: source.category,
-        baseUrl: source.baseUrl,
-        crawlerType: source.crawlerType,
-        crawlerConfig: JSON.parse(JSON.stringify(source.crawlerConfig)),
-        minQualityScore: source.minQualityScore ?? 0,
-        status: source.status,
-        isVerified: source.isVerified ?? false,
-        deduplicationConfig: JSON.parse(
-          JSON.stringify({
-            checkUrl: true,
-            checkTitle: true,
-            titleSimilarityThreshold: 0.85,
-          }),
-        ),
-      };
-
-      // Only add optional fields if they exist
-      if (source.description) data.description = source.description;
-      if (source.apiEndpoint) data.apiEndpoint = source.apiEndpoint;
-      if ("authType" in source && source.authType)
-        data.authType = source.authType;
-      if ("credentials" in source && source.credentials)
-        data.credentials = source.credentials;
-      if (source.rateLimit) data.rateLimit = source.rateLimit;
-      if (source.keywords)
-        data.keywords = JSON.parse(JSON.stringify(source.keywords));
-      if (source.categories)
-        data.categories = JSON.parse(JSON.stringify(source.categories));
-      if ("languages" in source && source.languages)
-        data.languages = JSON.parse(JSON.stringify(source.languages));
-
-      await prisma.dataSource.create({ data });
-
-      console.log(`✅ Created: ${source.name} (${source.category})`);
-      created++;
-    } catch (error) {
-      console.error(`❌ Error creating ${source.name}:`, error);
+      console.log("\n🎉 数据源已成功导入到Railway云端数据库!");
+    } else {
+      console.error("❌ 导入失败:", response.data);
+      process.exit(1);
     }
+  } catch (error: any) {
+    console.error("\n❌ 批量导入时发生错误:");
+    if (error.response) {
+      console.error("响应状态:", error.response.status);
+      console.error("响应数据:", JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      console.error("请求未收到响应:", error.message);
+    } else {
+      console.error("错误:", error.message);
+    }
+    process.exit(1);
   }
-
-  console.log(`\n📊 Summary:`);
-  console.log(`   Created: ${created}`);
-  console.log(`   Skipped: ${skipped}`);
-  console.log(`   Total:   ${predefinedDataSources.length}`);
 }
 
-seedDataSources()
-  .catch((e) => {
-    console.error("Error seeding data sources:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// 运行导入
+importDataSources();

@@ -282,6 +282,58 @@ export class DataSourceService {
   }
 
   /**
+   * 批量创建数据源
+   */
+  async bulkCreate(dtos: CreateDataSourceDto[]): Promise<{
+    created: number;
+    skipped: number;
+    failed: number;
+    errors: Array<{ name: string; error: string }>;
+  }> {
+    this.logger.log(`Bulk creating ${dtos.length} data sources`);
+
+    let created = 0;
+    let skipped = 0;
+    let failed = 0;
+    const errors: Array<{ name: string; error: string }> = [];
+
+    for (const dto of dtos) {
+      try {
+        // 检查数据源是否已存在
+        const existing = await this.prisma.dataSource.findFirst({
+          where: {
+            name: dto.name,
+            category: dto.category as any,
+          },
+        });
+
+        if (existing) {
+          this.logger.log(`Skipping ${dto.name} - already exists`);
+          skipped++;
+          continue;
+        }
+
+        // 创建数据源
+        await this.create(dto);
+        this.logger.log(`Created: ${dto.name} (${dto.category})`);
+        created++;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        this.logger.error(`Error creating ${dto.name}:`, errorMessage);
+        errors.push({ name: dto.name, error: errorMessage });
+        failed++;
+      }
+    }
+
+    this.logger.log(
+      `Bulk create completed: ${created} created, ${skipped} skipped, ${failed} failed`,
+    );
+
+    return { created, skipped, failed, errors };
+  }
+
+  /**
    * 修复已知的RSS URL问题
    * 修复社区反馈的常见RSS URL错误
    */

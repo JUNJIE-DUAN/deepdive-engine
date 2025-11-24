@@ -35,6 +35,19 @@ export class DataSourceController {
   }
 
   /**
+   * 批量创建数据源
+   * POST /data-collection/sources/bulk
+   */
+  @Post("bulk")
+  async bulkCreate(@Body() dtos: CreateDataSourceDto[]) {
+    const result = await this.dataSourceService.bulkCreate(dtos);
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  /**
    * 获取所有数据源
    * GET /data-collection/sources
    */

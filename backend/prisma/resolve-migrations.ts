@@ -8,6 +8,10 @@ import { PrismaClient } from "@prisma/client";
 
 async function forceDeleteFailedMigration(migrationName: string) {
   console.log(`\n🗑️  Force deleting migration record: ${migrationName}`);
+
+  // DEBUG: Print connection info
+  console.log(`🔗 Attempting to connect to database...`);
+
   const prisma = new PrismaClient();
 
   try {
@@ -46,6 +50,16 @@ async function forceDeleteFailedMigration(migrationName: string) {
 
 async function resolveMigrations() {
   console.log("🔍 Proactively checking for failed migrations in database...");
+
+  // DEBUG: Print DATABASE_URL for troubleshooting
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl) {
+    // Mask password for security
+    const maskedUrl = dbUrl.replace(/:[^:@]+@/, ":****@");
+    console.log(`📊 DATABASE_URL: ${maskedUrl}`);
+  } else {
+    console.error("❌ DATABASE_URL is not set!");
+  }
 
   const prisma = new PrismaClient();
 

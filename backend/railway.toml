@@ -6,7 +6,7 @@ phases.install.cmds = ["npm ci --legacy-peer-deps"]
 phases.build.cmds = ["npm run build", "npx prisma generate"]
 
 [deploy]
-startCommand = "sh -c 'set -e; echo \"🚀 Starting deployment...\"; npm run deploy || exit 1; echo \"✅ Deploy OK, starting server...\"; exec npm run start:prod'"
+startCommand = "sh -c 'set -e; echo \"🚀 Starting deployment...\"; echo \"🔍 Running diagnostics...\"; npm run diagnose; echo \"📦 Running migrations...\"; npm run deploy || exit 1; echo \"✅ Deploy OK, starting server...\"; exec npm run start:prod'"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

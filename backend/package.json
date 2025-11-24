@@ -27,6 +27,7 @@
     "thumbnails:generate": "ts-node -r tsconfig-paths/register src/scripts/generate-thumbnails.ts",
     "thumbnails:arxiv": "ts-node -r tsconfig-paths/register src/scripts/update-arxiv-thumbnails.ts",
     "seed": "tsx prisma/seed.ts",
+    "diagnose": "tsx prisma/diagnose-db.ts",
     "deploy": "tsx prisma/resolve-migrations.ts && npm run prisma:seed"
   },
   "prisma": {

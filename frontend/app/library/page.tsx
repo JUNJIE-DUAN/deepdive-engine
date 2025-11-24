@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { config } from '@/lib/config';
 import NotesList from '@/components/features/NotesList';
 import Sidebar from '@/components/layout/Sidebar';
+import CollectionNav, {
+  Collection as NavCollection,
+} from '@/components/library/CollectionNav';
+import CollectionModal from '@/components/library/CollectionModal';
 import { getAuthHeader } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +17,9 @@ interface Collection {
   id: string;
   name: string;
   description?: string;
+  icon?: string;
+  color?: string;
+  isDefault?: boolean;
   isPublic: boolean;
   createdAt: string;
   items: CollectionItem[];
@@ -67,6 +74,19 @@ export default function LibraryPage() {
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CollectionItem | null>(null);
 
+  // Collection navigation states
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(
+    null
+  );
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
+  const [collectionModalMode, setCollectionModalMode] = useState<
+    'create' | 'edit'
+  >('create');
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(
+    null
+  );
+  const [navCollapsed, setNavCollapsed] = useState(false);
+
   // Load data based on active tab
   useEffect(() => {
     const loadData = async () => {
@@ -87,9 +107,8 @@ export default function LibraryPage() {
     void loadData();
   }, [activeTab]);
 
-  const loadCollections = async () => {
+  const loadCollections = useCallback(async () => {
     try {
-      setLoading(true);
       const authHeaders = getAuthHeader();
       const response = await fetch(`${config.apiBaseUrl}/api/v1/collections`, {
         headers: authHeaders,
@@ -97,13 +116,131 @@ export default function LibraryPage() {
       if (response.ok) {
         const data = await response.json();
         setCollections(data);
+        return data;
       }
+      return [];
     } catch (err) {
       console.error('Failed to load collections:', err);
-    } finally {
-      setLoading(false);
+      return [];
+    }
+  }, []);
+
+  // Load collections on mount
+  useEffect(() => {
+    loadCollections();
+  }, [loadCollections]);
+
+  // Collection management handlers
+  const handleCreateCollection = () => {
+    setCollectionModalMode('create');
+    setEditingCollection(null);
+    setCollectionModalOpen(true);
+  };
+
+  const handleEditCollection = (collection: NavCollection) => {
+    const fullCollection = collections.find((c) => c.id === collection.id);
+    if (fullCollection) {
+      setCollectionModalMode('edit');
+      setEditingCollection(fullCollection);
+      setCollectionModalOpen(true);
     }
   };
+
+  const handleDeleteCollection = async (collection: NavCollection) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${collection.name}"? All bookmarks in this collection will be removed.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const authHeaders = getAuthHeader();
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/collections/${collection.id}`,
+        {
+          method: 'DELETE',
+          headers: authHeaders,
+        }
+      );
+
+      if (response.ok) {
+        setCollections(collections.filter((c) => c.id !== collection.id));
+        if (activeCollectionId === collection.id) {
+          setActiveCollectionId(null);
+        }
+      } else {
+        alert('Failed to delete collection');
+      }
+    } catch (err) {
+      console.error('Failed to delete collection:', err);
+      alert('Failed to delete collection');
+    }
+  };
+
+  const handleSaveCollection = async (data: {
+    name: string;
+    description?: string;
+    icon?: string;
+    color?: string;
+    isPublic: boolean;
+  }) => {
+    const authHeaders = getAuthHeader();
+
+    if (collectionModalMode === 'create') {
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/collections`, {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const newCollection = await response.json();
+        setCollections([...collections, { ...newCollection, items: [] }]);
+      } else {
+        throw new Error('Failed to create collection');
+      }
+    } else if (editingCollection) {
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/collections/${editingCollection.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            ...authHeaders,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      if (response.ok) {
+        setCollections(
+          collections.map((c) =>
+            c.id === editingCollection.id ? { ...c, ...data } : c
+          )
+        );
+      } else {
+        throw new Error('Failed to update collection');
+      }
+    }
+  };
+
+  // Convert collections to nav format
+  const navCollections: NavCollection[] = collections.map((c) => ({
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    icon: c.icon,
+    color: c.color,
+    isDefault: c.name === '我的收藏',
+    isPublic: c.isPublic,
+    itemCount: c.items?.length || 0,
+    createdAt: c.createdAt,
+  }));
 
   const loadVideos = async () => {
     try {
@@ -245,8 +382,30 @@ export default function LibraryPage() {
     return `${config.apiBaseUrl}${thumbnailUrl}`;
   };
 
+  // Get all bookmarks from all collections or specific collection
+  const getAllBookmarks = (): CollectionItem[] => {
+    if (activeCollectionId === null) {
+      // All items from all collections
+      return collections.flatMap((c) => c.items || []);
+    } else if (activeCollectionId === 'recent') {
+      // Recent items (last 7 days)
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return collections
+        .flatMap((c) => c.items || [])
+        .filter((item) => new Date(item.createdAt) > weekAgo);
+    } else if (activeCollectionId.startsWith('tag:')) {
+      // Filter by tag (future feature)
+      return collections.flatMap((c) => c.items || []);
+    } else {
+      // Specific collection
+      const collection = collections.find((c) => c.id === activeCollectionId);
+      return collection?.items || [];
+    }
+  };
+
   // Filter and sort functions - 基于 CollectionItem
-  const filteredBookmarks = bookmarkItems
+  const filteredBookmarks = getAllBookmarks()
     .filter((item) =>
       item.resource.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
@@ -617,6 +776,18 @@ export default function LibraryPage() {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
+
+      {/* Collection Navigation - Sub sidebar */}
+      <CollectionNav
+        collections={navCollections}
+        activeCollectionId={activeCollectionId}
+        onSelectCollection={setActiveCollectionId}
+        onCreateCollection={handleCreateCollection}
+        onEditCollection={handleEditCollection}
+        onDeleteCollection={handleDeleteCollection}
+        isCollapsed={navCollapsed}
+        onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
+      />
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-gray-50">
@@ -1222,6 +1393,15 @@ export default function LibraryPage() {
           </div>
         </div>
       )}
+
+      {/* Collection Create/Edit Modal */}
+      <CollectionModal
+        isOpen={collectionModalOpen}
+        onClose={() => setCollectionModalOpen(false)}
+        onSave={handleSaveCollection}
+        collection={editingCollection}
+        mode={collectionModalMode}
+      />
     </div>
   );
 }

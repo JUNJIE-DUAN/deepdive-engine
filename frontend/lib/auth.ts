@@ -11,6 +11,18 @@ export interface User {
   bio?: string;
   interests?: string[];
   createdAt: string;
+  role?: 'USER' | 'ADMIN';
+}
+
+// 管理员邮箱白名单
+const ADMIN_EMAILS = ['hello.junjie.duan@gmail.com'];
+
+/**
+ * 检查用户是否是管理员
+ */
+export function isUserAdmin(user: User | null): boolean {
+  if (!user) return false;
+  return user.role === 'ADMIN' || ADMIN_EMAILS.includes(user.email);
 }
 
 export interface AuthTokens {

@@ -28,6 +28,7 @@ import { BlogCollectionModule } from "./modules/blog-collection/blog-collection.
 import { DataManagementModule } from "./modules/data-management/data-management.module";
 import { AiOfficeModule } from "./modules/ai-office/ai-office.module";
 import { DataCollectionModule } from "./modules/data-collection/data-collection.module";
+import { AdminModule } from "./modules/admin/admin.module";
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { DataCollectionModule } from "./modules/data-collection/data-collection.
     DataManagementModule,
     AiOfficeModule,
     DataCollectionModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

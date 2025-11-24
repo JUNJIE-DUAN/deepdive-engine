@@ -13,11 +13,19 @@ datasource db {
 
 // ============ 用户相关 ============
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id           String  @id @default(uuid())
   email        String  @unique
   username     String? @unique
   passwordHash String? @map("password_hash")
+
+  // 角色权限
+  role UserRole @default(USER)
 
   // OAuth
   oauthProvider String? @map("oauth_provider")

@@ -9,6 +9,8 @@ import {
   Activity,
   Shield,
   History,
+  Users,
+  Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -26,6 +28,12 @@ export default function DataCollectionLayout({
       href: '/data-collection/dashboard',
       icon: LayoutDashboard,
       description: 'Overview and statistics',
+    },
+    {
+      name: 'Users',
+      href: '/data-collection/users',
+      icon: Users,
+      description: 'User management',
     },
     {
       name: 'Config',
@@ -78,10 +86,10 @@ export default function DataCollectionLayout({
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">
-                  Data Collection
+                  System Management
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Professional data collection workbench
+                  Admin control panel for system management
                 </p>
               </div>
             </div>

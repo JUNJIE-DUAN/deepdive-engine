@@ -11,6 +11,7 @@ import {
   clearAuthTokens,
   loginWithGoogle as authLoginWithGoogle,
   logout as authLogout,
+  isUserAdmin,
 } from '@/lib/auth';
 import { config } from '@/lib/config';
 
@@ -19,6 +20,7 @@ interface AuthContextType extends AuthState {
   logout: () => void;
   loginWithGoogle: () => void;
   isLoading: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         loginWithGoogle,
         isLoading,
+        isAdmin: isUserAdmin(authState.user),
       }}
     >
       {children}

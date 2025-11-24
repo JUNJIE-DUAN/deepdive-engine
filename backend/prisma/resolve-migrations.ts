@@ -4,6 +4,29 @@
  */
 
 import { execSync } from "child_process";
+import { PrismaClient } from "@prisma/client";
+
+async function forceDeleteFailedMigration(migrationName: string) {
+  console.log(`🗑️  Force deleting migration record: ${migrationName}`);
+  const prisma = new PrismaClient();
+
+  try {
+    await prisma.$connect();
+
+    const result = await prisma.$executeRaw`
+      DELETE FROM "_prisma_migrations"
+      WHERE migration_name = ${migrationName};
+    `;
+
+    console.log(
+      `✅ Deleted ${result} migration record(s) for ${migrationName}`,
+    );
+  } catch (error) {
+    console.error(`❌ Failed to delete migration ${migrationName}:`, error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
 
 async function resolveMigrations() {
   console.log("🔍 Checking for failed migrations...");
@@ -21,28 +44,19 @@ async function resolveMigrations() {
       console.log("⚠️  Found failed migrations, attempting to resolve...");
 
       try {
-        // Resolve any failed migrations
+        // List of known failed migrations to delete
         const failedMigrations = [
           "20251123_seed_predefined_data_sources",
           "20251123_seed_predefined_data_sources_v2",
         ];
 
+        // Force delete failed migration records from database
+        console.log("\n🧹 Force cleaning failed migration records...");
         for (const migrationName of failedMigrations) {
-          try {
-            console.log(`🔧 Marking ${migrationName} as rolled back...`);
-            execSync(
-              `npx prisma migrate resolve --rolled-back "${migrationName}"`,
-              { stdio: "inherit" },
-            );
-          } catch (e) {
-            // Migration might not exist, continue
-            console.log(
-              `ℹ️  Migration ${migrationName} not found, skipping...`,
-            );
-          }
+          await forceDeleteFailedMigration(migrationName);
         }
 
-        console.log("🔄 Retrying migration deployment...");
+        console.log("\n🔄 Retrying migration deployment...");
         execSync("npx prisma migrate deploy", { stdio: "inherit" });
         console.log("✅ Migrations deployed successfully after resolution");
       } catch (resolveError) {

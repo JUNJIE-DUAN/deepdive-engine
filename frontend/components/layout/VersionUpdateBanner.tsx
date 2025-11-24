@@ -9,6 +9,7 @@ import {
   getLatestChangelog,
   CURRENT_VERSION,
 } from '@/lib/changelog';
+import { config } from '@/lib/config';
 
 export default function VersionUpdateBanner() {
   const [showBanner, setShowBanner] = useState(false);
@@ -41,6 +42,9 @@ export default function VersionUpdateBanner() {
                 新版本 v{CURRENT_VERSION} 已发布!{' '}
                 <span className="hidden text-gray-600 sm:inline">
                   {latestChangelog.changes.length} 项更新
+                </span>
+                <span className="ml-2 rounded bg-gray-200 px-2 py-0.5 font-mono text-xs text-gray-700">
+                  {config.gitCommitHash}
                 </span>
               </p>
               <p className="mt-0.5 hidden text-xs text-gray-600 md:block">

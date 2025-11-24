@@ -59,8 +59,6 @@ export function ImportUrlDialog({
   const [error, setError] = useState('');
   const [metadata, setMetadata] = useState<ParsedMetadata | null>(null);
   const [editedTitle, setEditedTitle] = useState('');
-  const [importMode, setImportMode] = useState<'url' | 'file'>('url');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   if (!isOpen) return null;
 
@@ -77,73 +75,7 @@ export function ImportUrlDialog({
     setError('');
     setMetadata(null);
     setEditedTitle('');
-    setImportMode('url');
-    setSelectedFile(null);
     onClose();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type - only allow PDF
-      if (file.type !== 'application/pdf') {
-        setError('只支持PDF文件格式');
-        setSelectedFile(null);
-        e.target.value = ''; // Clear the input
-        return;
-      }
-
-      // Validate file size - max 100MB
-      const maxSize = 100 * 1024 * 1024; // 100MB in bytes
-      if (file.size > maxSize) {
-        setError('文件大小不能超过100MB');
-        setSelectedFile(null);
-        e.target.value = ''; // Clear the input
-        return;
-      }
-
-      setSelectedFile(file);
-      setError('');
-    }
-  };
-
-  const handleFileUpload = async () => {
-    if (!selectedFile) {
-      setError('请选择文件');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('resourceType', resourceTypeInfo.type);
-
-      const response = await fetch(
-        `${apiBaseUrl}/api/v1/data-management/import-file`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || '文件上传失败');
-      }
-
-      // 上传成功 - 直接关闭对话框
-      handleClose();
-      onImportSuccess();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '文件上传失败';
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleValidateUrl = async () => {
@@ -263,109 +195,38 @@ export function ImportUrlDialog({
             />
           </div>
 
-          {/* Step 1: Input URL or Upload File */}
+          {/* Step 1: Input URL */}
           {step === 'input-url' && (
             <div className="space-y-4">
-              {/* Mode Toggle */}
-              <div className="flex gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
-                <button
-                  onClick={() => setImportMode('url')}
-                  className={`flex-1 rounded px-4 py-2 text-sm font-medium transition-all ${
-                    importMode === 'url'
-                      ? 'bg-blue-600 text-white shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  🔗 从URL导入
-                </button>
-                <button
-                  onClick={() => setImportMode('file')}
-                  className={`flex-1 rounded px-4 py-2 text-sm font-medium transition-all ${
-                    importMode === 'file'
-                      ? 'bg-blue-600 text-white shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  📁 上传本地文件
-                </button>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <h4 className="mb-2 font-semibold text-blue-900">
+                  📋 输入说明
+                </h4>
+                <ul className="space-y-1 text-sm text-blue-800">
+                  <li>✓ 输入{resourceTypeInfo.name}的完整URL</li>
+                  <li>✓ 系统会自动提取标题、描述等信息</li>
+                  <li>✓ 你可以在下一步编辑这些信息</li>
+                  <li>✓ 支持来自已列入白名单的网站</li>
+                </ul>
               </div>
 
-              {importMode === 'url' ? (
-                <>
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <h4 className="mb-2 font-semibold text-blue-900">
-                      📋 输入说明
-                    </h4>
-                    <ul className="space-y-1 text-sm text-blue-800">
-                      <li>✓ 输入{resourceTypeInfo.name}的完整URL</li>
-                      <li>✓ 系统会自动提取标题、描述等信息</li>
-                      <li>✓ 你可以在下一步编辑这些信息</li>
-                      <li>✓ 支持来自已列入白名单的网站</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold">
-                      资源URL
-                    </label>
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      placeholder="例如：https://arxiv.org/abs/2024.xxxxx"
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onKeyPress={(e) =>
-                        e.key === 'Enter' && handleValidateUrl()
-                      }
-                      autoFocus
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      输入完整的URL链接，按Enter键或点击下方按钮验证
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                    <h4 className="mb-2 font-semibold text-green-900">
-                      📁 上传说明
-                    </h4>
-                    <ul className="space-y-1 text-sm text-green-800">
-                      <li>✓ 仅支持PDF文档格式</li>
-                      <li>✓ 文件大小不超过100MB</li>
-                      <li>✓ 系统会自动解析文件内容并支持在线预览</li>
-                      <li>✓ 上传后即可在资源列表中查看和阅读</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold">
-                      选择文件
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        onChange={handleFileChange}
-                        accept=".pdf,application/pdf"
-                        className="flex-1 text-sm text-gray-600 file:mr-4 file:rounded file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                    </div>
-                    {selectedFile && (
-                      <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">
-                        <p className="text-xs text-gray-600">
-                          已选择：
-                          <span className="font-medium">
-                            {selectedFile.name}
-                          </span>
-                          <span className="ml-2 text-gray-400">
-                            ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                          </span>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+              <div>
+                <label className="mb-2 block text-sm font-semibold">
+                  资源URL
+                </label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="例如：https://arxiv.org/abs/2024.xxxxx"
+                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyPress={(e) => e.key === 'Enter' && handleValidateUrl()}
+                  autoFocus
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  输入完整的URL链接，按Enter键或点击下方按钮验证
+                </p>
+              </div>
 
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <p className="mb-2 text-xs font-medium text-gray-700">
@@ -532,26 +393,16 @@ export function ImportUrlDialog({
             取消
           </button>
 
-          {step === 'input-url' &&
-            (importMode === 'url' ? (
-              <button
-                onClick={handleValidateUrl}
-                disabled={!url || isLoading}
-                className="ml-auto flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isLoading && <Loader2 size={16} className="animate-spin" />}
-                验证 & 下一步
-              </button>
-            ) : (
-              <button
-                onClick={handleFileUpload}
-                disabled={!selectedFile || isLoading}
-                className="ml-auto flex items-center gap-2 rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                {isLoading && <Loader2 size={16} className="animate-spin" />}
-                上传文件
-              </button>
-            ))}
+          {step === 'input-url' && (
+            <button
+              onClick={handleValidateUrl}
+              disabled={!url || isLoading}
+              className="ml-auto flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isLoading && <Loader2 size={16} className="animate-spin" />}
+              验证 & 下一步
+            </button>
+          )}
 
           {step === 'preview' && (
             <button

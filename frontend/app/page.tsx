@@ -1263,7 +1263,9 @@ function HomeContent() {
 
     // Check if user is logged in
     if (!user) {
-      router.push('/login');
+      // Trigger Google OAuth login
+      const { loginWithGoogle } = await import('@/lib/auth');
+      loginWithGoogle();
       return;
     }
 
@@ -2270,7 +2272,7 @@ function HomeContent() {
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => setAiRightTab('assistant')}
-                title="AI Assistant"
+                title="AI Chat"
                 className={`group relative flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all duration-200 ${
                   aiRightTab === 'assistant'
                     ? 'border-red-500 bg-red-50 text-red-600'

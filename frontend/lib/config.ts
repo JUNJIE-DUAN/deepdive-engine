@@ -51,4 +51,19 @@ export const config = {
   get isProduction() {
     return this.env === 'production';
   },
+
+  /**
+   * Git commit hash (构建时注入)
+   */
+  gitCommitHash: process.env.NEXT_PUBLIC_GIT_COMMIT_HASH || 'dev',
+
+  /**
+   * Git commit hash 完整版 (构建时注入)
+   */
+  gitCommitHashFull: process.env.NEXT_PUBLIC_GIT_COMMIT_HASH_FULL || 'dev',
+
+  /**
+   * 构建时间 (构建时注入)
+   */
+  buildTime: process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString(),
 } as const;

@@ -1,4 +1,20 @@
 /** @type {import('next').NextConfig} */
+const { execSync } = require('child_process');
+
+// Get git commit hash at build time
+function getGitCommitHash() {
+  try {
+    const hash = execSync('git rev-parse --short HEAD').toString().trim();
+    const fullHash = execSync('git rev-parse HEAD').toString().trim();
+    return { short: hash, full: fullHash };
+  } catch (error) {
+    console.warn('Failed to get git commit hash:', error);
+    return { short: 'unknown', full: 'unknown' };
+  }
+}
+
+const gitInfo = getGitCommitHash();
+
 const nextConfig = {
   reactStrictMode: true,
   images: {
@@ -7,6 +23,9 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+    NEXT_PUBLIC_GIT_COMMIT_HASH: gitInfo.short,
+    NEXT_PUBLIC_GIT_COMMIT_HASH_FULL: gitInfo.full,
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
   eslint: {
     ignoreDuringBuilds: true,

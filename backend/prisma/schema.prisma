@@ -960,8 +960,8 @@ model DataSource {
   rateLimit     Int?   @map("rate_limit") // 每秒请求数
 
   // 内容过滤
-  keywords        Json? // ["AI", "Machine Learning"]
-  categories      Json? // ["cs.AI", "cs.LG"]
+  keywords        String[] // ["AI", "Machine Learning"]
+  categories      String[] // ["cs.AI", "cs.LG"]
   languages       Json? // ["en", "zh"]
   minQualityScore Float @default(0) @map("min_quality_score")
 

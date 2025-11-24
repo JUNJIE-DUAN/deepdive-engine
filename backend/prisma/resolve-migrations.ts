@@ -45,44 +45,61 @@ async function forceDeleteFailedMigration(migrationName: string) {
 }
 
 async function resolveMigrations() {
-  console.log("🔍 Checking for failed migrations...");
+  console.log("🔍 Proactively checking for failed migrations in database...");
+
+  const prisma = new PrismaClient();
 
   try {
-    // Try to deploy migrations
+    // Connect to database first
+    await prisma.$connect();
+    console.log("✅ Connected to database");
+
+    // Check for ANY failed or incomplete migrations
+    const failedMigrations = await prisma.$queryRaw<
+      Array<{
+        migration_name: string;
+        started_at: Date;
+        finished_at: Date | null;
+        logs: string | null;
+      }>
+    >`
+      SELECT migration_name, started_at, finished_at, logs
+      FROM "_prisma_migrations"
+      WHERE finished_at IS NULL OR logs LIKE '%fail%' OR logs LIKE '%error%'
+      ORDER BY started_at DESC;
+    `;
+
+    if (failedMigrations.length > 0) {
+      console.log(
+        `\n⚠️  Found ${failedMigrations.length} failed/incomplete migration(s):`,
+      );
+      failedMigrations.forEach((m) => {
+        console.log(`   - ${m.migration_name} (started: ${m.started_at})`);
+      });
+
+      console.log("\n🧹 DELETING ALL failed migration records...");
+
+      // Delete ALL failed migrations
+      for (const migration of failedMigrations) {
+        await forceDeleteFailedMigration(migration.migration_name);
+      }
+
+      console.log("✅ All failed migrations cleaned up");
+    } else {
+      console.log("✅ No failed migrations found in database");
+    }
+
+    await prisma.$disconnect();
+    console.log("✓ Disconnected from database\n");
+
+    // Now deploy migrations
+    console.log("🚀 Deploying migrations...");
     execSync("npx prisma migrate deploy", { stdio: "inherit" });
     console.log("✅ Migrations deployed successfully");
-  } catch (error: any) {
-    // Check if it's a failed migration error (P3009)
-    if (
-      error.message?.includes("P3009") ||
-      error.message?.includes("failed migrations")
-    ) {
-      console.log("⚠️  Found failed migrations, attempting to resolve...");
-
-      try {
-        // List of known failed migrations to delete
-        const failedMigrations = [
-          "20251123_seed_predefined_data_sources",
-          "20251123_seed_predefined_data_sources_v2",
-        ];
-
-        // Force delete failed migration records from database
-        console.log("\n🧹 Force cleaning failed migration records...");
-        for (const migrationName of failedMigrations) {
-          await forceDeleteFailedMigration(migrationName);
-        }
-
-        console.log("\n🔄 Retrying migration deployment...");
-        execSync("npx prisma migrate deploy", { stdio: "inherit" });
-        console.log("✅ Migrations deployed successfully after resolution");
-      } catch (resolveError) {
-        console.error("❌ Failed to resolve migrations:", resolveError);
-        process.exit(1);
-      }
-    } else {
-      // Some other error
-      throw error;
-    }
+  } catch (error) {
+    console.error("❌ Migration resolution failed:", error);
+    await prisma.$disconnect();
+    process.exit(1);
   }
 }
 

@@ -1,11 +1,32 @@
 # AI Office 内容创作工作室系统设计方案
 
-> **文档类型**: 系统架构设计 v2.0
+> **文档类型**: 系统架构设计 v2.1
 > **创建日期**: 2025-11-23
-> **版本**: v2.0 (重大更新)
+> **版本**: v2.1 (协作增强 + Gemini 3 + Imagen 3)
 > **作者**: Senior Product Manager & Senior Architect
 > **状态**: RFC (Request for Comments)
-> **定位**: RAG-Powered Multi-Modal Content Creation Studio
+> **定位**: Gemini 3 驱动的 RAG 多模态协作创作平台
+
+## 🆕 v2.1 更新内容
+
+### 核心技术升级
+
+1. **Gemini 3 Pro 全面集成** 🌟
+   - 超长上下文窗口（最高 2M tokens）
+   - 多模态理解能力（文本、图像、音视频）
+   - 原生代码理解和生成
+   - File Search API 托管 RAG
+
+2. **Imagen 3 专业级图像生成** 🎨
+   - 替换 DALL-E 3，更精准的提示词理解
+   - 更高质量的专业配图
+   - 与 Gemini 3 无缝集成
+
+3. **实时协作系统** 👥
+   - Google Docs 级别的多人同时在线编辑
+   - WebSocket + CRDT (Y.js) 零冲突协作
+   - 实时光标、评论、活动历史
+   - 完整的权限控制和离线支持
 
 ---
 
@@ -187,7 +208,7 @@ AI Office = NotebookLM (RAG 能力)
 | ------------ | ------------------- | ----------------------- | --------------- |
 | **文档**     | DOCX, PDF, MD       | Gemini + 模板           | ✅ 富文本编辑器 |
 | **演示文稿** | PPTX, PDF, 在线预览 | AI 设计 + 内容填充      | ✅ 拖拽编辑     |
-| **图像**     | PNG, SVG, JPEG      | DALL-E 3 / Imagen 3     | ⚠️ 重新生成     |
+| **图像**     | PNG, SVG, JPEG      | **Imagen 3** (Google)   | ⚠️ 重新生成     |
 | **图表**     | 数据可视化          | D3.js / Chart.js        | ✅ 数据调整     |
 | **音频**     | MP3, WAV            | Google TTS / ElevenLabs | ⚠️ 重新生成     |
 | **视频**     | MP4, WebM           | 图像 + 音频合成         | ✅ 时间轴编辑   |
@@ -204,6 +225,19 @@ AI Office = NotebookLM (RAG 能力)
 | **标签**      | 标记重要版本       | 元数据标注            |
 | **协作**      | 多人编辑、冲突解决 | CRDT / OT 算法        |
 
+### 3.4 实时协作能力 🆕
+
+| 功能             | 描述                   | 实现方式         |
+| ---------------- | ---------------------- | ---------------- |
+| **同时在线编辑** | 多人同时编辑同一内容   | WebSocket + CRDT |
+| **实时光标**     | 显示其他用户的编辑位置 | Y.js Awareness   |
+| **评论与讨论**   | 针对具体内容进行讨论   | 线程化评论系统   |
+| **变更广播**     | 实时同步所有用户的修改 | Redis Pub/Sub    |
+| **冲突解决**     | 自动合并冲突修改       | CRDT 算法        |
+| **协作感知**     | 显示在线用户、编辑状态 | Presence 系统    |
+| **权限控制**     | 编辑、评论、查看权限   | RBAC 权限系统    |
+| **变更历史**     | 谁在何时修改了什么     | Activity Log     |
+
 ---
 
 ## 4. 系统架构设计
@@ -212,52 +246,58 @@ AI Office = NotebookLM (RAG 能力)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                       Frontend Layer                            │
+│                  Frontend Layer (Next.js + Y.js)                │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  AI Office   │  │  Content     │  │  Version     │          │
-│  │  Dashboard   │  │  Editor      │  │  Manager     │          │
+│  │  AI Office   │  │ Collaborative│  │  Version     │          │
+│  │  Dashboard   │  │   Editor 🆕  │  │  Manager     │          │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
-│         │                  │                  │                  │
+│         │         (Y.js + WebSocket)         │                  │
 └─────────┼──────────────────┼──────────────────┼──────────────────┘
           │                  │                  │
 ┌─────────┼──────────────────┼──────────────────┼──────────────────┐
-│         │         Backend Layer (NestJS)      │                  │
+│         │     Backend Layer (NestJS + WebSocket)                │
 ├─────────┼──────────────────┼──────────────────┼──────────────────┤
 │         ↓                  ↓                  ↓                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │              Content Creation Orchestrator               │   │
+│  │         Content Creation Orchestrator (Gemini 3驱动) 🌟  │   │
 │  ├──────────────────────────────────────────────────────────┤   │
-│  │  • RAG Engine (Knowledge Retrieval)                      │   │
-│  │  • Multi-Modal Generator (Doc/PPT/Video/Audio)          │   │
+│  │  • RAG Engine (Gemini File Search)                       │   │
+│  │  • Multi-Modal Generator (Gemini 3 + Imagen 3)          │   │
 │  │  • Version Control Engine (Git-style)                    │   │
 │  │  • Iteration Manager (Refinement Loop)                   │   │
+│  │  • Collaboration Engine (CRDT + WebSocket) 🆕            │   │
 │  └────────┬──────────────────┬──────────────┬────────────────┘   │
 │           │                  │              │                    │
 │           ↓                  ↓              ↓                    │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐    │
 │  │  RAG Service   │  │  Output        │  │  Version DB    │    │
-│  │  (Gemini File  │  │  Generators    │  │  (Git Model)   │    │
-│  │   Search)      │  │                │  │                │    │
+│  │  (Gemini 3     │  │  Generators    │  │  (Git Model)   │    │
+│  │ File Search)   │  │ (Gemini 3基础) │  │  + Comments    │    │
 │  └────────┬───────┘  └────────┬───────┘  └────────┬───────┘    │
 │           │                   │                    │             │
 └───────────┼───────────────────┼────────────────────┼─────────────┘
             │                   │                    │
 ┌───────────┼───────────────────┼────────────────────┼─────────────┐
-│      External Services        │                    │             │
+│   Google AI Platform 🌟       │                    │             │
 ├───────────┼───────────────────┼────────────────────┼─────────────┤
 │           ↓                   ↓                    ↓             │
 │  ┌─────────────────┐  ┌──────────────────────────────────────┐ │
-│  │ Gemini API      │  │  Content Generation Services         │ │
+│  │ Gemini 3 Pro 🌟 │  │  Multi-Modal Generation              │ │
 │  │ - File Search   │  ├──────────────────────────────────────┤ │
-│  │ - Text Gen      │  │ • Document: Gemini Pro               │ │
-│  └─────────────────┘  │ • PPT: Custom Engine                 │ │
-│                       │ • Image: DALL-E 3 / Imagen 3         │ │
-│  ┌─────────────────┐  │ • Audio: Google TTS / ElevenLabs     │ │
-│  │ Storage         │  │ • Video: FFmpeg + AI                 │ │
-│  │ - S3 / GCS      │  └──────────────────────────────────────┘ │
-│  │ - Vector DB     │                                           │
-│  └─────────────────┘                                           │
+│  │ - Text Gen      │  │ • Document: Gemini 3 Pro             │ │
+│  │ - Code Gen      │  │ • PPT: Gemini 3 + Templates          │ │
+│  │ - Multi-Modal   │  │ • Image: Imagen 3 🎨                 │ │
+│  └─────────────────┘  │ • Audio: Google TTS / ElevenLabs     │ │
+│                       │ • Video: FFmpeg + Gemini 3           │ │
+│  ┌─────────────────┐  └──────────────────────────────────────┘ │
+│  │ Storage + Cache │                                           │
+│  │ - GCS Storage   │  ┌──────────────────────────────────────┐ │
+│  │ - Redis Cache   │  │ Collaboration Infrastructure 🆕      │ │
+│  │ - PostgreSQL    │  │ • WebSocket Server                   │ │
+│  └─────────────────┘  │ • Redis Pub/Sub (消息广播)           │ │
+│                       │ • Y.js CRDT Server                   │ │
+│                       └──────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -812,6 +852,355 @@ class IterationManager {
   }
 }
 ```
+
+#### 4.2.5 Real-Time Collaboration Engine (实时协作引擎) 🆕
+
+**职责**:
+
+- 多人同时在线编辑同一内容
+- 实时同步所有用户的修改
+- 冲突自动解决
+- 协作感知（显示在线用户、光标位置）
+
+**核心技术**:
+
+```typescript
+/**
+ * 实时协作架构
+ *
+ * 技术栈:
+ * - Y.js: CRDT (Conflict-free Replicated Data Type) 核心库
+ * - WebSocket: 实时通信
+ * - Redis Pub/Sub: 多服务器消息广播
+ * - Presence: 用户在线状态管理
+ */
+
+class CollaborationEngine {
+  private ydoc: Y.Doc;
+  private provider: WebsocketProvider;
+  private awareness: Awareness;
+  private presenceManager: PresenceManager;
+
+  /**
+   * 初始化协作会话
+   */
+  async initSession(projectId: string, userId: string): Promise<CollabSession> {
+    // 1. 创建 Y.Doc (CRDT 文档)
+    this.ydoc = new Y.Doc();
+
+    // 2. 连接 WebSocket Provider
+    this.provider = new WebsocketProvider(
+      "wss://api.deepdive.com/collab",
+      `project-${projectId}`,
+      this.ydoc,
+    );
+
+    // 3. 初始化 Awareness (用户状态)
+    this.awareness = this.provider.awareness;
+    this.awareness.setLocalState({
+      user: {
+        id: userId,
+        name: await this.getUserName(userId),
+        color: this.generateUserColor(userId),
+      },
+      cursor: null,
+      selection: null,
+    });
+
+    // 4. 监听远程变更
+    this.ydoc.on("update", (update: Uint8Array) => {
+      this.broadcastUpdate(projectId, update);
+    });
+
+    // 5. 监听用户状态变化
+    this.awareness.on("change", ({ added, updated, removed }) => {
+      this.handlePresenceChange(added, updated, removed);
+    });
+
+    return {
+      ydoc: this.ydoc,
+      provider: this.provider,
+      awareness: this.awareness,
+    };
+  }
+
+  /**
+   * 实时编辑内容
+   */
+  async editContent(
+    projectId: string,
+    versionId: string,
+    path: string,
+    operation: EditOperation,
+  ): Promise<void> {
+    // 使用 Y.js 进行 CRDT 操作，自动解决冲突
+    const ytext = this.ydoc.getText(path);
+
+    switch (operation.type) {
+      case "insert":
+        ytext.insert(operation.position, operation.content);
+        break;
+      case "delete":
+        ytext.delete(operation.position, operation.length);
+        break;
+      case "format":
+        ytext.format(
+          operation.position,
+          operation.length,
+          operation.attributes,
+        );
+        break;
+    }
+
+    // 变更会自动通过 WebSocket 广播给所有在线用户
+  }
+
+  /**
+   * 实时光标同步
+   */
+  updateCursor(position: CursorPosition): void {
+    this.awareness.setLocalStateField("cursor", {
+      position,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * 添加评论（协作讨论）
+   */
+  async addComment(
+    versionId: string,
+    target: CommentTarget,
+    content: string,
+    userId: string,
+  ): Promise<Comment> {
+    const comment: Comment = {
+      id: uuid(),
+      versionId,
+      target, // { type: 'text', path: 'slides[2].content', range: [10, 20] }
+      content,
+      authorId: userId,
+      createdAt: new Date(),
+      resolved: false,
+      replies: [],
+    };
+
+    // 保存到数据库
+    await this.commentRepo.save(comment);
+
+    // 实时广播给所有在线用户
+    await this.broadcastComment(versionId, comment);
+
+    return comment;
+  }
+
+  /**
+   * 冲突解决（CRDT 自动处理）
+   */
+  private handleConflict(
+    localOp: Operation,
+    remoteOp: Operation,
+  ): ResolvedOperation {
+    // Y.js CRDT 自动解决冲突，无需手动干预
+    // 所有操作都是 commutative (可交换的)
+    // 例如：用户 A 插入 "hello"，用户 B 同时插入 "world"
+    // Y.js 会确保所有客户端最终看到相同的结果
+
+    return {
+      operation: localOp,
+      resolved: true,
+      strategy: "crdt-automatic",
+    };
+  }
+
+  /**
+   * 用户在线状态管理
+   */
+  private handlePresenceChange(
+    added: number[],
+    updated: number[],
+    removed: number[],
+  ): void {
+    // 新用户加入
+    added.forEach((clientId) => {
+      const state = this.awareness.getStates().get(clientId);
+      this.notifyUserJoined(state?.user);
+    });
+
+    // 用户离开
+    removed.forEach((clientId) => {
+      this.notifyUserLeft(clientId);
+    });
+
+    // 更新 UI 显示在线用户
+    this.updateCollaboratorsList();
+  }
+
+  /**
+   * 变更广播（跨服务器）
+   */
+  private async broadcastUpdate(
+    projectId: string,
+    update: Uint8Array,
+  ): Promise<void> {
+    // 使用 Redis Pub/Sub 在多个服务器实例间广播
+    await this.redis.publish(
+      `collab:${projectId}`,
+      Buffer.from(update).toString("base64"),
+    );
+  }
+}
+
+/**
+ * Presence Manager - 管理用户在线状态
+ */
+class PresenceManager {
+  /**
+   * 获取在线用户列表
+   */
+  async getOnlineUsers(projectId: string): Promise<OnlineUser[]> {
+    const sessions = await this.redis.smembers(`online:${projectId}`);
+
+    return Promise.all(
+      sessions.map(async (sessionId) => {
+        const data = await this.redis.get(`session:${sessionId}`);
+        return JSON.parse(data);
+      }),
+    );
+  }
+
+  /**
+   * 更新用户活动状态
+   */
+  async updateActivity(
+    projectId: string,
+    userId: string,
+    activity: Activity,
+  ): Promise<void> {
+    const activityData = {
+      type: activity.type, // 'editing', 'commenting', 'viewing'
+      target: activity.target,
+      timestamp: Date.now(),
+    };
+
+    // 保存活动日志
+    await this.activityRepo.save({
+      projectId,
+      userId,
+      ...activityData,
+    });
+
+    // 实时广播
+    await this.redis.publish(
+      `activity:${projectId}`,
+      JSON.stringify({ userId, activity: activityData }),
+    );
+  }
+}
+```
+
+**协作 UI 组件**:
+
+```typescript
+/**
+ * 协作编辑器 UI
+ */
+const CollaborativeEditor = ({ projectId, versionId }: Props) => {
+  const { ydoc, awareness } = useCollaboration(projectId);
+  const onlineUsers = useOnlineUsers(awareness);
+
+  return (
+    <div className="collaborative-editor">
+      {/* 在线用户列表 */}
+      <div className="collaborators-bar">
+        {onlineUsers.map(user => (
+          <UserAvatar
+            key={user.id}
+            user={user}
+            color={user.color}
+            cursor={user.cursor}
+          />
+        ))}
+      </div>
+
+      {/* 编辑器 */}
+      <TipTapEditor
+        ydoc={ydoc}
+        awareness={awareness}
+        extensions={[
+          Collaboration.configure({ document: ydoc }),
+          CollaborationCursor.configure({ provider: awareness }),
+        ]}
+      />
+
+      {/* 实时光标 */}
+      <CursorOverlay awareness={awareness} />
+
+      {/* 评论侧边栏 */}
+      <CommentsSidebar versionId={versionId} />
+    </div>
+  );
+};
+```
+
+**数据库 Schema (协作相关)**:
+
+```sql
+-- 协作会话
+CREATE TABLE collaboration_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id),
+  version_id UUID NOT NULL REFERENCES content_versions(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  joined_at TIMESTAMP DEFAULT NOW(),
+  last_activity TIMESTAMP DEFAULT NOW(),
+  cursor_position JSONB,
+  status VARCHAR(50) DEFAULT 'active' -- active, idle, disconnected
+);
+
+-- 评论
+CREATE TABLE comments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  version_id UUID NOT NULL REFERENCES content_versions(id),
+  parent_comment_id UUID REFERENCES comments(id), -- 用于回复
+  author_id UUID NOT NULL REFERENCES users(id),
+  content TEXT NOT NULL,
+  target JSONB NOT NULL, -- { type: 'text', path: '...', range: [...] }
+  resolved BOOLEAN DEFAULT FALSE,
+  resolved_by UUID REFERENCES users(id),
+  resolved_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 活动日志
+CREATE TABLE collaboration_activities (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id),
+  version_id UUID REFERENCES content_versions(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  activity_type VARCHAR(50) NOT NULL, -- edit, comment, view, export
+  activity_data JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 索引
+CREATE INDEX idx_sessions_project ON collaboration_sessions(project_id);
+CREATE INDEX idx_sessions_user ON collaboration_sessions(user_id);
+CREATE INDEX idx_comments_version ON comments(version_id);
+CREATE INDEX idx_activities_project ON collaboration_activities(project_id);
+CREATE INDEX idx_activities_user ON collaboration_activities(user_id);
+```
+
+**实时协作特性**:
+
+1. ✅ **Google Docs 级别的实时编辑** - 多人同时编辑，零冲突
+2. ✅ **实时光标** - 看到其他用户正在编辑的位置
+3. ✅ **在线用户列表** - 显示所有在线协作者
+4. ✅ **评论与讨论** - 针对具体内容进行线程化讨论
+5. ✅ **活动历史** - 完整的协作历史记录
+6. ✅ **权限控制** - 编辑、评论、查看权限分离
+7. ✅ **离线支持** - 离线编辑，上线后自动同步
 
 ---
 
@@ -1694,13 +2083,13 @@ class VideoGenerator {
 
 #### AI 服务集成
 
-| 服务              | 用途                    | API              |
-| ----------------- | ----------------------- | ---------------- |
-| **Google Gemini** | RAG、文本生成、代码理解 | Gemini 2.0 Flash |
-| **DALL-E 3**      | 图像生成                | OpenAI API       |
-| **ElevenLabs**    | 高质量 TTS              | ElevenLabs API   |
-| **FFmpeg**        | 视频处理                | 本地/云端        |
-| **Whisper**       | 语音转文本              | OpenAI API       |
+| 服务                   | 用途                                | API          | 优势                   |
+| ---------------------- | ----------------------------------- | ------------ | ---------------------- |
+| **Gemini 3** 🌟        | RAG、文本生成、代码理解、多模态分析 | Gemini 3 Pro | 超长上下文、多模态能力 |
+| **Imagen 3** 🆕        | 专业级图像生成、配图、可视化        | Imagen 3 API | 高质量、精准提示词理解 |
+| **ElevenLabs**         | 高质量 TTS、多语言配音              | ElevenLabs   | 自然语音               |
+| **FFmpeg**             | 视频处理、合成、编码                | 本地/云端    | 功能全面               |
+| **Gemini File Search** | 托管 RAG 服务                       | Gemini API   | 零运维、高性能         |
 
 ### 8.2 数据库 Schema
 
@@ -2182,7 +2571,7 @@ interface ImprovementPlan {
 | **Gemini API**     |               |             |              |
 | - File Search 索引 | 500M tokens   | $0.15/M     | $75          |
 | - Text Generation  | 50M tokens    | $0.30/M     | $15          |
-| **DALL-E 3**       | 1000 images   | $0.04/image | $40          |
+| **Imagen 3** 🆕    | 1000 images   | $0.04/image | $40          |
 | **ElevenLabs TTS** | 100,000 chars | $0.30/1K    | $30          |
 | **Storage (S3)**   | 100 GB        | $0.023/GB   | $2.30        |
 | **Database (RDS)** | PostgreSQL    | -           | $50          |
@@ -2205,12 +2594,19 @@ interface ImprovementPlan {
 
 ---
 
-**文档版本**: v2.0
+**文档版本**: v2.1 (Gemini 3 + Imagen 3 + 实时协作)
 **最后更新**: 2025-11-23
 **状态**: RFC - 待评审和技术验证
+
+**核心技术升级**:
+
+- ✅ Gemini 3 Pro 全面集成（超长上下文、多模态能力）
+- ✅ Imagen 3 专业级图像生成
+- ✅ Google Docs 级别实时协作（Y.js CRDT + WebSocket）
+
 **下一步**:
 
-1. 团队评审会议
-2. POC 开发（2 周）
+1. 团队评审会议（v2.1 新增协作特性）
+2. POC 开发（2 周 - 验证 Gemini 3 + 协作）
 3. 用户调研验证
-4. Phase 1 启动
+4. Phase 1 启动（优先实现协作基础设施）

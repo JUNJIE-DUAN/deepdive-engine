@@ -56,10 +56,25 @@ export class AdminService {
     ]);
 
     // 标记管理员
-    const usersWithAdminFlag = users.map((user) => ({
-      ...user,
-      isAdmin: user.role === "ADMIN" || this.adminEmails.includes(user.email),
-    }));
+    const usersWithAdminFlag = users.map(
+      (user: {
+        email: string;
+        role: string;
+        id: string;
+        username: string | null;
+        avatarUrl: string | null;
+        isActive: boolean;
+        isVerified: boolean;
+        oauthProvider: string | null;
+        subscriptionTier: string;
+        createdAt: Date;
+        lastLoginAt: Date | null;
+        _count: { notes: number; comments: number; collections: number };
+      }) => ({
+        ...user,
+        isAdmin: user.role === "ADMIN" || this.adminEmails.includes(user.email),
+      }),
+    );
 
     return {
       users: usersWithAdminFlag,
@@ -204,7 +219,10 @@ export class AdminService {
       resources: {
         total: totalResources,
         byType: resourcesByType.reduce(
-          (acc, item) => {
+          (
+            acc: Record<string, number>,
+            item: { type: string; _count: { type: number } },
+          ) => {
             acc[item.type] = item._count.type;
             return acc;
           },

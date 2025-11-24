@@ -919,7 +919,7 @@ function YouTubeTLDWContent() {
               {activeTab === 'chat' && (
                 <div className="flex h-full flex-col">
                   {/* Chat Messages */}
-                  <div className="flex-1 space-y-3 overflow-y-auto">
+                  <div className="flex-1 space-y-2 overflow-y-auto">
                     {aiMessages.length > 0 ? (
                       aiMessages.map((msg, i) => (
                         <div
@@ -927,17 +927,22 @@ function YouTubeTLDWContent() {
                           className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[80%] rounded-lg px-4 py-2.5 ${
+                            className={`max-w-[85%] rounded-lg px-3 py-2 ${
                               msg.role === 'user'
                                 ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
                                 : 'bg-gray-100 text-gray-800'
                             }`}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              // TODO: Add context menu to add to notes
+                              console.log('Right-click detected on message');
+                            }}
                           >
-                            <div className="prose prose-sm max-w-none">
+                            <div className="prose-xs prose max-w-none text-xs leading-relaxed [&>*]:my-0.5 [&>ol]:my-0.5 [&>p]:my-0.5 [&>ul]:my-0.5">
                               <ReactMarkdown>{msg.content}</ReactMarkdown>
                             </div>
                             <div
-                              className={`mt-1 text-xs ${
+                              className={`mt-1 text-[10px] ${
                                 msg.role === 'user'
                                   ? 'text-red-100'
                                   : 'text-gray-500'

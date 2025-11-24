@@ -2579,14 +2579,7 @@ function HomeContent() {
                               )
                             }
                           >
-                            <div className="flex items-start gap-2">
-                              <span className="text-base">
-                                {insight.importance === 'high'
-                                  ? '⭐'
-                                  : insight.importance === 'medium'
-                                    ? '🔸'
-                                    : '•'}
-                              </span>
+                            <div className="flex items-start">
                               <div className="flex-1">
                                 <h4 className="text-xs font-semibold leading-snug text-gray-900">
                                   {insight.title}

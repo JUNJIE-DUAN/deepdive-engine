@@ -1402,10 +1402,12 @@ ${userInput || ''}
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* 标题栏 - 固定 */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
-        <div className="flex items-center space-x-2">
-          <Sparkles className="h-5 w-5 text-purple-600" />
-          <h3 className="text-sm font-semibold text-gray-700">AI 智能助手</h3>
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4">
+        <div className="flex items-center space-x-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 shadow-sm">
+            <Sparkles className="h-6 w-6 text-white" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-800">AI 智能助手</h3>
         </div>
 
         <div className="flex items-center space-x-3">

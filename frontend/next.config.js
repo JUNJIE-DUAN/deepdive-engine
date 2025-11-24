@@ -12,8 +12,23 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const aiUrl = process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
+    // Ensure URLs have protocol prefix
+    const ensureProtocol = (url) => {
+      if (!url) return url;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      // Default to https for production URLs
+      return `https://${url}`;
+    };
+
+    const apiUrl = ensureProtocol(
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+    );
+    const aiUrl = ensureProtocol(
+      process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000'
+    );
+
     return [
       {
         source: '/api/v1/:path*',

@@ -2269,18 +2269,18 @@ function HomeContent() {
 
           {/* Top Tab Navigation - Icon Only */}
           <div className="border-b border-gray-100 bg-gray-50 px-3 py-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => setAiRightTab('assistant')}
                 title="Chat"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-14 w-14 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'assistant'
                     ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
                     : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
                 <svg
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2296,14 +2296,14 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('notes')}
                 title="Notes"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-14 w-14 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'notes'
                     ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
                     : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
                 <svg
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2319,14 +2319,14 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('comments')}
                 title="Comments"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-14 w-14 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'comments'
                     ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
                     : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
                 <svg
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2342,14 +2342,14 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('similar')}
                 title="Similar"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-14 w-14 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'similar'
                     ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
                     : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
                 <svg
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2365,14 +2365,14 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('image')}
                 title="Image"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-14 w-14 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'image'
                     ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
                     : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
               >
                 <svg
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

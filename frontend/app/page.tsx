@@ -2243,7 +2243,7 @@ function HomeContent() {
 
       {/* Right AI Interaction Panel */}
       {!isAiPanelCollapsed && (
-        <aside className="relative hidden w-80 flex-shrink-0 flex-col border-l border-gray-200 bg-white pt-6 lg:flex lg:w-96">
+        <aside className="relative hidden w-80 flex-shrink-0 flex-col border-l border-gray-200 bg-white lg:flex lg:w-96">
           <button
             type="button"
             onClick={() => setIsAiPanelCollapsed(true)}
@@ -2267,7 +2267,7 @@ function HomeContent() {
           </button>
 
           {/* Top Tab Navigation - Icon Only */}
-          <div className="border-b border-gray-100 bg-gray-50 px-2 py-2">
+          <div className="border-b border-gray-100 bg-gray-50 px-2 pb-2 pt-6">
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setAiRightTab('assistant')}

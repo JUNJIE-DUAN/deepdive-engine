@@ -19,7 +19,6 @@ import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
 import { ImportUrlDialog } from '@/components/ImportUrlDialog';
 import { ImportFileDialog } from '@/components/ImportFileDialog';
-import { ImportSelector } from '@/components/ImportSelector';
 import ResponsiveNav, {
   type TabType,
   type SortByType,
@@ -321,10 +320,8 @@ function HomeContent() {
   };
 
   // Import states
-  const [showImportSelector, setShowImportSelector] = useState(false);
   const [showImportUrlDialog, setShowImportUrlDialog] = useState(false);
   const [showImportFileDialog, setShowImportFileDialog] = useState(false);
-  const importButtonRef = useRef<HTMLButtonElement>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -984,7 +981,7 @@ function HomeContent() {
 
   // Close context menu when clicking outside
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       // Don't close if clicking on the context menu itself
       if (target.closest('.context-menu')) {
@@ -993,8 +990,15 @@ function HomeContent() {
       setContextMenu(null);
     };
     if (contextMenu) {
-      document.addEventListener('click', handleClick);
-      return () => document.removeEventListener('click', handleClick);
+      // Use mousedown to detect clicks outside, but delay adding the listener
+      // to avoid catching the same click that opened the menu
+      const timer = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
   }, [contextMenu]);
 
@@ -1646,7 +1650,8 @@ function HomeContent() {
               <ResponsiveNav
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                onImportClick={() => setShowImportSelector(true)}
+                onImportUrlClick={() => setShowImportUrlDialog(true)}
+                onImportFileClick={() => setShowImportFileDialog(true)}
                 onFilterClick={() => setShowFilterPanel(true)}
                 filterActive={
                   selectedCategories.length > 0 ||
@@ -2589,10 +2594,10 @@ function HomeContent() {
                             </svg>
                           </div>
                           <div>
-                            <h3 className="text-xs font-bold text-gray-900">
+                            <h3 className="text-sm font-bold text-gray-900">
                               AI Summary
                             </h3>
-                            <p className="text-[10px] text-gray-500">
+                            <p className="text-[11px] text-gray-500">
                               Right-click to add to notes
                             </p>
                           </div>
@@ -2602,7 +2607,7 @@ function HomeContent() {
                         className="cursor-text select-text p-3"
                         onContextMenu={(e) => handleContextMenu(e, aiSummary)}
                       >
-                        <p className="text-xs leading-relaxed text-gray-700">
+                        <p className="text-sm leading-relaxed text-gray-700">
                           {aiSummary}
                         </p>
                       </div>
@@ -2613,7 +2618,7 @@ function HomeContent() {
                   {(aiLoading || isStreaming) && (
                     <div className="flex items-center justify-center gap-2 py-4">
                       <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-red-600"></div>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-sm text-gray-600">
                         {isStreaming
                           ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'} is thinking...`
                           : 'AI processing...'}
@@ -2642,10 +2647,10 @@ function HomeContent() {
                             </svg>
                           </div>
                           <div>
-                            <h3 className="text-xs font-bold text-gray-900">
+                            <h3 className="text-sm font-bold text-gray-900">
                               {aiInsights.length} Key Insights
                             </h3>
-                            <p className="text-[10px] text-gray-500">
+                            <p className="text-[11px] text-gray-500">
                               Right-click to add to notes
                             </p>
                           </div>
@@ -2671,10 +2676,10 @@ function HomeContent() {
                           >
                             <div className="flex items-start">
                               <div className="flex-1">
-                                <h4 className="text-xs font-semibold leading-snug text-gray-900">
+                                <h4 className="text-sm font-semibold leading-snug text-gray-900">
                                   {insight.title}
                                 </h4>
-                                <p className="mt-1 text-[11px] leading-relaxed text-gray-600">
+                                <p className="mt-1 text-xs leading-relaxed text-gray-600">
                                   {insight.description}
                                 </p>
                               </div>
@@ -3186,20 +3191,6 @@ function HomeContent() {
           <div className="absolute inset-0 rounded-l-lg bg-gradient-to-br from-red-400/0 to-pink-400/0 opacity-0 transition-opacity duration-200 group-hover:from-red-400/10 group-hover:to-pink-400/10 group-hover:opacity-100" />
         </button>
       )}
-
-      {/* Import Selector - Choose URL or File */}
-      <ImportSelector
-        isOpen={showImportSelector}
-        onClose={() => setShowImportSelector(false)}
-        onSelectUrl={() => {
-          setShowImportSelector(false);
-          setShowImportUrlDialog(true);
-        }}
-        onSelectFile={() => {
-          setShowImportSelector(false);
-          setShowImportFileDialog(true);
-        }}
-      />
 
       {/* Import URL Dialog */}
       <ImportUrlDialog

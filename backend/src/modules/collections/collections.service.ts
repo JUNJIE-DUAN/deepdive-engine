@@ -35,6 +35,21 @@ export class CollectionsService {
    * 创建收藏集
    */
   async createCollection(userId: string, dto: CreateCollectionDto) {
+    // Check if collection with same name already exists for this user
+    const existingCollection = await this.prisma.collection.findFirst({
+      where: {
+        userId,
+        name: dto.name,
+      },
+    });
+
+    if (existingCollection) {
+      this.logger.log(
+        `Collection "${dto.name}" already exists for user ${userId}, returning existing`,
+      );
+      return existingCollection;
+    }
+
     const collection = await this.prisma.collection.create({
       data: {
         userId,

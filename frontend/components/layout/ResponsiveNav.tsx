@@ -13,6 +13,8 @@ import {
   TrendingUp,
   Clock,
   Star,
+  Link2,
+  FileUp,
 } from 'lucide-react';
 
 export type TabType =
@@ -27,7 +29,8 @@ export type SortByType = 'trendingScore' | 'publishedAt' | 'qualityScore';
 interface ResponsiveNavProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
-  onImportClick: () => void;
+  onImportUrlClick: () => void;
+  onImportFileClick: () => void;
   onFilterClick: () => void;
   filterActive?: boolean;
   sortBy: SortByType;
@@ -120,7 +123,8 @@ const NAV_TABS: NavTab[] = [
 export default function ResponsiveNav({
   activeTab,
   onTabChange,
-  onImportClick,
+  onImportUrlClick,
+  onImportFileClick,
   onFilterClick,
   filterActive,
   sortBy,
@@ -128,6 +132,7 @@ export default function ResponsiveNav({
   className = '',
 }: ResponsiveNavProps) {
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showImportMenu, setShowImportMenu] = useState(false);
 
   return (
     <div
@@ -163,15 +168,53 @@ export default function ResponsiveNav({
 
       {/* Action Buttons - Icon only */}
       <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
-        {/* Import Button - Icon only */}
-        <button
-          onClick={onImportClick}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 sm:h-10 sm:w-10"
-          title="Import URL or file"
-          aria-label="Import"
-        >
-          <Plus className="h-4 w-4 flex-shrink-0" />
-        </button>
+        {/* Import Button - Icon only with dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowImportMenu(!showImportMenu)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 sm:h-10 sm:w-10"
+            title="Import URL or file"
+            aria-label="Import"
+          >
+            <Plus className="h-4 w-4 flex-shrink-0" />
+          </button>
+
+          {/* Import Dropdown Menu */}
+          {showImportMenu && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+              <div className="p-1">
+                <button
+                  onClick={() => {
+                    onImportUrlClick();
+                    setShowImportMenu(false);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50"
+                >
+                  <Link2 className="h-4 w-4 text-blue-600" />
+                  <div className="text-left">
+                    <p className="font-medium text-gray-900">From URL</p>
+                    <p className="text-xs text-gray-500">
+                      Import from a web link
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    onImportFileClick();
+                    setShowImportMenu(false);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-green-50"
+                >
+                  <FileUp className="h-4 w-4 text-green-600" />
+                  <div className="text-left">
+                    <p className="font-medium text-gray-900">Upload File</p>
+                    <p className="text-xs text-gray-500">PDF, HTML documents</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Filter Button - Icon only with active indicator */}
         <button

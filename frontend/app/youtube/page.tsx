@@ -403,7 +403,6 @@ function YouTubeTLDWContent() {
       };
 
       setAiMessages((prev) => [...prev, assistantMessage]);
-      const messageIndex = aiMessages.length + 1;
 
       while (reader) {
         const { done, value } = await reader.read();
@@ -422,10 +421,17 @@ function YouTubeTLDWContent() {
               if (parsed.content) {
                 setAiMessages((prev) => {
                   const newMessages = [...prev];
-                  newMessages[messageIndex] = {
-                    ...newMessages[messageIndex],
-                    content: newMessages[messageIndex].content + parsed.content,
-                  };
+                  // Always update the last message (assistant's response)
+                  const lastIndex = newMessages.length - 1;
+                  if (
+                    lastIndex >= 0 &&
+                    newMessages[lastIndex].role === 'assistant'
+                  ) {
+                    newMessages[lastIndex] = {
+                      ...newMessages[lastIndex],
+                      content: newMessages[lastIndex].content + parsed.content,
+                    };
+                  }
                   return newMessages;
                 });
               }
@@ -754,7 +760,7 @@ function YouTubeTLDWContent() {
                         d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                       />
                     </svg>
-                    <span className="leading-tight">Chat</span>
+                    <span className="leading-tight">AI Chat</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('notes')}
@@ -944,38 +950,55 @@ function YouTubeTLDWContent() {
                   {/* Chat Messages */}
                   <div className="flex-1 space-y-2 overflow-y-auto">
                     {aiMessages.length > 0 ? (
-                      aiMessages.map((msg, i) => (
-                        <div
-                          key={i}
-                          className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
+                      <>
+                        {aiMessages.map((msg, i) => (
                           <div
-                            className={`max-w-[85%] rounded-lg px-3 py-2 ${
-                              msg.role === 'user'
-                                ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              // TODO: Add context menu to add to notes
-                              console.log('Right-click detected on message');
-                            }}
+                            key={i}
+                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                           >
-                            <div className="prose-xs prose max-w-none text-xs leading-relaxed [&>*]:my-0.5 [&>ol]:my-0.5 [&>p]:my-0.5 [&>ul]:my-0.5">
-                              <ReactMarkdown>{msg.content}</ReactMarkdown>
-                            </div>
                             <div
-                              className={`mt-1 text-[10px] ${
+                              className={`max-w-[85%] rounded-lg px-3 py-2 ${
                                 msg.role === 'user'
-                                  ? 'text-red-100'
-                                  : 'text-gray-500'
+                                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
+                                  : 'bg-gray-100 text-gray-800'
                               }`}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                // TODO: Add context menu to add to notes
+                                console.log('Right-click detected on message');
+                              }}
                             >
-                              {new Date(msg.timestamp).toLocaleTimeString()}
+                              <div className="prose-sm prose max-w-none text-sm leading-relaxed [&>*]:my-0.5 [&>ol]:my-0.5 [&>p]:my-0.5 [&>ul]:my-0.5">
+                                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                              </div>
+                              <div
+                                className={`mt-1 text-[11px] ${
+                                  msg.role === 'user'
+                                    ? 'text-red-100'
+                                    : 'text-gray-500'
+                                }`}
+                              >
+                                {new Date(msg.timestamp).toLocaleTimeString()}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        ))}
+                        {/* AI Thinking Indicator */}
+                        {isStreaming &&
+                          aiMessages.length > 0 &&
+                          aiMessages[aiMessages.length - 1].role ===
+                            'assistant' &&
+                          !aiMessages[aiMessages.length - 1].content && (
+                            <div className="flex justify-start">
+                              <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-600">
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div>
+                                <span className="text-sm">
+                                  AI is thinking...
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                      </>
                     ) : (
                       <div className="flex h-full items-center justify-center">
                         <div className="text-center">
@@ -993,10 +1016,10 @@ function YouTubeTLDWContent() {
                             />
                           </svg>
                           <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                            与AI对话
+                            Chat with AI
                           </h3>
-                          <p className="mt-1 text-xs text-gray-600">
-                            询问视频内容、获取总结或深入讨论
+                          <p className="mt-1 text-sm text-gray-600">
+                            Ask questions about the video content
                           </p>
                         </div>
                       </div>

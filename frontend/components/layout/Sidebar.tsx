@@ -64,64 +64,83 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         className={`flex items-center p-4 ${isCollapsed ? 'justify-center' : ''}`}
       >
         {isCollapsed ? (
-          /* Collapsed Logo - Modern tech hexagon */
+          /* Collapsed Logo - Professional tech mark */
           <Link href="/" className="group" title="DeepDive Engine">
             <svg
-              className="h-10 w-10 transition-transform duration-300 group-hover:scale-110"
+              className="h-10 w-10 transition-transform duration-300 group-hover:scale-105"
               viewBox="0 0 40 40"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Gradient Definition */}
               <defs>
                 <linearGradient
-                  id="logoGradient"
-                  x1="8"
-                  y1="8"
-                  x2="32"
-                  y2="32"
-                  gradientUnits="userSpaceOnUse"
+                  id="logoGradientCollapsed"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
                 >
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#1e40af" />
+                  <stop offset="0%" stopColor="#0ea5e9" />
+                  <stop offset="50%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#1d4ed8" />
+                </linearGradient>
+                <linearGradient
+                  id="logoGradientCollapsedLight"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#7dd3fc" />
+                  <stop offset="100%" stopColor="#93c5fd" />
                 </linearGradient>
               </defs>
 
-              {/* Outer Hexagon */}
+              {/* Outer rounded square with subtle corner cuts - tech aesthetic */}
+              <rect
+                x="4"
+                y="4"
+                width="32"
+                height="32"
+                rx="8"
+                fill="url(#logoGradientCollapsed)"
+              />
+
+              {/* Abstract "D" shape formed by layers - representing depth */}
               <path
-                d="M20 6 L30 12 L30 24 L20 30 L10 24 L10 12 Z"
-                stroke="url(#logoGradient)"
-                strokeWidth="2"
+                d="M12 10 L12 30 L22 30 C28 30 30 24 30 20 C30 16 28 10 22 10 L12 10 Z"
                 fill="none"
+                stroke="white"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                opacity="0.95"
               />
 
-              {/* Inner Diamond/Data Node */}
+              {/* Inner depth layers - representing "dive" concept */}
               <path
-                d="M20 14 L25 18 L20 22 L15 18 Z"
-                fill="url(#logoGradient)"
-                opacity="0.9"
+                d="M16 14 L16 26 L21 26 C24 26 26 23 26 20 C26 17 24 14 21 14 L16 14 Z"
+                fill="white"
+                opacity="0.3"
               />
 
-              {/* Connection Lines - representing data flow */}
-              <line
-                x1="20"
-                y1="14"
-                x2="20"
-                y2="10"
-                stroke="url(#logoGradient)"
-                strokeWidth="1.5"
+              {/* Center focal point - data/knowledge core */}
+              <circle cx="20" cy="20" r="3" fill="white" opacity="0.9" />
+
+              {/* Downward arrow hint - dive symbolism */}
+              <path
+                d="M20 24 L20 28"
+                stroke="url(#logoGradientCollapsedLight)"
+                strokeWidth="2"
                 strokeLinecap="round"
               />
-              <line
-                x1="20"
-                y1="22"
-                x2="20"
-                y2="26"
-                stroke="url(#logoGradient)"
-                strokeWidth="1.5"
+              <path
+                d="M18 26 L20 28 L22 26"
+                stroke="url(#logoGradientCollapsedLight)"
+                strokeWidth="2"
                 strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
               />
             </svg>
           </Link>
@@ -129,76 +148,93 @@ export default function Sidebar({ className = '' }: SidebarProps) {
           /* Expanded Logo - Mark + Logotype */
           <Link
             href="/"
-            className="group flex items-center gap-2.5"
+            className="group flex items-center gap-3"
             title="DeepDive Engine"
           >
             <svg
-              className="h-9 w-9 flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+              className="h-10 w-10 flex-shrink-0 transition-transform duration-300 group-hover:scale-105"
               viewBox="0 0 40 40"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Gradient Definition */}
               <defs>
                 <linearGradient
                   id="logoGradientExpanded"
-                  x1="8"
-                  y1="8"
-                  x2="32"
-                  y2="32"
-                  gradientUnits="userSpaceOnUse"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
                 >
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#1e40af" />
+                  <stop offset="0%" stopColor="#0ea5e9" />
+                  <stop offset="50%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#1d4ed8" />
+                </linearGradient>
+                <linearGradient
+                  id="logoGradientExpandedLight"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#7dd3fc" />
+                  <stop offset="100%" stopColor="#93c5fd" />
                 </linearGradient>
               </defs>
 
-              {/* Outer Hexagon */}
+              {/* Outer rounded square with subtle corner cuts - tech aesthetic */}
+              <rect
+                x="4"
+                y="4"
+                width="32"
+                height="32"
+                rx="8"
+                fill="url(#logoGradientExpanded)"
+              />
+
+              {/* Abstract "D" shape formed by layers - representing depth */}
               <path
-                d="M20 6 L30 12 L30 24 L20 30 L10 24 L10 12 Z"
-                stroke="url(#logoGradientExpanded)"
-                strokeWidth="2"
+                d="M12 10 L12 30 L22 30 C28 30 30 24 30 20 C30 16 28 10 22 10 L12 10 Z"
                 fill="none"
+                stroke="white"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                opacity="0.95"
               />
 
-              {/* Inner Diamond/Data Node */}
+              {/* Inner depth layers - representing "dive" concept */}
               <path
-                d="M20 14 L25 18 L20 22 L15 18 Z"
-                fill="url(#logoGradientExpanded)"
-                opacity="0.9"
+                d="M16 14 L16 26 L21 26 C24 26 26 23 26 20 C26 17 24 14 21 14 L16 14 Z"
+                fill="white"
+                opacity="0.3"
               />
 
-              {/* Connection Lines - representing data flow */}
-              <line
-                x1="20"
-                y1="14"
-                x2="20"
-                y2="10"
-                stroke="url(#logoGradientExpanded)"
-                strokeWidth="1.5"
+              {/* Center focal point - data/knowledge core */}
+              <circle cx="20" cy="20" r="3" fill="white" opacity="0.9" />
+
+              {/* Downward arrow hint - dive symbolism */}
+              <path
+                d="M20 24 L20 28"
+                stroke="url(#logoGradientExpandedLight)"
+                strokeWidth="2"
                 strokeLinecap="round"
               />
-              <line
-                x1="20"
-                y1="22"
-                x2="20"
-                y2="26"
-                stroke="url(#logoGradientExpanded)"
-                strokeWidth="1.5"
+              <path
+                d="M18 26 L20 28 L22 26"
+                stroke="url(#logoGradientExpandedLight)"
+                strokeWidth="2"
                 strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
               />
             </svg>
 
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center">
-                <span className="text-sm font-bold tracking-tight text-gray-900">
-                  DeepDive
-                </span>
-              </div>
-              <span className="text-xs font-semibold tracking-wide text-blue-700">
-                ENGINE
+            <div className="flex flex-col">
+              <span className="text-[15px] font-bold tracking-tight text-gray-900">
+                DeepDive
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-600">
+                Engine
               </span>
             </div>
           </Link>

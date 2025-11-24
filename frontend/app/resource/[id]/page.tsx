@@ -64,8 +64,8 @@ export default function ResourcePage() {
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'pdf' | 'notes' | 'comments'
-  >('overview');
+    'ai' | 'notes' | 'comments' | 'similar' | 'image'
+  >('ai');
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | undefined>(
@@ -380,105 +380,181 @@ export default function ResourcePage() {
             </div>
           )}
 
-          {/* Tabs */}
+          {/* Tabs - Icon Only Design */}
           <div className="mb-6 rounded-lg bg-white shadow-sm">
-            <div className="flex overflow-x-auto border-b border-gray-200">
+            <div className="flex items-center justify-end gap-2 border-b border-gray-200 px-4 py-3">
+              {/* AI Tab */}
               <button
-                onClick={() => setActiveTab('overview')}
-                className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
-                  activeTab === 'overview'
-                    ? 'border-b-2 border-red-600 text-red-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                onClick={() => setActiveTab('ai')}
+                className={`group flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
+                  activeTab === 'ai'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow'
                 }`}
+                title="AI Analysis"
               >
-                Overview
-              </button>
-              {resource.type === 'PAPER' && resource.pdfUrl && (
-                <button
-                  onClick={() => setActiveTab('pdf')}
-                  className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
-                    activeTab === 'pdf'
-                      ? 'border-b-2 border-red-600 text-red-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  PDF Viewer
-                </button>
-              )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                  />
+                </svg>
+              </button>
+
+              {/* Notes Tab */}
               <button
                 onClick={() => setActiveTab('notes')}
-                className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
+                className={`group flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
                   activeTab === 'notes'
-                    ? 'border-b-2 border-red-600 text-red-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow'
                 }`}
+                title="Notes"
               >
-                My Notes
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
               </button>
+
+              {/* Comments Tab */}
               <button
                 onClick={() => setActiveTab('comments')}
-                className={`whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
                   activeTab === 'comments'
-                    ? 'border-b-2 border-red-600 text-red-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow'
                 }`}
+                title="Comments"
               >
-                Comments ({resource.commentCount})
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                {resource.commentCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {resource.commentCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Similar Tab */}
+              <button
+                onClick={() => setActiveTab('similar')}
+                className={`group flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
+                  activeTab === 'similar'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow'
+                }`}
+                title="Similar Resources"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  />
+                </svg>
+              </button>
+
+              {/* Image Tab - New! */}
+              <button
+                onClick={() => setActiveTab('image')}
+                className={`group flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
+                  activeTab === 'image'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow'
+                }`}
+                title="Generate Images"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
               </button>
             </div>
 
             <div className="p-6">
-              {activeTab === 'pdf' && resource.pdfUrl && (
+              {/* AI Tab Content */}
+              {activeTab === 'ai' && (
                 <div className="space-y-4">
-                  <PDFViewerClient url={resource.pdfUrl} />
-                </div>
-              )}
-
-              {activeTab === 'overview' && (
-                <div className="space-y-4">
-                  {/* Stats */}
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="rounded-lg bg-gray-50 p-4 text-center">
-                      <div className="text-2xl font-bold text-gray-900">
-                        {resource.viewCount}
-                      </div>
-                      <div className="text-sm text-gray-600">Views</div>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 p-4 text-center">
-                      <div className="text-2xl font-bold text-gray-900">
-                        {resource.saveCount}
-                      </div>
-                      <div className="text-sm text-gray-600">Saves</div>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 p-4 text-center">
-                      <div className="text-2xl font-bold text-gray-900">
-                        {resource.upvoteCount}
-                      </div>
-                      <div className="text-sm text-gray-600">Upvotes</div>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 p-4 text-center">
-                      <div className="text-2xl font-bold text-gray-900">
-                        {resource.commentCount}
-                      </div>
-                      <div className="text-sm text-gray-600">Comments</div>
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  {resource.tags && resource.tags.length > 0 && (
-                    <div>
-                      <h3 className="mb-2 text-sm font-semibold text-gray-700">
-                        Tags
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {resource.tags.map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                  {resource.aiSummary ? (
+                    isStructuredAISummary(resource.aiSummary) ? (
+                      <StructuredAISummaryRouter
+                        summary={resource.aiSummary}
+                        compact={false}
+                        expandable={true}
+                      />
+                    ) : typeof resource.aiSummary === 'string' ? (
+                      <StructuredAISummaryRouter
+                        summary={convertToStructuredSummary(
+                          resource.aiSummary,
+                          resource.type,
+                          'intermediate'
+                        )}
+                        compact={false}
+                        expandable={true}
+                      />
+                    ) : null
+                  ) : (
+                    <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-gray-300">
+                      <div className="text-center">
+                        <svg
+                          className="mx-auto h-12 w-12 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                          />
+                        </svg>
+                        <p className="mt-2 text-sm text-gray-500">
+                          AI analysis not yet available
+                        </p>
                       </div>
                     </div>
                   )}
@@ -536,6 +612,58 @@ export default function ResourcePage() {
 
               {activeTab === 'comments' && (
                 <CommentsList resourceId={resource.id} />
+              )}
+
+              {/* Similar Tab Content */}
+              {activeTab === 'similar' && (
+                <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-gray-300">
+                  <div className="text-center">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                      />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-500">
+                      Similar resources coming soon
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Image Tab Content */}
+              {activeTab === 'image' && (
+                <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-gray-300">
+                  <div className="text-center">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-500">
+                      Text-to-image generation coming soon
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Generate diagrams, visualizations, and illustrations from
+                      text
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>

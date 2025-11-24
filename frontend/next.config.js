@@ -3,13 +3,23 @@ const { execSync } = require('child_process');
 
 // Get git commit hash at build time
 function getGitCommitHash() {
+  // First, try to get from Railway environment variable
+  if (process.env.RAILWAY_GIT_COMMIT_SHA) {
+    const fullHash = process.env.RAILWAY_GIT_COMMIT_SHA;
+    const shortHash = fullHash.substring(0, 7);
+    console.log('✓ Using git commit hash from Railway:', shortHash);
+    return { short: shortHash, full: fullHash };
+  }
+
+  // Second, try to get from git command (local development)
   try {
     const hash = execSync('git rev-parse --short HEAD').toString().trim();
     const fullHash = execSync('git rev-parse HEAD').toString().trim();
+    console.log('✓ Using git commit hash from git command:', hash);
     return { short: hash, full: fullHash };
   } catch (error) {
-    console.warn('Failed to get git commit hash:', error);
-    return { short: 'unknown', full: 'unknown' };
+    console.warn('⚠ Git command failed, using fallback');
+    return { short: 'dev', full: 'development' };
   }
 }
 

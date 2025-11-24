@@ -7,24 +7,40 @@ import { execSync } from "child_process";
 import { PrismaClient } from "@prisma/client";
 
 async function forceDeleteFailedMigration(migrationName: string) {
-  console.log(`🗑️  Force deleting migration record: ${migrationName}`);
+  console.log(`\n🗑️  Force deleting migration record: ${migrationName}`);
   const prisma = new PrismaClient();
 
   try {
     await prisma.$connect();
+    console.log("✓ Connected to database");
 
-    const result = await prisma.$executeRaw`
-      DELETE FROM "_prisma_migrations"
+    // Check if migration exists before deletion
+    const existing = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(*) as count
+      FROM "_prisma_migrations"
       WHERE migration_name = ${migrationName};
     `;
+    const count = Number(existing[0].count);
+    console.log(`✓ Found ${count} record(s) for migration: ${migrationName}`);
 
-    console.log(
-      `✅ Deleted ${result} migration record(s) for ${migrationName}`,
-    );
+    if (count > 0) {
+      const result = await prisma.$executeRaw`
+        DELETE FROM "_prisma_migrations"
+        WHERE migration_name = ${migrationName};
+      `;
+      console.log(
+        `✅ Deleted ${result} migration record(s) for ${migrationName}`,
+      );
+    } else {
+      console.log(
+        `ℹ️  No records found for ${migrationName}, skipping deletion`,
+      );
+    }
   } catch (error) {
     console.error(`❌ Failed to delete migration ${migrationName}:`, error);
   } finally {
     await prisma.$disconnect();
+    console.log("✓ Disconnected from database\n");
   }
 }
 

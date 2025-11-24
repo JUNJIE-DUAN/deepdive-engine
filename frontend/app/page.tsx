@@ -2268,12 +2268,12 @@ function HomeContent() {
           </button>
 
           {/* Top Tab Navigation - Icon Only */}
-          <div className="border-b border-gray-100 bg-white px-4 py-3">
-            <div className="flex items-center justify-center gap-2">
+          <div className="border-b border-gray-100 bg-white px-6 py-4">
+            <div className="flex items-center justify-between">
               <button
                 onClick={() => setAiRightTab('assistant')}
                 title="AI Assistant"
-                className={`group relative flex h-11 w-11 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'assistant'
                     ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
@@ -2296,7 +2296,7 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('notes')}
                 title="My Notes"
-                className={`group relative flex h-11 w-11 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'notes'
                     ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
@@ -2319,7 +2319,7 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('comments')}
                 title="Comments"
-                className={`group relative flex h-11 w-11 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'comments'
                     ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
@@ -2342,7 +2342,7 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('similar')}
                 title="Similar Resources"
-                className={`group relative flex h-11 w-11 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'similar'
                     ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
@@ -2365,7 +2365,7 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('image')}
                 title="Image Analysis"
-                className={`group relative flex h-11 w-11 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'image'
                     ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'

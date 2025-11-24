@@ -17,6 +17,16 @@ export class UpdateCollectionDto {
   description?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  icon?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  color?: string;
+
+  @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
 

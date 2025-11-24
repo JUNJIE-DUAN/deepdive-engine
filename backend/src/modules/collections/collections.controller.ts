@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   Request,
   UseGuards,
   UnauthorizedException,
@@ -16,6 +17,11 @@ import {
   UpdateCollectionDto,
   AddToCollectionDto,
   UpdateNoteDto,
+  UpdateCollectionItemDto,
+  BatchMoveItemsDto,
+  BatchDeleteItemsDto,
+  BatchUpdateTagsDto,
+  BatchUpdateStatusDto,
 } from "./dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../../common/guards/optional-jwt-auth.guard";
@@ -167,5 +173,137 @@ export class CollectionsController {
       req.user.id,
       resourceId,
     );
+  }
+
+  /**
+   * 获取用户的所有标签（需要认证）
+   */
+  @Get("tags/all")
+  @UseGuards(JwtAuthGuard)
+  async getUserTags(@Request() req: any) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.getUserTags(req.user.id);
+  }
+
+  /**
+   * 获取用户收藏统计（需要认证）
+   */
+  @Get("stats/summary")
+  @UseGuards(JwtAuthGuard)
+  async getUserStats(@Request() req: any) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.getUserStats(req.user.id);
+  }
+
+  /**
+   * 分页获取收藏项（需要认证）
+   */
+  @Get("items/paginated")
+  @UseGuards(JwtAuthGuard)
+  async getItemsPaginated(
+    @Request() req: any,
+    @Query("collectionId") collectionId?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+    @Query("status") status?: string,
+    @Query("tag") tag?: string,
+    @Query("search") search?: string,
+    @Query("sortBy") sortBy?: string,
+    @Query("sortOrder") sortOrder?: "asc" | "desc",
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.getCollectionItemsPaginated(
+      collectionId || null,
+      req.user.id,
+      {
+        page: page ? parseInt(page, 10) : undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        status,
+        tag,
+        search,
+        sortBy,
+        sortOrder,
+      },
+    );
+  }
+
+  /**
+   * 更新收藏项（标签、阅读状态等）（需要认证）
+   */
+  @Patch("items/:itemId")
+  @UseGuards(JwtAuthGuard)
+  async updateItem(
+    @Param("itemId") itemId: string,
+    @Request() req: any,
+    @Body() dto: UpdateCollectionItemDto,
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.updateCollectionItem(
+      itemId,
+      req.user.id,
+      dto,
+    );
+  }
+
+  /**
+   * 批量移动收藏项（需要认证）
+   */
+  @Post("items/batch/move")
+  @UseGuards(JwtAuthGuard)
+  async batchMoveItems(@Request() req: any, @Body() dto: BatchMoveItemsDto) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.batchMoveItems(req.user.id, dto);
+  }
+
+  /**
+   * 批量删除收藏项（需要认证）
+   */
+  @Post("items/batch/delete")
+  @UseGuards(JwtAuthGuard)
+  async batchDeleteItems(
+    @Request() req: any,
+    @Body() dto: BatchDeleteItemsDto,
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.batchDeleteItems(req.user.id, dto);
+  }
+
+  /**
+   * 批量更新标签（需要认证）
+   */
+  @Post("items/batch/tags")
+  @UseGuards(JwtAuthGuard)
+  async batchUpdateTags(@Request() req: any, @Body() dto: BatchUpdateTagsDto) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.batchUpdateTags(req.user.id, dto);
+  }
+
+  /**
+   * 批量更新阅读状态（需要认证）
+   */
+  @Post("items/batch/status")
+  @UseGuards(JwtAuthGuard)
+  async batchUpdateStatus(
+    @Request() req: any,
+    @Body() dto: BatchUpdateStatusDto,
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.batchUpdateStatus(req.user.id, dto);
   }
 }

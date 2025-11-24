@@ -198,6 +198,8 @@ model Collection {
   userId      String  @map("user_id")
   name        String  @db.VarChar(200)
   description String? @db.Text
+  icon        String? @db.VarChar(10) // Emoji icon
+  color       String? @db.VarChar(20) // Hex color code
   isPublic    Boolean @default(false) @map("is_public")
   sortOrder   Int     @default(0) @map("sort_order")
 
@@ -218,6 +220,14 @@ model CollectionItem {
   note         String? @db.Text
   position     Int     @default(0)
 
+  // Reading status tracking
+  readStatus   ReadStatus @default(UNREAD) @map("read_status")
+  readProgress Int        @default(0) @map("read_progress") // 0-100%
+  lastReadAt   DateTime?  @map("last_read_at")
+
+  // Personal tags (stored as JSON array)
+  tags Json? @default("[]") // ["important", "to-read", "research"]
+
   addedAt DateTime @default(now()) @map("added_at")
 
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
@@ -226,7 +236,15 @@ model CollectionItem {
   @@unique([collectionId, resourceId])
   @@index([collectionId])
   @@index([resourceId])
+  @@index([readStatus])
   @@map("collection_items")
+}
+
+enum ReadStatus {
+  UNREAD
+  READING
+  COMPLETED
+  ARCHIVED
 }
 
 // ============ 用户行为 ============

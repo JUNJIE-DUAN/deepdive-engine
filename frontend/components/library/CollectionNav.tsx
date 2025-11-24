@@ -28,6 +28,17 @@ export interface Collection {
   createdAt: string;
 }
 
+export interface Tag {
+  name: string;
+  count: number;
+}
+
+export interface UserStats {
+  totalItems: number;
+  recentItems: number;
+  byStatus: Record<string, number>;
+}
+
 interface CollectionNavProps {
   collections: Collection[];
   activeCollectionId: string | null;
@@ -37,6 +48,8 @@ interface CollectionNavProps {
   onDeleteCollection: (collection: Collection) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  tags?: Tag[];
+  stats?: UserStats;
 }
 
 export default function CollectionNav({
@@ -48,6 +61,8 @@ export default function CollectionNav({
   onDeleteCollection,
   isCollapsed = false,
   onToggleCollapse,
+  tags = [],
+  stats,
 }: CollectionNavProps) {
   const [expandedSections, setExpandedSections] = useState({
     collections: true,
@@ -63,18 +78,26 @@ export default function CollectionNav({
     }));
   };
 
-  // Quick access items
+  // Quick access items with stats
   const quickAccessItems = [
-    { id: 'recent', name: 'Recent', icon: Clock, count: null },
-    { id: 'favorites', name: 'Favorites', icon: Star, count: null },
-    { id: 'reading', name: 'Reading', icon: BookOpen, count: null },
-  ];
-
-  // Mock tags - will be dynamic later
-  const tags = [
-    { id: 'important', name: 'Important', color: '#ef4444', count: 5 },
-    { id: 'to-read', name: 'To Read', color: '#3b82f6', count: 12 },
-    { id: 'completed', name: 'Completed', color: '#22c55e', count: 20 },
+    {
+      id: 'recent',
+      name: 'Recent',
+      icon: Clock,
+      count: stats?.recentItems || null,
+    },
+    {
+      id: 'reading',
+      name: 'Reading',
+      icon: BookOpen,
+      count: stats?.byStatus?.READING || null,
+    },
+    {
+      id: 'completed',
+      name: 'Completed',
+      icon: Star,
+      count: stats?.byStatus?.COMPLETED || null,
+    },
   ];
 
   if (isCollapsed) {
@@ -287,21 +310,29 @@ export default function CollectionNav({
           </button>
           {expandedSections.tags && (
             <div className="mt-1 space-y-0.5">
-              {tags.map((tag) => (
-                <button
-                  key={tag.id}
-                  onClick={() => onSelectCollection(`tag:${tag.id}`)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    activeCollectionId === `tag:${tag.id}`
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <Hash className="h-4 w-4" style={{ color: tag.color }} />
-                  <span className="flex-1 text-left">{tag.name}</span>
-                  <span className="text-xs text-gray-400">{tag.count}</span>
-                </button>
-              ))}
+              {tags.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-gray-400">
+                  No tags yet. Add tags to your bookmarks to organize them.
+                </div>
+              ) : (
+                tags.map((tag) => (
+                  <button
+                    key={tag.name}
+                    onClick={() => onSelectCollection(`tag:${tag.name}`)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      activeCollectionId === `tag:${tag.name}`
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Hash className="h-4 w-4 text-gray-400" />
+                    <span className="flex-1 truncate text-left">
+                      {tag.name}
+                    </span>
+                    <span className="text-xs text-gray-400">{tag.count}</span>
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -310,17 +341,34 @@ export default function CollectionNav({
       {/* Footer - Storage Info */}
       <div className="border-t border-gray-100 px-4 py-3">
         <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
-          <span>Storage</span>
+          <span>Total Items</span>
           <span>
-            {collections.reduce((sum, c) => sum + (c.itemCount || 0), 0)} items
+            {stats?.totalItems ||
+              collections.reduce((sum, c) => sum + (c.itemCount || 0), 0)}
           </span>
         </div>
-        <div className="h-1.5 rounded-full bg-gray-100">
-          <div
-            className="h-1.5 rounded-full bg-blue-500"
-            style={{ width: '25%' }}
-          />
-        </div>
+        {stats && (
+          <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-gray-400" />
+              <span className="text-gray-500">
+                {stats.byStatus?.UNREAD || 0}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-blue-500" />
+              <span className="text-gray-500">
+                {stats.byStatus?.READING || 0}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-gray-500">
+                {stats.byStatus?.COMPLETED || 0}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

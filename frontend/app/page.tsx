@@ -2243,7 +2243,7 @@ function HomeContent() {
 
       {/* Right AI Interaction Panel */}
       {!isAiPanelCollapsed && (
-        <aside className="relative hidden w-80 flex-shrink-0 flex-col border-l border-gray-200 bg-white lg:flex lg:w-96">
+        <aside className="relative hidden w-80 flex-shrink-0 flex-col border-l border-gray-200 bg-white pt-6 lg:flex lg:w-96">
           <button
             type="button"
             onClick={() => setIsAiPanelCollapsed(true)}

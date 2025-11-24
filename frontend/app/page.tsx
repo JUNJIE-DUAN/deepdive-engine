@@ -18,6 +18,8 @@ import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
 import { ImportUrlDialog } from '@/components/ImportUrlDialog';
+import { ImportFileDialog } from '@/components/ImportFileDialog';
+import { ImportSelector } from '@/components/ImportSelector';
 import ResponsiveNav, {
   type TabType,
   type SortByType,
@@ -318,8 +320,11 @@ function HomeContent() {
     }
   };
 
-  // Import URL states
-  const [showImportDialog, setShowImportDialog] = useState(false);
+  // Import states
+  const [showImportSelector, setShowImportSelector] = useState(false);
+  const [showImportUrlDialog, setShowImportUrlDialog] = useState(false);
+  const [showImportFileDialog, setShowImportFileDialog] = useState(false);
+  const importButtonRef = useRef<HTMLButtonElement>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -939,11 +944,14 @@ function HomeContent() {
 
       const response = await fetch(`${config.apiBaseUrl}/api/v1/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           resourceId: selectedResource.id,
           content: contextMenu.text,
-          tags: ['AI生成'],
+          tags: ['AI-Generated'],
           isPublic: false,
         }),
       });
@@ -1638,7 +1646,7 @@ function HomeContent() {
               <ResponsiveNav
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                onImportClick={() => setShowImportDialog(true)}
+                onImportClick={() => setShowImportSelector(true)}
                 onFilterClick={() => setShowFilterPanel(true)}
                 filterActive={
                   selectedCategories.length > 0 ||
@@ -2460,16 +2468,31 @@ function HomeContent() {
               aiRightTab === 'assistant' ? (
                 <div className="space-y-4">
                   {/* Model Selector */}
-                  <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                    <span className="text-xs font-medium text-gray-700">
-                      AI模型:
-                    </span>
+                  <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 p-3">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="h-4 w-4 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span className="text-xs font-medium text-gray-700">
+                        AI Model
+                      </span>
+                    </div>
                     <select
                       value={aiModel}
                       onChange={(e) =>
                         setAiModel(e.target.value as 'grok' | 'openai')
                       }
-                      className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium shadow-sm transition-all hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     >
                       <option value="grok">Grok-3 (x.AI)</option>
                       <option value="openai">GPT-4o-mini (OpenAI)</option>
@@ -2479,7 +2502,7 @@ function HomeContent() {
                   {/* Quick Actions */}
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-700">
-                      快捷操作:
+                      Quick Actions:
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       <button
@@ -2500,7 +2523,7 @@ function HomeContent() {
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        <span className="text-gray-700">摘要</span>
+                        <span className="text-gray-700">Summary</span>
                       </button>
                       <button
                         onClick={() => handleQuickAction('insights')}
@@ -2520,7 +2543,7 @@ function HomeContent() {
                             d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
                           />
                         </svg>
-                        <span className="text-gray-700">洞察</span>
+                        <span className="text-gray-700">Insights</span>
                       </button>
                       <button
                         onClick={() => handleQuickAction('methodology')}
@@ -2540,7 +2563,7 @@ function HomeContent() {
                             d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 008 10.586V5L7 4z"
                           />
                         </svg>
-                        <span className="text-gray-700">方法论</span>
+                        <span className="text-gray-700">Methods</span>
                       </button>
                     </div>
                   </div>
@@ -2567,10 +2590,10 @@ function HomeContent() {
                           </div>
                           <div>
                             <h3 className="text-xs font-bold text-gray-900">
-                              AI摘要
+                              AI Summary
                             </h3>
                             <p className="text-[10px] text-gray-500">
-                              右键添加到笔记
+                              Right-click to add to notes
                             </p>
                           </div>
                         </div>
@@ -2592,8 +2615,8 @@ function HomeContent() {
                       <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-red-600"></div>
                       <span className="text-xs text-gray-600">
                         {isStreaming
-                          ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'}正在思考...`
-                          : 'AI处理中...'}
+                          ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'} is thinking...`
+                          : 'AI processing...'}
                       </span>
                     </div>
                   )}
@@ -2620,10 +2643,10 @@ function HomeContent() {
                           </div>
                           <div>
                             <h3 className="text-xs font-bold text-gray-900">
-                              {aiInsights.length}个核心观点
+                              {aiInsights.length} Key Insights
                             </h3>
                             <p className="text-[10px] text-gray-500">
-                              右键添加到笔记
+                              Right-click to add to notes
                             </p>
                           </div>
                         </div>
@@ -2684,10 +2707,10 @@ function HomeContent() {
                           </div>
                           <div>
                             <h3 className="text-xs font-bold text-gray-900">
-                              研究方法论
+                              Research Methodology
                             </h3>
                             <p className="text-[10px] text-gray-500">
-                              右键添加到笔记
+                              Right-click to add to notes
                             </p>
                           </div>
                         </div>
@@ -3164,12 +3187,35 @@ function HomeContent() {
         </button>
       )}
 
-      {/* Import URL Dialog - Using Professional Component */}
-      <ImportUrlDialog
-        isOpen={showImportDialog}
-        onClose={() => {
-          setShowImportDialog(false);
+      {/* Import Selector - Choose URL or File */}
+      <ImportSelector
+        isOpen={showImportSelector}
+        onClose={() => setShowImportSelector(false)}
+        onSelectUrl={() => {
+          setShowImportSelector(false);
+          setShowImportUrlDialog(true);
         }}
+        onSelectFile={() => {
+          setShowImportSelector(false);
+          setShowImportFileDialog(true);
+        }}
+      />
+
+      {/* Import URL Dialog */}
+      <ImportUrlDialog
+        isOpen={showImportUrlDialog}
+        onClose={() => setShowImportUrlDialog(false)}
+        activeTab={activeTab}
+        onImportSuccess={() => {
+          fetchResources();
+        }}
+        apiBaseUrl={config.apiBaseUrl}
+      />
+
+      {/* Import File Dialog */}
+      <ImportFileDialog
+        isOpen={showImportFileDialog}
+        onClose={() => setShowImportFileDialog(false)}
         activeTab={activeTab}
         onImportSuccess={() => {
           fetchResources();
@@ -3206,7 +3252,7 @@ function HomeContent() {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            {savingNote ? '保存中...' : '添加到笔记'}
+            {savingNote ? 'Saving...' : 'Add to Notes'}
           </button>
         </div>
       )}

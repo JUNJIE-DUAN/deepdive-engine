@@ -231,15 +231,20 @@ export default function LibraryPage() {
       });
       if (response.ok) {
         const data = await response.json();
-        setCollections(data);
+        // Deduplicate collections by id to avoid displaying duplicates
+        const uniqueCollections = data.filter(
+          (collection: Collection, index: number, self: Collection[]) =>
+            index === self.findIndex((c) => c.id === collection.id)
+        );
+        setCollections(uniqueCollections);
         // Set default collection ID
-        const defaultCollection = data.find(
+        const defaultCollection = uniqueCollections.find(
           (c: Collection) => c.name === '我的收藏'
         );
         if (defaultCollection) {
           setCurrentCollectionId(defaultCollection.id);
         }
-        return data;
+        return uniqueCollections;
       }
       return [];
     } catch (err) {
@@ -810,7 +815,7 @@ export default function LibraryPage() {
 
         {/* Main card content */}
         <Link
-          href={`/resource/${resource.id}`}
+          href={`/explore?id=${resource.id}`}
           className="block"
           onClick={(e) => {
             if (selectionMode) {
@@ -1054,13 +1059,6 @@ export default function LibraryPage() {
                 }`}
               >
                 Bookmarks
-                {paginatedItems && paginatedItems.pagination.total > 0 && (
-                  <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                    {paginatedItems.pagination.total > 99
-                      ? '99+'
-                      : paginatedItems.pagination.total}
-                  </span>
-                )}
               </button>
               <button
                 onClick={() => setActiveTab('notes')}

@@ -155,7 +155,7 @@ function HomeContent() {
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [aiMethodology, setAiMethodology] = useState<AIInsight[]>([]);
   const [aiRightTab, setAiRightTab] = useState<
-    'assistant' | 'notes' | 'comments' | 'similar'
+    'assistant' | 'notes' | 'comments' | 'similar' | 'image'
   >('assistant');
   const [isAiPanelCollapsed, setIsAiPanelCollapsed] = useState(false);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(true);
@@ -2266,19 +2266,20 @@ function HomeContent() {
             <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-red-400/0 to-pink-400/0 opacity-0 transition-opacity duration-200 group-hover:from-red-400/10 group-hover:to-pink-400/10 group-hover:opacity-100" />
           </button>
 
-          {/* Top Tab Navigation */}
+          {/* Top Tab Navigation - Icon Only */}
           <div className="border-b border-gray-100 bg-gray-50 px-2 py-2">
-            <div className="grid grid-cols-4 gap-1">
+            <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setAiRightTab('assistant')}
-                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'assistant'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
-                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
+                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
+                aria-label="AI助手"
               >
                 <svg
-                  className="h-4 w-4"
+                  className={`h-5 w-5 ${aiRightTab === 'assistant' ? 'text-white' : 'text-gray-600'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2290,21 +2291,18 @@ function HomeContent() {
                     d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
                   />
                 </svg>
-                <span className="leading-tight">AI</span>
-                {aiRightTab === 'assistant' && (
-                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
-                )}
               </button>
               <button
                 onClick={() => setAiRightTab('notes')}
-                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'notes'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
-                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
+                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
+                aria-label="笔记"
               >
                 <svg
-                  className="h-4 w-4"
+                  className={`h-5 w-5 ${aiRightTab === 'notes' ? 'text-white' : 'text-gray-600'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2316,21 +2314,18 @@ function HomeContent() {
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-                <span className="leading-tight">Notes</span>
-                {aiRightTab === 'notes' && (
-                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
-                )}
               </button>
               <button
                 onClick={() => setAiRightTab('comments')}
-                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'comments'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
-                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
+                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
+                aria-label="评论"
               >
                 <svg
-                  className="h-4 w-4"
+                  className={`h-5 w-5 ${aiRightTab === 'comments' ? 'text-white' : 'text-gray-600'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2342,21 +2337,18 @@ function HomeContent() {
                     d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
-                <span className="leading-tight">Comments</span>
-                {aiRightTab === 'comments' && (
-                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
-                )}
               </button>
               <button
                 onClick={() => setAiRightTab('similar')}
-                className={`group relative flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-all duration-200 ${
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'similar'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
-                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
+                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
+                aria-label="相似内容"
               >
                 <svg
-                  className="h-4 w-4"
+                  className={`h-5 w-5 ${aiRightTab === 'similar' ? 'text-white' : 'text-gray-600'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2368,10 +2360,29 @@ function HomeContent() {
                     d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
                   />
                 </svg>
-                <span className="leading-tight">Similar</span>
-                {aiRightTab === 'similar' && (
-                  <div className="absolute -bottom-0.5 left-1/2 h-0.5 w-2/3 -translate-x-1/2 rounded-full bg-white/50"></div>
-                )}
+              </button>
+              <button
+                onClick={() => setAiRightTab('image')}
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
+                  aiRightTab === 'image'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
+                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
+                }`}
+                aria-label="图像生成"
+              >
+                <svg
+                  className={`h-5 w-5 ${aiRightTab === 'image' ? 'text-white' : 'text-gray-600'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
               </button>
             </div>
           </div>
@@ -2710,9 +2721,127 @@ function HomeContent() {
                 <div className="p-6">
                   <CommentsList resourceId={selectedResource.id} />
                 </div>
-              ) : (
+              ) : aiRightTab === 'similar' ? (
                 <div className="py-8 text-center text-gray-500">
                   <p className="text-sm">相似内容推荐功能开发中...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <svg
+                        className="h-5 w-5 text-purple-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        文生图 / 图生图
+                      </h3>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      基于当前资源内容，生成相关的可视化图像，或从图片生成图片
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-medium text-gray-700">
+                      快捷生成选项:
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button className="flex flex-col items-center gap-2 rounded-lg border border-purple-200 bg-white p-3 text-xs transition-colors hover:border-purple-300 hover:bg-purple-50">
+                        <svg
+                          className="h-6 w-6 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                          />
+                        </svg>
+                        <span className="text-gray-700">数据图表</span>
+                      </button>
+                      <button className="flex flex-col items-center gap-2 rounded-lg border border-purple-200 bg-white p-3 text-xs transition-colors hover:border-purple-300 hover:bg-purple-50">
+                        <svg
+                          className="h-6 w-6 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+                          />
+                        </svg>
+                        <span className="text-gray-700">概念图</span>
+                      </button>
+                      <button className="flex flex-col items-center gap-2 rounded-lg border border-purple-200 bg-white p-3 text-xs transition-colors hover:border-purple-300 hover:bg-purple-50">
+                        <svg
+                          className="h-6 w-6 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+                          />
+                        </svg>
+                        <span className="text-gray-700">架构图</span>
+                      </button>
+                      <button className="flex flex-col items-center gap-2 rounded-lg border border-purple-200 bg-white p-3 text-xs transition-colors hover:border-purple-300 hover:bg-purple-50">
+                        <svg
+                          className="h-6 w-6 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span className="text-gray-700">场景图</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p className="mb-3 text-xs font-medium text-gray-700">
+                      自定义提示词:
+                    </p>
+                    <textarea
+                      placeholder="描述你想要生成的图像..."
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                      rows={3}
+                    />
+                    <button className="mt-2 w-full rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-purple-700 hover:to-pink-700">
+                      生成图像
+                    </button>
+                  </div>
+
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-xs text-amber-800">
+                      💡 功能开发中，即将支持DALL-E、Stable Diffusion等模型
+                    </p>
+                  </div>
                 </div>
               )
             ) : (

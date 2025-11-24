@@ -132,7 +132,7 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -1383,6 +1383,48 @@ function HomeContent() {
     setAiRightTab('comments');
   };
 
+  // Admin: Delete resource handler
+  const handleDeleteResource = async (
+    resourceId: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (!isAdmin) return;
+
+    if (
+      !confirm(
+        'Are you sure you want to delete this resource? This action cannot be undone.'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/admin/resources/${resourceId}`,
+        {
+          method: 'DELETE',
+          headers: getAuthHeader(),
+        }
+      );
+
+      if (response.ok) {
+        // Remove from local state
+        setResources((prev) => prev.filter((r) => r.id !== resourceId));
+        // If viewing the deleted resource, go back to list
+        if (selectedResource?.id === resourceId) {
+          setSelectedResource(null);
+          setViewMode('list');
+        }
+      } else {
+        alert('Failed to delete resource');
+      }
+    } catch (err) {
+      console.error('Failed to delete resource:', err);
+      alert('Failed to delete resource');
+    }
+  };
+
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-gray-50">
       <VersionUpdateBanner />
@@ -1865,6 +1907,31 @@ function HomeContent() {
                                 ? 'Added'
                                 : 'AI Office'}
                             </button>
+                            {/* Admin Delete Button */}
+                            {isAdmin && (
+                              <button
+                                onClick={(e) =>
+                                  handleDeleteResource(resource.id, e)
+                                }
+                                className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-red-600"
+                                title="Delete resource (Admin)"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

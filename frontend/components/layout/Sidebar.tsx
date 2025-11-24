@@ -254,7 +254,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                 ? 'bg-pink-50 text-gray-900'
                 : 'text-gray-700 hover:bg-gray-50'
             }`}
-            title="Library"
+            title="My Library"
           >
             <svg
               className="h-5 w-5 flex-shrink-0"
@@ -269,7 +269,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                 d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
               />
             </svg>
-            {!isCollapsed && <span>Library</span>}
+            {!isCollapsed && <span>My Library</span>}
           </Link>
 
           <Link

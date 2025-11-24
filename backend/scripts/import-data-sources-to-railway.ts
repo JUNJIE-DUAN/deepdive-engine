@@ -8,7 +8,7 @@ import axios from "axios";
 // Railway生产环境API地址
 const RAILWAY_API_URL =
   process.env.RAILWAY_API_URL ||
-  "https://backend-production-af8e.up.railway.app";
+  "https://backend-production-8638.up.railway.app";
 
 const predefinedDataSources = [
   // ============ PAPER (论文) ============
@@ -687,7 +687,7 @@ async function importDataSources() {
 
   try {
     const response = await axios.post(
-      `${RAILWAY_API_URL}/api/data-collection/sources/bulk`,
+      `${RAILWAY_API_URL}/api/v1/data-collection/sources/bulk`,
       predefinedDataSources,
       {
         headers: {

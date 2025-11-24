@@ -6,3 +6,7 @@ healthcheckPath = "/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
+
+# Force rebuild
+[build.env]
+FORCE_REBUILD = "2025-11-24"

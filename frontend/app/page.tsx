@@ -13,6 +13,7 @@ import HTMLViewer from '@/components/ui/HTMLViewer';
 import ReaderView from '@/components/ui/ReaderView';
 import NotesList from '@/components/features/NotesList';
 import CommentsList from '@/components/features/CommentsList';
+import ReactMarkdown from 'react-markdown';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
@@ -2267,19 +2268,19 @@ function HomeContent() {
           </button>
 
           {/* Top Tab Navigation - Icon Only */}
-          <div className="border-b border-gray-100 bg-gray-50 px-2 pb-2 pt-6">
-            <div className="flex items-center justify-end gap-2">
+          <div className="border-b border-gray-100 bg-gray-50 px-3 py-2.5">
+            <div className="flex items-center justify-between">
               <button
                 onClick={() => setAiRightTab('assistant')}
+                title="Chat"
                 className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'assistant'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
-                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
-                aria-label="AI助手"
               >
                 <svg
-                  className={`h-5 w-5 ${aiRightTab === 'assistant' ? 'text-white' : 'text-gray-600'}`}
+                  className="h-5 w-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2294,15 +2295,15 @@ function HomeContent() {
               </button>
               <button
                 onClick={() => setAiRightTab('notes')}
+                title="Notes"
                 className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'notes'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
-                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
-                aria-label="笔记"
               >
                 <svg
-                  className={`h-5 w-5 ${aiRightTab === 'notes' ? 'text-white' : 'text-gray-600'}`}
+                  className="h-5 w-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2317,15 +2318,15 @@ function HomeContent() {
               </button>
               <button
                 onClick={() => setAiRightTab('comments')}
+                title="Comments"
                 className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'comments'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
-                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
-                aria-label="评论"
               >
                 <svg
-                  className={`h-5 w-5 ${aiRightTab === 'comments' ? 'text-white' : 'text-gray-600'}`}
+                  className="h-5 w-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2340,15 +2341,15 @@ function HomeContent() {
               </button>
               <button
                 onClick={() => setAiRightTab('similar')}
+                title="Similar"
                 className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'similar'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
-                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
-                aria-label="相似内容"
               >
                 <svg
-                  className={`h-5 w-5 ${aiRightTab === 'similar' ? 'text-white' : 'text-gray-600'}`}
+                  className="h-5 w-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2363,15 +2364,15 @@ function HomeContent() {
               </button>
               <button
                 onClick={() => setAiRightTab('image')}
+                title="Image"
                 className={`group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
                   aiRightTab === 'image'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20'
-                    : 'bg-white shadow-sm hover:bg-gray-50 hover:shadow'
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/20'
+                    : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50 hover:shadow'
                 }`}
-                aria-label="图像生成"
               >
                 <svg
-                  className={`h-5 w-5 ${aiRightTab === 'image' ? 'text-white' : 'text-gray-600'}`}
+                  className="h-5 w-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2477,33 +2478,41 @@ function HomeContent() {
                     </div>
                   </div>
 
-                  {/* AI Summary Section */}
+                  {/* AI Summary Section - Card Style */}
                   {aiSummary && (
-                    <div className="space-y-2">
-                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                        <svg
-                          className="h-4 w-4 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        AI摘要
-                        <span className="ml-auto text-xs text-gray-500">
-                          右键添加到笔记
-                        </span>
-                      </h3>
+                    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+                      <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-red-50 to-orange-50 px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white shadow-sm">
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-gray-900">
+                              AI摘要
+                            </h3>
+                            <p className="text-[10px] text-gray-500">
+                              右键添加到笔记
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                       <div
-                        className="cursor-text select-text rounded-lg border border-red-200 bg-red-50 p-3"
+                        className="cursor-text select-text p-3"
                         onContextMenu={(e) => handleContextMenu(e, aiSummary)}
                       >
-                        <p className="text-sm leading-relaxed text-gray-700">
+                        <p className="text-xs leading-relaxed text-gray-700">
                           {aiSummary}
                         </p>
                       </div>
@@ -2522,103 +2531,139 @@ function HomeContent() {
                     </div>
                   )}
 
-                  {/* AI Insights Section */}
+                  {/* AI Insights Section - Card Style */}
                   {aiInsights.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                        <svg
-                          className="h-4 w-4 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                          />
-                        </svg>
-                        关键洞察
-                        <span className="ml-auto text-xs text-gray-500">
-                          右键添加到笔记
-                        </span>
-                      </h3>
-                      {aiInsights.map((insight, i) => (
-                        <div
-                          key={i}
-                          className={`cursor-text select-text rounded-lg border p-3 ${
-                            insight.importance === 'high'
-                              ? 'border-red-200 bg-red-50'
-                              : insight.importance === 'medium'
-                                ? 'border-orange-200 bg-orange-50'
-                                : 'border-gray-200 bg-gray-50'
-                          }`}
-                          onContextMenu={(e) =>
-                            handleContextMenu(
-                              e,
-                              `**${insight.title}**\n\n${insight.description}`
-                            )
-                          }
-                        >
-                          <h4 className="mb-1 text-sm font-semibold text-gray-900">
-                            {insight.title}
-                          </h4>
-                          <p className="text-xs text-gray-600">
-                            {insight.description}
-                          </p>
+                    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+                      <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-orange-50 to-yellow-50 px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600 text-white shadow-sm">
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-gray-900">
+                              {aiInsights.length}个核心观点
+                            </h3>
+                            <p className="text-[10px] text-gray-500">
+                              右键添加到笔记
+                            </p>
+                          </div>
                         </div>
-                      ))}
+                      </div>
+                      <div className="space-y-2 p-3">
+                        {aiInsights.map((insight, i) => (
+                          <div
+                            key={i}
+                            className={`group cursor-pointer rounded-lg border-2 p-2.5 transition-all ${
+                              insight.importance === 'high'
+                                ? 'border-red-200 bg-red-50 hover:border-red-300 hover:bg-red-100'
+                                : insight.importance === 'medium'
+                                  ? 'border-orange-200 bg-orange-50 hover:border-orange-300 hover:bg-orange-100'
+                                  : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                            }`}
+                            onContextMenu={(e) =>
+                              handleContextMenu(
+                                e,
+                                `**${insight.title}**\n\n${insight.description}`
+                              )
+                            }
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="text-base">
+                                {insight.importance === 'high'
+                                  ? '⭐'
+                                  : insight.importance === 'medium'
+                                    ? '🔸'
+                                    : '•'}
+                              </span>
+                              <div className="flex-1">
+                                <h4 className="text-xs font-semibold leading-snug text-gray-900">
+                                  {insight.title}
+                                </h4>
+                                <p className="mt-1 text-[11px] leading-relaxed text-gray-600">
+                                  {insight.description}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  {/* AI Methodology Section */}
+                  {/* AI Methodology Section - Card Style */}
                   {aiMethodology.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                        <svg
-                          className="h-4 w-4 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 008 10.586V5L7 4z"
-                          />
-                        </svg>
-                        研究方法论
-                        <span className="ml-auto text-xs text-gray-500">
-                          右键添加到笔记
-                        </span>
-                      </h3>
-                      {aiMethodology.map((method, i) => (
-                        <div
-                          key={i}
-                          className={`cursor-text select-text rounded-lg border p-3 ${
-                            method.importance === 'high'
-                              ? 'border-blue-200 bg-blue-50'
-                              : method.importance === 'medium'
-                                ? 'border-cyan-200 bg-cyan-50'
-                                : 'border-teal-200 bg-teal-50'
-                          }`}
-                          onContextMenu={(e) =>
-                            handleContextMenu(
-                              e,
-                              `**${method.title}**\n\n${method.description}`
-                            )
-                          }
-                        >
-                          <h4 className="mb-1 text-sm font-semibold text-gray-900">
-                            {method.title}
-                          </h4>
-                          <p className="text-xs text-gray-600">
-                            {method.description}
-                          </p>
+                    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+                      <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-blue-50 to-cyan-50 px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 008 10.586V5L7 4z"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-gray-900">
+                              研究方法论
+                            </h3>
+                            <p className="text-[10px] text-gray-500">
+                              右键添加到笔记
+                            </p>
+                          </div>
                         </div>
-                      ))}
+                      </div>
+                      <div className="space-y-2 p-3">
+                        {aiMethodology.map((method, i) => (
+                          <div
+                            key={i}
+                            className={`group cursor-pointer rounded-lg border-2 p-2.5 transition-all ${
+                              method.importance === 'high'
+                                ? 'border-blue-200 bg-blue-50 hover:border-blue-300 hover:bg-blue-100'
+                                : method.importance === 'medium'
+                                  ? 'border-cyan-200 bg-cyan-50 hover:border-cyan-300 hover:bg-cyan-100'
+                                  : 'border-teal-200 bg-teal-50 hover:border-teal-300 hover:bg-teal-100'
+                            }`}
+                            onContextMenu={(e) =>
+                              handleContextMenu(
+                                e,
+                                `**${method.title}**\n\n${method.description}`
+                              )
+                            }
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="text-base">🔬</span>
+                              <div className="flex-1">
+                                <h4 className="text-xs font-semibold leading-snug text-gray-900">
+                                  {method.title}
+                                </h4>
+                                <p className="mt-1 text-[11px] leading-relaxed text-gray-600">
+                                  {method.description}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -2631,19 +2676,29 @@ function HomeContent() {
                           className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                            className={`max-w-[80%] rounded-lg px-3 py-2 ${
                               msg.role === 'user'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-100 text-gray-900'
+                                ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
+                                : 'bg-gray-100 text-gray-800'
                             }`}
+                            onContextMenu={
+                              msg.role === 'assistant'
+                                ? (e) => handleContextMenu(e, msg.content)
+                                : undefined
+                            }
                           >
-                            <p className="text-sm">{msg.content}</p>
-                            <p className="mt-1 text-xs opacity-70">
-                              {msg.timestamp.toLocaleTimeString('zh-CN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
+                            <div className="prose-xs prose max-w-none text-xs leading-relaxed [&>*]:my-1 [&>ol]:my-1 [&>p]:my-1 [&>ul]:my-1">
+                              <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            </div>
+                            <div
+                              className={`mt-1 text-[10px] ${
+                                msg.role === 'user'
+                                  ? 'text-red-100'
+                                  : 'text-gray-500'
+                              }`}
+                            >
+                              {new Date(msg.timestamp).toLocaleTimeString()}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -2651,11 +2706,11 @@ function HomeContent() {
                       {/* Inline Loading Message */}
                       {isStreaming && (
                         <div className="flex justify-start">
-                          <div className="max-w-[80%] rounded-lg bg-gray-100 px-4 py-3 text-gray-900">
+                          <div className="max-w-[80%] rounded-lg bg-gray-100 px-3 py-2 text-gray-900">
                             <div className="flex items-center gap-2">
-                              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-red-600"></div>
-                              <p className="text-sm">
-                                {aiModel === 'grok' ? 'Grok' : 'GPT-4'}
+                              <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-red-600"></div>
+                              <p className="text-xs">
+                                {aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'}
                                 正在思考...
                               </p>
                             </div>

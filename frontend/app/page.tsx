@@ -1263,9 +1263,7 @@ function HomeContent() {
 
     // Check if user is logged in
     if (!user) {
-      alert(
-        '请先登录才能使用收藏功能。\n\n请在左侧边栏底部点击 "Login" 按钮登录。'
-      );
+      router.push('/login');
       return;
     }
 
@@ -2268,15 +2266,15 @@ function HomeContent() {
           </button>
 
           {/* Top Tab Navigation - Icon Only */}
-          <div className="mt-6 border-b border-gray-100 bg-white px-6 py-4">
-            <div className="flex items-center justify-between">
+          <div className="border-b border-gray-100 bg-white px-6 py-6 pt-6">
+            <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => setAiRightTab('assistant')}
                 title="AI Assistant"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all duration-200 ${
                   aiRightTab === 'assistant'
-                    ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    ? 'border-red-500 bg-red-50 text-red-600'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
                 }`}
               >
                 <svg
@@ -2296,10 +2294,10 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('notes')}
                 title="My Notes"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all duration-200 ${
                   aiRightTab === 'notes'
-                    ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    ? 'border-red-500 bg-red-50 text-red-600'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
                 }`}
               >
                 <svg
@@ -2319,10 +2317,10 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('comments')}
                 title="Comments"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all duration-200 ${
                   aiRightTab === 'comments'
-                    ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    ? 'border-red-500 bg-red-50 text-red-600'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
                 }`}
               >
                 <svg
@@ -2342,10 +2340,10 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('similar')}
                 title="Similar Resources"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all duration-200 ${
                   aiRightTab === 'similar'
-                    ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    ? 'border-red-500 bg-red-50 text-red-600'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
                 }`}
               >
                 <svg
@@ -2365,10 +2363,10 @@ function HomeContent() {
               <button
                 onClick={() => setAiRightTab('image')}
                 title="Image Analysis"
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
+                className={`group relative flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all duration-200 ${
                   aiRightTab === 'image'
-                    ? 'bg-red-50 text-red-600 ring-2 ring-red-500 ring-offset-0'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    ? 'border-blue-500 bg-blue-50 text-blue-600'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'
                 }`}
               >
                 <svg

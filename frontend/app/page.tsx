@@ -842,8 +842,14 @@ function HomeContent() {
             '⚠️ AI服务暂不可用\n\n请在 ai-service/.env 文件中配置以下API密钥之一：\n• GROK_API_KEY (推荐)\n• OPENAI_API_KEY\n\n配置后重启 ai-service 即可使用AI功能。'
           );
         } else {
-          const error = await res.json();
-          setAiSummary(`生成失败: ${error.detail || '未知错误'}`);
+          try {
+            const error = await res.json();
+            setAiSummary(
+              `生成失败: ${error.error || error.detail || error.message || 'AI服务返回错误'}`
+            );
+          } catch {
+            setAiSummary(`生成失败: AI服务返回错误 (${res.status})`);
+          }
         }
         return;
       }

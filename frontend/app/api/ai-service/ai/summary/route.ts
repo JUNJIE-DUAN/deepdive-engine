@@ -22,15 +22,34 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`AI service responded with status: ${response.status}`);
+      // Try to get error details from the response
+      let errorDetail = `AI service responded with status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorDetail =
+          errorData.detail ||
+          errorData.error ||
+          errorData.message ||
+          errorDetail;
+      } catch {
+        // If we can't parse JSON, use the status text
+        errorDetail = response.statusText || errorDetail;
+      }
+      console.error('AI summary error:', errorDetail);
+      return NextResponse.json(
+        { error: errorDetail },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error('AI summary error:', error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to communicate with AI service' },
+      { error: `无法连接到AI服务: ${errorMessage}` },
       { status: 500 }
     );
   }

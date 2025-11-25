@@ -12,11 +12,7 @@ import {
 } from '@/types/ai-group';
 import * as api from '@/lib/api/ai-group';
 import { getAuthTokens } from '@/lib/auth';
-
-// TODO: Enable WebSocket after installing socket.io-client
-// npm install socket.io-client
-// import { io, Socket } from 'socket.io-client';
-type Socket = any;
+import { io, Socket } from 'socket.io-client';
 
 interface AiGroupState {
   // Topics
@@ -335,13 +331,6 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
   // ==================== WebSocket ====================
 
   connectSocket: (_userId) => {
-    // TODO: WebSocket functionality disabled until socket.io-client is installed
-    // To enable real-time features, run:
-    // npm install socket.io-client
-    // Then uncomment the socket.io-client import and the code below
-    console.warn('WebSocket disabled: socket.io-client not installed');
-
-    /*
     const { socket } = get();
     if (socket?.connected) return;
 
@@ -362,11 +351,21 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
       set({ isConnected: false });
     });
 
+    newSocket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error);
+    });
+
     // 新消息
     newSocket.on('message:new', (message: TopicMessage) => {
-      set((state) => ({
-        messages: [...state.messages, message],
-      }));
+      set((state) => {
+        // 防止重复添加消息
+        if (state.messages.some((m) => m.id === message.id)) {
+          return state;
+        }
+        return {
+          messages: [...state.messages, message],
+        };
+      });
     });
 
     // 消息删除
@@ -377,39 +376,48 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     });
 
     // 成员上线
-    newSocket.on('member:online', ({ onlineUserId }: { onlineUserId: string }) => {
-      set((state) => {
-        const newSet = new Set(state.onlineUsers);
-        newSet.add(onlineUserId);
-        return { onlineUsers: newSet };
-      });
-    });
+    newSocket.on(
+      'member:online',
+      ({ userId: onlineUserId }: { userId: string }) => {
+        set((state) => {
+          const newSet = new Set(state.onlineUsers);
+          newSet.add(onlineUserId);
+          return { onlineUsers: newSet };
+        });
+      }
+    );
 
     // 成员下线
-    newSocket.on('member:offline', ({ offlineUserId }: { offlineUserId: string }) => {
-      set((state) => {
-        const newSet = new Set(state.onlineUsers);
-        newSet.delete(offlineUserId);
-        return { onlineUsers: newSet };
-      });
-    });
+    newSocket.on(
+      'member:offline',
+      ({ userId: offlineUserId }: { userId: string }) => {
+        set((state) => {
+          const newSet = new Set(state.onlineUsers);
+          newSet.delete(offlineUserId);
+          return { onlineUsers: newSet };
+        });
+      }
+    );
 
     // 成员正在输入
-    newSocket.on('member:typing', ({ typingUserId }: { typingUserId: string }) => {
-      set((state) => {
-        const newSet = new Set(state.typingUsers);
-        newSet.add(typingUserId);
-        return { typingUsers: newSet };
-      });
-      // 3秒后自动移除
-      setTimeout(() => {
+    newSocket.on(
+      'member:typing',
+      ({ userId: typingUserId }: { userId: string }) => {
         set((state) => {
           const newSet = new Set(state.typingUsers);
-          newSet.delete(typingUserId);
+          newSet.add(typingUserId);
           return { typingUsers: newSet };
         });
-      }, 3000);
-    });
+        // 3秒后自动移除
+        setTimeout(() => {
+          set((state) => {
+            const newSet = new Set(state.typingUsers);
+            newSet.delete(typingUserId);
+            return { typingUsers: newSet };
+          });
+        }, 3000);
+      }
+    );
 
     // AI正在输入
     newSocket.on('ai:typing', ({ aiMemberId }: { aiMemberId: string }) => {
@@ -427,6 +435,10 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
         if (message.aiMemberId) {
           newSet.delete(message.aiMemberId);
         }
+        // 防止重复添加
+        if (state.messages.some((m) => m.id === message.id)) {
+          return { typingAIs: newSet };
+        }
         return {
           typingAIs: newSet,
           messages: [...state.messages, message],
@@ -434,41 +446,88 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
       });
     });
 
+    // AI错误
+    newSocket.on(
+      'ai:error',
+      ({ aiMemberId, error }: { aiMemberId: string; error: string }) => {
+        console.error(`AI ${aiMemberId} error:`, error);
+        set((state) => {
+          const newSet = new Set(state.typingAIs);
+          newSet.delete(aiMemberId);
+          return { typingAIs: newSet };
+        });
+      }
+    );
+
     // 反应添加
-    newSocket.on('reaction:add', ({ messageId, reactionUserId, emoji }: { messageId: string; reactionUserId: string; emoji: string }) => {
-      set((state) => ({
-        messages: state.messages.map((m) => {
-          if (m.id === messageId) {
-            const existingReaction = m.reactions.find((r) => r.userId === reactionUserId && r.emoji === emoji);
-            if (!existingReaction) {
-              return {
-                ...m,
-                reactions: [...m.reactions, { id: '', messageId, userId: reactionUserId, emoji, createdAt: new Date().toISOString() }],
-              };
+    newSocket.on(
+      'reaction:add',
+      ({
+        messageId,
+        userId: reactionUserId,
+        emoji,
+      }: {
+        messageId: string;
+        userId: string;
+        emoji: string;
+      }) => {
+        set((state) => ({
+          messages: state.messages.map((m) => {
+            if (m.id === messageId) {
+              const existingReaction = m.reactions.find(
+                (r) => r.userId === reactionUserId && r.emoji === emoji
+              );
+              if (!existingReaction) {
+                return {
+                  ...m,
+                  reactions: [
+                    ...m.reactions,
+                    {
+                      id: '',
+                      messageId,
+                      userId: reactionUserId,
+                      emoji,
+                      createdAt: new Date().toISOString(),
+                    },
+                  ],
+                };
+              }
             }
-          }
-          return m;
-        }),
-      }));
-    });
+            return m;
+          }),
+        }));
+      }
+    );
 
     // 反应移除
-    newSocket.on('reaction:remove', ({ messageId, removeUserId, emoji }: { messageId: string; removeUserId: string; emoji: string }) => {
-      set((state) => ({
-        messages: state.messages.map((m) => {
-          if (m.id === messageId) {
-            return {
-              ...m,
-              reactions: m.reactions.filter((r) => !(r.userId === removeUserId && r.emoji === emoji)),
-            };
-          }
-          return m;
-        }),
-      }));
-    });
+    newSocket.on(
+      'reaction:remove',
+      ({
+        messageId,
+        userId: removeUserId,
+        emoji,
+      }: {
+        messageId: string;
+        userId: string;
+        emoji: string;
+      }) => {
+        set((state) => ({
+          messages: state.messages.map((m) => {
+            if (m.id === messageId) {
+              return {
+                ...m,
+                reactions: m.reactions.filter(
+                  (r) => !(r.userId === removeUserId && r.emoji === emoji)
+                ),
+              };
+            }
+            return m;
+          }),
+        }));
+      }
+    );
 
     set({ socket: newSocket });
-    */
   },
 
   disconnectSocket: () => {

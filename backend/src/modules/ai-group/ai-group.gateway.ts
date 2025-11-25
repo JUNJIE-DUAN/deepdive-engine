@@ -6,11 +6,11 @@ import {
   OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
-import { AiGroupService } from './ai-group.service';
-import { SendMessageDto } from './dto';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { Logger } from "@nestjs/common";
+import { AiGroupService } from "./ai-group.service";
+import { SendMessageDto } from "./dto";
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -18,17 +18,23 @@ interface AuthenticatedSocket extends Socket {
 }
 
 @WebSocketGateway({
-  namespace: '/ai-group',
+  namespace: "/ai-group",
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:3001', process.env.FRONTEND_URL],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      process.env.FRONTEND_URL,
+    ],
     credentials: true,
   },
 })
-export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class AiGroupGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
-  private logger = new Logger('AiGroupGateway');
+  private logger = new Logger("AiGroupGateway");
   private userSockets = new Map<string, Set<string>>(); // userId -> Set<socketId>
   private socketUsers = new Map<string, string>(); // socketId -> userId
 
@@ -37,9 +43,10 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
   async handleConnection(client: AuthenticatedSocket) {
     try {
       // 从handshake中获取用户信息（由前端传入）
-      const userId = client.handshake.auth?.userId || client.handshake.query?.userId;
+      const userId =
+        client.handshake.auth?.userId || client.handshake.query?.userId;
 
-      if (!userId || typeof userId !== 'string') {
+      if (!userId || typeof userId !== "string") {
         this.logger.warn(`Connection rejected: no userId provided`);
         client.disconnect();
         return;
@@ -55,8 +62,10 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
       this.userSockets.get(userId)?.add(client.id);
 
       this.logger.log(`Client connected: ${client.id}, userId: ${userId}`);
-    } catch (error) {
-      this.logger.error(`Connection error: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Connection error: ${errorMessage}`);
       client.disconnect();
     }
   }
@@ -74,7 +83,7 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   // 加入Topic房间
-  @SubscribeMessage('topic:join')
+  @SubscribeMessage("topic:join")
   async handleJoinTopic(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { topicId: string },
@@ -83,7 +92,7 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const userId = client.userId;
 
     if (!userId) {
-      return { error: 'Not authenticated' };
+      return { error: "Not authenticated" };
     }
 
     try {
@@ -100,19 +109,21 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
       client.currentTopicId = topicId;
 
       // 通知其他成员有人加入
-      client.to(`topic:${topicId}`).emit('member:online', { userId });
+      client.to(`topic:${topicId}`).emit("member:online", { userId });
 
       this.logger.log(`User ${userId} joined topic ${topicId}`);
 
       return { success: true };
-    } catch (error) {
-      this.logger.error(`Join topic error: ${error.message}`);
-      return { error: error.message };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Join topic error: ${errorMessage}`);
+      return { error: errorMessage };
     }
   }
 
   // 离开Topic房间
-  @SubscribeMessage('topic:leave')
+  @SubscribeMessage("topic:leave")
   async handleLeaveTopic(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { topicId: string },
@@ -125,7 +136,7 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
       client.currentTopicId = undefined;
 
       // 通知其他成员有人离开
-      client.to(`topic:${topicId}`).emit('member:offline', { userId });
+      client.to(`topic:${topicId}`).emit("member:offline", { userId });
 
       this.logger.log(`User ${userId} left topic ${topicId}`);
     }
@@ -134,7 +145,7 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   // 发送消息
-  @SubscribeMessage('message:send')
+  @SubscribeMessage("message:send")
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { topicId: string } & SendMessageDto,
@@ -143,41 +154,53 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const userId = client.userId;
 
     if (!userId) {
-      return { error: 'Not authenticated' };
+      return { error: "Not authenticated" };
     }
 
     try {
-      const message = await this.aiGroupService.sendMessage(topicId, userId, messageDto);
+      const message = await this.aiGroupService.sendMessage(
+        topicId,
+        userId,
+        messageDto,
+      );
 
       // 广播消息给Topic内所有成员
-      this.server.to(`topic:${topicId}`).emit('message:new', message);
+      this.server.to(`topic:${topicId}`).emit("message:new", message);
 
       // 检查是否有@AI的mention，如果有，触发AI响应
-      const aiMentions = messageDto.mentions?.filter((m) => m.mentionType === 'AI');
+      const aiMentions = messageDto.mentions?.filter(
+        (m) => m.mentionType === "AI",
+      );
       if (aiMentions && aiMentions.length > 0) {
         for (const mention of aiMentions) {
           if (mention.aiMemberId) {
             // 通知正在输入
-            this.server.to(`topic:${topicId}`).emit('ai:typing', {
+            this.server.to(`topic:${topicId}`).emit("ai:typing", {
               topicId,
               aiMemberId: mention.aiMemberId,
             });
 
             // 生成AI响应（异步）
-            this.generateAndBroadcastAIResponse(topicId, userId, mention.aiMemberId);
+            this.generateAndBroadcastAIResponse(
+              topicId,
+              userId,
+              mention.aiMemberId,
+            );
           }
         }
       }
 
       return { success: true, message };
-    } catch (error) {
-      this.logger.error(`Send message error: ${error.message}`);
-      return { error: error.message };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Send message error: ${errorMessage}`);
+      return { error: errorMessage };
     }
   }
 
   // 正在输入提示
-  @SubscribeMessage('message:typing')
+  @SubscribeMessage("message:typing")
   async handleTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { topicId: string },
@@ -187,11 +210,11 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
     if (!userId) return;
 
-    client.to(`topic:${topicId}`).emit('member:typing', { userId });
+    client.to(`topic:${topicId}`).emit("member:typing", { userId });
   }
 
   // 标记消息已读
-  @SubscribeMessage('message:read')
+  @SubscribeMessage("message:read")
   async handleReadMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { topicId: string; messageId: string },
@@ -200,19 +223,21 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const userId = client.userId;
 
     if (!userId) {
-      return { error: 'Not authenticated' };
+      return { error: "Not authenticated" };
     }
 
     try {
       await this.aiGroupService.markAsRead(topicId, userId, messageId);
       return { success: true };
-    } catch (error) {
-      return { error: error.message };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      return { error: errorMessage };
     }
   }
 
   // 添加表情反应
-  @SubscribeMessage('reaction:add')
+  @SubscribeMessage("reaction:add")
   async handleAddReaction(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { topicId: string; messageId: string; emoji: string },
@@ -221,27 +246,29 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const userId = client.userId;
 
     if (!userId) {
-      return { error: 'Not authenticated' };
+      return { error: "Not authenticated" };
     }
 
     try {
       await this.aiGroupService.addReaction(topicId, userId, messageId, emoji);
 
       // 广播反应事件
-      this.server.to(`topic:${topicId}`).emit('reaction:add', {
+      this.server.to(`topic:${topicId}`).emit("reaction:add", {
         messageId,
         userId,
         emoji,
       });
 
       return { success: true };
-    } catch (error) {
-      return { error: error.message };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      return { error: errorMessage };
     }
   }
 
   // 移除表情反应
-  @SubscribeMessage('reaction:remove')
+  @SubscribeMessage("reaction:remove")
   async handleRemoveReaction(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { topicId: string; messageId: string; emoji: string },
@@ -250,22 +277,29 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const userId = client.userId;
 
     if (!userId) {
-      return { error: 'Not authenticated' };
+      return { error: "Not authenticated" };
     }
 
     try {
-      await this.aiGroupService.removeReaction(topicId, userId, messageId, emoji);
+      await this.aiGroupService.removeReaction(
+        topicId,
+        userId,
+        messageId,
+        emoji,
+      );
 
       // 广播反应移除事件
-      this.server.to(`topic:${topicId}`).emit('reaction:remove', {
+      this.server.to(`topic:${topicId}`).emit("reaction:remove", {
         messageId,
         userId,
         emoji,
       });
 
       return { success: true };
-    } catch (error) {
-      return { error: error.message };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      return { error: errorMessage };
     }
   }
 
@@ -286,13 +320,15 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
       );
 
       // 广播AI响应
-      this.server.to(`topic:${topicId}`).emit('ai:response', aiMessage);
-      this.server.to(`topic:${topicId}`).emit('message:new', aiMessage);
-    } catch (error) {
-      this.logger.error(`AI response error: ${error.message}`);
-      this.server.to(`topic:${topicId}`).emit('ai:error', {
+      this.server.to(`topic:${topicId}`).emit("ai:response", aiMessage);
+      this.server.to(`topic:${topicId}`).emit("message:new", aiMessage);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`AI response error: ${errorMessage}`);
+      this.server.to(`topic:${topicId}`).emit("ai:error", {
         aiMemberId,
-        error: error.message,
+        error: errorMessage,
       });
     }
   }
@@ -314,16 +350,15 @@ export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
   // 获取Topic内在线用户
   async getOnlineUsersInTopic(topicId: string): Promise<string[]> {
-    const room = this.server.adapter.rooms?.get(`topic:${topicId}`);
-    if (!room) return [];
-
+    const sockets = await this.server.in(`topic:${topicId}`).fetchSockets();
     const onlineUserIds: string[] = [];
-    room.forEach((socketId) => {
-      const userId = this.socketUsers.get(socketId);
+
+    for (const socket of sockets) {
+      const userId = this.socketUsers.get(socket.id);
       if (userId && !onlineUserIds.includes(userId)) {
         onlineUserIds.push(userId);
       }
-    });
+    }
 
     return onlineUserIds;
   }

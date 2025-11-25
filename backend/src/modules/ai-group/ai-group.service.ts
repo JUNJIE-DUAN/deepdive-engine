@@ -1091,14 +1091,17 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
     });
 
     // Get AI model configuration from database
-    // Try to match by name (case-insensitive) or by the model name in lowercase
+    // Try to match by name or displayName (case-insensitive)
+    // aiMember.aiModel could be "grok" while DB has name="Grok" or displayName="Grok"
     const aiModelConfig = await this.prisma.aIModel.findFirst({
       where: {
         OR: [
           { name: { equals: aiMember.aiModel, mode: "insensitive" } },
+          { displayName: { equals: aiMember.aiModel, mode: "insensitive" } },
+          // Also try with "AI-" prefix removed (e.g., "AI-Grok" -> "Grok")
           {
-            name: {
-              equals: aiMember.aiModel.toLowerCase(),
+            displayName: {
+              equals: `AI-${aiMember.aiModel}`,
               mode: "insensitive",
             },
           },
@@ -1108,7 +1111,7 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
     });
 
     this.logger.log(
-      `Looking for AI model config: aiMember.aiModel=${aiMember.aiModel}, found=${!!aiModelConfig}`,
+      `Looking for AI model config: aiMember.aiModel=${aiMember.aiModel}, found=${!!aiModelConfig}, config=${JSON.stringify(aiModelConfig ? { name: aiModelConfig.name, displayName: aiModelConfig.displayName, hasApiKey: !!aiModelConfig.apiKey } : null)}`,
     );
 
     // Call AI service

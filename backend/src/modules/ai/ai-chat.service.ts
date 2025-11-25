@@ -827,37 +827,35 @@ Format the summary in a clear, structured manner using markdown.`;
 
   /**
    * Helper method to call Gemini API with key
+   * Supports both text and image generation using gemini-2.0-flash-exp
    */
   private async callGeminiApiWithKey(
     apiKey: string,
     modelId: string,
-    apiEndpoint: string | undefined,
+    _apiEndpoint: string | undefined, // Reserved for future use
     messages: ChatMessage[],
     maxTokens: number,
     temperature: number,
   ): Promise<ChatCompletionResult> {
-    // Build the correct Gemini API URL
-    // If apiEndpoint is the base URL like "https://generativelanguage.googleapis.com/v1beta/models"
-    // we need to append the model ID and action
-    let url: string;
-    if (apiEndpoint) {
-      // Check if apiEndpoint already includes the model and action
-      if (apiEndpoint.includes(":generateContent")) {
-        url = apiEndpoint.includes("key=")
-          ? apiEndpoint
-          : `${apiEndpoint}${apiEndpoint.includes("?") ? "&" : "?"}key=${apiKey}`;
-      } else {
-        // Append model ID and action
-        const baseUrl = apiEndpoint.endsWith("/")
-          ? apiEndpoint.slice(0, -1)
-          : apiEndpoint;
-        url = `${baseUrl}/${modelId}:generateContent?key=${apiKey}`;
-      }
-    } else {
-      url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
-    }
+    // Check if user is requesting image generation
+    const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+    const userContent = lastUserMessage?.content?.toLowerCase() || "";
+    const isImageRequest = this.isImageGenerationRequest(userContent);
 
-    this.logger.log(`Calling Gemini API: ${url.replace(apiKey, "***")}`);
+    // Use image generation model if user requests image
+    // gemini-2.0-flash-exp supports native image generation
+    const effectiveModelId = isImageRequest
+      ? "gemini-2.0-flash-exp"
+      : modelId.includes("gemini")
+        ? modelId
+        : "gemini-2.0-flash";
+
+    // Build the correct Gemini API URL
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${effectiveModelId}:generateContent?key=${apiKey}`;
+
+    this.logger.log(
+      `Calling Gemini API: ${url.replace(apiKey, "***")}, imageRequest=${isImageRequest}`,
+    );
 
     // Extract system message for system instruction
     const systemMessage = messages.find((m) => m.role === "system");
@@ -875,13 +873,20 @@ Format the summary in a clear, structured manner using markdown.`;
         maxOutputTokens: maxTokens,
         temperature,
       },
-      // Enable Google Search Grounding for real-time information
-      tools: [
+    };
+
+    // Enable image generation if requested
+    if (isImageRequest) {
+      requestBody.generationConfig.responseModalities = ["TEXT", "IMAGE"];
+      this.logger.log("Image generation enabled for this request");
+    } else {
+      // Enable Google Search Grounding for text-only responses
+      requestBody.tools = [
         {
           googleSearch: {},
         },
-      ],
-    };
+      ];
+    }
 
     if (systemMessage) {
       requestBody.systemInstruction = {
@@ -894,18 +899,89 @@ Format the summary in a clear, structured manner using markdown.`;
         headers: {
           "Content-Type": "application/json",
         },
-        timeout: 60000,
+        timeout: 120000, // Longer timeout for image generation
       }),
     );
 
     const data = response.data;
+
+    // Process response - handle both text and image parts
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    let textContent = "";
+    const images: string[] = [];
+
+    for (const part of parts) {
+      if (part.text) {
+        textContent += part.text;
+      }
+      if (part.inlineData) {
+        // Image data is returned as base64
+        const mimeType = part.inlineData.mimeType || "image/png";
+        const base64Data = part.inlineData.data;
+        const imageMarkdown = `![Generated Image](data:${mimeType};base64,${base64Data})`;
+        images.push(imageMarkdown);
+      }
+    }
+
+    // Combine text and images in the response
+    let finalContent = textContent;
+    if (images.length > 0) {
+      finalContent =
+        images.join("\n\n") + (textContent ? "\n\n" + textContent : "");
+      this.logger.log(`Gemini generated ${images.length} image(s)`);
+    }
+
     return {
-      content: data.candidates?.[0]?.content?.parts?.[0]?.text || "",
+      content: finalContent || "I was unable to generate a response.",
       model: "gemini",
       tokensUsed:
         (data.usageMetadata?.promptTokenCount || 0) +
         (data.usageMetadata?.candidatesTokenCount || 0),
     };
+  }
+
+  /**
+   * Check if the user message is requesting image generation
+   */
+  private isImageGenerationRequest(content: string): boolean {
+    const imageKeywords = [
+      // Chinese
+      "生成图",
+      "画图",
+      "画一",
+      "画个",
+      "画张",
+      "创建图",
+      "制作图",
+      "生成一张",
+      "生成一个图",
+      "帮我画",
+      "给我画",
+      "图片",
+      "图像",
+      "插图",
+      "绘制",
+      "设计图",
+      "信息图",
+      "流程图",
+      "示意图",
+      // English
+      "generate image",
+      "create image",
+      "draw",
+      "make image",
+      "generate picture",
+      "create picture",
+      "illustration",
+      "infographic",
+      "diagram",
+      "visualize",
+      "picture of",
+      "image of",
+    ];
+
+    const lowerContent = content.toLowerCase();
+    return imageKeywords.some((keyword) => lowerContent.includes(keyword));
   }
 
   /**

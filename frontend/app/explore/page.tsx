@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 /**
- * Redirect page for legacy /explore?id= URLs
- * Redirects to /resource/[id]
+ * Inner component that uses useSearchParams
  */
-export default function ExplorePage() {
+function ExploreRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
@@ -27,5 +26,26 @@ export default function ExplorePage() {
         <p className="text-gray-500">Redirecting...</p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Redirect page for legacy /explore?id= URLs
+ * Redirects to /resource/[id]
+ */
+export default function ExplorePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+            <p className="text-gray-500">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <ExploreRedirect />
+    </Suspense>
   );
 }

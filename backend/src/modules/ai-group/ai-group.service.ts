@@ -1091,12 +1091,25 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
     });
 
     // Get AI model configuration from database
+    // Try to match by name (case-insensitive) or by the model name in lowercase
     const aiModelConfig = await this.prisma.aIModel.findFirst({
       where: {
-        name: aiMember.aiModel,
+        OR: [
+          { name: { equals: aiMember.aiModel, mode: "insensitive" } },
+          {
+            name: {
+              equals: aiMember.aiModel.toLowerCase(),
+              mode: "insensitive",
+            },
+          },
+        ],
         isEnabled: true,
       },
     });
+
+    this.logger.log(
+      `Looking for AI model config: aiMember.aiModel=${aiMember.aiModel}, found=${!!aiModelConfig}`,
+    );
 
     // Call AI service
     this.logger.log(

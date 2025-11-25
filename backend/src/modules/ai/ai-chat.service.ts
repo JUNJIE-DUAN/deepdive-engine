@@ -654,13 +654,17 @@ Format the summary in a clear, structured manner using markdown.`;
     } = options;
 
     this.logger.log(
-      `Generating chat completion with key for provider: ${provider}, model: ${modelId}`,
+      `Generating chat completion with key for provider: ${provider}, model: ${modelId}, apiKeyLength: ${apiKey?.length || 0}, endpoint: ${apiEndpoint}`,
     );
 
     if (!apiKey) {
       this.logger.warn(`No API key provided for ${provider}, returning mock`);
       return this.getMockResponse(modelId, messages);
     }
+
+    this.logger.log(
+      `API key confirmed for ${provider}: ${apiKey.substring(0, 8)}...${apiKey.slice(-4)}`,
+    );
 
     // Build full messages with system prompt
     const fullMessages: ChatMessage[] = [];
@@ -759,7 +763,18 @@ Format the summary in a clear, structured manner using markdown.`;
           );
       }
     } catch (error) {
-      this.logger.error(`API call failed: ${error}`);
+      const errorDetails =
+        error instanceof Error
+          ? {
+              message: error.message,
+              name: error.name,
+              response: (error as any).response?.data,
+              status: (error as any).response?.status,
+            }
+          : error;
+      this.logger.error(
+        `API call failed for ${provider}: ${JSON.stringify(errorDetails)}`,
+      );
       return this.getMockResponse(modelId, messages);
     }
   }

@@ -223,7 +223,13 @@ export async function addReaction(
   topicId: string,
   messageId: string,
   emoji: string
-): Promise<void> {
+): Promise<{
+  id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+}> {
   return fetchWithAuth(
     `/api/v1/topics/${topicId}/messages/${messageId}/reactions`,
     {

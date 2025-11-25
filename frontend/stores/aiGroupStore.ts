@@ -198,7 +198,10 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
 
   sendMessage: async (topicId, dto) => {
     const message = await api.sendMessage(topicId, dto);
-    // 消息会通过WebSocket推送，这里不需要更新state
+    // WebSocket未实现，需要手动更新state
+    set((state) => ({
+      messages: [...state.messages, message],
+    }));
     return message;
   },
 
@@ -210,13 +213,35 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
   },
 
   addReaction: async (topicId, messageId, emoji) => {
-    await api.addReaction(topicId, messageId, emoji);
-    // 反应会通过WebSocket推送
+    const reaction = await api.addReaction(topicId, messageId, emoji);
+    // WebSocket未实现，手动更新state
+    const { messages } = get();
+    set({
+      messages: messages.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              reactions: [...m.reactions, reaction],
+            }
+          : m
+      ),
+    });
   },
 
   removeReaction: async (topicId, messageId, emoji) => {
     await api.removeReaction(topicId, messageId, emoji);
-    // 反应会通过WebSocket推送
+    // WebSocket未实现，手动更新state
+    const { messages } = get();
+    set({
+      messages: messages.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              reactions: m.reactions.filter((r) => r.emoji !== emoji),
+            }
+          : m
+      ),
+    });
   },
 
   // ==================== Members ====================
@@ -267,7 +292,10 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
 
     try {
       const message = await api.generateAIResponse(topicId, aiMemberId);
-      // Message will come through WebSocket, but also return it
+      // WebSocket未实现，需要手动更新state
+      set((state) => ({
+        messages: [...state.messages, message],
+      }));
       return message;
     } finally {
       // Remove AI from typing

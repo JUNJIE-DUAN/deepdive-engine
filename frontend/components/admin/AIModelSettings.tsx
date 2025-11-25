@@ -38,12 +38,40 @@ const MODEL_ICONS: Record<string, string> = {
   gemini: '/icons/ai/gemini.svg',
 };
 
-// Standard model IDs that match frontend AI_MODELS
-const STANDARD_MODEL_IDS = [
-  { id: 'grok', name: 'Grok', provider: 'xAI' },
-  { id: 'gpt-4', name: 'GPT-4', provider: 'OpenAI' },
-  { id: 'claude', name: 'Claude', provider: 'Anthropic' },
-  { id: 'gemini', name: 'Gemini', provider: 'Google' },
+// Standard model configurations with defaults
+const STANDARD_MODEL_CONFIGS = [
+  {
+    id: 'grok',
+    name: 'Grok',
+    provider: 'xAI',
+    defaultModelId: 'grok-3-latest',
+    defaultEndpoint: 'https://api.x.ai/v1/chat/completions',
+    icon: '/icons/ai/grok.svg',
+  },
+  {
+    id: 'gpt-4',
+    name: 'GPT-4',
+    provider: 'OpenAI',
+    defaultModelId: 'gpt-4-turbo',
+    defaultEndpoint: 'https://api.openai.com/v1/chat/completions',
+    icon: '/icons/ai/openai.svg',
+  },
+  {
+    id: 'claude',
+    name: 'Claude',
+    provider: 'Anthropic',
+    defaultModelId: 'claude-sonnet-4-20250514',
+    defaultEndpoint: 'https://api.anthropic.com/v1/messages',
+    icon: '/icons/ai/claude.svg',
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini',
+    provider: 'Google',
+    defaultModelId: 'gemini-2.0-flash',
+    defaultEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
+    icon: '/icons/ai/gemini.svg',
+  },
 ] as const;
 
 function getModelIconUrl(modelName: string): string | null {
@@ -820,7 +848,7 @@ function AddModelModal({
             <select
               value={formData.name}
               onChange={(e) => {
-                const selected = STANDARD_MODEL_IDS.find(
+                const selected = STANDARD_MODEL_CONFIGS.find(
                   (m) => m.id === e.target.value
                 );
                 if (selected) {
@@ -829,20 +857,23 @@ function AddModelModal({
                     name: selected.id,
                     displayName: selected.name,
                     provider: selected.provider,
+                    modelId: selected.defaultModelId,
+                    apiEndpoint: selected.defaultEndpoint,
+                    icon: selected.icon,
                   });
                 }
               }}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="">Select a model type...</option>
-              {STANDARD_MODEL_IDS.map((model) => (
+              {STANDARD_MODEL_CONFIGS.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.name} ({model.provider})
                 </option>
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              This must match AI Group model IDs
+              选择后会自动填充默认配置
             </p>
           </div>
 
@@ -874,27 +905,57 @@ function AddModelModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Model ID
-              </label>
-              <input
-                type="text"
-                value={formData.modelId}
-                onChange={(e) =>
-                  setFormData({ ...formData, modelId: e.target.value })
-                }
-                placeholder="e.g., gpt-4o-2024-05-13"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+          {/* API Configuration Section */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <h4 className="mb-3 text-sm font-semibold text-blue-800">
+              API 配置（选择模型后自动填充）
+            </h4>
+
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  API Endpoint <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.apiEndpoint}
+                  onChange={(e) =>
+                    setFormData({ ...formData, apiEndpoint: e.target.value })
+                  }
+                  placeholder="https://api.openai.com/v1/chat/completions"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  API 请求地址，如 https://api.x.ai/v1/chat/completions
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Model ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.modelId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, modelId: e.target.value })
+                  }
+                  placeholder="gpt-4-turbo"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  模型标识符，如
+                  grok-3-latest、gpt-4-turbo、claude-sonnet-4-20250514
+                </p>
+              </div>
             </div>
           </div>
 
+          {/* Display Settings */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Icon (Emoji)
+                Icon Path
               </label>
               <input
                 type="text"
@@ -902,7 +963,8 @@ function AddModelModal({
                 onChange={(e) =>
                   setFormData({ ...formData, icon: e.target.value })
                 }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-xl focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="/icons/ai/grok.svg"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -923,21 +985,6 @@ function AddModelModal({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              API Endpoint
-            </label>
-            <input
-              type="text"
-              value={formData.apiEndpoint}
-              onChange={(e) =>
-                setFormData({ ...formData, apiEndpoint: e.target.value })
-              }
-              placeholder="e.g., https://api.openai.com/v1/chat/completions"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
           </div>
 
           <div>

@@ -1481,14 +1481,14 @@ model AIModel {
   name        String  @unique @db.VarChar(50) // 内部名称 (grok, gpt-4, claude, gemini)
   displayName String  @map("display_name") @db.VarChar(100)
   provider    String  @db.VarChar(50) // xAI, OpenAI, Anthropic, Google
-  modelId     String  @map("model_id") @db.VarChar(100) // 实际模型ID
+  modelId     String  @map("model_id") @db.VarChar(200) // 实际模型ID
 
   // 显示设置
-  icon  String @db.VarChar(10) // emoji
-  color String @db.VarChar(50) // Tailwind gradient class
+  icon  String @db.Text // emoji or icon URL path
+  color String @db.VarChar(100) // Tailwind gradient class
 
   // API配置
-  apiEndpoint String  @map("api_endpoint") @db.VarChar(500)
+  apiEndpoint String  @map("api_endpoint") @db.Text // API endpoint URL
   apiKey      String? @map("api_key") @db.Text // 加密存储的API Key
 
   // 模型参数

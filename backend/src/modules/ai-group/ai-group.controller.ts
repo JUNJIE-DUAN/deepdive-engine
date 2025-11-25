@@ -211,20 +211,25 @@ export class AiGroupController {
 
     // 处理 mentions - 向被@的用户发送通知
     if (dto.mentions && dto.mentions.length > 0) {
+      // 收集需要响应的 AI 成员 ID（去重）
+      const aiMemberIdsToRespond = new Set<string>();
+
       for (const mention of dto.mentions) {
         if (mention.mentionType === MentionType.AI && mention.aiMemberId) {
-          // @AI：通知正在输入并生成响应
-          this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
-            topicId,
-            aiMemberId: mention.aiMemberId,
-          });
-
-          // 生成AI响应（异步）
-          this.generateAIResponseInBackground(
+          // @单个AI
+          aiMemberIdsToRespond.add(mention.aiMemberId);
+        } else if (mention.mentionType === MentionType.ALL_AI) {
+          // @All AIs：获取 topic 的所有 AI 成员
+          this.logger.log(`@All AIs triggered in topic ${topicId}`);
+          const topic = await this.aiGroupService.getTopicById(
             topicId,
             req.user.id,
-            mention.aiMemberId,
           );
+          if (topic.aiMembers) {
+            for (const ai of topic.aiMembers) {
+              aiMemberIdsToRespond.add(ai.id);
+            }
+          }
         } else if (mention.mentionType === MentionType.USER && mention.userId) {
           // @真人用户：向被@用户发送通知
           this.logger.log(
@@ -241,6 +246,18 @@ export class AiGroupController {
             timestamp: message.createdAt,
           });
         }
+      }
+
+      // 触发所有需要响应的 AI
+      for (const aiMemberId of aiMemberIdsToRespond) {
+        this.logger.log(`Triggering AI response for ${aiMemberId}`);
+        // 通知正在输入
+        this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
+          topicId,
+          aiMemberId,
+        });
+        // 生成AI响应（异步）
+        this.generateAIResponseInBackground(topicId, req.user.id, aiMemberId);
       }
     }
 

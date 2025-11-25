@@ -1091,52 +1091,17 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
     });
 
     // Get AI model configuration from database
-    // aiMember.aiModel is the model ID like "grok", "claude", "gpt-4", "gemini"
-    // We need to match this against AIModel records in database
-    // The database name field should match, but admin may have configured differently
-
-    // First, get all enabled models to find the best match
-    const enabledModels = await this.prisma.aIModel.findMany({
-      where: { isEnabled: true },
+    // aiMember.aiModel is the standard model ID: "grok", "claude", "gpt-4", "gemini"
+    // Database AIModel.name field uses the same standard IDs (enforced by admin UI)
+    const aiModelConfig = await this.prisma.aIModel.findFirst({
+      where: {
+        name: aiMember.aiModel,
+        isEnabled: true,
+      },
     });
 
     this.logger.log(
-      `Looking for AI model: aiMember.aiModel="${aiMember.aiModel}", enabledModels=${JSON.stringify(enabledModels.map((m) => ({ name: m.name, displayName: m.displayName, provider: m.provider })))}`,
-    );
-
-    // Try to find a matching model using multiple strategies
-    const searchTerm = aiMember.aiModel.toLowerCase();
-    let aiModelConfig = enabledModels.find((m) => {
-      const name = m.name.toLowerCase();
-      const displayName = m.displayName.toLowerCase();
-      const provider = m.provider.toLowerCase();
-
-      // Exact match on name
-      if (name === searchTerm) return true;
-
-      // Exact match on displayName (without AI- prefix)
-      if (displayName === searchTerm) return true;
-      if (displayName === `ai-${searchTerm}`) return true;
-
-      // Name contains the search term
-      if (name.includes(searchTerm)) return true;
-
-      // DisplayName contains the search term
-      if (displayName.includes(searchTerm)) return true;
-
-      // Provider-based matching for common models
-      // e.g., "grok" -> provider "xAI", "claude" -> provider "Anthropic"
-      if (searchTerm === "grok" && provider.includes("xai")) return true;
-      if (searchTerm === "claude" && provider.includes("anthropic"))
-        return true;
-      if (searchTerm === "gpt-4" && provider.includes("openai")) return true;
-      if (searchTerm === "gemini" && provider.includes("google")) return true;
-
-      return false;
-    });
-
-    this.logger.log(
-      `AI model lookup result: found=${!!aiModelConfig}, config=${JSON.stringify(aiModelConfig ? { name: aiModelConfig.name, displayName: aiModelConfig.displayName, hasApiKey: !!aiModelConfig.apiKey } : null)}`,
+      `AI model lookup: aiMember.aiModel="${aiMember.aiModel}", found=${!!aiModelConfig}`,
     );
 
     // Call AI service

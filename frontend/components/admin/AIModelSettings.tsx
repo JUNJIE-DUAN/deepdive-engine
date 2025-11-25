@@ -38,6 +38,14 @@ const MODEL_ICONS: Record<string, string> = {
   gemini: '/icons/ai/gemini.svg',
 };
 
+// Standard model IDs that match frontend AI_MODELS
+const STANDARD_MODEL_IDS = [
+  { id: 'grok', name: 'Grok', provider: 'xAI' },
+  { id: 'gpt-4', name: 'GPT-4', provider: 'OpenAI' },
+  { id: 'claude', name: 'Claude', provider: 'Anthropic' },
+  { id: 'gemini', name: 'Gemini', provider: 'Google' },
+] as const;
+
 function getModelIconUrl(modelName: string): string | null {
   const name = modelName.toLowerCase();
   return MODEL_ICONS[name] || null;
@@ -805,21 +813,40 @@ function AddModelModal({
         </h3>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Name (ID)
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Model Type <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.name}
+              onChange={(e) => {
+                const selected = STANDARD_MODEL_IDS.find(
+                  (m) => m.id === e.target.value
+                );
+                if (selected) {
+                  setFormData({
+                    ...formData,
+                    name: selected.id,
+                    displayName: selected.name,
+                    provider: selected.provider,
+                  });
                 }
-                placeholder="e.g., gpt-4o"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Select a model type...</option>
+              {STANDARD_MODEL_IDS.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name} ({model.provider})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              This must match AI Group model IDs
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Display Name
@@ -830,13 +857,10 @@ function AddModelModal({
                 onChange={(e) =>
                   setFormData({ ...formData, displayName: e.target.value })
                 }
-                placeholder="e.g., GPT-4o"
+                placeholder="Auto-filled from model type"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Provider
@@ -844,13 +868,13 @@ function AddModelModal({
               <input
                 type="text"
                 value={formData.provider}
-                onChange={(e) =>
-                  setFormData({ ...formData, provider: e.target.value })
-                }
-                placeholder="e.g., OpenAI"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                readOnly
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Model ID

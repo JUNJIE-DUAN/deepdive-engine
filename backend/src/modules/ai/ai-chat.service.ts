@@ -690,6 +690,17 @@ Format the summary in a clear, structured manner using markdown.`;
 
         case "openai":
         case "gpt":
+          // Check if user is requesting image generation
+          const lastUserMsg = fullMessages
+            .filter((m) => m.role === "user")
+            .pop();
+          const userText = lastUserMsg?.content?.toLowerCase() || "";
+          if (this.isImageGenerationRequest(userText)) {
+            this.logger.log(
+              "Image generation request detected, using DALL-E 3",
+            );
+            return await this.callDallE3(apiKey, lastUserMsg?.content || "");
+          }
           return await this.callApiWithKey(
             apiEndpoint || "https://api.openai.com/v1/chat/completions",
             {
@@ -982,6 +993,81 @@ Format the summary in a clear, structured manner using markdown.`;
 
     const lowerContent = content.toLowerCase();
     return imageKeywords.some((keyword) => lowerContent.includes(keyword));
+  }
+
+  /**
+   * Call OpenAI DALL-E 3 API for image generation
+   * DALL-E 3 produces the best infographics and diagrams
+   */
+  private async callDallE3(
+    apiKey: string,
+    prompt: string,
+  ): Promise<ChatCompletionResult> {
+    const url = "https://api.openai.com/v1/images/generations";
+
+    this.logger.log(`Calling DALL-E 3 API for image generation`);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          url,
+          {
+            model: "dall-e-3",
+            prompt: prompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "hd",
+            response_format: "b64_json",
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            timeout: 120000, // 2 minutes for image generation
+          },
+        ),
+      );
+
+      const data = response.data;
+      const imageData = data.data?.[0];
+
+      if (imageData?.b64_json) {
+        const imageMarkdown = `![Generated Image](data:image/png;base64,${imageData.b64_json})`;
+        const revisedPrompt = imageData.revised_prompt
+          ? `\n\n*Prompt used: ${imageData.revised_prompt}*`
+          : "";
+
+        this.logger.log("DALL-E 3 image generated successfully");
+
+        return {
+          content: imageMarkdown + revisedPrompt,
+          model: "dall-e-3",
+          tokensUsed: 0,
+        };
+      } else if (imageData?.url) {
+        // Fallback to URL if b64_json not available
+        const imageMarkdown = `![Generated Image](${imageData.url})`;
+        return {
+          content: imageMarkdown,
+          model: "dall-e-3",
+          tokensUsed: 0,
+        };
+      }
+
+      throw new Error("No image data in response");
+    } catch (error: any) {
+      this.logger.error(
+        `DALL-E 3 API error: ${error.response?.data?.error?.message || error.message}`,
+      );
+
+      // Return helpful error message instead of mock
+      return {
+        content: `抱歉，图像生成失败: ${error.response?.data?.error?.message || error.message}\n\n请检查 OpenAI API Key 是否有 DALL-E 3 的访问权限。`,
+        model: "dall-e-3",
+        tokensUsed: 0,
+      };
+    }
   }
 
   /**

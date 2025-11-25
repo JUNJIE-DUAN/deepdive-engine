@@ -1191,14 +1191,34 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     // Database AIModel.name field uses the same standard IDs (enforced by admin UI)
     const aiModelConfig = await this.prisma.aIModel.findFirst({
       where: {
-        name: aiMember.aiModel,
+        name: {
+          equals: aiMember.aiModel,
+          mode: "insensitive",
+        },
         isEnabled: true,
       },
     });
 
-    this.logger.log(
-      `AI model lookup: aiMember.aiModel="${aiMember.aiModel}", found=${!!aiModelConfig}`,
-    );
+    // 详细日志帮助调试
+    if (!aiModelConfig) {
+      // 列出所有可用的模型
+      const allModels = await this.prisma.aIModel.findMany({
+        select: { name: true, isEnabled: true, apiKey: true },
+      });
+      this.logger.error(
+        `AI model "${aiMember.aiModel}" not found! Available models: ${JSON.stringify(
+          allModels.map((m) => ({
+            name: m.name,
+            enabled: m.isEnabled,
+            hasKey: !!m.apiKey,
+          })),
+        )}`,
+      );
+    } else {
+      this.logger.log(
+        `AI model lookup: "${aiMember.aiModel}" -> found "${aiModelConfig.name}", hasApiKey=${!!aiModelConfig.apiKey}`,
+      );
+    }
 
     // Call AI service
     this.logger.log(

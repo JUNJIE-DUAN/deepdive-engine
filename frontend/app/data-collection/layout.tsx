@@ -8,6 +8,7 @@ import {
   History,
   Users,
   Bot,
+  Plug,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -43,7 +44,13 @@ export default function DataCollectionLayout({
       name: 'AI Models',
       href: '/data-collection/ai-models',
       icon: Bot,
-      description: 'AI model configuration and API keys',
+      description: 'AI model configuration',
+    },
+    {
+      name: 'External API',
+      href: '/data-collection/external-api',
+      icon: Plug,
+      description: 'Search and third-party API configuration',
     },
     // 运维监控
     {

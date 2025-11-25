@@ -242,4 +242,114 @@ export class SearchService {
 
     return `## Web Search Results\nRecent information from the web:\n\n${formatted}`;
   }
+
+  /**
+   * Extract URLs from text content
+   */
+  extractUrls(text: string): string[] {
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
+    const matches = text.match(urlRegex) || [];
+    // Remove trailing punctuation that might be captured
+    return matches.map((url) => url.replace(/[.,;:!?)]+$/, ""));
+  }
+
+  /**
+   * Fetch content from a URL and extract main text
+   */
+  async fetchUrlContent(url: string): Promise<{
+    success: boolean;
+    title?: string;
+    content?: string;
+    error?: string;
+  }> {
+    try {
+      this.logger.log(`Fetching URL content: ${url}`);
+
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+          },
+          timeout: 15000,
+          maxRedirects: 5,
+        }),
+      );
+
+      const html = response.data;
+      if (!html || typeof html !== "string") {
+        return { success: false, error: "No HTML content received" };
+      }
+
+      // Extract title
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const title = titleMatch ? titleMatch[1].trim() : url;
+
+      // Extract main content - remove scripts, styles, and HTML tags
+      let content = html
+        // Remove script tags and content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        // Remove style tags and content
+        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+        // Remove HTML comments
+        .replace(/<!--[\s\S]*?-->/g, "")
+        // Remove all HTML tags
+        .replace(/<[^>]+>/g, " ")
+        // Decode HTML entities
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        // Normalize whitespace
+        .replace(/\s+/g, " ")
+        .trim();
+
+      // Limit content length for AI context
+      if (content.length > 8000) {
+        content = content.substring(0, 8000) + "...";
+      }
+
+      this.logger.log(
+        `Fetched URL content: ${title} (${content.length} chars)`,
+      );
+
+      return { success: true, title, content };
+    } catch (error: any) {
+      const errorMessage = error.response?.status
+        ? `HTTP ${error.response.status}: ${error.response.statusText}`
+        : error.message;
+      this.logger.error(`Failed to fetch URL ${url}: ${errorMessage}`);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Fetch multiple URLs and format for AI context
+   */
+  async fetchUrlsForContext(urls: string[]): Promise<string> {
+    if (urls.length === 0) return "";
+
+    const results: string[] = [];
+
+    // Limit to 3 URLs to avoid context overflow
+    const urlsToFetch = urls.slice(0, 3);
+
+    for (const url of urlsToFetch) {
+      const result = await this.fetchUrlContent(url);
+      if (result.success && result.content) {
+        results.push(
+          `### ${result.title || url}\nURL: ${url}\n\n${result.content}`,
+        );
+      }
+    }
+
+    if (results.length === 0) return "";
+
+    return `## Fetched Web Page Content\nThe following content was fetched from URLs mentioned in the conversation:\n\n${results.join("\n\n---\n\n")}`;
+  }
 }

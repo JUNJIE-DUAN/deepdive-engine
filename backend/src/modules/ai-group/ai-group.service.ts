@@ -1112,14 +1112,27 @@ ${messagesForSummary
       }
     }
 
-    // 检测是否需要搜索实时信息
+    // 检测是否需要搜索实时信息或抓取URL
     // 获取最后一条用户消息
     const lastUserMessage = contextMessages.find((m) => m.senderId);
     let searchContext = "";
+    let urlContext = "";
 
     if (lastUserMessage) {
-      const needsSearch = this.shouldSearchForInfo(lastUserMessage.content);
-      if (needsSearch) {
+      // 1. 检测并抓取消息中的URL
+      const urls = this.searchService.extractUrls(lastUserMessage.content);
+      if (urls.length > 0) {
+        this.logger.log(
+          `Found ${urls.length} URLs in message, fetching content...`,
+        );
+        urlContext = await this.searchService.fetchUrlsForContext(urls);
+        if (urlContext) {
+          this.logger.log(`Added URL content to context`);
+        }
+      }
+
+      // 2. 检测是否需要搜索实时信息（仅当没有URL时才搜索）
+      if (!urlContext && this.shouldSearchForInfo(lastUserMessage.content)) {
         this.logger.log(
           `Searching for real-time info: "${lastUserMessage.content.substring(0, 100)}..."`,
         );
@@ -1143,9 +1156,9 @@ ${messagesForSummary
       `You are ${aiMember.displayName}, an AI assistant participating in a group discussion.
 ${aiMember.roleDescription ? `Your role: ${aiMember.roleDescription}` : ""}
 You are in a discussion group called "${topic?.name}".
-${topic?.description ? `Group description: ${topic.description}` : ""}${resourceContext}${searchContext}
+${topic?.description ? `Group description: ${topic.description}` : ""}${resourceContext}${urlContext}${searchContext}
 
-Respond naturally and helpfully to the discussion. When relevant, reference the shared materials and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
+Respond naturally and helpfully to the discussion. When relevant, reference the shared materials, fetched web content, and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
 
     // Build chat messages for AI service
     const chatMessages: ChatMessage[] = contextMessages.reverse().map((m) => {

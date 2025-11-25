@@ -164,7 +164,7 @@ function MemberPanel({
         </div>
 
         {/* AI Members */}
-        {topic.aiMembers.length > 0 && (
+        {topic.aiMembers && topic.aiMembers.length > 0 && (
           <div>
             <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <svg
@@ -388,7 +388,7 @@ function MessageBubble({
           </div>
 
           {/* Attachments */}
-          {message.attachments.length > 0 && (
+          {message.attachments && message.attachments.length > 0 && (
             <div className="mt-2 space-y-1">
               {message.attachments.map((att) => (
                 <a
@@ -963,7 +963,7 @@ export default function TopicPage() {
             aiMemberIds.add(mention.aiMemberId);
           } else if (mention.mentionType === MentionType.ALL_AI) {
             // Add all AI members
-            currentTopic.aiMembers.forEach((ai) => aiMemberIds.add(ai.id));
+            currentTopic?.aiMembers?.forEach((ai) => aiMemberIds.add(ai.id));
           }
         }
 
@@ -983,7 +983,7 @@ export default function TopicPage() {
       if (!topicId || !user?.id) return;
 
       const message = messages.find((m) => m.id === messageId);
-      const hasReaction = message?.reactions.some(
+      const hasReaction = message?.reactions?.some(
         (r) => r.userId === user.id && r.emoji === emoji
       );
 

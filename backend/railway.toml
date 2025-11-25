@@ -1,6 +1,9 @@
 [build]
 builder = "nixpacks"
 
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["bzip2"]
+
 [build.nixpacksPlan]
 phases.install.cmds = ["npm ci --legacy-peer-deps"]
 phases.build.cmds = ["npm run build", "npx prisma generate"]

@@ -28,6 +28,8 @@ function MemberPanel({
   typingAIs,
   onMemberClick,
   onAIClick,
+  onInviteMember,
+  isOwnerOrAdmin,
 }: {
   topic: Topic;
   onlineUsers: Set<string>;
@@ -35,6 +37,8 @@ function MemberPanel({
   typingAIs: Set<string>;
   onMemberClick: (member: TopicMember) => void;
   onAIClick: (ai: TopicAIMember) => void;
+  onInviteMember: () => void;
+  isOwnerOrAdmin: boolean;
 }) {
   return (
     <div className="flex w-64 flex-col border-r border-gray-200 bg-white">
@@ -59,22 +63,45 @@ function MemberPanel({
       <div className="flex-1 overflow-auto p-3">
         {/* Human Members */}
         <div className="mb-4">
-          <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            Members ({topic.memberCount})
-          </h3>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+              Members ({topic.memberCount})
+            </h3>
+            {isOwnerOrAdmin && (
+              <button
+                onClick={onInviteMember}
+                className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                title="Invite member"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
           <div className="space-y-1">
             {topic.members.map((member) => {
               const isOnline = onlineUsers.has(member.userId);
@@ -279,7 +306,7 @@ function MessageBubble({
   );
 
   // Group reactions by emoji
-  const groupedReactions = message.reactions.reduce(
+  const groupedReactions = (message.reactions || []).reduce(
     (acc, r) => {
       if (!acc[r.emoji]) {
         acc[r.emoji] = { emoji: r.emoji, count: 0, hasOwn: false };
@@ -852,6 +879,10 @@ export default function TopicPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -974,6 +1005,75 @@ export default function TopicPage() {
     }
   }, [hasMoreMessages, isLoadingMessages, topicId, messages, fetchMessages]);
 
+  // Handle invite member
+  const handleInviteMember = useCallback(async () => {
+    if (!inviteEmail.trim() || !topicId || !accessToken) return;
+
+    setIsInviting(true);
+    setInviteError('');
+
+    try {
+      // First, search for user by email
+      const searchResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/users/search?email=${encodeURIComponent(inviteEmail.trim())}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!searchResponse.ok) {
+        throw new Error('User not found');
+      }
+
+      const userData = await searchResponse.json();
+      if (!userData || !userData.id) {
+        throw new Error('User not found with this email');
+      }
+
+      // Add member to topic
+      const addResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/topics/${topicId}/members`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            userId: userData.id,
+            role: 'MEMBER',
+          }),
+        }
+      );
+
+      if (!addResponse.ok) {
+        const errorData = await addResponse.json();
+        throw new Error(errorData.message || 'Failed to add member');
+      }
+
+      // Refresh topic data
+      await fetchTopic(topicId);
+
+      // Close dialog and reset
+      setShowInviteDialog(false);
+      setInviteEmail('');
+    } catch (error: any) {
+      setInviteError(error.message || 'Failed to invite member');
+    } finally {
+      setIsInviting(false);
+    }
+  }, [inviteEmail, topicId, accessToken, fetchTopic]);
+
+  // Check if current user is owner or admin
+  const currentUserMember = currentTopic?.members.find(
+    (m) => m.userId === user?.id
+  );
+  const isOwnerOrAdmin =
+    currentUserMember?.role === TopicRole.OWNER ||
+    currentUserMember?.role === TopicRole.ADMIN;
+
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -1025,6 +1125,8 @@ export default function TopicPage() {
           // Could show AI config or quick mention
           console.log('AI clicked:', ai);
         }}
+        onInviteMember={() => setShowInviteDialog(true)}
+        isOwnerOrAdmin={isOwnerOrAdmin}
       />
 
       {/* Main Chat Area */}
@@ -1218,6 +1320,88 @@ export default function TopicPage() {
           topic={currentTopic}
           onClose={() => setShowSummary(false)}
         />
+      )}
+
+      {/* Invite Member Dialog */}
+      {showInviteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Invite Member
+              </h2>
+              <button
+                onClick={() => {
+                  setShowInviteDialog(false);
+                  setInviteEmail('');
+                  setInviteError('');
+                }}
+                className="rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm text-gray-600">
+              Enter the email address of the user you want to invite to this
+              group.
+            </p>
+
+            <div className="mb-4">
+              <label
+                htmlFor="invite-email"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Email Address
+              </label>
+              <input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="user@example.com"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                disabled={isInviting}
+              />
+              {inviteError && (
+                <p className="mt-1 text-sm text-red-500">{inviteError}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowInviteDialog(false);
+                  setInviteEmail('');
+                  setInviteError('');
+                }}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                disabled={isInviting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInviteMember}
+                disabled={!inviteEmail.trim() || isInviting}
+                className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isInviting ? 'Inviting...' : 'Invite'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

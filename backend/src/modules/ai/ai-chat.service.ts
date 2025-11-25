@@ -528,6 +528,17 @@ Format the summary in a clear, structured manner using markdown.`;
           const geminiEndpoint =
             apiEndpoint ||
             `https://generativelanguage.googleapis.com/v1beta/models/${modelId || "gemini-pro"}:generateContent?key=${apiKey}`;
+          // Check if this is an image generation model
+          const isImageModel =
+            modelId?.includes("image") || modelId?.includes("imagen");
+          const geminiConfig: Record<string, unknown> = isImageModel
+            ? {
+                responseModalities: ["TEXT", "IMAGE"],
+              }
+            : {
+                maxOutputTokens: 50,
+                temperature: 0,
+              };
           response = await firstValueFrom(
             this.httpService.post(
               geminiEndpoint,
@@ -537,10 +548,7 @@ Format the summary in a clear, structured manner using markdown.`;
                     parts: [{ text: testMessages[0].content }],
                   },
                 ],
-                generationConfig: {
-                  maxOutputTokens: 50,
-                  temperature: 0,
-                },
+                generationConfig: geminiConfig,
               },
               {
                 headers: {
@@ -607,6 +615,261 @@ Format the summary in a clear, structured manner using markdown.`;
         latency,
       };
     }
+  }
+
+  /**
+   * Generate a chat completion using a specific API key from the database
+   * Used for AI Group feature where models are configured per-tenant
+   */
+  async generateChatCompletionWithKey(options: {
+    provider: string;
+    modelId: string;
+    apiKey: string;
+    apiEndpoint?: string;
+    systemPrompt?: string;
+    messages: ChatMessage[];
+    maxTokens?: number;
+    temperature?: number;
+  }): Promise<ChatCompletionResult> {
+    const {
+      provider,
+      modelId,
+      apiKey,
+      apiEndpoint,
+      systemPrompt,
+      messages,
+      maxTokens = 2048,
+      temperature = 0.7,
+    } = options;
+
+    this.logger.log(
+      `Generating chat completion with key for provider: ${provider}, model: ${modelId}`,
+    );
+
+    if (!apiKey) {
+      this.logger.warn(`No API key provided for ${provider}, returning mock`);
+      return this.getMockResponse(modelId, messages);
+    }
+
+    // Build full messages with system prompt
+    const fullMessages: ChatMessage[] = [];
+    if (systemPrompt) {
+      fullMessages.push({ role: "system", content: systemPrompt });
+    }
+    fullMessages.push(...messages);
+
+    try {
+      switch (provider.toLowerCase()) {
+        case "xai":
+        case "grok":
+          return await this.callApiWithKey(
+            apiEndpoint || "https://api.x.ai/v1/chat/completions",
+            {
+              model: modelId || "grok-beta",
+              messages: fullMessages.map((m) => ({
+                role: m.role,
+                content: m.content,
+              })),
+              max_tokens: maxTokens,
+              temperature,
+            },
+            { Authorization: `Bearer ${apiKey}` },
+            "grok",
+          );
+
+        case "openai":
+        case "gpt":
+          return await this.callApiWithKey(
+            apiEndpoint || "https://api.openai.com/v1/chat/completions",
+            {
+              model: modelId || "gpt-4-turbo-preview",
+              messages: fullMessages.map((m) => ({
+                role: m.role,
+                content: m.content,
+              })),
+              max_tokens: maxTokens,
+              temperature,
+            },
+            { Authorization: `Bearer ${apiKey}` },
+            "gpt-4",
+          );
+
+        case "anthropic":
+        case "claude":
+          const systemMessage = fullMessages.find((m) => m.role === "system");
+          const otherMessages = fullMessages.filter((m) => m.role !== "system");
+          return await this.callClaudeApiWithKey(
+            apiEndpoint || "https://api.anthropic.com/v1/messages",
+            apiKey,
+            modelId || "claude-3-opus-20240229",
+            systemMessage?.content,
+            otherMessages,
+            maxTokens,
+            temperature,
+          );
+
+        case "google":
+        case "gemini":
+          return await this.callGeminiApiWithKey(
+            apiKey,
+            modelId || "gemini-2.0-flash-exp",
+            apiEndpoint,
+            fullMessages,
+            maxTokens,
+            temperature,
+          );
+
+        default:
+          this.logger.warn(`Unknown provider: ${provider}, using Grok`);
+          return await this.callApiWithKey(
+            "https://api.x.ai/v1/chat/completions",
+            {
+              model: "grok-beta",
+              messages: fullMessages.map((m) => ({
+                role: m.role,
+                content: m.content,
+              })),
+              max_tokens: maxTokens,
+              temperature,
+            },
+            { Authorization: `Bearer ${apiKey}` },
+            "grok",
+          );
+      }
+    } catch (error) {
+      this.logger.error(`API call failed: ${error}`);
+      return this.getMockResponse(modelId, messages);
+    }
+  }
+
+  /**
+   * Helper method to call OpenAI-compatible APIs
+   */
+  private async callApiWithKey(
+    url: string,
+    body: any,
+    headers: Record<string, string>,
+    modelName: string,
+  ): Promise<ChatCompletionResult> {
+    const response = await firstValueFrom(
+      this.httpService.post(url, body, {
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        timeout: 60000,
+      }),
+    );
+
+    const data = response.data;
+    return {
+      content: data.choices?.[0]?.message?.content || "",
+      model: modelName,
+      tokensUsed: data.usage?.total_tokens || 0,
+    };
+  }
+
+  /**
+   * Helper method to call Claude API with key
+   */
+  private async callClaudeApiWithKey(
+    url: string,
+    apiKey: string,
+    modelId: string,
+    systemPrompt: string | undefined,
+    messages: ChatMessage[],
+    maxTokens: number,
+    temperature: number,
+  ): Promise<ChatCompletionResult> {
+    const response = await firstValueFrom(
+      this.httpService.post(
+        url,
+        {
+          model: modelId,
+          max_tokens: maxTokens,
+          temperature,
+          system: systemPrompt,
+          messages: messages.map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: m.content,
+          })),
+        },
+        {
+          headers: {
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+          },
+          timeout: 60000,
+        },
+      ),
+    );
+
+    const data = response.data;
+    return {
+      content: data.content?.[0]?.text || "",
+      model: "claude",
+      tokensUsed:
+        (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
+    };
+  }
+
+  /**
+   * Helper method to call Gemini API with key
+   */
+  private async callGeminiApiWithKey(
+    apiKey: string,
+    modelId: string,
+    apiEndpoint: string | undefined,
+    messages: ChatMessage[],
+    maxTokens: number,
+    temperature: number,
+  ): Promise<ChatCompletionResult> {
+    const url =
+      apiEndpoint ||
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+
+    // Extract system message for system instruction
+    const systemMessage = messages.find((m) => m.role === "system");
+    const otherMessages = messages.filter((m) => m.role !== "system");
+
+    // Convert messages to Gemini format
+    const contents = otherMessages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
+
+    const requestBody: any = {
+      contents,
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        temperature,
+      },
+    };
+
+    if (systemMessage) {
+      requestBody.systemInstruction = {
+        parts: [{ text: systemMessage.content }],
+      };
+    }
+
+    const response = await firstValueFrom(
+      this.httpService.post(url, requestBody, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 60000,
+      }),
+    );
+
+    const data = response.data;
+    return {
+      content: data.candidates?.[0]?.content?.parts?.[0]?.text || "",
+      model: "gemini",
+      tokensUsed:
+        (data.usageMetadata?.promptTokenCount || 0) +
+        (data.usageMetadata?.candidatesTokenCount || 0),
+    };
   }
 
   /**

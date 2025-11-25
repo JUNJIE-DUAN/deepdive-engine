@@ -306,3 +306,28 @@ export class AiGroupController {
     return this.aiGroupService.deleteSummary(topicId, req.user.id, summaryId);
   }
 }
+
+// Separate controller for user search to avoid route conflicts
+@Controller("users")
+@UseGuards(JwtAuthGuard)
+export class UsersController {
+  constructor(private readonly aiGroupService: AiGroupService) {}
+
+  @Get("search")
+  async searchUsers(
+    @Query("email") email?: string,
+    @Query("query") query?: string,
+    @Query("limit") limit?: string,
+  ) {
+    if (email) {
+      return this.aiGroupService.searchUserByEmail(email);
+    }
+    if (query) {
+      return this.aiGroupService.searchUsers(
+        query,
+        limit ? parseInt(limit) : 10,
+      );
+    }
+    return [];
+  }
+}

@@ -1090,6 +1090,14 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
       } as ChatMessage;
     });
 
+    // Get AI model configuration from database
+    const aiModelConfig = await this.prisma.aIModel.findFirst({
+      where: {
+        name: aiMember.aiModel,
+        isEnabled: true,
+      },
+    });
+
     // Call AI service
     this.logger.log(
       `Generating AI response for topic ${topicId} using ${aiMember.aiModel}`,
@@ -1098,13 +1106,35 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
     let tokensUsed = 0;
 
     try {
-      const result = await this.aiChatService.generateChatCompletion({
-        model: aiMember.aiModel,
-        systemPrompt,
-        messages: chatMessages,
-        maxTokens: 1024,
-        temperature: 0.7,
-      });
+      let result;
+      if (aiModelConfig && aiModelConfig.apiKey) {
+        // Use database-configured API key
+        this.logger.log(
+          `Using database-configured API key for ${aiModelConfig.provider}`,
+        );
+        result = await this.aiChatService.generateChatCompletionWithKey({
+          provider: aiModelConfig.provider,
+          modelId: aiModelConfig.modelId,
+          apiKey: aiModelConfig.apiKey,
+          apiEndpoint: aiModelConfig.apiEndpoint || undefined,
+          systemPrompt,
+          messages: chatMessages,
+          maxTokens: 1024,
+          temperature: aiModelConfig.temperature || 0.7,
+        });
+      } else {
+        // Fall back to environment variable configuration
+        this.logger.warn(
+          `No database config found for ${aiMember.aiModel}, falling back to env vars`,
+        );
+        result = await this.aiChatService.generateChatCompletion({
+          model: aiMember.aiModel,
+          systemPrompt,
+          messages: chatMessages,
+          maxTokens: 1024,
+          temperature: 0.7,
+        });
+      }
       aiResponse = result.content;
       tokensUsed = result.tokensUsed;
     } catch (error) {
@@ -1190,5 +1220,53 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
     }
 
     return membership;
+  }
+
+  // ==================== User Search ====================
+
+  async searchUserByEmail(email: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: "insensitive",
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        fullName: true,
+        avatarUrl: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found with this email");
+    }
+
+    return user;
+  }
+
+  async searchUsers(query: string, limit: number = 10) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { contains: query, mode: "insensitive" } },
+          { username: { contains: query, mode: "insensitive" } },
+          { fullName: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        fullName: true,
+        avatarUrl: true,
+      },
+      take: limit,
+    });
+
+    return users;
   }
 }

@@ -482,10 +482,10 @@ function highlightMentions(
     return content;
   }
 
-  // Simple mention pattern @name
+  // Mention pattern @name (supports hyphens and underscores like "AI-Grok")
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
-  const regex = /@(\w+)/g;
+  const regex = /@([\w-]+)/g;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
@@ -575,10 +575,10 @@ function MessageInput({
     const value = e.target.value;
     setContent(value);
 
-    // Check for @ mention trigger
+    // Check for @ mention trigger (support hyphens in names like "AI-Grok")
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = value.slice(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    const atMatch = textBeforeCursor.match(/@([\w-]*)$/);
 
     if (atMatch) {
       setMentionQuery(atMatch[1]);
@@ -606,14 +606,19 @@ function MessageInput({
     const textAfterCursor = content.slice(cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
 
+    const mentionText = `@${entity.name} `;
     const newContent =
-      textBeforeCursor.slice(0, atIndex) + `@${entity.name} ` + textAfterCursor;
+      textBeforeCursor.slice(0, atIndex) + mentionText + textAfterCursor;
     setContent(newContent);
     setShowMentionMenu(false);
 
-    // Focus back to input
+    // Focus back to input and set cursor position after the mention
+    const newCursorPos = atIndex + mentionText.length;
     setTimeout(() => {
-      inputRef.current?.focus();
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
     }, 0);
   };
 
@@ -621,12 +626,13 @@ function MessageInput({
     if (!content.trim()) return;
 
     // Parse mentions from content
+    // Support names with letters, numbers, hyphens, and underscores (e.g., "AI-Grok", "AI_Claude")
     const mentions: {
       userId?: string;
       aiMemberId?: string;
       mentionType: MentionType;
     }[] = [];
-    const mentionRegex = /@(\w+)/g;
+    const mentionRegex = /@([\w-]+)/g;
     let match;
 
     while ((match = mentionRegex.exec(content)) !== null) {

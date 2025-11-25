@@ -464,4 +464,229 @@ export class AdminService {
 
     return model?.apiKey || null;
   }
+
+  // ============ System Settings Management ============
+
+  /**
+   * 获取系统设置（按分类）
+   */
+  async getSettings(category?: string) {
+    const where = category ? { category } : {};
+
+    const settings = await this.prisma.systemSetting.findMany({
+      where,
+      orderBy: { key: "asc" },
+    });
+
+    // 将设置转换为键值对格式
+    const result: Record<string, any> = {};
+    for (const setting of settings) {
+      try {
+        result[setting.key] = JSON.parse(setting.value);
+      } catch {
+        result[setting.key] = setting.value;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 获取单个设置
+   */
+  async getSetting(key: string) {
+    const setting = await this.prisma.systemSetting.findUnique({
+      where: { key },
+    });
+
+    if (!setting) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(setting.value);
+    } catch {
+      return setting.value;
+    }
+  }
+
+  /**
+   * 更新或创建设置
+   */
+  async setSetting(
+    key: string,
+    value: any,
+    options?: { description?: string; category?: string },
+  ) {
+    const stringValue =
+      typeof value === "string" ? value : JSON.stringify(value);
+
+    const setting = await this.prisma.systemSetting.upsert({
+      where: { key },
+      update: {
+        value: stringValue,
+        description: options?.description,
+        category: options?.category,
+      },
+      create: {
+        key,
+        value: stringValue,
+        description: options?.description,
+        category: options?.category ?? "general",
+      },
+    });
+
+    this.logger.log(`System setting updated: ${key}`);
+
+    return setting;
+  }
+
+  /**
+   * 批量更新设置
+   */
+  async setSettings(
+    settings: Array<{
+      key: string;
+      value: any;
+      description?: string;
+      category?: string;
+    }>,
+  ) {
+    const results = await Promise.all(
+      settings.map((s) =>
+        this.setSetting(s.key, s.value, {
+          description: s.description,
+          category: s.category,
+        }),
+      ),
+    );
+
+    this.logger.log(`Updated ${results.length} system settings`);
+
+    return results;
+  }
+
+  /**
+   * 删除设置
+   */
+  async deleteSetting(key: string) {
+    const setting = await this.prisma.systemSetting.findUnique({
+      where: { key },
+    });
+
+    if (!setting) {
+      throw new NotFoundException(`Setting ${key} not found`);
+    }
+
+    await this.prisma.systemSetting.delete({
+      where: { key },
+    });
+
+    this.logger.log(`System setting deleted: ${key}`);
+
+    return { success: true, message: "Setting deleted successfully" };
+  }
+
+  /**
+   * 获取搜索API配置
+   */
+  async getSearchConfig() {
+    const provider = await this.getSetting("search.provider");
+    const tavilyKey = await this.getSetting("search.tavily.apiKey");
+    const serperKey = await this.getSetting("search.serper.apiKey");
+    const enabled = await this.getSetting("search.enabled");
+
+    return {
+      provider: provider || "tavily",
+      enabled: enabled !== false,
+      tavily: {
+        apiKey: tavilyKey ? "***configured***" : null,
+        hasApiKey: !!tavilyKey,
+      },
+      serper: {
+        apiKey: serperKey ? "***configured***" : null,
+        hasApiKey: !!serperKey,
+      },
+    };
+  }
+
+  /**
+   * 更新搜索API配置
+   */
+  async updateSearchConfig(config: {
+    provider?: string;
+    enabled?: boolean;
+    tavilyApiKey?: string;
+    serperApiKey?: string;
+  }) {
+    const updates: Array<{
+      key: string;
+      value: any;
+      description?: string;
+      category: string;
+    }> = [];
+
+    if (config.provider !== undefined) {
+      updates.push({
+        key: "search.provider",
+        value: config.provider,
+        description: "Search API provider (tavily or serper)",
+        category: "search",
+      });
+    }
+
+    if (config.enabled !== undefined) {
+      updates.push({
+        key: "search.enabled",
+        value: config.enabled,
+        description: "Enable or disable search functionality",
+        category: "search",
+      });
+    }
+
+    // Only update API keys if they are provided and not the masked value
+    if (
+      config.tavilyApiKey &&
+      config.tavilyApiKey !== "***configured***" &&
+      config.tavilyApiKey.trim() !== ""
+    ) {
+      updates.push({
+        key: "search.tavily.apiKey",
+        value: config.tavilyApiKey.trim(),
+        description: "Tavily API Key",
+        category: "search",
+      });
+    }
+
+    if (
+      config.serperApiKey &&
+      config.serperApiKey !== "***configured***" &&
+      config.serperApiKey.trim() !== ""
+    ) {
+      updates.push({
+        key: "search.serper.apiKey",
+        value: config.serperApiKey.trim(),
+        description: "Serper API Key",
+        category: "search",
+      });
+    }
+
+    if (updates.length > 0) {
+      await this.setSettings(updates);
+    }
+
+    return this.getSearchConfig();
+  }
+
+  /**
+   * 获取搜索API Key（内部使用，返回实际值）
+   */
+  async getSearchApiKey(provider: string): Promise<string | null> {
+    if (provider === "tavily") {
+      return this.getSetting("search.tavily.apiKey");
+    } else if (provider === "serper") {
+      return this.getSetting("search.serper.apiKey");
+    }
+    return null;
+  }
 }

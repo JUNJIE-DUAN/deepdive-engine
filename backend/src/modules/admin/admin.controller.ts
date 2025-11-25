@@ -260,4 +260,150 @@ export class AdminController {
       body.apiEndpoint,
     );
   }
+
+  // ============ System Settings ============
+
+  /**
+   * 获取系统设置
+   * GET /api/v1/admin/settings
+   */
+  @Get("settings")
+  async getSettings(@Query("category") category?: string) {
+    this.logger.log(`Admin: Fetching settings (category=${category})`);
+    return this.adminService.getSettings(category);
+  }
+
+  /**
+   * 更新系统设置
+   * PATCH /api/v1/admin/settings
+   */
+  @Patch("settings")
+  async updateSettings(
+    @Body()
+    body: Array<{
+      key: string;
+      value: any;
+      description?: string;
+      category?: string;
+    }>,
+  ) {
+    this.logger.log(`Admin: Updating ${body.length} settings`);
+    return this.adminService.setSettings(body);
+  }
+
+  // ============ Search API Configuration ============
+
+  /**
+   * 获取搜索API配置
+   * GET /api/v1/admin/search-config
+   */
+  @Get("search-config")
+  async getSearchConfig() {
+    this.logger.log("Admin: Fetching search config");
+    return this.adminService.getSearchConfig();
+  }
+
+  /**
+   * 更新搜索API配置
+   * PATCH /api/v1/admin/search-config
+   */
+  @Patch("search-config")
+  async updateSearchConfig(
+    @Body()
+    body: {
+      provider?: string;
+      enabled?: boolean;
+      tavilyApiKey?: string;
+      serperApiKey?: string;
+    },
+  ) {
+    this.logger.log("Admin: Updating search config");
+    return this.adminService.updateSearchConfig(body);
+  }
+
+  /**
+   * 测试搜索API连接
+   * POST /api/v1/admin/search-config/test
+   */
+  @Post("search-config/test")
+  async testSearchConnection(
+    @Body()
+    body: {
+      provider: string;
+      apiKey: string;
+    },
+  ) {
+    this.logger.log(`Admin: Testing search connection for ${body.provider}`);
+
+    try {
+      const { HttpService } = await import("@nestjs/axios");
+
+      // Create a temporary test instance
+      const httpService = new HttpService();
+
+      // Test search
+      const testQuery = "AI technology news";
+      let response;
+
+      if (body.provider === "tavily") {
+        const { firstValueFrom } = await import("rxjs");
+        response = await firstValueFrom(
+          httpService.post(
+            "https://api.tavily.com/search",
+            {
+              api_key: body.apiKey,
+              query: testQuery,
+              max_results: 1,
+              search_depth: "basic",
+            },
+            {
+              headers: { "Content-Type": "application/json" },
+              timeout: 10000,
+            },
+          ),
+        );
+
+        return {
+          success: true,
+          message: "Tavily API connection successful",
+          resultsCount: response.data.results?.length || 0,
+        };
+      } else if (body.provider === "serper") {
+        const { firstValueFrom } = await import("rxjs");
+        response = await firstValueFrom(
+          httpService.post(
+            "https://google.serper.dev/search",
+            {
+              q: testQuery,
+              num: 1,
+            },
+            {
+              headers: {
+                "X-API-KEY": body.apiKey,
+                "Content-Type": "application/json",
+              },
+              timeout: 10000,
+            },
+          ),
+        );
+
+        return {
+          success: true,
+          message: "Serper API connection successful",
+          resultsCount: response.data.organic?.length || 0,
+        };
+      }
+
+      return {
+        success: false,
+        message: `Unknown provider: ${body.provider}`,
+      };
+    } catch (error: any) {
+      this.logger.error(`Search API test failed: ${error.message}`);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+      };
+    }
+  }
 }

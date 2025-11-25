@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { firstValueFrom } from "rxjs";
+import { PrismaService } from "../../common/prisma/prisma.service";
 
 export interface SearchResult {
   title: string;
@@ -19,7 +20,10 @@ export interface SearchResponse {
 export class SearchService {
   private readonly logger = new Logger(SearchService.name);
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /**
    * Search for real-time information using configured search API
@@ -69,25 +73,77 @@ export class SearchService {
   }
 
   /**
-   * Get search API configuration from database
+   * Get search API configuration from database, fallback to environment variables
    */
   private async getSearchConfig(): Promise<{
     provider: string;
     apiKey: string | null;
+    enabled: boolean;
   }> {
-    // Look for a system setting for search API
-    // For now, check environment variables as fallback
+    try {
+      // Try to get from database first
+      const settings = await this.prisma.systemSetting.findMany({
+        where: {
+          key: {
+            in: [
+              "search.provider",
+              "search.enabled",
+              "search.tavily.apiKey",
+              "search.serper.apiKey",
+            ],
+          },
+        },
+      });
+
+      const settingsMap: Record<string, any> = {};
+      for (const s of settings) {
+        try {
+          settingsMap[s.key] = JSON.parse(s.value);
+        } catch {
+          settingsMap[s.key] = s.value;
+        }
+      }
+
+      // Check if search is disabled in database
+      if (
+        settingsMap["search.enabled"] === false ||
+        settingsMap["search.enabled"] === "false"
+      ) {
+        return { provider: "tavily", apiKey: null, enabled: false };
+      }
+
+      const provider = settingsMap["search.provider"] || "tavily";
+
+      // Get API key based on provider
+      let apiKey: string | null = null;
+      if (provider === "tavily") {
+        apiKey = settingsMap["search.tavily.apiKey"] || null;
+      } else if (provider === "serper") {
+        apiKey = settingsMap["search.serper.apiKey"] || null;
+      }
+
+      // If database has config, use it
+      if (apiKey) {
+        return { provider, apiKey, enabled: true };
+      }
+    } catch (error) {
+      this.logger.warn(
+        "Failed to get search config from database, using env vars",
+      );
+    }
+
+    // Fallback to environment variables
     const tavilyKey = process.env.TAVILY_API_KEY;
     const serperKey = process.env.SERPER_API_KEY;
 
     if (tavilyKey) {
-      return { provider: "tavily", apiKey: tavilyKey };
+      return { provider: "tavily", apiKey: tavilyKey, enabled: true };
     }
     if (serperKey) {
-      return { provider: "serper", apiKey: serperKey };
+      return { provider: "serper", apiKey: serperKey, enabled: true };
     }
 
-    return { provider: "tavily", apiKey: null };
+    return { provider: "tavily", apiKey: null, enabled: true };
   }
 
   /**

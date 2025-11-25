@@ -1474,6 +1474,23 @@ model TopicSummary {
   @@map("topic_summaries")
 }
 
+// ============ 系统设置 ============
+
+model SystemSetting {
+  id    String @id @default(uuid())
+  key   String @unique @db.VarChar(100) // setting key, e.g., "search.provider"
+  value String @db.Text // JSON-encoded value
+
+  description String? @db.Text
+  category    String  @default("general") @db.VarChar(50) // general, search, ai, etc.
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("system_settings")
+}
+
 // ============ AI模型配置 ============
 
 model AIModel {

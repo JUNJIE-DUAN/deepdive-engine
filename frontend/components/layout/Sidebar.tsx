@@ -418,7 +418,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                   ? 'bg-purple-50 text-gray-900'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
-              title="Management"
+              title="Settings"
             >
               <svg
                 className="h-5 w-5 flex-shrink-0"
@@ -439,7 +439,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              {!isCollapsed && <span>Management</span>}
+              {!isCollapsed && <span>Settings</span>}
             </Link>
           )}
         </div>

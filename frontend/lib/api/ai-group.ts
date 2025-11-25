@@ -51,7 +51,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 // ==================== Topic API ====================
 
 export async function createTopic(dto: CreateTopicDto): Promise<Topic> {
-  return fetchWithAuth('/api/topics', {
+  return fetchWithAuth('/api/v1/topics', {
     method: 'POST',
     body: JSON.stringify(dto),
   });
@@ -66,31 +66,31 @@ export async function getTopics(options?: {
   if (options?.search) params.set('search', options.search);
 
   const query = params.toString();
-  return fetchWithAuth(`/api/topics${query ? `?${query}` : ''}`);
+  return fetchWithAuth(`/api/v1/topics${query ? `?${query}` : ''}`);
 }
 
 export async function getTopicById(topicId: string): Promise<Topic> {
-  return fetchWithAuth(`/api/topics/${topicId}`);
+  return fetchWithAuth(`/api/v1/topics/${topicId}`);
 }
 
 export async function updateTopic(
   topicId: string,
   dto: UpdateTopicDto
 ): Promise<Topic> {
-  return fetchWithAuth(`/api/topics/${topicId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}`, {
     method: 'PATCH',
     body: JSON.stringify(dto),
   });
 }
 
 export async function archiveTopic(topicId: string): Promise<Topic> {
-  return fetchWithAuth(`/api/topics/${topicId}/archive`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/archive`, {
     method: 'POST',
   });
 }
 
 export async function deleteTopic(topicId: string): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}`, {
     method: 'DELETE',
   });
 }
@@ -98,14 +98,14 @@ export async function deleteTopic(topicId: string): Promise<void> {
 // ==================== Member API ====================
 
 export async function getMembers(topicId: string): Promise<TopicMember[]> {
-  return fetchWithAuth(`/api/topics/${topicId}/members`);
+  return fetchWithAuth(`/api/v1/topics/${topicId}/members`);
 }
 
 export async function addMember(
   topicId: string,
   dto: AddMemberDto
 ): Promise<TopicMember> {
-  return fetchWithAuth(`/api/topics/${topicId}/members`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/members`, {
     method: 'POST',
     body: JSON.stringify(dto),
   });
@@ -116,7 +116,7 @@ export async function addMembers(
   userIds: string[],
   role?: TopicRole
 ): Promise<{ added: number }> {
-  return fetchWithAuth(`/api/topics/${topicId}/members/batch`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/members/batch`, {
     method: 'POST',
     body: JSON.stringify({ userIds, role }),
   });
@@ -127,7 +127,7 @@ export async function updateMember(
   memberId: string,
   dto: { role?: TopicRole; nickname?: string }
 ): Promise<TopicMember> {
-  return fetchWithAuth(`/api/topics/${topicId}/members/${memberId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/members/${memberId}`, {
     method: 'PATCH',
     body: JSON.stringify(dto),
   });
@@ -137,13 +137,13 @@ export async function removeMember(
   topicId: string,
   memberId: string
 ): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}/members/${memberId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/members/${memberId}`, {
     method: 'DELETE',
   });
 }
 
 export async function leaveTopic(topicId: string): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}/leave`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/leave`, {
     method: 'POST',
   });
 }
@@ -151,14 +151,14 @@ export async function leaveTopic(topicId: string): Promise<void> {
 // ==================== AI Member API ====================
 
 export async function getAIMembers(topicId: string): Promise<TopicAIMember[]> {
-  return fetchWithAuth(`/api/topics/${topicId}/ai-members`);
+  return fetchWithAuth(`/api/v1/topics/${topicId}/ai-members`);
 }
 
 export async function addAIMember(
   topicId: string,
   dto: AddAIMemberDto
 ): Promise<TopicAIMember> {
-  return fetchWithAuth(`/api/topics/${topicId}/ai-members`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/ai-members`, {
     method: 'POST',
     body: JSON.stringify(dto),
   });
@@ -169,7 +169,7 @@ export async function updateAIMember(
   aiMemberId: string,
   dto: UpdateAIMemberDto
 ): Promise<TopicAIMember> {
-  return fetchWithAuth(`/api/topics/${topicId}/ai-members/${aiMemberId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/ai-members/${aiMemberId}`, {
     method: 'PATCH',
     body: JSON.stringify(dto),
   });
@@ -179,7 +179,7 @@ export async function removeAIMember(
   topicId: string,
   aiMemberId: string
 ): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}/ai-members/${aiMemberId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/ai-members/${aiMemberId}`, {
     method: 'DELETE',
   });
 }
@@ -196,7 +196,7 @@ export async function getMessages(
 
   const query = params.toString();
   return fetchWithAuth(
-    `/api/topics/${topicId}/messages${query ? `?${query}` : ''}`
+    `/api/v1/topics/${topicId}/messages${query ? `?${query}` : ''}`
   );
 }
 
@@ -204,7 +204,7 @@ export async function sendMessage(
   topicId: string,
   dto: SendMessageDto
 ): Promise<TopicMessage> {
-  return fetchWithAuth(`/api/topics/${topicId}/messages`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/messages`, {
     method: 'POST',
     body: JSON.stringify(dto),
   });
@@ -214,7 +214,7 @@ export async function deleteMessage(
   topicId: string,
   messageId: string
 ): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}/messages/${messageId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/messages/${messageId}`, {
     method: 'DELETE',
   });
 }
@@ -225,7 +225,7 @@ export async function addReaction(
   emoji: string
 ): Promise<void> {
   return fetchWithAuth(
-    `/api/topics/${topicId}/messages/${messageId}/reactions`,
+    `/api/v1/topics/${topicId}/messages/${messageId}/reactions`,
     {
       method: 'POST',
       body: JSON.stringify({ emoji }),
@@ -239,7 +239,7 @@ export async function removeReaction(
   emoji: string
 ): Promise<void> {
   return fetchWithAuth(
-    `/api/topics/${topicId}/messages/${messageId}/reactions/${emoji}`,
+    `/api/v1/topics/${topicId}/messages/${messageId}/reactions/${emoji}`,
     {
       method: 'DELETE',
     }
@@ -250,7 +250,7 @@ export async function markAsRead(
   topicId: string,
   messageId?: string
 ): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}/read`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/read`, {
     method: 'POST',
     body: JSON.stringify({ messageId }),
   });
@@ -263,7 +263,7 @@ export async function generateAIResponse(
   aiMemberId: string,
   contextMessageIds?: string[]
 ): Promise<TopicMessage> {
-  return fetchWithAuth(`/api/topics/${topicId}/ai/generate`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/ai/generate`, {
     method: 'POST',
     body: JSON.stringify({ aiMemberId, contextMessageIds }),
   });
@@ -272,14 +272,14 @@ export async function generateAIResponse(
 // ==================== Resource API ====================
 
 export async function getResources(topicId: string): Promise<TopicResource[]> {
-  return fetchWithAuth(`/api/topics/${topicId}/resources`);
+  return fetchWithAuth(`/api/v1/topics/${topicId}/resources`);
 }
 
 export async function addResource(
   topicId: string,
   dto: AddResourceDto
 ): Promise<TopicResource> {
-  return fetchWithAuth(`/api/topics/${topicId}/resources`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/resources`, {
     method: 'POST',
     body: JSON.stringify(dto),
   });
@@ -289,7 +289,7 @@ export async function removeResource(
   topicId: string,
   resourceId: string
 ): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}/resources/${resourceId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/resources/${resourceId}`, {
     method: 'DELETE',
   });
 }
@@ -297,14 +297,14 @@ export async function removeResource(
 // ==================== Summary API ====================
 
 export async function getSummaries(topicId: string): Promise<TopicSummary[]> {
-  return fetchWithAuth(`/api/topics/${topicId}/summaries`);
+  return fetchWithAuth(`/api/v1/topics/${topicId}/summaries`);
 }
 
 export async function generateSummary(
   topicId: string,
   dto: GenerateSummaryDto
 ): Promise<TopicSummary> {
-  return fetchWithAuth(`/api/topics/${topicId}/summaries`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/summaries`, {
     method: 'POST',
     body: JSON.stringify(dto),
   });
@@ -314,7 +314,7 @@ export async function deleteSummary(
   topicId: string,
   summaryId: string
 ): Promise<void> {
-  return fetchWithAuth(`/api/topics/${topicId}/summaries/${summaryId}`, {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/summaries/${summaryId}`, {
     method: 'DELETE',
   });
 }

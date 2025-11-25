@@ -26,7 +26,7 @@ import {
 } from "./dto";
 import { TopicType } from "@prisma/client";
 
-@Controller("api/topics")
+@Controller("topics")
 @UseGuards(JwtAuthGuard)
 export class AiGroupController {
   constructor(private readonly aiGroupService: AiGroupService) {}

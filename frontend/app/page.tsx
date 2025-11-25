@@ -402,14 +402,79 @@ function HomeContent() {
   // Handle opening resource from URL parameter (from library page)
   useEffect(() => {
     const resourceId = searchParams?.get('id');
-    if (resourceId && resources.length > 0) {
-      const resource = resources.find((r) => r.id === resourceId);
-      if (resource) {
-        setSelectedResource(resource);
-        setViewMode('detail');
+    if (!resourceId) return;
+
+    // Helper function to handle the resource
+    const handleResource = (resource: Resource) => {
+      // For YouTube videos, redirect to the YouTube page
+      if (
+        resource.type === 'YOUTUBE' ||
+        resource.type === 'YOUTUBE_VIDEO' ||
+        (resource as any).videoId
+      ) {
+        let videoId = (resource as any).videoId;
+
+        // If no videoId, extract from sourceUrl (handle multiple YouTube URL formats)
+        if (!videoId && resource.sourceUrl) {
+          // Try youtube.com/watch?v=xxx format
+          let urlMatch = resource.sourceUrl.match(/[?&]v=([^&]+)/);
+          if (urlMatch) {
+            videoId = urlMatch[1];
+          } else {
+            // Try youtu.be/xxx format
+            urlMatch = resource.sourceUrl.match(/youtu\.be\/([^?&]+)/);
+            if (urlMatch) {
+              videoId = urlMatch[1];
+            } else {
+              // Try youtube.com/embed/xxx format
+              urlMatch = resource.sourceUrl.match(
+                /youtube\.com\/embed\/([^?&]+)/
+              );
+              if (urlMatch) {
+                videoId = urlMatch[1];
+              }
+            }
+          }
+        }
+
+        if (videoId) {
+          router.push(`/youtube?videoId=${videoId}`);
+          return;
+        }
       }
+
+      // For non-YouTube resources, show in detail view
+      setSelectedResource(resource);
+      setViewMode('detail');
+    };
+
+    // First try to find in current resources
+    const resource = resources.find((r) => r.id === resourceId);
+    if (resource) {
+      handleResource(resource);
+      return;
     }
-  }, [searchParams, resources]);
+
+    // If not found in current resources, fetch directly from API
+    const fetchResourceById = async () => {
+      try {
+        const response = await fetch(
+          `${config.apiUrl}/resources/${resourceId}`,
+          {
+            headers: getAuthHeader(),
+          }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          handleResource(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch resource by id:', error);
+      }
+    };
+
+    fetchResourceById();
+  }, [searchParams, resources, router]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -677,11 +742,26 @@ function HomeContent() {
     ) {
       let videoId = (resource as any).videoId;
 
-      // If no videoId, extract from sourceUrl
+      // If no videoId, extract from sourceUrl (handle multiple YouTube URL formats)
       if (!videoId && resource.sourceUrl) {
-        const urlMatch = resource.sourceUrl.match(/[?&]v=([^&]+)/);
+        // Try youtube.com/watch?v=xxx format
+        let urlMatch = resource.sourceUrl.match(/[?&]v=([^&]+)/);
         if (urlMatch) {
           videoId = urlMatch[1];
+        } else {
+          // Try youtu.be/xxx format
+          urlMatch = resource.sourceUrl.match(/youtu\.be\/([^?&]+)/);
+          if (urlMatch) {
+            videoId = urlMatch[1];
+          } else {
+            // Try youtube.com/embed/xxx format
+            urlMatch = resource.sourceUrl.match(
+              /youtube\.com\/embed\/([^?&]+)/
+            );
+            if (urlMatch) {
+              videoId = urlMatch[1];
+            }
+          }
         }
       }
 

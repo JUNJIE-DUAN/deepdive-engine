@@ -30,6 +30,32 @@ interface TestResult {
   latency?: number;
 }
 
+interface DiagnoseResult {
+  timestamp: string;
+  models: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+    provider: string;
+    modelId: string;
+    apiEndpoint: string;
+    isEnabled: boolean;
+    isDefault: boolean;
+    hasApiKey: boolean;
+    apiKeyLength: number;
+    apiKeyPrefix: string | null;
+    maxTokens: number;
+    temperature: number;
+    updatedAt: string;
+  }>;
+  summary: {
+    total: number;
+    enabled: number;
+    withApiKey: number;
+    ready: number;
+  };
+}
+
 // Map model names to their icon URLs
 const MODEL_ICONS: Record<string, string> = {
   grok: '/icons/ai/grok.svg',
@@ -230,6 +256,11 @@ export default function AIModelSettings() {
   const [testResults, setTestResults] = useState<Record<string, TestResult>>(
     {}
   );
+  const [showDiagnose, setShowDiagnose] = useState(false);
+  const [diagnoseResult, setDiagnoseResult] = useState<DiagnoseResult | null>(
+    null
+  );
+  const [diagnosing, setDiagnosing] = useState(false);
 
   // Fetch models from API
   useEffect(() => {
@@ -461,6 +492,33 @@ export default function AIModelSettings() {
     }
   };
 
+  const handleDiagnose = async () => {
+    setDiagnosing(true);
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/ai-models/diagnose`,
+        {
+          headers: { ...getAuthHeader() },
+          credentials: 'include',
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setDiagnoseResult(result);
+        setShowDiagnose(true);
+      } else {
+        setError('Failed to diagnose AI models');
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (err) {
+      setError('Network error during diagnosis');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setDiagnosing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -481,25 +539,66 @@ export default function AIModelSettings() {
             Configure AI models, API keys, and test connections
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-blue-700"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDiagnose}
+            disabled={diagnosing}
+            className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 shadow-sm transition-all hover:bg-orange-100 disabled:opacity-50"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Add Model
-        </button>
+            {diagnosing ? (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
+              </svg>
+            )}
+            Diagnose
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-blue-700"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Model
+          </button>
+        </div>
       </div>
 
       {/* Notifications */}
@@ -722,6 +821,187 @@ export default function AIModelSettings() {
           onClose={() => setShowAddModal(false)}
           saving={saving}
         />
+      )}
+
+      {/* Diagnose Modal */}
+      {showDiagnose && diagnoseResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                AI Models Diagnostic Report
+              </h3>
+              <button
+                onClick={() => setShowDiagnose(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Summary */}
+            <div className="mb-6 grid grid-cols-4 gap-4">
+              <div className="rounded-lg bg-gray-50 p-3 text-center">
+                <div className="text-2xl font-bold text-gray-900">
+                  {diagnoseResult.summary.total}
+                </div>
+                <div className="text-xs text-gray-500">Total Models</div>
+              </div>
+              <div className="rounded-lg bg-green-50 p-3 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {diagnoseResult.summary.enabled}
+                </div>
+                <div className="text-xs text-gray-500">Enabled</div>
+              </div>
+              <div className="rounded-lg bg-blue-50 p-3 text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {diagnoseResult.summary.withApiKey}
+                </div>
+                <div className="text-xs text-gray-500">With API Key</div>
+              </div>
+              <div
+                className={`rounded-lg p-3 text-center ${diagnoseResult.summary.ready > 0 ? 'bg-green-50' : 'bg-red-50'}`}
+              >
+                <div
+                  className={`text-2xl font-bold ${diagnoseResult.summary.ready > 0 ? 'text-green-600' : 'text-red-600'}`}
+                >
+                  {diagnoseResult.summary.ready}
+                </div>
+                <div className="text-xs text-gray-500">Ready to Use</div>
+              </div>
+            </div>
+
+            {/* Timestamp */}
+            <p className="mb-4 text-xs text-gray-500">
+              Diagnosed at:{' '}
+              {new Date(diagnoseResult.timestamp).toLocaleString()}
+            </p>
+
+            {/* Models Table */}
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Name
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Provider
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Model ID
+                    </th>
+                    <th className="px-4 py-2 text-center font-medium text-gray-700">
+                      Enabled
+                    </th>
+                    <th className="px-4 py-2 text-center font-medium text-gray-700">
+                      API Key
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Key Prefix
+                    </th>
+                    <th className="px-4 py-2 text-center font-medium text-gray-700">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {diagnoseResult.models.map((model) => (
+                    <tr
+                      key={model.id}
+                      className={
+                        !model.isEnabled ? 'bg-gray-50 opacity-60' : ''
+                      }
+                    >
+                      <td className="px-4 py-2">
+                        <div className="font-medium">{model.displayName}</div>
+                        <div className="text-xs text-gray-500">
+                          {model.name}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-gray-600">
+                        {model.provider}
+                      </td>
+                      <td className="px-4 py-2 font-mono text-xs text-gray-600">
+                        {model.modelId}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {model.isEnabled ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            Yes
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            No
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {model.hasApiKey ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            {model.apiKeyLength} chars
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                            Missing
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 font-mono text-xs text-gray-500">
+                        {model.apiKeyPrefix || '-'}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {model.isEnabled && model.hasApiKey ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            Ready
+                          </span>
+                        ) : !model.isEnabled ? (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            Disabled
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                            No Key
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Warning if no models ready */}
+            {diagnoseResult.summary.ready === 0 && (
+              <div className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+                <strong>Warning:</strong> No AI models are ready to use. AI
+                responses will fall back to mock data. Please configure at least
+                one model with an API key and enable it.
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowDiagnose(false)}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

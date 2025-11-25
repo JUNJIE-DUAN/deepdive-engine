@@ -689,4 +689,31 @@ export class AdminService {
     }
     return null;
   }
+
+  /**
+   * 诊断AI模型配置
+   * 返回所有模型的配置状态，用于调试
+   */
+  async diagnoseAIModels() {
+    const models = await this.prisma.aIModel.findMany({
+      orderBy: { name: "asc" },
+    });
+
+    return models.map((model) => ({
+      id: model.id,
+      name: model.name,
+      displayName: model.displayName,
+      provider: model.provider,
+      modelId: model.modelId,
+      apiEndpoint: model.apiEndpoint,
+      isEnabled: model.isEnabled,
+      isDefault: model.isDefault,
+      hasApiKey: !!model.apiKey,
+      apiKeyLength: model.apiKey?.length || 0,
+      apiKeyPrefix: model.apiKey ? model.apiKey.substring(0, 8) + "..." : null,
+      maxTokens: model.maxTokens,
+      temperature: model.temperature,
+      updatedAt: model.updatedAt,
+    }));
+  }
 }

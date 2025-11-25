@@ -199,6 +199,27 @@ export class AdminController {
   }
 
   /**
+   * 诊断AI模型配置
+   * GET /api/v1/admin/ai-models/diagnose
+   * 返回所有AI模型的配置状态，用于调试
+   */
+  @Get("ai-models/diagnose")
+  async diagnoseAIModels() {
+    this.logger.log("Admin: Diagnosing AI models configuration");
+    const models = await this.adminService.diagnoseAIModels();
+    return {
+      timestamp: new Date().toISOString(),
+      models,
+      summary: {
+        total: models.length,
+        enabled: models.filter((m: any) => m.isEnabled).length,
+        withApiKey: models.filter((m: any) => m.hasApiKey).length,
+        ready: models.filter((m: any) => m.isEnabled && m.hasApiKey).length,
+      },
+    };
+  }
+
+  /**
    * 测试AI模型连接
    * POST /api/v1/admin/ai-models/:id/test
    */

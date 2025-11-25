@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import {
   LayoutDashboard,
@@ -10,7 +9,7 @@ import {
   Shield,
   History,
   Users,
-  Settings,
+  Bot,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -70,6 +69,12 @@ export default function DataCollectionLayout({
       href: '/data-collection/history',
       icon: History,
       description: 'Collection history',
+    },
+    {
+      name: 'AI Models',
+      href: '/data-collection/ai-models',
+      icon: Bot,
+      description: 'Configure AI models and API keys',
     },
   ];
 

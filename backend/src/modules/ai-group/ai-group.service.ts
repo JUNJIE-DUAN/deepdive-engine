@@ -1113,41 +1113,53 @@ ${messagesForSummary
     }
 
     // 检测是否需要搜索实时信息或抓取URL
-    // 获取最后一条用户消息
-    const lastUserMessage = contextMessages.find((m) => m.senderId);
+    // 获取最近的用户消息（可能有多条）
+    const recentUserMessages = contextMessages
+      .filter((m) => m.senderId)
+      .slice(0, 5);
     let searchContext = "";
     let urlContext = "";
 
-    if (lastUserMessage) {
-      // 1. 检测并抓取消息中的URL
-      const urls = this.searchService.extractUrls(lastUserMessage.content);
-      if (urls.length > 0) {
-        this.logger.log(
-          `Found ${urls.length} URLs in message, fetching content...`,
-        );
-        urlContext = await this.searchService.fetchUrlsForContext(urls);
-        if (urlContext) {
-          this.logger.log(`Added URL content to context`);
-        }
-      }
+    // 1. 从最近的用户消息中提取所有URL
+    const allUrls: string[] = [];
+    for (const msg of recentUserMessages) {
+      const urls = this.searchService.extractUrls(msg.content);
+      allUrls.push(...urls);
+    }
+    // 去重
+    const uniqueUrls = [...new Set(allUrls)];
 
-      // 2. 检测是否需要搜索实时信息（仅当没有URL时才搜索）
-      if (!urlContext && this.shouldSearchForInfo(lastUserMessage.content)) {
+    if (uniqueUrls.length > 0) {
+      this.logger.log(
+        `Found ${uniqueUrls.length} URLs in recent messages, fetching content...`,
+      );
+      urlContext = await this.searchService.fetchUrlsForContext(uniqueUrls);
+      if (urlContext) {
+        this.logger.log(`Added URL content to context`);
+      }
+    }
+
+    // 2. 检测是否需要搜索实时信息（仅当没有URL时才搜索）
+    const lastUserMessage = recentUserMessages[0];
+    if (
+      lastUserMessage &&
+      !urlContext &&
+      this.shouldSearchForInfo(lastUserMessage.content)
+    ) {
+      this.logger.log(
+        `Searching for real-time info: "${lastUserMessage.content.substring(0, 100)}..."`,
+      );
+      const searchResults = await this.searchService.search(
+        lastUserMessage.content,
+        5,
+      );
+      if (searchResults.success && searchResults.results.length > 0) {
+        searchContext =
+          "\n\n" +
+          this.searchService.formatResultsForContext(searchResults.results);
         this.logger.log(
-          `Searching for real-time info: "${lastUserMessage.content.substring(0, 100)}..."`,
+          `Added ${searchResults.results.length} search results to context`,
         );
-        const searchResults = await this.searchService.search(
-          lastUserMessage.content,
-          5,
-        );
-        if (searchResults.success && searchResults.results.length > 0) {
-          searchContext =
-            "\n\n" +
-            this.searchService.formatResultsForContext(searchResults.results);
-          this.logger.log(
-            `Added ${searchResults.results.length} search results to context`,
-          );
-        }
       }
     }
 

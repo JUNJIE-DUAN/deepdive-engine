@@ -361,6 +361,71 @@ Format the summary in a clear, structured manner using markdown.`;
   }
 
   /**
+   * Test connection to an AI model
+   * Returns latency and success status
+   */
+  async testModelConnection(
+    model: string,
+  ): Promise<{ success: boolean; message: string; latency?: number }> {
+    const startTime = Date.now();
+
+    try {
+      // Simple test message
+      const testMessages: ChatMessage[] = [
+        { role: "user", content: "Say 'OK' to confirm you are working." },
+      ];
+
+      let result: ChatCompletionResult;
+
+      switch (model) {
+        case "grok":
+          result = await this.callGrokAPI(testMessages, 50, 0);
+          break;
+        case "gpt-4":
+          result = await this.callOpenAIAPI(testMessages, 50, 0);
+          break;
+        case "claude":
+          result = await this.callClaudeAPI(testMessages, 50, 0);
+          break;
+        case "gemini":
+          result = await this.callGeminiAPI(testMessages, 50, 0);
+          break;
+        default:
+          return {
+            success: false,
+            message: `Unknown model: ${model}`,
+          };
+      }
+
+      const latency = Date.now() - startTime;
+
+      // Check if we got a mock response (API key not configured)
+      if (result.content.includes("mock response")) {
+        return {
+          success: false,
+          message: `API key not configured for ${model}`,
+          latency,
+        };
+      }
+
+      return {
+        success: true,
+        message: `Connection successful! Response: "${result.content.substring(0, 100)}..."`,
+        latency,
+      };
+    } catch (error) {
+      const latency = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      return {
+        success: false,
+        message: `Connection failed: ${errorMessage}`,
+        latency,
+      };
+    }
+  }
+
+  /**
    * Generate a mock response for development/testing when API keys are not configured
    */
   private getMockResponse(

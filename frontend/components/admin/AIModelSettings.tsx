@@ -11,79 +11,23 @@ interface AIModel {
   displayName: string;
   icon: string;
   color: string;
-  apiKeyEnvVar: string;
   apiEndpoint: string;
+  apiKey: string | null;
+  hasApiKey: boolean;
   isEnabled: boolean;
   isDefault: boolean;
   maxTokens: number;
   temperature: number;
-  description: string;
+  description: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-const defaultModels: Omit<AIModel, 'id' | 'createdAt' | 'updatedAt'>[] = [
-  {
-    name: 'grok',
-    provider: 'xAI',
-    modelId: 'grok-beta',
-    displayName: 'Grok',
-    icon: '⚡',
-    color: 'from-blue-500 to-blue-600',
-    apiKeyEnvVar: 'XAI_API_KEY',
-    apiEndpoint: 'https://api.x.ai/v1/chat/completions',
-    isEnabled: true,
-    isDefault: true,
-    maxTokens: 4096,
-    temperature: 0.7,
-    description: 'xAI Grok - Fast and capable AI assistant',
-  },
-  {
-    name: 'gpt-4',
-    provider: 'OpenAI',
-    modelId: 'gpt-4-turbo-preview',
-    displayName: 'GPT-4',
-    icon: '🧠',
-    color: 'from-green-500 to-green-600',
-    apiKeyEnvVar: 'OPENAI_API_KEY',
-    apiEndpoint: 'https://api.openai.com/v1/chat/completions',
-    isEnabled: true,
-    isDefault: false,
-    maxTokens: 4096,
-    temperature: 0.7,
-    description: 'OpenAI GPT-4 Turbo - Most capable model',
-  },
-  {
-    name: 'claude',
-    provider: 'Anthropic',
-    modelId: 'claude-3-opus-20240229',
-    displayName: 'Claude',
-    icon: '🎭',
-    color: 'from-orange-500 to-orange-600',
-    apiKeyEnvVar: 'ANTHROPIC_API_KEY',
-    apiEndpoint: 'https://api.anthropic.com/v1/messages',
-    isEnabled: true,
-    isDefault: false,
-    maxTokens: 4096,
-    temperature: 0.7,
-    description: 'Anthropic Claude 3 Opus - Best for analysis',
-  },
-  {
-    name: 'gemini',
-    provider: 'Google',
-    modelId: 'gemini-2.0-flash-exp',
-    displayName: 'Gemini',
-    icon: '✨',
-    color: 'from-purple-500 to-purple-600',
-    apiKeyEnvVar: 'GOOGLE_AI_API_KEY',
-    apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
-    isEnabled: true,
-    isDefault: false,
-    maxTokens: 4096,
-    temperature: 0.7,
-    description: 'Google Gemini 2.0 Flash - Fast multimodal model',
-  },
-];
+interface TestResult {
+  success: boolean;
+  message: string;
+  latency?: number;
+}
 
 export default function AIModelSettings() {
   const [models, setModels] = useState<AIModel[]>([]);
@@ -94,11 +38,11 @@ export default function AIModelSettings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [testingModel, setTestingModel] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<
-    Record<string, { success: boolean; message: string; latency?: number }>
-  >({});
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>(
+    {}
+  );
 
-  // Fetch models
+  // Fetch models from API
   useEffect(() => {
     fetchModels();
   }, []);
@@ -111,86 +55,99 @@ export default function AIModelSettings() {
         const data = await response.json();
         setModels(data);
       } else {
-        // If API returns 404 or error, use default models
-        setModels(
-          defaultModels.map((m, i) => ({
-            ...m,
-            id: `default-${i}`,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }))
-        );
+        setError('Failed to fetch AI models');
       }
     } catch (err) {
       console.error('Failed to fetch AI models:', err);
-      // Use default models on error
-      setModels(
-        defaultModels.map((m, i) => ({
-          ...m,
-          id: `default-${i}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }))
-      );
+      setError('Failed to fetch AI models');
     } finally {
       setLoading(false);
     }
   };
 
   const handleToggleEnabled = async (model: AIModel) => {
-    const updated = { ...model, isEnabled: !model.isEnabled };
-    setModels(models.map((m) => (m.id === model.id ? updated : m)));
-
-    try {
-      await fetch(`${config.apiUrl}/admin/ai-models/${model.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isEnabled: updated.isEnabled }),
-      });
-      setSuccess(
-        `${model.displayName} ${updated.isEnabled ? 'enabled' : 'disabled'}`
-      );
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error('Failed to update model:', err);
-    }
-  };
-
-  const handleSetDefault = async (model: AIModel) => {
-    const updatedModels = models.map((m) => ({
-      ...m,
-      isDefault: m.id === model.id,
-    }));
-    setModels(updatedModels);
-
-    try {
-      await fetch(`${config.apiUrl}/admin/ai-models/${model.id}/set-default`, {
-        method: 'POST',
-      });
-      setSuccess(`${model.displayName} set as default`);
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error('Failed to set default:', err);
-    }
-  };
-
-  const handleSaveModel = async (model: AIModel) => {
-    setSaving(true);
     try {
       const response = await fetch(
         `${config.apiUrl}/admin/ai-models/${model.id}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(model),
+          body: JSON.stringify({ isEnabled: !model.isEnabled }),
         }
       );
 
       if (response.ok) {
-        setModels(models.map((m) => (m.id === model.id ? model : m)));
+        const updated = await response.json();
+        setModels(models.map((m) => (m.id === model.id ? updated : m)));
+        setSuccess(
+          `${model.displayName} ${!model.isEnabled ? 'enabled' : 'disabled'}`
+        );
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to update model:', err);
+      setError('Failed to update model');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handleSetDefault = async (model: AIModel) => {
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/ai-models/${model.id}/set-default`,
+        { method: 'POST' }
+      );
+
+      if (response.ok) {
+        // Refresh models to get updated default status
+        await fetchModels();
+        setSuccess(`${model.displayName} set as default`);
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to set default:', err);
+      setError('Failed to set default');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handleSaveModel = async (model: AIModel, newApiKey?: string) => {
+    setSaving(true);
+    try {
+      const updateData: Record<string, unknown> = {
+        displayName: model.displayName,
+        provider: model.provider,
+        modelId: model.modelId,
+        icon: model.icon,
+        color: model.color,
+        apiEndpoint: model.apiEndpoint,
+        maxTokens: model.maxTokens,
+        temperature: model.temperature,
+        description: model.description,
+      };
+
+      // Only send apiKey if it was changed
+      if (newApiKey !== undefined && newApiKey !== '***configured***') {
+        updateData.apiKey = newApiKey;
+      }
+
+      const response = await fetch(
+        `${config.apiUrl}/admin/ai-models/${model.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (response.ok) {
+        const updated = await response.json();
+        setModels(models.map((m) => (m.id === model.id ? updated : m)));
         setEditingModel(null);
         setSuccess('Model settings saved');
         setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error('Failed to save');
       }
     } catch (err) {
       setError('Failed to save model settings');
@@ -201,7 +158,7 @@ export default function AIModelSettings() {
   };
 
   const handleAddModel = async (
-    model: Omit<AIModel, 'id' | 'createdAt' | 'updatedAt'>
+    model: Omit<AIModel, 'id' | 'createdAt' | 'updatedAt' | 'hasApiKey'>
   ) => {
     setSaving(true);
     try {
@@ -217,6 +174,8 @@ export default function AIModelSettings() {
         setShowAddModal(false);
         setSuccess('New model added');
         setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error('Failed to add');
       }
     } catch (err) {
       setError('Failed to add model');
@@ -227,19 +186,68 @@ export default function AIModelSettings() {
   };
 
   const handleDeleteModel = async (model: AIModel) => {
+    if (model.isDefault) {
+      setError('Cannot delete the default model');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
     if (!confirm(`Are you sure you want to delete ${model.displayName}?`))
       return;
 
     try {
-      await fetch(`${config.apiUrl}/admin/ai-models/${model.id}`, {
-        method: 'DELETE',
-      });
-      setModels(models.filter((m) => m.id !== model.id));
-      setSuccess('Model deleted');
-      setTimeout(() => setSuccess(null), 3000);
+      const response = await fetch(
+        `${config.apiUrl}/admin/ai-models/${model.id}`,
+        { method: 'DELETE' }
+      );
+
+      if (response.ok) {
+        setModels(models.filter((m) => m.id !== model.id));
+        setSuccess('Model deleted');
+        setTimeout(() => setSuccess(null), 3000);
+      }
     } catch (err) {
       setError('Failed to delete model');
       setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handleTestConnection = async (model: AIModel) => {
+    setTestingModel(model.id);
+    setTestResults((prev) => ({
+      ...prev,
+      [model.id]: { success: false, message: 'Testing...' },
+    }));
+
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/ai-models/${model.id}/test`,
+        { method: 'POST' }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setTestResults((prev) => ({
+          ...prev,
+          [model.id]: {
+            success: result.success,
+            message: result.message,
+            latency: result.latency,
+          },
+        }));
+      } else {
+        setTestResults((prev) => ({
+          ...prev,
+          [model.id]: { success: false, message: 'Test request failed' },
+        }));
+      }
+    } catch (err) {
+      setTestResults((prev) => ({
+        ...prev,
+        [model.id]: { success: false, message: 'Connection error' },
+      }));
+    } finally {
+      setTestingModel(null);
     }
   };
 
@@ -260,7 +268,7 @@ export default function AIModelSettings() {
             AI Model Configuration
           </h2>
           <p className="text-sm text-gray-500">
-            Configure available AI models and their settings
+            Configure AI models, API keys, and test connections
           </p>
         </div>
         <button
@@ -351,8 +359,10 @@ export default function AIModelSettings() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">API Key:</span>
-                <span className="font-mono text-gray-700">
-                  {model.apiKeyEnvVar}
+                <span
+                  className={`font-mono ${model.hasApiKey ? 'text-green-600' : 'text-red-500'}`}
+                >
+                  {model.hasApiKey ? '✓ Configured' : '✗ Not configured'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -365,17 +375,83 @@ export default function AIModelSettings() {
               </div>
             </div>
 
+            {/* Test Result */}
+            {testResults[model.id] && (
+              <div
+                className={`mb-4 rounded-lg p-3 text-sm ${
+                  testResults[model.id].success
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-red-50 text-red-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{testResults[model.id].message}</span>
+                  {testResults[model.id].latency && (
+                    <span className="font-mono text-xs">
+                      {testResults[model.id].latency}ms
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Description */}
-            <p className="mb-4 text-sm text-gray-600">{model.description}</p>
+            {model.description && (
+              <p className="mb-4 text-sm text-gray-600">{model.description}</p>
+            )}
 
             {/* Actions */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {/* Test Connection */}
+              <button
+                onClick={() => handleTestConnection(model)}
+                disabled={testingModel === model.id || !model.isEnabled}
+                className="flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {testingModel === model.id ? (
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                )}
+                Test
+              </button>
+
               {!model.isDefault && model.isEnabled && (
                 <button
                   onClick={() => handleSetDefault(model)}
-                  className="flex-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100"
+                  className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100"
                 >
-                  Set as Default
+                  Set Default
                 </button>
               )}
               <button
@@ -386,7 +462,8 @@ export default function AIModelSettings() {
               </button>
               <button
                 onClick={() => handleDeleteModel(model)}
-                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+                disabled={model.isDefault}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg
                   className="h-4 w-4"
@@ -437,15 +514,17 @@ function EditModelModal({
   saving,
 }: {
   model: AIModel;
-  onSave: (model: AIModel) => void;
+  onSave: (model: AIModel, newApiKey?: string) => void;
   onClose: () => void;
   saving: boolean;
 }) {
   const [formData, setFormData] = useState(model);
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <h3 className="mb-4 text-lg font-semibold text-gray-900">
           Edit {model.displayName}
         </h3>
@@ -493,6 +572,72 @@ function EditModelModal({
             />
           </div>
 
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              API Key{' '}
+              {model.hasApiKey && (
+                <span className="text-green-600">(configured)</span>
+              )}
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={
+                  model.hasApiKey
+                    ? 'Enter new key to update...'
+                    : 'Enter API key...'
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showApiKey ? (
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Leave empty to keep existing key. Enter new value to update.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -536,7 +681,7 @@ function EditModelModal({
               Description
             </label>
             <textarea
-              value={formData.description}
+              value={formData.description || ''}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
@@ -554,7 +699,7 @@ function EditModelModal({
             Cancel
           </button>
           <button
-            onClick={() => onSave(formData)}
+            onClick={() => onSave(formData, apiKey || undefined)}
             disabled={saving}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
@@ -572,7 +717,9 @@ function AddModelModal({
   onClose,
   saving,
 }: {
-  onAdd: (model: Omit<AIModel, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onAdd: (
+    model: Omit<AIModel, 'id' | 'createdAt' | 'updatedAt' | 'hasApiKey'>
+  ) => void;
   onClose: () => void;
   saving: boolean;
 }) {
@@ -581,16 +728,17 @@ function AddModelModal({
     provider: '',
     modelId: '',
     displayName: '',
-    icon: '🤖',
+    icon: '',
     color: 'from-gray-500 to-gray-600',
-    apiKeyEnvVar: '',
     apiEndpoint: '',
+    apiKey: null as string | null,
     isEnabled: true,
     isDefault: false,
     maxTokens: 4096,
     temperature: 0.7,
     description: '',
   });
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const colorOptions = [
     { value: 'from-blue-500 to-blue-600', label: 'Blue' },
@@ -709,21 +857,6 @@ function AddModelModal({
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              API Key Environment Variable
-            </label>
-            <input
-              type="text"
-              value={formData.apiKeyEnvVar}
-              onChange={(e) =>
-                setFormData({ ...formData, apiKeyEnvVar: e.target.value })
-              }
-              placeholder="e.g., OPENAI_API_KEY"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
               API Endpoint
             </label>
             <input
@@ -735,6 +868,67 @@ function AddModelModal({
               placeholder="e.g., https://api.openai.com/v1/chat/completions"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              API Key
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={formData.apiKey || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    apiKey: e.target.value || null,
+                  })
+                }
+                placeholder="Enter API key..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showApiKey ? (
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

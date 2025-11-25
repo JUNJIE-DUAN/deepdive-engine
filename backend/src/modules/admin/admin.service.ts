@@ -245,4 +245,217 @@ export class AdminService {
 
     return user.role === "ADMIN" || this.adminEmails.includes(user.email);
   }
+
+  // ============ AI Model Management ============
+
+  /**
+   * 获取所有AI模型配置
+   */
+  async getAllAIModels() {
+    const models = await this.prisma.aIModel.findMany({
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    });
+
+    // 隐藏API Key的实际值，只返回是否已配置
+    return models.map((model) => ({
+      ...model,
+      apiKey: model.apiKey ? "***configured***" : null,
+      hasApiKey: !!model.apiKey,
+    }));
+  }
+
+  /**
+   * 获取单个AI模型
+   */
+  async getAIModel(id: string) {
+    const model = await this.prisma.aIModel.findUnique({
+      where: { id },
+    });
+
+    if (!model) {
+      throw new NotFoundException(`AI Model ${id} not found`);
+    }
+
+    return {
+      ...model,
+      apiKey: model.apiKey ? "***configured***" : null,
+      hasApiKey: !!model.apiKey,
+    };
+  }
+
+  /**
+   * 创建AI模型
+   */
+  async createAIModel(data: {
+    name: string;
+    displayName: string;
+    provider: string;
+    modelId: string;
+    icon: string;
+    color: string;
+    apiEndpoint: string;
+    apiKey?: string;
+    maxTokens?: number;
+    temperature?: number;
+    description?: string;
+  }) {
+    const model = await this.prisma.aIModel.create({
+      data: {
+        name: data.name,
+        displayName: data.displayName,
+        provider: data.provider,
+        modelId: data.modelId,
+        icon: data.icon,
+        color: data.color,
+        apiEndpoint: data.apiEndpoint,
+        apiKey: data.apiKey,
+        maxTokens: data.maxTokens ?? 4096,
+        temperature: data.temperature ?? 0.7,
+        description: data.description,
+        isEnabled: true,
+        isDefault: false,
+      },
+    });
+
+    this.logger.log(`AI Model created: ${model.name} (${model.displayName})`);
+
+    return {
+      ...model,
+      apiKey: model.apiKey ? "***configured***" : null,
+      hasApiKey: !!model.apiKey,
+    };
+  }
+
+  /**
+   * 更新AI模型
+   */
+  async updateAIModel(
+    id: string,
+    data: {
+      displayName?: string;
+      provider?: string;
+      modelId?: string;
+      icon?: string;
+      color?: string;
+      apiEndpoint?: string;
+      apiKey?: string;
+      maxTokens?: number;
+      temperature?: number;
+      description?: string;
+      isEnabled?: boolean;
+    },
+  ) {
+    const model = await this.prisma.aIModel.findUnique({
+      where: { id },
+    });
+
+    if (!model) {
+      throw new NotFoundException(`AI Model ${id} not found`);
+    }
+
+    // 如果apiKey为空字符串，设为null；如果是"***configured***"则保持不变
+    let apiKeyUpdate = undefined;
+    if (data.apiKey !== undefined) {
+      if (data.apiKey === "" || data.apiKey === null) {
+        apiKeyUpdate = null;
+      } else if (data.apiKey !== "***configured***") {
+        apiKeyUpdate = data.apiKey;
+      }
+    }
+
+    const updated = await this.prisma.aIModel.update({
+      where: { id },
+      data: {
+        displayName: data.displayName,
+        provider: data.provider,
+        modelId: data.modelId,
+        icon: data.icon,
+        color: data.color,
+        apiEndpoint: data.apiEndpoint,
+        apiKey: apiKeyUpdate,
+        maxTokens: data.maxTokens,
+        temperature: data.temperature,
+        description: data.description,
+        isEnabled: data.isEnabled,
+      },
+    });
+
+    this.logger.log(`AI Model updated: ${updated.name}`);
+
+    return {
+      ...updated,
+      apiKey: updated.apiKey ? "***configured***" : null,
+      hasApiKey: !!updated.apiKey,
+    };
+  }
+
+  /**
+   * 设置默认AI模型
+   */
+  async setDefaultAIModel(id: string) {
+    const model = await this.prisma.aIModel.findUnique({
+      where: { id },
+    });
+
+    if (!model) {
+      throw new NotFoundException(`AI Model ${id} not found`);
+    }
+
+    // 先将所有模型设为非默认
+    await this.prisma.aIModel.updateMany({
+      data: { isDefault: false },
+    });
+
+    // 设置当前模型为默认
+    const updated = await this.prisma.aIModel.update({
+      where: { id },
+      data: { isDefault: true },
+    });
+
+    this.logger.log(`AI Model ${updated.name} set as default`);
+
+    return {
+      ...updated,
+      apiKey: updated.apiKey ? "***configured***" : null,
+      hasApiKey: !!updated.apiKey,
+    };
+  }
+
+  /**
+   * 删除AI模型
+   */
+  async deleteAIModel(id: string) {
+    const model = await this.prisma.aIModel.findUnique({
+      where: { id },
+    });
+
+    if (!model) {
+      throw new NotFoundException(`AI Model ${id} not found`);
+    }
+
+    // 不允许删除默认模型
+    if (model.isDefault) {
+      throw new Error("Cannot delete the default AI model");
+    }
+
+    await this.prisma.aIModel.delete({
+      where: { id },
+    });
+
+    this.logger.log(`AI Model deleted: ${model.name}`);
+
+    return { success: true, message: "AI Model deleted successfully" };
+  }
+
+  /**
+   * 获取AI模型的API Key（仅用于测试连接）
+   */
+  async getAIModelApiKey(id: string): Promise<string | null> {
+    const model = await this.prisma.aIModel.findUnique({
+      where: { id },
+      select: { apiKey: true },
+    });
+
+    return model?.apiKey || null;
+  }
 }

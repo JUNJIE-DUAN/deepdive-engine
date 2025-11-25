@@ -1473,3 +1473,36 @@ model TopicSummary {
   @@index([topicId, createdAt(sort: Desc)])
   @@map("topic_summaries")
 }
+
+// ============ AI模型配置 ============
+
+model AIModel {
+  id          String  @id @default(uuid())
+  name        String  @unique @db.VarChar(50) // 内部名称 (grok, gpt-4, claude, gemini)
+  displayName String  @map("display_name") @db.VarChar(100)
+  provider    String  @db.VarChar(50) // xAI, OpenAI, Anthropic, Google
+  modelId     String  @map("model_id") @db.VarChar(100) // 实际模型ID
+
+  // 显示设置
+  icon  String @db.VarChar(10) // emoji
+  color String @db.VarChar(50) // Tailwind gradient class
+
+  // API配置
+  apiEndpoint String  @map("api_endpoint") @db.VarChar(500)
+  apiKey      String? @map("api_key") @db.Text // 加密存储的API Key
+
+  // 模型参数
+  maxTokens   Int   @default(4096) @map("max_tokens")
+  temperature Float @default(0.7)
+
+  // 状态
+  isEnabled Boolean @default(true) @map("is_enabled")
+  isDefault Boolean @default(false) @map("is_default")
+
+  description String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_models")
+}

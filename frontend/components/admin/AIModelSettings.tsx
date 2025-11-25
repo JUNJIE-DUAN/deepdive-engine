@@ -30,6 +30,19 @@ interface TestResult {
   latency?: number;
 }
 
+// Map model names to their icon URLs
+const MODEL_ICONS: Record<string, string> = {
+  grok: '/icons/ai/grok.svg',
+  'gpt-4': '/icons/ai/openai.svg',
+  claude: '/icons/ai/claude.svg',
+  gemini: '/icons/ai/gemini.svg',
+};
+
+function getModelIconUrl(modelName: string): string | null {
+  const name = modelName.toLowerCase();
+  return MODEL_ICONS[name] || null;
+}
+
 export default function AIModelSettings() {
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -339,9 +352,20 @@ export default function AIModelSettings() {
             <div className="mb-4 flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${model.color} text-2xl text-white shadow-sm`}
+                  className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${model.color} text-2xl text-white shadow-sm`}
                 >
-                  {model.icon}
+                  {(() => {
+                    const iconUrl = getModelIconUrl(model.name);
+                    return iconUrl ? (
+                      <img
+                        src={iconUrl}
+                        alt={model.displayName}
+                        className="h-8 w-8"
+                      />
+                    ) : (
+                      model.icon
+                    );
+                  })()}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

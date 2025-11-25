@@ -109,14 +109,27 @@ export class AiGroupGateway
       }
 
       // 加入新的Topic房间
-      client.join(`topic:${topicId}`);
+      const roomName = `topic:${topicId}`;
+      client.join(roomName);
       client.currentTopicId = topicId;
+
+      // 验证是否成功加入房间
+      const clientRooms = Array.from(client.rooms);
+      this.logger.log(
+        `Client ${client.id} (user ${userId}) rooms after join: ${clientRooms.join(", ")}`,
+      );
 
       // 获取当前房间内的在线用户列表
       const onlineUsers = await this.getOnlineUsersInTopic(topicId);
 
+      // 获取房间内的 socket 数量
+      const socketsInRoom = await this.server.in(roomName).fetchSockets();
+      this.logger.log(
+        `Room ${roomName} now has ${socketsInRoom.length} sockets: ${socketsInRoom.map((s) => s.id).join(", ")}`,
+      );
+
       // 通知其他成员有人加入（使用 server.to 而不是 client.to，确保广播）
-      this.server.to(`topic:${topicId}`).emit("member:online", { userId });
+      this.server.to(roomName).emit("member:online", { userId });
 
       this.logger.log(
         `User ${userId} joined topic ${topicId}, online users: ${onlineUsers.join(", ")}`,
@@ -370,8 +383,18 @@ export class AiGroupGateway
   }
 
   // 广播消息给Topic内所有成员
-  emitToTopic(topicId: string, event: string, data: any) {
-    this.server.to(`topic:${topicId}`).emit(event, data);
+  async emitToTopic(topicId: string, event: string, data: any) {
+    const roomName = `topic:${topicId}`;
+    // 获取房间内的 socket 数量用于调试
+    const sockets = await this.server.in(roomName).fetchSockets();
+    const socketDetails = sockets.map((s) => {
+      const userId = this.socketUsers.get(s.id);
+      return `${s.id}(user:${userId})`;
+    });
+    this.logger.log(
+      `emitToTopic: room=${roomName}, event=${event}, sockets=${sockets.length}, details=[${socketDetails.join(", ")}]`,
+    );
+    this.server.to(roomName).emit(event, data);
   }
 
   // 获取Topic内在线用户

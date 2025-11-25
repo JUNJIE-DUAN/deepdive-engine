@@ -347,12 +347,17 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     });
 
     newSocket.on('connect', () => {
-      console.log('WebSocket connected');
+      console.log('[WS] Connected, socket id:', newSocket.id);
       set({ isConnected: true });
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
+    newSocket.on('disconnect', (reason) => {
+      console.log(
+        '[WS] Disconnected, reason:',
+        reason,
+        'socket id:',
+        newSocket.id
+      );
       set({ isConnected: false });
     });
 
@@ -362,11 +367,21 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
 
     // 新消息
     newSocket.on('message:new', (message: TopicMessage) => {
+      console.log('[WS] Received message:new event:', {
+        messageId: message.id,
+        topicId: message.topicId,
+        senderId: message.senderId,
+        aiMemberId: message.aiMemberId,
+        content: message.content?.substring(0, 50),
+        socketId: newSocket.id,
+      });
       set((state) => {
         // 防止重复添加消息
         if (state.messages.some((m) => m.id === message.id)) {
+          console.log('[WS] Message already exists, skipping:', message.id);
           return state;
         }
+        console.log('[WS] Adding new message to state:', message.id);
         return {
           messages: [...state.messages, message],
         };
@@ -545,6 +560,9 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
 
   joinTopicRoom: (topicId) => {
     const { socket } = get();
+    console.log(
+      `[WS] joinTopicRoom called for topic ${topicId}, socket connected: ${socket?.connected}, socket id: ${socket?.id}`
+    );
     if (socket?.connected) {
       socket.emit(
         'topic:join',
@@ -554,23 +572,27 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
           onlineUsers?: string[];
           error?: string;
         }) => {
+          console.log(`[WS] topic:join response for ${topicId}:`, response);
           if (response.success && response.onlineUsers) {
             // 设置在线用户列表
             set({ onlineUsers: new Set(response.onlineUsers) });
             console.log(
-              'Joined topic room, online users:',
+              '[WS] Joined topic room, online users:',
               response.onlineUsers
             );
           } else if (response.error) {
-            console.error('Failed to join topic room:', response.error);
+            console.error('[WS] Failed to join topic room:', response.error);
           }
         }
       );
     } else {
       // 如果 socket 还没连接，等待连接后再加入
-      console.log('Socket not connected, waiting...');
+      console.log('[WS] Socket not connected, waiting...');
       const checkAndJoin = () => {
         const { socket: currentSocket } = get();
+        console.log(
+          `[WS] Retry join: socket connected: ${currentSocket?.connected}, socket id: ${currentSocket?.id}`
+        );
         if (currentSocket?.connected) {
           currentSocket.emit(
             'topic:join',
@@ -580,10 +602,14 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
               onlineUsers?: string[];
               error?: string;
             }) => {
+              console.log(
+                `[WS] topic:join response (delayed) for ${topicId}:`,
+                response
+              );
               if (response.success && response.onlineUsers) {
                 set({ onlineUsers: new Set(response.onlineUsers) });
                 console.log(
-                  'Joined topic room (delayed), online users:',
+                  '[WS] Joined topic room (delayed), online users:',
                   response.onlineUsers
                 );
               }

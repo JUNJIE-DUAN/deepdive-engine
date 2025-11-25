@@ -1,3 +1,7 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
 [deploy]
 startCommand = "sh -c 'set -e; echo \"🚀 Starting deployment...\"; echo \"🔍 Running diagnostics...\"; npm run diagnose || echo \"⚠️  Diagnostics failed, continuing...\"; echo \"📦 Running migrations...\"; npm run deploy || exit 1; echo \"✅ Deploy OK, starting server...\"; exec npm run start:prod'"
 healthcheckPath = "/api/v1/health"

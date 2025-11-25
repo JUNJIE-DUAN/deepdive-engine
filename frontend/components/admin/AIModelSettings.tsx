@@ -1020,8 +1020,18 @@ function EditModelModal({
   saving: boolean;
 }) {
   const [formData, setFormData] = useState(model);
-  const [apiKey, setApiKey] = useState('');
+  // 初始化时显示已保存的掩码 API Key
+  const [apiKey, setApiKey] = useState(model.apiKey || '');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isApiKeyModified, setIsApiKeyModified] = useState(false);
+
+  const handleApiKeyChange = (value: string) => {
+    setApiKey(value);
+    // 如果用户清空或修改了 API Key，标记为已修改
+    if (value !== model.apiKey) {
+      setIsApiKeyModified(true);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -1076,20 +1086,19 @@ function EditModelModal({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               API Key{' '}
-              {model.hasApiKey && (
+              {model.hasApiKey && !isApiKeyModified && (
                 <span className="text-green-600">(configured)</span>
+              )}
+              {isApiKeyModified && (
+                <span className="text-orange-600">(modified)</span>
               )}
             </label>
             <div className="relative">
               <input
                 type={showApiKey ? 'text' : 'password'}
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={
-                  model.hasApiKey
-                    ? 'Enter new key to update...'
-                    : 'Enter API key...'
-                }
+                onChange={(e) => handleApiKeyChange(e.target.value)}
+                placeholder="Enter API key..."
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button
@@ -1135,7 +1144,9 @@ function EditModelModal({
               </button>
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              Leave empty to keep existing key. Enter new value to update.
+              {model.hasApiKey
+                ? 'Current key is shown masked. Enter new value to update, or leave as-is to keep existing.'
+                : 'Enter API key to configure this model.'}
             </p>
           </div>
 
@@ -1200,7 +1211,9 @@ function EditModelModal({
             Cancel
           </button>
           <button
-            onClick={() => onSave(formData, apiKey || undefined)}
+            onClick={() =>
+              onSave(formData, isApiKeyModified ? apiKey : undefined)
+            }
             disabled={saving}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >

@@ -256,10 +256,10 @@ export class AdminService {
       orderBy: [{ isDefault: "desc" }, { name: "asc" }],
     });
 
-    // 隐藏API Key的实际值，只返回是否已配置
+    // 返回掩码的API Key，显示前4位和后4位
     return models.map((model) => ({
       ...model,
-      apiKey: model.apiKey ? "***configured***" : null,
+      apiKey: model.apiKey ? this.maskApiKey(model.apiKey) : null,
       hasApiKey: !!model.apiKey,
     }));
   }
@@ -278,9 +278,19 @@ export class AdminService {
 
     return {
       ...model,
-      apiKey: model.apiKey ? "***configured***" : null,
+      apiKey: model.apiKey ? this.maskApiKey(model.apiKey) : null,
       hasApiKey: !!model.apiKey,
     };
+  }
+
+  /**
+   * 掩码 API Key，显示前4位和后4位
+   */
+  private maskApiKey(apiKey: string): string {
+    if (apiKey.length <= 12) {
+      return "****" + apiKey.slice(-4);
+    }
+    return apiKey.slice(0, 4) + "****" + apiKey.slice(-4);
   }
 
   /**
@@ -324,7 +334,7 @@ export class AdminService {
 
     return {
       ...model,
-      apiKey: model.apiKey ? "***configured***" : null,
+      apiKey: model.apiKey ? this.maskApiKey(model.apiKey) : null,
       hasApiKey: !!model.apiKey,
     };
   }
@@ -356,7 +366,7 @@ export class AdminService {
       throw new NotFoundException(`AI Model ${id} not found`);
     }
 
-    // 如果apiKey为空字符串，设为null；如果是"***configured***"则保持不变
+    // 如果apiKey为空字符串，设为null；如果是掩码格式（包含****）则保持不变
     // 同时对apiKey进行trim处理，防止复制时带入空格
     let apiKeyUpdate = undefined;
     if (data.apiKey !== undefined) {
@@ -368,13 +378,14 @@ export class AdminService {
       if (trimmedKey === "" || trimmedKey === null) {
         apiKeyUpdate = null;
         this.logger.log("API Key update: setting to null (empty)");
-      } else if (trimmedKey !== "***configured***") {
+      } else if (trimmedKey.includes("****")) {
+        // 掩码格式，保持不变
+        this.logger.log("API Key update: keeping existing (masked format)");
+      } else {
         apiKeyUpdate = trimmedKey;
         this.logger.log(
           `API Key update: setting new key (length=${trimmedKey.length})`,
         );
-      } else {
-        this.logger.log("API Key update: keeping existing (***configured***)");
       }
     }
 
@@ -399,7 +410,7 @@ export class AdminService {
 
     return {
       ...updated,
-      apiKey: updated.apiKey ? "***configured***" : null,
+      apiKey: updated.apiKey ? this.maskApiKey(updated.apiKey) : null,
       hasApiKey: !!updated.apiKey,
     };
   }
@@ -431,7 +442,7 @@ export class AdminService {
 
     return {
       ...updated,
-      apiKey: updated.apiKey ? "***configured***" : null,
+      apiKey: updated.apiKey ? this.maskApiKey(updated.apiKey) : null,
       hasApiKey: !!updated.apiKey,
     };
   }

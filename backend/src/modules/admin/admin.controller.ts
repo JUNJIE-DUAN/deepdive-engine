@@ -239,4 +239,25 @@ export class AdminController {
       ...result,
     };
   }
+
+  /**
+   * 获取提供商可用的模型列表
+   * POST /api/v1/admin/ai-models/fetch-available
+   */
+  @Post("ai-models/fetch-available")
+  async fetchAvailableModels(
+    @Body()
+    body: {
+      provider: string;
+      apiKey: string;
+      apiEndpoint?: string;
+    },
+  ) {
+    this.logger.log(`Admin: Fetching available models for ${body.provider}`);
+    return this.aiChatService.fetchAvailableModels(
+      body.provider,
+      body.apiKey,
+      body.apiEndpoint,
+    );
+  }
 }

@@ -941,4 +941,174 @@ Feel free to ask if you'd like me to elaborate on any of these points!
       tokensUsed: Math.floor(content.length / 4), // Rough estimate
     };
   }
+
+  /**
+   * Fetch available models from a provider's API
+   * Returns list of model IDs and their metadata
+   */
+  async fetchAvailableModels(
+    provider: string,
+    apiKey: string,
+    _apiEndpoint?: string, // Reserved for future custom endpoint support
+  ): Promise<{
+    success: boolean;
+    models?: Array<{ id: string; name: string; description?: string }>;
+    error?: string;
+  }> {
+    if (!apiKey) {
+      return { success: false, error: "API key is required" };
+    }
+
+    try {
+      switch (provider.toLowerCase()) {
+        case "xai":
+        case "grok":
+          return await this.fetchXAIModels(apiKey);
+
+        case "openai":
+        case "gpt":
+          return await this.fetchOpenAIModels(apiKey);
+
+        case "anthropic":
+        case "claude":
+          return this.getAnthropicModels();
+
+        case "google":
+        case "gemini":
+          return await this.fetchGeminiModels(apiKey);
+
+        default:
+          return { success: false, error: `Unknown provider: ${provider}` };
+      }
+    } catch (error: any) {
+      this.logger.error(`Failed to fetch models for ${provider}: ${error}`);
+      const errorMessage =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        "Unknown error";
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Fetch models from xAI API
+   */
+  private async fetchXAIModels(apiKey: string) {
+    const response = await firstValueFrom(
+      this.httpService.get("https://api.x.ai/v1/models", {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        timeout: 30000,
+      }),
+    );
+
+    const models = response.data?.data || [];
+    return {
+      success: true,
+      models: models.map((m: any) => ({
+        id: m.id,
+        name: m.id,
+        description: m.description || `xAI ${m.id}`,
+      })),
+    };
+  }
+
+  /**
+   * Fetch models from OpenAI API
+   */
+  private async fetchOpenAIModels(apiKey: string) {
+    const response = await firstValueFrom(
+      this.httpService.get("https://api.openai.com/v1/models", {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        timeout: 30000,
+      }),
+    );
+
+    const models = response.data?.data || [];
+    // Filter to show only chat models (gpt-*)
+    const chatModels = models
+      .filter(
+        (m: any) =>
+          m.id.startsWith("gpt-") ||
+          m.id.startsWith("o1") ||
+          m.id.startsWith("o3"),
+      )
+      .sort((a: any, b: any) => b.created - a.created);
+
+    return {
+      success: true,
+      models: chatModels.map((m: any) => ({
+        id: m.id,
+        name: m.id,
+        description: `OpenAI ${m.id}`,
+      })),
+    };
+  }
+
+  /**
+   * Get Anthropic models (no public list API, return known models)
+   */
+  private getAnthropicModels() {
+    // Anthropic doesn't have a public models list API
+    // Return known production models
+    const models = [
+      {
+        id: "claude-sonnet-4-20250514",
+        name: "Claude Sonnet 4",
+        description: "Most intelligent model, best for complex tasks",
+      },
+      {
+        id: "claude-3-5-sonnet-20241022",
+        name: "Claude 3.5 Sonnet",
+        description: "Best balance of intelligence and speed",
+      },
+      {
+        id: "claude-3-5-haiku-20241022",
+        name: "Claude 3.5 Haiku",
+        description: "Fastest model, good for simple tasks",
+      },
+      {
+        id: "claude-3-opus-20240229",
+        name: "Claude 3 Opus",
+        description: "Previous flagship model",
+      },
+    ];
+
+    return { success: true, models };
+  }
+
+  /**
+   * Fetch models from Google Gemini API
+   */
+  private async fetchGeminiModels(apiKey: string) {
+    const response = await firstValueFrom(
+      this.httpService.get(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+        {
+          timeout: 30000,
+        },
+      ),
+    );
+
+    const models = response.data?.models || [];
+    // Filter to relevant models
+    const relevantModels = models.filter(
+      (m: any) =>
+        m.name.includes("gemini") &&
+        m.supportedGenerationMethods?.includes("generateContent"),
+    );
+
+    return {
+      success: true,
+      models: relevantModels.map((m: any) => ({
+        id: m.name.replace("models/", ""),
+        name: m.displayName || m.name.replace("models/", ""),
+        description: m.description || `Google ${m.displayName}`,
+      })),
+    };
+  }
 }

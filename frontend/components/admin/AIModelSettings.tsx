@@ -79,6 +79,145 @@ function getModelIconUrl(modelName: string): string | null {
   return MODEL_ICONS[name] || null;
 }
 
+// Model ID Selector with fetch capability
+function ModelIdSelector({
+  value,
+  onChange,
+  provider,
+  apiKey,
+}: {
+  value: string;
+  onChange: (modelId: string) => void;
+  provider: string;
+  apiKey: string;
+}) {
+  const [availableModels, setAvailableModels] = useState<
+    Array<{ id: string; name: string; description?: string }>
+  >([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const fetchModels = async () => {
+    if (!apiKey) {
+      setError('请先输入 API Key');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/ai-models/fetch-available`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeader(),
+          },
+          credentials: 'include',
+          body: JSON.stringify({ provider, apiKey }),
+        }
+      );
+      const data = await response.json();
+      if (data.success && data.models) {
+        setAvailableModels(data.models);
+        setShowDropdown(true);
+      } else {
+        setError(data.error || '获取模型列表失败');
+      }
+    } catch (err) {
+      setError('网络错误，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700">
+        Model ID <span className="text-red-500">*</span>
+      </label>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="gpt-4-turbo"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {showDropdown && availableModels.length > 0 && (
+            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+              {availableModels.map((model) => (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(model.id);
+                    setShowDropdown(false);
+                  }}
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-blue-50"
+                >
+                  <div className="font-mono font-medium">{model.id}</div>
+                  {model.description && (
+                    <div className="text-xs text-gray-500">
+                      {model.description}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={fetchModels}
+          disabled={loading}
+          className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          {loading ? (
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          )}
+          获取
+        </button>
+      </div>
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      <p className="mt-1 text-xs text-gray-500">
+        输入 API Key 后点击"获取"按钮可获取可用模型列表
+      </p>
+    </div>
+  );
+}
+
 export default function AIModelSettings() {
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -908,7 +1047,7 @@ function AddModelModal({
           {/* API Configuration Section */}
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
             <h4 className="mb-3 text-sm font-semibold text-blue-800">
-              API 配置（选择模型后自动填充）
+              API 配置
             </h4>
 
             <div className="space-y-3">
@@ -925,197 +1064,166 @@ function AddModelModal({
                   placeholder="https://api.openai.com/v1/chat/completions"
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  API 请求地址，如 https://api.x.ai/v1/chat/completions
-                </p>
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Model ID <span className="text-red-500">*</span>
+                  API Key <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={formData.modelId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, modelId: e.target.value })
-                  }
-                  placeholder="gpt-4-turbo"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  模型标识符，如
-                  grok-3-latest、gpt-4-turbo、claude-sonnet-4-20250514
-                </p>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={formData.apiKey || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        apiKey: e.target.value || null,
+                      })
+                    }
+                    placeholder="sk-..."
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showApiKey ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+
+              <ModelIdSelector
+                value={formData.modelId}
+                onChange={(modelId) => setFormData({ ...formData, modelId })}
+                provider={formData.provider}
+                apiKey={formData.apiKey || ''}
+              />
+            </div>
+          </div>
+
+          {/* Display Settings - Collapsed */}
+          <details className="rounded-lg border border-gray-200">
+            <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              显示设置（可选）
+            </summary>
+            <div className="space-y-3 border-t border-gray-200 p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Icon Path
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.icon}
+                    onChange={(e) =>
+                      setFormData({ ...formData, icon: e.target.value })
+                    }
+                    placeholder="/icons/ai/grok.svg"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Color
+                  </label>
+                  <select
+                    value={formData.color}
+                    onChange={(e) =>
+                      setFormData({ ...formData, color: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    {colorOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
+          </details>
 
-          {/* Display Settings */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Icon Path
-              </label>
-              <input
-                type="text"
-                value={formData.icon}
-                onChange={(e) =>
-                  setFormData({ ...formData, icon: e.target.value })
-                }
-                placeholder="/icons/ai/grok.svg"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+          {/* Advanced Settings - Collapsed */}
+          <details className="rounded-lg border border-gray-200">
+            <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              高级设置（可选）
+            </summary>
+            <div className="space-y-3 border-t border-gray-200 p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Max Tokens
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.maxTokens}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        maxTokens: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Temperature
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    value={formData.temperature}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        temperature: parseFloat(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={2}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Color
-              </label>
-              <select
-                value={formData.color}
-                onChange={(e) =>
-                  setFormData({ ...formData, color: e.target.value })
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                {colorOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          </details>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              API Key
-            </label>
-            <div className="relative">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                value={formData.apiKey || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    apiKey: e.target.value || null,
-                  })
-                }
-                placeholder="Enter API key..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showApiKey ? (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Max Tokens
-              </label>
-              <input
-                type="number"
-                value={formData.maxTokens}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    maxTokens: parseInt(e.target.value),
-                  })
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Temperature
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="2"
-                value={formData.temperature}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    temperature: parseFloat(e.target.value),
-                  })
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              取消
+            </button>
+            <button
+              onClick={() =>
+                onAdd({
+                  ...formData,
+                  apiKey: formData.apiKey || null,
+                } as any)
               }
-              rows={2}
-              placeholder="Brief description of the model..."
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+              disabled={saving || !formData.name || !formData.apiKey}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? '保存中...' : '添加模型'}
+            </button>
           </div>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onAdd(formData)}
-            disabled={saving || !formData.name || !formData.displayName}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? 'Adding...' : 'Add Model'}
-          </button>
         </div>
       </div>
     </div>

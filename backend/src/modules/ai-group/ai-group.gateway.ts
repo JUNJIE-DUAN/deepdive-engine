@@ -206,6 +206,26 @@ export class AiGroupGateway
               userId,
               mention.aiMemberId,
             );
+          } else if (mention.mentionType === "ALL_AI") {
+            // @All AIs：通知所有AI正在输入并生成响应
+            const topic = await this.aiGroupService.getTopicById(
+              topicId,
+              userId,
+            );
+            this.logger.log(
+              `User ${userId} mentioned ALL AIs in topic ${topicId}, triggering ${topic.aiMembers.length} AI responses`,
+            );
+
+            // 遍历所有AI成员，为每个AI生成响应
+            for (const aiMember of topic.aiMembers) {
+              this.server.to(`topic:${topicId}`).emit("ai:typing", {
+                topicId,
+                aiMemberId: aiMember.id,
+              });
+
+              // 生成AI响应（异步）
+              this.generateAndBroadcastAIResponse(topicId, userId, aiMember.id);
+            }
           } else if (
             mention.mentionType === "USER" &&
             mention.userId &&

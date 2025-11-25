@@ -905,6 +905,7 @@ Format the summary in a clear, structured manner using markdown.`;
     if (isImageRequest) {
       requestBody.generationConfig.responseModalities = ["TEXT", "IMAGE"];
       this.logger.log("Image generation enabled for this request");
+      // Note: systemInstruction is not supported with image generation in gemini-2.0-flash-exp
     } else {
       // Enable Google Search Grounding for text-only responses
       requestBody.tools = [
@@ -912,12 +913,13 @@ Format the summary in a clear, structured manner using markdown.`;
           googleSearch: {},
         },
       ];
-    }
 
-    if (systemMessage) {
-      requestBody.systemInstruction = {
-        parts: [{ text: systemMessage.content }],
-      };
+      // Only add system instruction for non-image requests
+      if (systemMessage) {
+        requestBody.systemInstruction = {
+          parts: [{ text: systemMessage.content }],
+        };
+      }
     }
 
     const response = await firstValueFrom(

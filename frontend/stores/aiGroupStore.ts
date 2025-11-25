@@ -194,10 +194,8 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
 
   sendMessage: async (topicId, dto) => {
     const message = await api.sendMessage(topicId, dto);
-    // WebSocket未实现，需要手动更新state
-    set((state) => ({
-      messages: [...state.messages, message],
-    }));
+    // WebSocket已实现message:new事件，会自动添加消息到state，不需要手动更新
+    // 注释掉手动更新以避免重复消息
     return message;
   },
 
@@ -209,35 +207,13 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
   },
 
   addReaction: async (topicId, messageId, emoji) => {
-    const reaction = await api.addReaction(topicId, messageId, emoji);
-    // WebSocket未实现，手动更新state
-    const { messages } = get();
-    set({
-      messages: messages.map((m) =>
-        m.id === messageId
-          ? {
-              ...m,
-              reactions: [...m.reactions, reaction],
-            }
-          : m
-      ),
-    });
+    await api.addReaction(topicId, messageId, emoji);
+    // WebSocket已实现reaction:add事件，会自动更新state，不需要手动更新
   },
 
   removeReaction: async (topicId, messageId, emoji) => {
     await api.removeReaction(topicId, messageId, emoji);
-    // WebSocket未实现，手动更新state
-    const { messages } = get();
-    set({
-      messages: messages.map((m) =>
-        m.id === messageId
-          ? {
-              ...m,
-              reactions: m.reactions.filter((r) => r.emoji !== emoji),
-            }
-          : m
-      ),
-    });
+    // WebSocket已实现reaction:remove事件，会自动更新state，不需要手动更新
   },
 
   // ==================== Members ====================

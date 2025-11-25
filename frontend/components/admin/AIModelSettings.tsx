@@ -50,7 +50,9 @@ export default function AIModelSettings() {
   const fetchModels = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${config.apiUrl}/admin/ai-models`);
+      const response = await fetch(`${config.apiUrl}/admin/ai-models`, {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setModels(data);
@@ -72,6 +74,7 @@ export default function AIModelSettings() {
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ isEnabled: !model.isEnabled }),
         }
       );
@@ -95,7 +98,7 @@ export default function AIModelSettings() {
     try {
       const response = await fetch(
         `${config.apiUrl}/admin/ai-models/${model.id}/set-default`,
-        { method: 'POST' }
+        { method: 'POST', credentials: 'include' }
       );
 
       if (response.ok) {
@@ -136,6 +139,7 @@ export default function AIModelSettings() {
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(updateData),
         }
       );
@@ -165,6 +169,7 @@ export default function AIModelSettings() {
       const response = await fetch(`${config.apiUrl}/admin/ai-models`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(model),
       });
 
@@ -198,7 +203,7 @@ export default function AIModelSettings() {
     try {
       const response = await fetch(
         `${config.apiUrl}/admin/ai-models/${model.id}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', credentials: 'include' }
       );
 
       if (response.ok) {
@@ -222,7 +227,7 @@ export default function AIModelSettings() {
     try {
       const response = await fetch(
         `${config.apiUrl}/admin/ai-models/${model.id}/test`,
-        { method: 'POST' }
+        { method: 'POST', credentials: 'include' }
       );
 
       if (response.ok) {

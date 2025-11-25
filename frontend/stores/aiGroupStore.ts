@@ -33,6 +33,7 @@ interface AiGroupState {
   // WebSocket
   socket: Socket | null;
   isConnected: boolean;
+  currentUserId: string | null;
   onlineUsers: Set<string>;
   typingUsers: Set<string>;
   typingAIs: Set<string>;
@@ -110,6 +111,7 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
   isLoadingResources: false,
   socket: null,
   isConnected: false,
+  currentUserId: null,
   onlineUsers: new Set(),
   typingUsers: new Set(),
   typingAIs: new Set(),
@@ -311,14 +313,17 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
 
   // ==================== WebSocket ====================
 
-  connectSocket: (_userId) => {
+  connectSocket: (userId) => {
     const { socket } = get();
     if (socket?.connected) return;
 
+    // Store current user ID
+    set({ currentUserId: userId });
+
     const tokens = getAuthTokens();
     const newSocket = io(`${API_URL}/ai-group`, {
-      auth: { userId: _userId, token: tokens?.accessToken },
-      query: { userId: _userId },
+      auth: { userId, token: tokens?.accessToken },
+      query: { userId },
       transports: ['websocket', 'polling'],
     });
 
@@ -530,7 +535,12 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     const { socket } = get();
     if (socket) {
       socket.disconnect();
-      set({ socket: null, isConnected: false });
+      set({
+        socket: null,
+        isConnected: false,
+        currentUserId: null,
+        onlineUsers: new Set(),
+      });
     }
   },
 
@@ -550,11 +560,16 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
         }) => {
           console.log(`[WS] topic:join response for ${topicId}:`, response);
           if (response.success && response.onlineUsers) {
-            // 设置在线用户列表
-            set({ onlineUsers: new Set(response.onlineUsers) });
+            // 设置在线用户列表，并确保当前用户包含在内
+            const { currentUserId } = get();
+            const onlineSet = new Set(response.onlineUsers);
+            if (currentUserId) {
+              onlineSet.add(currentUserId);
+            }
+            set({ onlineUsers: onlineSet });
             console.log(
               '[WS] Joined topic room, online users:',
-              response.onlineUsers
+              Array.from(onlineSet)
             );
           } else if (response.error) {
             console.error('[WS] Failed to join topic room:', response.error);
@@ -583,10 +598,15 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
                 response
               );
               if (response.success && response.onlineUsers) {
-                set({ onlineUsers: new Set(response.onlineUsers) });
+                const { currentUserId } = get();
+                const onlineSet = new Set(response.onlineUsers);
+                if (currentUserId) {
+                  onlineSet.add(currentUserId);
+                }
+                set({ onlineUsers: onlineSet });
                 console.log(
                   '[WS] Joined topic room (delayed), online users:',
-                  response.onlineUsers
+                  Array.from(onlineSet)
                 );
               }
             }

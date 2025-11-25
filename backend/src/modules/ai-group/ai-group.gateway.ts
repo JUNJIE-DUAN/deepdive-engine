@@ -102,18 +102,28 @@ export class AiGroupGateway
       // 离开之前的Topic房间
       if (client.currentTopicId) {
         client.leave(`topic:${client.currentTopicId}`);
+        // 通知之前房间的成员该用户离开
+        this.server
+          .to(`topic:${client.currentTopicId}`)
+          .emit("member:offline", { userId });
       }
 
       // 加入新的Topic房间
       client.join(`topic:${topicId}`);
       client.currentTopicId = topicId;
 
-      // 通知其他成员有人加入
-      client.to(`topic:${topicId}`).emit("member:online", { userId });
+      // 获取当前房间内的在线用户列表
+      const onlineUsers = await this.getOnlineUsersInTopic(topicId);
 
-      this.logger.log(`User ${userId} joined topic ${topicId}`);
+      // 通知其他成员有人加入（使用 server.to 而不是 client.to，确保广播）
+      this.server.to(`topic:${topicId}`).emit("member:online", { userId });
 
-      return { success: true };
+      this.logger.log(
+        `User ${userId} joined topic ${topicId}, online users: ${onlineUsers.join(", ")}`,
+      );
+
+      // 返回成功状态和在线用户列表
+      return { success: true, onlineUsers };
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

@@ -546,7 +546,54 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
   joinTopicRoom: (topicId) => {
     const { socket } = get();
     if (socket?.connected) {
-      socket.emit('topic:join', { topicId });
+      socket.emit(
+        'topic:join',
+        { topicId },
+        (response: {
+          success?: boolean;
+          onlineUsers?: string[];
+          error?: string;
+        }) => {
+          if (response.success && response.onlineUsers) {
+            // 设置在线用户列表
+            set({ onlineUsers: new Set(response.onlineUsers) });
+            console.log(
+              'Joined topic room, online users:',
+              response.onlineUsers
+            );
+          } else if (response.error) {
+            console.error('Failed to join topic room:', response.error);
+          }
+        }
+      );
+    } else {
+      // 如果 socket 还没连接，等待连接后再加入
+      console.log('Socket not connected, waiting...');
+      const checkAndJoin = () => {
+        const { socket: currentSocket } = get();
+        if (currentSocket?.connected) {
+          currentSocket.emit(
+            'topic:join',
+            { topicId },
+            (response: {
+              success?: boolean;
+              onlineUsers?: string[];
+              error?: string;
+            }) => {
+              if (response.success && response.onlineUsers) {
+                set({ onlineUsers: new Set(response.onlineUsers) });
+                console.log(
+                  'Joined topic room (delayed), online users:',
+                  response.onlineUsers
+                );
+              }
+            }
+          );
+        } else {
+          setTimeout(checkAndJoin, 500);
+        }
+      };
+      setTimeout(checkAndJoin, 500);
     }
   },
 

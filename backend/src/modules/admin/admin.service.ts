@@ -266,8 +266,10 @@ export class AdminService {
 
   /**
    * 获取单个AI模型
+   * @param id 模型ID
+   * @param includeFullApiKey 是否返回完整的 API Key（用于编辑模式）
    */
-  async getAIModel(id: string) {
+  async getAIModel(id: string, includeFullApiKey: boolean = false) {
     const model = await this.prisma.aIModel.findUnique({
       where: { id },
     });
@@ -276,9 +278,14 @@ export class AdminService {
       throw new NotFoundException(`AI Model ${id} not found`);
     }
 
+    // 编辑模式返回完整 API Key，否则返回掩码
     return {
       ...model,
-      apiKey: model.apiKey ? this.maskApiKey(model.apiKey) : null,
+      apiKey: model.apiKey
+        ? includeFullApiKey
+          ? model.apiKey
+          : this.maskApiKey(model.apiKey)
+        : null,
       hasApiKey: !!model.apiKey,
     };
   }

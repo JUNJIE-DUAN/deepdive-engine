@@ -120,11 +120,15 @@ export class AdminController {
   /**
    * 获取单个AI模型
    * GET /api/v1/admin/ai-models/:id
+   * @query edit - 如果为 true，返回完整的 API Key（用于编辑模式）
    */
   @Get("ai-models/:id")
-  async getAIModel(@Param("id") id: string) {
-    this.logger.log(`Admin: Fetching AI model ${id}`);
-    return this.adminService.getAIModel(id);
+  async getAIModel(@Param("id") id: string, @Query("edit") edit?: string) {
+    const includeFullApiKey = edit === "true";
+    this.logger.log(
+      `Admin: Fetching AI model ${id}, edit mode: ${includeFullApiKey}`,
+    );
+    return this.adminService.getAIModel(id, includeFullApiKey);
   }
 
   /**

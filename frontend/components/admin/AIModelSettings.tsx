@@ -1029,16 +1029,49 @@ function EditModelModal({
   saving: boolean;
 }) {
   const [formData, setFormData] = useState(model);
-  // 初始化时显示已保存的掩码 API Key
-  const [apiKey, setApiKey] = useState(model.apiKey || '');
+  const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isApiKeyModified, setIsApiKeyModified] = useState(false);
+  const [loadingApiKey, setLoadingApiKey] = useState(true);
+
+  // 打开编辑模态框时，获取完整的 API Key
+  useEffect(() => {
+    const fetchFullApiKey = async () => {
+      try {
+        const response = await fetch(
+          `${config.apiUrl}/admin/ai-models/${model.id}?edit=true`,
+          {
+            headers: { ...getAuthHeader() },
+            credentials: 'include',
+          }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setApiKey(data.apiKey || '');
+        }
+      } catch (err) {
+        console.error('Failed to fetch full API key:', err);
+        setApiKey(model.apiKey || '');
+      } finally {
+        setLoadingApiKey(false);
+      }
+    };
+    fetchFullApiKey();
+  }, [model.id, model.apiKey]);
+
+  // 记录原始加载的 API Key，用于判断是否修改
+  const [originalApiKey, setOriginalApiKey] = useState('');
+
+  // 更新 fetchFullApiKey 后设置原始值
+  useEffect(() => {
+    if (!loadingApiKey && apiKey) {
+      setOriginalApiKey(apiKey);
+    }
+  }, [loadingApiKey, apiKey]);
 
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
-    if (value !== model.apiKey) {
-      setIsApiKeyModified(true);
-    }
+    setIsApiKeyModified(value !== originalApiKey);
   };
 
   const colorOptions = [
@@ -1136,20 +1169,28 @@ function EditModelModal({
                   API Key <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <input
-                    type={showApiKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => handleApiKeyChange(e.target.value)}
-                    placeholder={model.hasApiKey ? '' : 'sk-...'}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    {showApiKey ? '🙈' : '👁️'}
-                  </button>
+                  {loadingApiKey ? (
+                    <div className="flex h-10 w-full items-center rounded-lg border border-gray-300 bg-gray-50 px-3">
+                      <span className="text-sm text-gray-500">Loading...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type={showApiKey ? 'text' : 'password'}
+                        value={apiKey}
+                        onChange={(e) => handleApiKeyChange(e.target.value)}
+                        placeholder={model.hasApiKey ? '' : 'sk-...'}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showApiKey ? '🙈' : '👁️'}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1157,7 +1198,7 @@ function EditModelModal({
                 value={formData.modelId}
                 onChange={(modelId) => setFormData({ ...formData, modelId })}
                 provider={formData.provider}
-                apiKey={isApiKeyModified ? apiKey : model.apiKey || ''}
+                apiKey={apiKey || ''}
               />
             </div>
           </div>

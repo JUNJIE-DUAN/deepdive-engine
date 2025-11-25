@@ -362,10 +362,19 @@ export class AdminService {
     if (data.apiKey !== undefined) {
       const trimmedKey =
         typeof data.apiKey === "string" ? data.apiKey.trim() : data.apiKey;
+      this.logger.log(
+        `API Key update: received="${data.apiKey?.substring(0, 10)}...", trimmed="${trimmedKey?.substring(0, 10)}...", length=${trimmedKey?.length || 0}`,
+      );
       if (trimmedKey === "" || trimmedKey === null) {
         apiKeyUpdate = null;
+        this.logger.log("API Key update: setting to null (empty)");
       } else if (trimmedKey !== "***configured***") {
         apiKeyUpdate = trimmedKey;
+        this.logger.log(
+          `API Key update: setting new key (length=${trimmedKey.length})`,
+        );
+      } else {
+        this.logger.log("API Key update: keeping existing (***configured***)");
       }
     }
 

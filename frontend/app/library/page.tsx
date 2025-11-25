@@ -815,7 +815,7 @@ export default function LibraryPage() {
 
         {/* Main card content */}
         <Link
-          href={`/explore?id=${resource.id}`}
+          href={`/resource/${resource.id}`}
           className="block"
           onClick={(e) => {
             if (selectionMode) {

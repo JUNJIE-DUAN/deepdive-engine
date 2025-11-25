@@ -294,7 +294,8 @@ export class AdminService {
   }
 
   /**
-   * 创建AI模型
+   * 创建或更新AI模型 (upsert)
+   * 如果同名模型已存在，则更新；否则创建新模型
    */
   async createAIModel(data: {
     name: string;
@@ -312,6 +313,46 @@ export class AdminService {
     // Trim apiKey to remove any whitespace from copy-paste
     const apiKey = data.apiKey?.trim() || null;
 
+    // 检查是否存在同名模型
+    const existing = await this.prisma.aIModel.findFirst({
+      where: { name: { equals: data.name, mode: "insensitive" } },
+    });
+
+    if (existing) {
+      // 如果存在，则更新
+      this.logger.log(
+        `AI Model ${data.name} already exists, updating instead of creating`,
+      );
+
+      const updated = await this.prisma.aIModel.update({
+        where: { id: existing.id },
+        data: {
+          displayName: data.displayName,
+          provider: data.provider,
+          modelId: data.modelId,
+          icon: data.icon,
+          color: data.color,
+          apiEndpoint: data.apiEndpoint,
+          apiKey: apiKey ?? undefined, // 只有提供了新的apiKey才更新
+          maxTokens: data.maxTokens ?? existing.maxTokens,
+          temperature: data.temperature ?? existing.temperature,
+          description: data.description,
+        },
+      });
+
+      this.logger.log(
+        `AI Model updated: ${updated.name} (${updated.displayName})`,
+      );
+
+      return {
+        ...updated,
+        apiKey: updated.apiKey ? this.maskApiKey(updated.apiKey) : null,
+        hasApiKey: !!updated.apiKey,
+        isUpdate: true, // 标记这是更新操作
+      };
+    }
+
+    // 不存在则创建新模型
     const model = await this.prisma.aIModel.create({
       data: {
         name: data.name,
@@ -336,6 +377,7 @@ export class AdminService {
       ...model,
       apiKey: model.apiKey ? this.maskApiKey(model.apiKey) : null,
       hasApiKey: !!model.apiKey,
+      isUpdate: false, // 标记这是创建操作
     };
   }
 

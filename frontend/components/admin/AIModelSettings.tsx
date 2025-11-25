@@ -402,16 +402,25 @@ export default function AIModelSettings() {
       });
 
       if (response.ok) {
-        const newModel = await response.json();
-        setModels([...models, newModel]);
+        const result = await response.json();
+        // 检查是更新还是创建
+        if (result.isUpdate) {
+          // 更新现有模型列表
+          setModels(models.map((m) => (m.id === result.id ? result : m)));
+          setSuccess(`模型 ${result.displayName} 已更新`);
+        } else {
+          // 添加新模型
+          setModels([...models, result]);
+          setSuccess(`模型 ${result.displayName} 已添加`);
+        }
         setShowAddModal(false);
-        setSuccess('New model added');
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        throw new Error('Failed to add');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to add');
       }
     } catch (err) {
-      setError('Failed to add model');
+      setError(err instanceof Error ? err.message : 'Failed to add model');
       setTimeout(() => setError(null), 3000);
     } finally {
       setSaving(false);

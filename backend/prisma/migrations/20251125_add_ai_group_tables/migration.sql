@@ -214,25 +214,25 @@ CREATE INDEX "TopicResource_topic_id_idx" ON "TopicResource"("topic_id");
 CREATE INDEX "TopicSummary_topic_id_idx" ON "TopicSummary"("topic_id");
 
 -- AddForeignKey
-ALTER TABLE "Topic" ADD CONSTRAINT "Topic_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Topic" ADD CONSTRAINT "Topic_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TopicMember" ADD CONSTRAINT "TopicMember_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMember" ADD CONSTRAINT "TopicMember_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TopicMember" ADD CONSTRAINT "TopicMember_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TopicAIMember" ADD CONSTRAINT "TopicAIMember_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicAIMember" ADD CONSTRAINT "TopicAIMember_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TopicAIMember" ADD CONSTRAINT "TopicAIMember_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "TopicAIMember"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -244,7 +244,7 @@ ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_reply_to_id_fkey" FOREIG
 ALTER TABLE "TopicMessageMention" ADD CONSTRAINT "TopicMessageMention_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "TopicMessage"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageMention" ADD CONSTRAINT "TopicMessageMention_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "TopicMessageMention" ADD CONSTRAINT "TopicMessageMention_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TopicMessageMention" ADD CONSTRAINT "TopicMessageMention_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "TopicAIMember"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -256,16 +256,16 @@ ALTER TABLE "TopicMessageAttachment" ADD CONSTRAINT "TopicMessageAttachment_mess
 ALTER TABLE "TopicMessageReaction" ADD CONSTRAINT "TopicMessageReaction_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "TopicMessage"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageReaction" ADD CONSTRAINT "TopicMessageReaction_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TopicMessageReaction" ADD CONSTRAINT "TopicMessageReaction_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TopicResource" ADD CONSTRAINT "TopicResource_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicResource" ADD CONSTRAINT "TopicResource_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TopicResource" ADD CONSTRAINT "TopicResource_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TopicSummary" ADD CONSTRAINT "TopicSummary_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicSummary" ADD CONSTRAINT "TopicSummary_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TopicSummary" ADD CONSTRAINT "TopicSummary_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

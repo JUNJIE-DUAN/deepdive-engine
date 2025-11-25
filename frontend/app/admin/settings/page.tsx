@@ -5,9 +5,10 @@ import Sidebar from '@/components/layout/Sidebar';
 import SettingsNav from '@/components/admin/SettingsNav';
 import WhitelistManagement from '@/components/admin/WhitelistManagement';
 import DataQualityManagement from '@/components/admin/DataQualityManagement';
+import AIModelSettings from '@/components/admin/AIModelSettings';
 import SystemSettings from '@/components/admin/SystemSettings';
 
-type SettingsTab = 'whitelist' | 'quality' | 'system';
+type SettingsTab = 'whitelist' | 'quality' | 'ai-models' | 'system';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('whitelist');
@@ -48,6 +49,7 @@ export default function SettingsPage() {
           <div className="flex-1 overflow-auto">
             {activeTab === 'whitelist' && <WhitelistManagement />}
             {activeTab === 'quality' && <DataQualityManagement />}
+            {activeTab === 'ai-models' && <AIModelSettings />}
             {activeTab === 'system' && <SystemSettings />}
           </div>
         </div>

@@ -1029,6 +1029,54 @@ function YouTubeTLDWContent() {
 
                   {/* Chat Input */}
                   <div className="border-t border-gray-200 bg-white p-4">
+                    {/* Model Selector */}
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-500">
+                        AI 模型:
+                      </span>
+                      <div className="flex gap-1">
+                        {[
+                          {
+                            id: 'grok',
+                            name: 'Grok',
+                            icon: '⚡',
+                            color: 'from-blue-500 to-blue-600',
+                          },
+                          {
+                            id: 'gpt-4',
+                            name: 'GPT-4',
+                            icon: '🧠',
+                            color: 'from-green-500 to-green-600',
+                          },
+                          {
+                            id: 'claude',
+                            name: 'Claude',
+                            icon: '🎭',
+                            color: 'from-orange-500 to-orange-600',
+                          },
+                          {
+                            id: 'gemini',
+                            name: 'Gemini',
+                            icon: '✨',
+                            color: 'from-purple-500 to-purple-600',
+                          },
+                        ].map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={() => setAiModel(model.id)}
+                            disabled={isStreaming}
+                            className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                              aiModel === model.id
+                                ? `bg-gradient-to-br ${model.color} text-white shadow-sm`
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            } ${isStreaming ? 'cursor-not-allowed opacity-50' : ''}`}
+                          >
+                            <span>{model.icon}</span>
+                            <span>{model.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="text"

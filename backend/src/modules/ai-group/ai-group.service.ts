@@ -1189,6 +1189,8 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     // Get AI model configuration from database
     // aiMember.aiModel is the standard model ID: "grok", "claude", "gpt-4", "gemini"
     // Database AIModel.name field uses the same standard IDs (enforced by admin UI)
+    this.logger.log(`Looking up AI model: "${aiMember.aiModel}"`);
+
     const aiModelConfig = await this.prisma.aIModel.findFirst({
       where: {
         name: {
@@ -1200,23 +1202,29 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     });
 
     // 详细日志帮助调试
+    // 列出所有可用的模型
+    const allModels = await this.prisma.aIModel.findMany({
+      select: { id: true, name: true, isEnabled: true, apiKey: true },
+    });
+    this.logger.log(
+      `All models in database: ${JSON.stringify(
+        allModels.map((m) => ({
+          id: m.id,
+          name: m.name,
+          enabled: m.isEnabled,
+          hasKey: !!m.apiKey,
+          keyLength: m.apiKey?.length || 0,
+        })),
+      )}`,
+    );
+
     if (!aiModelConfig) {
-      // 列出所有可用的模型
-      const allModels = await this.prisma.aIModel.findMany({
-        select: { name: true, isEnabled: true, apiKey: true },
-      });
       this.logger.error(
-        `AI model "${aiMember.aiModel}" not found! Available models: ${JSON.stringify(
-          allModels.map((m) => ({
-            name: m.name,
-            enabled: m.isEnabled,
-            hasKey: !!m.apiKey,
-          })),
-        )}`,
+        `AI model "${aiMember.aiModel}" not found or disabled!`,
       );
     } else {
       this.logger.log(
-        `AI model lookup: "${aiMember.aiModel}" -> found "${aiModelConfig.name}", hasApiKey=${!!aiModelConfig.apiKey}`,
+        `AI model lookup: "${aiMember.aiModel}" -> found "${aiModelConfig.name}", hasApiKey=${!!aiModelConfig.apiKey}, keyLength=${aiModelConfig.apiKey?.length || 0}`,
       );
     }
 

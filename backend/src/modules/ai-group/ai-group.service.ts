@@ -40,75 +40,68 @@ export class AiGroupService {
   async createTopic(userId: string, dto: CreateTopicDto) {
     const { memberIds, aiMembers, ...topicData } = dto;
 
-    return this.prisma.$transaction(async (tx) => {
-      // 创建Topic
-      const topic = await tx.topic.create({
-        data: {
-          ...topicData,
-          createdById: userId,
-          // 创建者自动成为Owner
-          members: {
-            create: {
-              userId,
-              role: TopicRole.OWNER,
-            },
-          },
-        },
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              username: true,
-              fullName: true,
-              avatarUrl: true,
-            },
-          },
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  fullName: true,
-                  avatarUrl: true,
-                },
+    this.logger.log(
+      `Creating topic for user ${userId}: ${JSON.stringify(dto)}`,
+    );
+
+    try {
+      const topicId = await this.prisma.$transaction(async (tx) => {
+        // 创建Topic
+        const topic = await tx.topic.create({
+          data: {
+            ...topicData,
+            createdById: userId,
+            // 创建者自动成为Owner
+            members: {
+              create: {
+                userId,
+                role: TopicRole.OWNER,
               },
             },
           },
-        },
+        });
+
+        this.logger.log(`Topic created with id: ${topic.id}`);
+
+        // 添加初始成员
+        if (memberIds && memberIds.length > 0) {
+          await tx.topicMember.createMany({
+            data: memberIds
+              .filter((id) => id !== userId) // 排除创建者
+              .map((id) => ({
+                topicId: topic.id,
+                userId: id,
+                role: TopicRole.MEMBER,
+              })),
+            skipDuplicates: true,
+          });
+        }
+
+        // 添加初始AI成员
+        if (aiMembers && aiMembers.length > 0) {
+          await tx.topicAIMember.createMany({
+            data: aiMembers.map((ai) => ({
+              topicId: topic.id,
+              aiModel: ai.aiModel,
+              displayName: ai.displayName,
+              roleDescription: ai.roleDescription,
+              systemPrompt: ai.systemPrompt,
+              addedById: userId,
+            })),
+          });
+        }
+
+        return topic.id;
       });
 
-      // 添加初始成员
-      if (memberIds && memberIds.length > 0) {
-        await tx.topicMember.createMany({
-          data: memberIds
-            .filter((id) => id !== userId) // 排除创建者
-            .map((id) => ({
-              topicId: topic.id,
-              userId: id,
-              role: TopicRole.MEMBER,
-            })),
-          skipDuplicates: true,
-        });
-      }
+      this.logger.log(`Transaction committed, fetching topic ${topicId}`);
 
-      // 添加初始AI成员
-      if (aiMembers && aiMembers.length > 0) {
-        await tx.topicAIMember.createMany({
-          data: aiMembers.map((ai) => ({
-            topicId: topic.id,
-            aiModel: ai.aiModel,
-            displayName: ai.displayName,
-            roleDescription: ai.roleDescription,
-            systemPrompt: ai.systemPrompt,
-            addedById: userId,
-          })),
-        });
-      }
-
-      // 返回完整的Topic信息
-      return this.getTopicById(topic.id, userId);
-    });
+      // 返回完整的Topic信息 (outside transaction to ensure data is committed)
+      return this.getTopicById(topicId, userId);
+    } catch (error) {
+      this.logger.error(`Failed to create topic: ${error}`);
+      throw error;
+    }
   }
 
   async getTopics(

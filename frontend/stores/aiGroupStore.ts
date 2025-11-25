@@ -554,16 +554,11 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
         }) => {
           console.log(`[WS] topic:join response for ${topicId}:`, response);
           if (response.success && response.onlineUsers) {
-            // 设置在线用户列表，并确保当前用户包含在内
-            const { currentUserId } = get();
-            const onlineSet = new Set(response.onlineUsers);
-            if (currentUserId) {
-              onlineSet.add(currentUserId);
-            }
-            set({ onlineUsers: onlineSet });
+            // 设置在线用户列表（后端已经包含当前用户）
+            set({ onlineUsers: new Set(response.onlineUsers) });
             console.log(
               '[WS] Joined topic room, online users:',
-              Array.from(onlineSet)
+              response.onlineUsers
             );
           } else if (response.error) {
             console.error('[WS] Failed to join topic room:', response.error);
@@ -592,15 +587,10 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
                 response
               );
               if (response.success && response.onlineUsers) {
-                const { currentUserId } = get();
-                const onlineSet = new Set(response.onlineUsers);
-                if (currentUserId) {
-                  onlineSet.add(currentUserId);
-                }
-                set({ onlineUsers: onlineSet });
+                set({ onlineUsers: new Set(response.onlineUsers) });
                 console.log(
                   '[WS] Joined topic room (delayed), online users:',
-                  Array.from(onlineSet)
+                  response.onlineUsers
                 );
               }
             }

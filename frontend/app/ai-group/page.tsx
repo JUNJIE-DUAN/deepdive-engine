@@ -1,0 +1,504 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAiGroupStore } from '@/stores/aiGroupStore';
+import { Topic, CreateTopicDto, AI_MODELS } from '@/types/ai-group';
+import Sidebar from '@/components/layout/Sidebar';
+
+export default function AIGroupPage() {
+  const router = useRouter();
+  const { user, accessToken, isLoading: authLoading } = useAuth();
+  const { topics, isLoadingTopics, fetchTopics, createTopic } =
+    useAiGroupStore();
+
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const isAuthenticated = !!accessToken;
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      fetchTopics();
+    }
+  }, [authLoading, isAuthenticated, fetchTopics]);
+
+  // 过滤topics
+  const filteredTopics = topics.filter((topic) => {
+    if (!searchQuery) return true;
+    return (
+      topic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      topic.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
+  if (authLoading) {
+    return (
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
+          <svg
+            className="h-16 w-16 text-gray-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+            />
+          </svg>
+          <h2 className="text-xl font-semibold text-gray-700">
+            Please sign in to access AI Group
+          </h2>
+          <p className="text-gray-500">
+            Create and join discussion groups with AI assistants
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">AI Group</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Multi-user multi-AI collaborative discussion community
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              New Topic
+            </button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="mt-4">
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search topics..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Topic Grid */}
+        <div className="p-6">
+          {isLoadingTopics ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+            </div>
+          ) : filteredTopics.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <svg
+                className="h-16 w-16 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-700">
+                No topics yet
+              </h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Create your first topic to start collaborating
+              </p>
+              <button
+                onClick={() => setShowCreateDialog(true)}
+                className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Create Topic
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredTopics.map((topic) => (
+                <TopicCard
+                  key={topic.id}
+                  topic={topic}
+                  onClick={() => router.push(`/ai-group/${topic.id}`)}
+                />
+              ))}
+
+              {/* Create New Card */}
+              <button
+                onClick={() => setShowCreateDialog(true)}
+                className="flex min-h-[180px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white p-6 transition-colors hover:border-blue-400 hover:bg-blue-50"
+              >
+                <svg
+                  className="h-10 w-10 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                <span className="mt-2 text-sm font-medium text-gray-600">
+                  Create New Topic
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Create Topic Dialog */}
+      {showCreateDialog && (
+        <CreateTopicDialog
+          onClose={() => setShowCreateDialog(false)}
+          onCreate={async (dto) => {
+            const topic = await createTopic(dto);
+            setShowCreateDialog(false);
+            router.push(`/ai-group/${topic.id}`);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Topic Card Component
+function TopicCard({ topic, onClick }: { topic: Topic; onClick: () => void }) {
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      className="group cursor-pointer rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
+    >
+      {/* Avatar */}
+      <div className="flex items-start justify-between">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 text-2xl">
+          {topic.avatar || '💬'}
+        </div>
+        {topic.unreadCount && topic.unreadCount > 0 && (
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-2 text-xs font-semibold text-white">
+            {topic.unreadCount > 99 ? '99+' : topic.unreadCount}
+          </span>
+        )}
+      </div>
+
+      {/* Title & Description */}
+      <h3 className="mt-3 truncate text-base font-semibold text-gray-900 group-hover:text-blue-600">
+        {topic.name}
+      </h3>
+      {topic.description && (
+        <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+          {topic.description}
+        </p>
+      )}
+
+      {/* Stats */}
+      <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
+        <span className="flex items-center gap-1">
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
+          {topic.memberCount}
+        </span>
+        <span className="flex items-center gap-1">
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
+          </svg>
+          {topic.aiMemberCount} AI
+        </span>
+        <span className="ml-auto">{formatTime(topic.updatedAt)}</span>
+      </div>
+
+      {/* Member Avatars */}
+      <div className="mt-3 flex items-center">
+        <div className="flex -space-x-2">
+          {topic.members.slice(0, 4).map((member, idx) => (
+            <div
+              key={member.id}
+              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-xs font-medium text-gray-600"
+              title={member.user.fullName || member.user.username || 'User'}
+            >
+              {member.user.avatarUrl ? (
+                <img
+                  src={member.user.avatarUrl}
+                  alt=""
+                  className="h-full w-full rounded-full object-cover"
+                />
+              ) : (
+                (member.user.fullName ||
+                  member.user.username ||
+                  'U')[0].toUpperCase()
+              )}
+            </div>
+          ))}
+          {topic.memberCount > 4 && (
+            <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-100 text-xs font-medium text-gray-500">
+              +{topic.memberCount - 4}
+            </div>
+          )}
+        </div>
+
+        {/* AI Avatars */}
+        {topic.aiMembers.length > 0 && (
+          <>
+            <div className="mx-2 h-4 w-px bg-gray-200" />
+            <div className="flex -space-x-2">
+              {topic.aiMembers.slice(0, 2).map((ai) => (
+                <div
+                  key={ai.id}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-green-100 to-blue-100 text-xs"
+                  title={ai.displayName}
+                >
+                  🤖
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Create Topic Dialog
+function CreateTopicDialog({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (dto: CreateTopicDto) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedAI, setSelectedAI] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreate = async () => {
+    if (!name.trim()) return;
+
+    setIsCreating(true);
+    try {
+      await onCreate({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        aiMembers: selectedAI.map((aiId) => {
+          const model = AI_MODELS.find((m) => m.id === aiId);
+          return {
+            aiModel: aiId,
+            displayName: `AI-${model?.name || aiId}`,
+          };
+        }),
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Create New Topic
+          </h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-4 px-6 py-4">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Topic Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Tech Discussion, Weekly Meeting"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What is this topic about?"
+              rows={3}
+              className="mt-1 w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* AI Members */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Add AI Assistants
+            </label>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {AI_MODELS.map((model) => (
+                <button
+                  key={model.id}
+                  onClick={() => {
+                    setSelectedAI((prev) =>
+                      prev.includes(model.id)
+                        ? prev.filter((id) => id !== model.id)
+                        : [...prev, model.id]
+                    );
+                  }}
+                  className={`flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-colors ${
+                    selectedAI.includes(model.id)
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="text-2xl">{model.icon}</span>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {model.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {model.description}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={!name.trim() || isCreating}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isCreating ? 'Creating...' : 'Create Topic'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

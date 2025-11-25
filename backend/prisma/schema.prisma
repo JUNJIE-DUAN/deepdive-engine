@@ -62,6 +62,16 @@ model User {
   youtubeVideos YouTubeVideo[]
   workspaces    Workspace[]
 
+  // AI Group 相关
+  createdTopics       Topic[]                 @relation("TopicCreator")
+  topicMemberships    TopicMember[]           @relation("TopicMemberships")
+  topicMessages       TopicMessage[]          @relation("TopicMessageSender")
+  topicReactions      TopicMessageReaction[]  @relation("TopicReactionUser")
+  addedAIMembers      TopicAIMember[]         @relation("TopicAIAdder")
+  topicResources      TopicResource[]         @relation("TopicResourceAdder")
+  topicSummaries      TopicSummary[]          @relation("TopicSummaryCreator")
+  topicMentions       TopicMessageMention[]   @relation("TopicMentionUser")
+
   @@map("users")
 }
 
@@ -180,6 +190,10 @@ model Resource {
   notes              Note[]
   comments           Comment[]
   workspaceResources WorkspaceResource[]
+
+  // AI Group 相关
+  topicAttachments   TopicMessageAttachment[] @relation("TopicAttachmentResource")
+  topicResources     TopicResource[]          @relation("TopicSharedResource")
 
   @@index([type, publishedAt(sort: Desc)])
   @@index([qualityScore(sort: Desc)])
@@ -1155,4 +1169,301 @@ model DeduplicationRecord {
   @@index([decision])
   @@index([taskId])
   @@map("deduplication_records")
+}
+
+// ============================================================================
+// AI Group - 多人多AI协作社区
+// ============================================================================
+
+enum TopicType {
+  PUBLIC
+  PRIVATE
+  ARCHIVED
+}
+
+enum TopicRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum MessageContentType {
+  TEXT
+  RICH_TEXT
+  CODE
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum MentionType {
+  USER
+  AI
+  ALL
+  ALL_AI
+}
+
+enum AttachmentType {
+  FILE
+  IMAGE
+  LINK
+  RESOURCE
+}
+
+enum TopicResourceType {
+  LINK
+  FILE
+  LIBRARY_RESOURCE
+}
+
+// Topic 群组
+model Topic {
+  id          String    @id @default(uuid())
+  name        String    @db.VarChar(200)
+  description String?   @db.Text
+  type        TopicType @default(PRIVATE)
+  avatar      String?   @db.Text
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("TopicCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  settings Json? // 群组设置
+  metadata Json? // 扩展元数据
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  archivedAt DateTime? @map("archived_at")
+
+  members   TopicMember[]
+  aiMembers TopicAIMember[]
+  messages  TopicMessage[]
+  resources TopicResource[]
+  summaries TopicSummary[]
+
+  @@index([createdById])
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+  @@map("topics")
+}
+
+// Topic 成员
+model TopicMember {
+  id String @id @default(uuid())
+
+  topicId String @map("topic_id")
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation("TopicMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  role     TopicRole @default(MEMBER)
+  nickname String?   @db.VarChar(100) // 群昵称
+
+  joinedAt   DateTime  @default(now()) @map("joined_at")
+  lastReadAt DateTime? @map("last_read_at")
+
+  @@unique([topicId, userId])
+  @@index([topicId])
+  @@index([userId])
+  @@map("topic_members")
+}
+
+// Topic AI成员
+model TopicAIMember {
+  id String @id @default(uuid())
+
+  topicId String @map("topic_id")
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  aiModel       String  @map("ai_model") @db.VarChar(50) // grok, gpt-4, claude, gemini
+  displayName   String  @map("display_name") @db.VarChar(100) // 显示名称，如 "AI-Grok"
+  avatar        String? @db.Text
+  roleDescription String? @map("role_description") @db.VarChar(200) // 角色描述，如 "技术专家"
+
+  systemPrompt  String? @map("system_prompt") @db.Text // 系统提示词
+  contextWindow Int     @default(20) @map("context_window") // 上下文消息数
+  responseStyle String? @map("response_style") @db.VarChar(50) // concise, detailed, academic
+  autoRespond   Boolean @default(false) @map("auto_respond") // 是否自动参与
+
+  addedById String @map("added_by_id")
+  addedBy   User   @relation("TopicAIAdder", fields: [addedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages TopicMessage[]
+  mentions TopicMessageMention[]
+
+  @@unique([topicId, aiModel, displayName])
+  @@index([topicId])
+  @@map("topic_ai_members")
+}
+
+// Topic 消息
+model TopicMessage {
+  id String @id @default(uuid())
+
+  topicId String @map("topic_id")
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  // 发送者（人或AI）
+  senderId   String?        @map("sender_id") // 如果是人
+  sender     User?          @relation("TopicMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  aiMemberId String?        @map("ai_member_id") // 如果是AI
+  aiMember   TopicAIMember? @relation(fields: [aiMemberId], references: [id], onDelete: SetNull)
+
+  content     String             @db.Text
+  contentType MessageContentType @default(TEXT) @map("content_type")
+
+  // AI消息特有
+  prompt     String? @db.Text // AI收到的Prompt（透明化）
+  modelUsed  String? @map("model_used") @db.VarChar(50) // 实际使用的模型
+  tokensUsed Int?    @map("tokens_used") // Token消耗
+
+  // 回复/引用
+  replyToId String?        @map("reply_to_id")
+  replyTo   TopicMessage?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   TopicMessage[] @relation("MessageReplies")
+
+  // 关系
+  mentions        TopicMessageMention[]
+  attachments     TopicMessageAttachment[]
+  reactions       TopicMessageReaction[]
+  sourceResources TopicResource[]          @relation("TopicResourceSource")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([topicId, createdAt(sort: Desc)])
+  @@index([senderId])
+  @@index([aiMemberId])
+  @@map("topic_messages")
+}
+
+// 消息@提及
+model TopicMessageMention {
+  id String @id @default(uuid())
+
+  messageId String       @map("message_id")
+  message   TopicMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // 被@的对象
+  userId      String?        @map("user_id")
+  user        User?          @relation("TopicMentionUser", fields: [userId], references: [id], onDelete: Cascade)
+  aiMemberId  String?        @map("ai_member_id")
+  aiMember    TopicAIMember? @relation(fields: [aiMemberId], references: [id], onDelete: Cascade)
+  mentionType MentionType    @map("mention_type") // USER, AI, ALL, ALL_AI
+
+  @@index([messageId])
+  @@index([userId])
+  @@index([aiMemberId])
+  @@map("topic_message_mentions")
+}
+
+// 消息附件
+model TopicMessageAttachment {
+  id String @id @default(uuid())
+
+  messageId String       @map("message_id")
+  message   TopicMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  type     AttachmentType
+  name     String         @db.VarChar(500)
+  url      String         @db.Text
+  size     Int? // bytes
+  mimeType String?        @map("mime_type") @db.VarChar(100)
+
+  // 如果是从Library导入的资源
+  resourceId String?   @map("resource_id")
+  resource   Resource? @relation("TopicAttachmentResource", fields: [resourceId], references: [id], onDelete: SetNull)
+
+  // 链接预览数据
+  linkPreview Json? @map("link_preview") // { title, description, image, favicon }
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([messageId])
+  @@map("topic_message_attachments")
+}
+
+// 消息反应
+model TopicMessageReaction {
+  id String @id @default(uuid())
+
+  messageId String       @map("message_id")
+  message   TopicMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation("TopicReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  emoji String @db.VarChar(20) // 表情符号
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("topic_message_reactions")
+}
+
+// Topic 共享资源
+model TopicResource {
+  id String @id @default(uuid())
+
+  topicId String @map("topic_id")
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  type TopicResourceType
+  name String            @db.VarChar(500)
+  url  String?           @db.Text
+
+  // 如果是从Library导入
+  resourceId String?   @map("resource_id")
+  resource   Resource? @relation("TopicSharedResource", fields: [resourceId], references: [id], onDelete: SetNull)
+
+  // 如果是上传的文件
+  fileUrl  String? @map("file_url") @db.Text
+  fileSize Int?    @map("file_size")
+  mimeType String? @map("mime_type") @db.VarChar(100)
+
+  // 来源消息（可追溯）
+  sourceMessageId String?       @map("source_message_id")
+  sourceMessage   TopicMessage? @relation("TopicResourceSource", fields: [sourceMessageId], references: [id], onDelete: SetNull)
+
+  addedById String @map("added_by_id")
+  addedBy   User   @relation("TopicResourceAdder", fields: [addedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([topicId])
+  @@index([type])
+  @@map("topic_resources")
+}
+
+// Topic 讨论纪要
+model TopicSummary {
+  id String @id @default(uuid())
+
+  topicId String @map("topic_id")
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  title   String @db.VarChar(500)
+  content String @db.Text
+
+  // 纪要范围
+  fromMessageId String? @map("from_message_id")
+  toMessageId   String? @map("to_message_id")
+
+  // 生成信息
+  generatedBy String  @map("generated_by") @db.VarChar(50) // AI模型
+  prompt      String? @db.Text
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("TopicSummaryCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([topicId, createdAt(sort: Desc)])
+  @@map("topic_summaries")
 }

@@ -29,6 +29,7 @@ import { DataManagementModule } from "./modules/data-management/data-management.
 import { AiOfficeModule } from "./modules/ai-office/ai-office.module";
 import { DataCollectionModule } from "./modules/data-collection/data-collection.module";
 import { AdminModule } from "./modules/admin/admin.module";
+import { AiGroupModule } from "./modules/ai-group/ai-group.module";
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { AdminModule } from "./modules/admin/admin.module";
     AiOfficeModule,
     DataCollectionModule,
     AdminModule,
+    AiGroupModule,
   ],
   controllers: [AppController],
   providers: [

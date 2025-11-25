@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [build.nixpacksPlan.phases.setup]
-nixPkgs = ["bzip2"]
+aptPkgs = ["bzip2"]
 
 [build.nixpacksPlan]
 phases.install.cmds = ["npm ci --legacy-peer-deps"]

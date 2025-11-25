@@ -19,6 +19,8 @@ import TopicSettingsDialog from '@/components/ai-group/TopicSettingsDialog';
 import ResourcesPanel from '@/components/ai-group/ResourcesPanel';
 import SummaryDialog from '@/components/ai-group/SummaryDialog';
 import Sidebar from '@/components/layout/Sidebar';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Member Panel
 function MemberPanel({
@@ -382,10 +384,18 @@ function MessageBubble({
                 : 'bg-gray-100 text-gray-800'
           }`}
         >
-          {/* Mentions highlighting */}
-          <div className="whitespace-pre-wrap break-words text-sm">
-            {highlightMentions(message.content, message.mentions)}
-          </div>
+          {/* AI messages render as Markdown, others as plain text */}
+          {isAI ? (
+            <div className="prose prose-sm prose-headings:text-gray-800 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-800 prose-pre:text-gray-100 max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <div className="whitespace-pre-wrap break-words text-sm">
+              {highlightMentions(message.content, message.mentions)}
+            </div>
+          )}
 
           {/* Attachments */}
           {message.attachments && message.attachments.length > 0 && (

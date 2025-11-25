@@ -1,5 +1,4 @@
 [build]
-# Use Dockerfile for build
 dockerfilePath = "Dockerfile"
 
 [deploy]

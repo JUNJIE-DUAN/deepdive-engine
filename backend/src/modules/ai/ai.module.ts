@@ -3,11 +3,12 @@ import { HttpModule } from "@nestjs/axios";
 import { AiController } from "./ai.controller";
 import { AiService } from "./ai.service";
 import { AiChatService } from "./ai-chat.service";
+import { SearchService } from "./search.service";
 
 @Module({
   imports: [HttpModule],
   controllers: [AiController],
-  providers: [AiService, AiChatService],
-  exports: [AiService, AiChatService],
+  providers: [AiService, AiChatService, SearchService],
+  exports: [AiService, AiChatService, SearchService],
 })
 export class AiModule {}

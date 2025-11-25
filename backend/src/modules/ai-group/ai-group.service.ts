@@ -25,6 +25,7 @@ import {
   GenerateSummaryDto,
 } from "./dto";
 import { AiChatService, ChatMessage } from "../ai/ai-chat.service";
+import { SearchService } from "../ai/search.service";
 
 @Injectable()
 export class AiGroupService {
@@ -33,6 +34,7 @@ export class AiGroupService {
   constructor(
     private prisma: PrismaService,
     private aiChatService: AiChatService,
+    private searchService: SearchService,
   ) {}
 
   // ==================== Topic CRUD ====================
@@ -1068,13 +1070,82 @@ ${messagesForSummary
       select: { name: true, description: true },
     });
 
+    // 获取Topic关联的资源内容作为上下文
+    const topicResources = await this.prisma.topicResource.findMany({
+      where: { topicId },
+      include: {
+        resource: {
+          select: {
+            title: true,
+            abstract: true,
+            content: true,
+            sourceUrl: true,
+            type: true,
+          },
+        },
+      },
+      take: 10, // 限制资源数量避免上下文过长
+      orderBy: { createdAt: "desc" },
+    });
+
+    // 构建资源上下文
+    let resourceContext = "";
+    if (topicResources.length > 0) {
+      const resourceSummaries = topicResources
+        .filter((tr) => tr.resource)
+        .map((tr) => {
+          const r = tr.resource!;
+          let summary = `- **${r.title || tr.name}**`;
+          if (r.sourceUrl) summary += ` (${r.sourceUrl})`;
+          if (r.abstract) summary += `\n  ${r.abstract}`;
+          // 包含部分内容（截断以避免过长）
+          if (r.content) {
+            const contentPreview = r.content.substring(0, 500);
+            summary += `\n  Content: ${contentPreview}${r.content.length > 500 ? "..." : ""}`;
+          }
+          return summary;
+        })
+        .join("\n\n");
+
+      if (resourceSummaries) {
+        resourceContext = `\n\n## Reference Materials\nThe following resources have been shared in this discussion group. Use them to provide more informed responses:\n\n${resourceSummaries}`;
+      }
+    }
+
+    // 检测是否需要搜索实时信息
+    // 获取最后一条用户消息
+    const lastUserMessage = contextMessages.find((m) => m.senderId);
+    let searchContext = "";
+
+    if (lastUserMessage) {
+      const needsSearch = this.shouldSearchForInfo(lastUserMessage.content);
+      if (needsSearch) {
+        this.logger.log(
+          `Searching for real-time info: "${lastUserMessage.content.substring(0, 100)}..."`,
+        );
+        const searchResults = await this.searchService.search(
+          lastUserMessage.content,
+          5,
+        );
+        if (searchResults.success && searchResults.results.length > 0) {
+          searchContext =
+            "\n\n" +
+            this.searchService.formatResultsForContext(searchResults.results);
+          this.logger.log(
+            `Added ${searchResults.results.length} search results to context`,
+          );
+        }
+      }
+    }
+
     const systemPrompt =
       aiMember.systemPrompt ||
       `You are ${aiMember.displayName}, an AI assistant participating in a group discussion.
 ${aiMember.roleDescription ? `Your role: ${aiMember.roleDescription}` : ""}
 You are in a discussion group called "${topic?.name}".
-${topic?.description ? `Group description: ${topic.description}` : ""}
-Respond naturally and helpfully to the discussion. Keep your responses concise but informative.`;
+${topic?.description ? `Group description: ${topic.description}` : ""}${resourceContext}${searchContext}
+
+Respond naturally and helpfully to the discussion. When relevant, reference the shared materials and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
 
     // Build chat messages for AI service
     const chatMessages: ChatMessage[] = contextMessages.reverse().map((m) => {
@@ -1182,6 +1253,86 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
   }
 
   // ==================== Helper Methods ====================
+
+  /**
+   * Determine if a message likely needs real-time information
+   * Uses keyword detection to decide when to search
+   */
+  private shouldSearchForInfo(content: string): boolean {
+    const lowerContent = content.toLowerCase();
+
+    // Keywords that suggest need for current/real-time info
+    const searchTriggers = [
+      // Time-sensitive
+      "最新",
+      "最近",
+      "今天",
+      "昨天",
+      "本周",
+      "这周",
+      "本月",
+      "latest",
+      "recent",
+      "today",
+      "yesterday",
+      "this week",
+      "this month",
+      "current",
+      "now",
+      "2024",
+      "2025",
+      // Research/info seeking
+      "什么是",
+      "是什么",
+      "怎么样",
+      "如何",
+      "为什么",
+      "哪些",
+      "哪个",
+      "what is",
+      "how to",
+      "why",
+      "which",
+      "who is",
+      "where",
+      // News/trends
+      "新闻",
+      "动态",
+      "趋势",
+      "发展",
+      "进展",
+      "消息",
+      "news",
+      "trend",
+      "update",
+      "development",
+      "announcement",
+      // Comparison/evaluation
+      "比较",
+      "对比",
+      "区别",
+      "评价",
+      "评测",
+      "推荐",
+      "compare",
+      "versus",
+      "vs",
+      "difference",
+      "review",
+      "recommend",
+      // Technical/specific
+      "价格",
+      "股价",
+      "天气",
+      "汇率",
+      "price",
+      "stock",
+      "weather",
+      "rate",
+    ];
+
+    return searchTriggers.some((trigger) => lowerContent.includes(trigger));
+  }
 
   private async checkTopicMembership(topicId: string, userId: string) {
     const topic = await this.prisma.topic.findUnique({

@@ -875,6 +875,12 @@ Format the summary in a clear, structured manner using markdown.`;
         maxOutputTokens: maxTokens,
         temperature,
       },
+      // Enable Google Search Grounding for real-time information
+      tools: [
+        {
+          googleSearch: {},
+        },
+      ],
     };
 
     if (systemMessage) {

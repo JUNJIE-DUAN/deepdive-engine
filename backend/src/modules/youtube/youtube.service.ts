@@ -364,6 +364,146 @@ export class YoutubeService {
     }
 
     this.logger.warn(`All fallback transcript attempts failed for ${videoId}`);
+
+    // Try YouTube's timedtext API as final fallback
+    const timedTextResult = await this.fetchTranscriptTimedText(
+      videoId,
+      preferredLang,
+    );
+    if (timedTextResult) {
+      return timedTextResult;
+    }
+
     return null;
+  }
+
+  /**
+   * Fetch transcript using YouTube's timedtext API (XML format)
+   */
+  private async fetchTranscriptTimedText(
+    videoId: string,
+    preferredLang: string = "en",
+  ): Promise<{
+    segments: TranscriptSegment[];
+    title: string | null;
+  } | null> {
+    const languages = preferredLang.startsWith("zh")
+      ? ["zh-Hans", "zh-Hant", "zh-CN", "zh-TW", "zh", "en"]
+      : [preferredLang, "en", "zh-Hans", "zh-Hant", "zh"];
+
+    for (const lang of languages) {
+      try {
+        // Try to get caption track URL from video page
+        const videoPageResponse = await fetch(
+          `https://www.youtube.com/watch?v=${videoId}`,
+          {
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+              "Accept-Language": "en-US,en;q=0.9",
+            },
+          },
+        );
+
+        if (!videoPageResponse.ok) {
+          continue;
+        }
+
+        const html = await videoPageResponse.text();
+
+        // Extract caption tracks from ytInitialPlayerResponse
+        const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
+        if (!captionMatch) {
+          this.logger.debug(
+            `No caption tracks found in video page for ${videoId}`,
+          );
+          continue;
+        }
+
+        let captionTracks: Array<{ baseUrl: string; languageCode: string }>;
+        try {
+          captionTracks = JSON.parse(captionMatch[1]);
+        } catch {
+          this.logger.debug(`Failed to parse caption tracks for ${videoId}`);
+          continue;
+        }
+
+        // Find matching language track
+        const track = captionTracks.find(
+          (t) =>
+            t.languageCode === lang ||
+            t.languageCode.startsWith(lang.split("-")[0]),
+        );
+
+        if (!track?.baseUrl) {
+          this.logger.debug(`No ${lang} caption track found for ${videoId}`);
+          continue;
+        }
+
+        // Fetch the caption XML
+        const captionResponse = await fetch(track.baseUrl, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          },
+        });
+
+        if (!captionResponse.ok) {
+          continue;
+        }
+
+        const xml = await captionResponse.text();
+
+        // Parse XML transcript
+        const segments = this.parseTranscriptXml(xml);
+
+        if (segments.length > 0) {
+          this.logger.log(
+            `Successfully fetched transcript using timedtext API (lang: ${lang}) for ${videoId}, segments=${segments.length}`,
+          );
+          return { segments, title: null };
+        }
+      } catch (error) {
+        this.logger.debug(
+          `Timedtext API failed for lang ${lang}: ${String(error)}`,
+        );
+        continue;
+      }
+    }
+
+    this.logger.warn(`Timedtext API fallback failed for ${videoId}`);
+    return null;
+  }
+
+  /**
+   * Parse YouTube transcript XML format
+   */
+  private parseTranscriptXml(xml: string): TranscriptSegment[] {
+    const segments: TranscriptSegment[] = [];
+
+    // Match <text start="..." dur="...">content</text> patterns
+    const textRegex =
+      /<text\s+start="([^"]+)"\s+dur="([^"]+)"[^>]*>([^<]*)<\/text>/g;
+    let match;
+
+    while ((match = textRegex.exec(xml)) !== null) {
+      const start = parseFloat(match[1]);
+      const duration = parseFloat(match[2]);
+      // Decode HTML entities
+      const text = match[3]
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\n/g, " ")
+        .trim();
+
+      if (text && !isNaN(start) && !isNaN(duration)) {
+        segments.push({ text, start, duration });
+      }
+    }
+
+    return segments;
   }
 }

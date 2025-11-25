@@ -33,7 +33,6 @@ interface AiGroupState {
   // WebSocket
   socket: Socket | null;
   isConnected: boolean;
-  currentJoinedTopicId: string | null;
   onlineUsers: Set<string>;
   typingUsers: Set<string>;
   typingAIs: Set<string>;
@@ -111,7 +110,6 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
   isLoadingResources: false,
   socket: null,
   isConnected: false,
-  currentJoinedTopicId: null,
   onlineUsers: new Set(),
   typingUsers: new Set(),
   typingAIs: new Set(),
@@ -351,29 +349,6 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     newSocket.on('connect', () => {
       console.log('[WS] Connected, socket id:', newSocket.id);
       set({ isConnected: true });
-
-      // 重连后自动重新加入当前 topic 房间
-      const { currentJoinedTopicId } = get();
-      if (currentJoinedTopicId) {
-        console.log(
-          '[WS] Reconnected, rejoining topic room:',
-          currentJoinedTopicId
-        );
-        newSocket.emit(
-          'topic:join',
-          { topicId: currentJoinedTopicId },
-          (response: {
-            success?: boolean;
-            onlineUsers?: string[];
-            error?: string;
-          }) => {
-            console.log('[WS] Rejoin response:', response);
-            if (response.success && response.onlineUsers) {
-              set({ onlineUsers: new Set(response.onlineUsers) });
-            }
-          }
-        );
-      }
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -387,7 +362,7 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('[WS] Connection error:', error);
+      console.error('WebSocket connection error:', error);
     });
 
     // 新消息
@@ -588,9 +563,6 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     console.log(
       `[WS] joinTopicRoom called for topic ${topicId}, socket connected: ${socket?.connected}, socket id: ${socket?.id}`
     );
-    // 记录当前要加入的房间，用于重连时自动重新加入
-    set({ currentJoinedTopicId: topicId });
-
     if (socket?.connected) {
       socket.emit(
         'topic:join',
@@ -652,14 +624,9 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
   },
 
   leaveTopicRoom: (topicId) => {
-    const { socket, currentJoinedTopicId } = get();
-    console.log(`[WS] leaveTopicRoom called for topic ${topicId}`);
+    const { socket } = get();
     if (socket?.connected) {
       socket.emit('topic:leave', { topicId });
-    }
-    // 只有当离开的是当前加入的房间时才清除
-    if (currentJoinedTopicId === topicId) {
-      set({ currentJoinedTopicId: null });
     }
   },
 
@@ -693,7 +660,6 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
       isLoadingResources: false,
       socket: null,
       isConnected: false,
-      currentJoinedTopicId: null,
       onlineUsers: new Set(),
       typingUsers: new Set(),
       typingAIs: new Set(),

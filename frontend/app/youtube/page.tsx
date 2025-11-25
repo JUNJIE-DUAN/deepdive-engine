@@ -80,6 +80,7 @@ function YouTubeTLDWContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [aiModel, setAiModel] = useState('grok');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Right panel collapse state
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
@@ -438,6 +439,9 @@ function YouTubeTLDWContent() {
     setAiInput('');
     setIsStreaming(true);
 
+    // Create abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     try {
       // Build context for YouTube video
       const transcriptText = transcript
@@ -468,6 +472,7 @@ function YouTubeTLDWContent() {
           model: aiModel,
           stream: true,
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!res.ok) throw new Error('Failed to fetch');
@@ -521,7 +526,12 @@ function YouTubeTLDWContent() {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      // Check if it was an abort
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('AI message streaming was stopped by user');
+        return;
+      }
       console.error('Failed to send message:', error);
       const errorMessage: AIMessage = {
         role: 'assistant',
@@ -531,6 +541,16 @@ function YouTubeTLDWContent() {
       };
       setAiMessages((prev) => [...prev, errorMessage]);
     } finally {
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  // Stop AI streaming
+  const stopAIStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
       setIsStreaming(false);
     }
   };
@@ -1167,32 +1187,26 @@ function YouTubeTLDWContent() {
                         className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
                         disabled={isStreaming}
                       />
-                      <button
-                        onClick={sendAIMessage}
-                        disabled={!aiInput.trim() || isStreaming}
-                        className="rounded-lg bg-gradient-to-br from-red-500 to-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {isStreaming ? (
+                      {isStreaming ? (
+                        <button
+                          onClick={stopAIStreaming}
+                          className="rounded-lg bg-gradient-to-br from-gray-600 to-gray-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-gray-700 hover:to-gray-800 hover:shadow-md"
+                          title="Stop generating"
+                        >
                           <svg
-                            className="h-4 w-4 animate-spin"
-                            fill="none"
+                            className="h-4 w-4"
+                            fill="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            />
+                            <rect x="6" y="6" width="12" height="12" rx="1" />
                           </svg>
-                        ) : (
+                        </button>
+                      ) : (
+                        <button
+                          onClick={sendAIMessage}
+                          disabled={!aiInput.trim()}
+                          className="rounded-lg bg-gradient-to-br from-red-500 to-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                        >
                           <svg
                             className="h-4 w-4"
                             fill="none"
@@ -1206,8 +1220,8 @@ function YouTubeTLDWContent() {
                               d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                             />
                           </svg>
-                        )}
-                      </button>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

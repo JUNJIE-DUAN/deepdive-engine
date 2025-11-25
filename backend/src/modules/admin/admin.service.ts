@@ -313,6 +313,10 @@ export class AdminService {
     // Trim apiKey to remove any whitespace from copy-paste
     const apiKey = data.apiKey?.trim() || null;
 
+    this.logger.log(
+      `createAIModel called: name=${data.name}, apiKeyProvided=${!!apiKey}, apiKeyLength=${apiKey?.length || 0}`,
+    );
+
     // 检查是否存在同名模型
     const existing = await this.prisma.aIModel.findFirst({
       where: { name: { equals: data.name, mode: "insensitive" } },
@@ -321,23 +325,37 @@ export class AdminService {
     if (existing) {
       // 如果存在，则更新
       this.logger.log(
-        `AI Model ${data.name} already exists, updating instead of creating`,
+        `AI Model ${data.name} already exists (id=${existing.id}), updating instead of creating`,
       );
+
+      // 准备更新数据 - 只有提供了有效的 apiKey 才更新
+      const updateData: any = {
+        displayName: data.displayName,
+        provider: data.provider,
+        modelId: data.modelId,
+        icon: data.icon,
+        color: data.color,
+        apiEndpoint: data.apiEndpoint,
+        maxTokens: data.maxTokens ?? existing.maxTokens,
+        temperature: data.temperature ?? existing.temperature,
+        description: data.description,
+      };
+
+      // 只有当提供了有效的 API Key（非空、非掩码格式）才更新
+      if (apiKey && !apiKey.includes("****")) {
+        updateData.apiKey = apiKey;
+        this.logger.log(
+          `Updating API key for ${data.name}: length=${apiKey.length}, prefix=${apiKey.substring(0, 8)}...`,
+        );
+      } else {
+        this.logger.log(
+          `Keeping existing API key for ${data.name} (new key not provided or is masked)`,
+        );
+      }
 
       const updated = await this.prisma.aIModel.update({
         where: { id: existing.id },
-        data: {
-          displayName: data.displayName,
-          provider: data.provider,
-          modelId: data.modelId,
-          icon: data.icon,
-          color: data.color,
-          apiEndpoint: data.apiEndpoint,
-          apiKey: apiKey ?? undefined, // 只有提供了新的apiKey才更新
-          maxTokens: data.maxTokens ?? existing.maxTokens,
-          temperature: data.temperature ?? existing.temperature,
-          description: data.description,
-        },
+        data: updateData,
       });
 
       this.logger.log(
@@ -448,7 +466,9 @@ export class AdminService {
       },
     });
 
-    this.logger.log(`AI Model updated: ${updated.name}`);
+    this.logger.log(
+      `AI Model updated: ${updated.name}, hasApiKey=${!!updated.apiKey}, apiKeyLength=${updated.apiKey?.length || 0}`,
+    );
 
     return {
       ...updated,

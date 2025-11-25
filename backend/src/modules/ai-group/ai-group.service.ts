@@ -1091,27 +1091,52 @@ Respond naturally and helpfully to the discussion. Keep your responses concise b
     });
 
     // Get AI model configuration from database
-    // Try to match by name or displayName (case-insensitive)
-    // aiMember.aiModel could be "grok" while DB has name="Grok" or displayName="Grok"
-    const aiModelConfig = await this.prisma.aIModel.findFirst({
-      where: {
-        OR: [
-          { name: { equals: aiMember.aiModel, mode: "insensitive" } },
-          { displayName: { equals: aiMember.aiModel, mode: "insensitive" } },
-          // Also try with "AI-" prefix removed (e.g., "AI-Grok" -> "Grok")
-          {
-            displayName: {
-              equals: `AI-${aiMember.aiModel}`,
-              mode: "insensitive",
-            },
-          },
-        ],
-        isEnabled: true,
-      },
+    // aiMember.aiModel is the model ID like "grok", "claude", "gpt-4", "gemini"
+    // We need to match this against AIModel records in database
+    // The database name field should match, but admin may have configured differently
+
+    // First, get all enabled models to find the best match
+    const enabledModels = await this.prisma.aIModel.findMany({
+      where: { isEnabled: true },
     });
 
     this.logger.log(
-      `Looking for AI model config: aiMember.aiModel=${aiMember.aiModel}, found=${!!aiModelConfig}, config=${JSON.stringify(aiModelConfig ? { name: aiModelConfig.name, displayName: aiModelConfig.displayName, hasApiKey: !!aiModelConfig.apiKey } : null)}`,
+      `Looking for AI model: aiMember.aiModel="${aiMember.aiModel}", enabledModels=${JSON.stringify(enabledModels.map((m) => ({ name: m.name, displayName: m.displayName, provider: m.provider })))}`,
+    );
+
+    // Try to find a matching model using multiple strategies
+    const searchTerm = aiMember.aiModel.toLowerCase();
+    let aiModelConfig = enabledModels.find((m) => {
+      const name = m.name.toLowerCase();
+      const displayName = m.displayName.toLowerCase();
+      const provider = m.provider.toLowerCase();
+
+      // Exact match on name
+      if (name === searchTerm) return true;
+
+      // Exact match on displayName (without AI- prefix)
+      if (displayName === searchTerm) return true;
+      if (displayName === `ai-${searchTerm}`) return true;
+
+      // Name contains the search term
+      if (name.includes(searchTerm)) return true;
+
+      // DisplayName contains the search term
+      if (displayName.includes(searchTerm)) return true;
+
+      // Provider-based matching for common models
+      // e.g., "grok" -> provider "xAI", "claude" -> provider "Anthropic"
+      if (searchTerm === "grok" && provider.includes("xai")) return true;
+      if (searchTerm === "claude" && provider.includes("anthropic"))
+        return true;
+      if (searchTerm === "gpt-4" && provider.includes("openai")) return true;
+      if (searchTerm === "gemini" && provider.includes("google")) return true;
+
+      return false;
+    });
+
+    this.logger.log(
+      `AI model lookup result: found=${!!aiModelConfig}, config=${JSON.stringify(aiModelConfig ? { name: aiModelConfig.name, displayName: aiModelConfig.displayName, hasApiKey: !!aiModelConfig.apiKey } : null)}`,
     );
 
     // Call AI service

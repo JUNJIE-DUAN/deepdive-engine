@@ -9,6 +9,7 @@ import {
   Users,
   Bot,
   Plug,
+  Shield,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -39,6 +40,12 @@ export default function DataCollectionLayout({
       href: '/data-collection/config',
       icon: Database,
       description: 'Data sources and collection rules',
+    },
+    {
+      name: 'Whitelists',
+      href: '/data-collection/whitelists',
+      icon: Shield,
+      description: 'Source whitelist management',
     },
     {
       name: 'AI Models',

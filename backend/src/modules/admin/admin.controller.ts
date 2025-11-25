@@ -206,11 +206,28 @@ export class AdminController {
   async testAIModelConnection(@Param("id") id: string) {
     this.logger.log(`Admin: Testing AI model connection ${id}`);
 
-    // 获取模型配置
+    // 获取模型配置（包含 API Key）
     const model = await this.adminService.getAIModel(id);
 
-    // 使用 AI Chat Service 测试连接
-    const result = await this.aiChatService.testModelConnection(model.name);
+    // 检查是否有 API Key
+    if (!model.apiKey) {
+      return {
+        modelId: id,
+        modelName: model.name,
+        displayName: model.displayName,
+        success: false,
+        message: "API key is not configured for this model",
+        latency: 0,
+      };
+    }
+
+    // 使用数据库中的 API Key 测试连接
+    const result = await this.aiChatService.testModelConnectionWithKey(
+      model.provider,
+      model.modelId,
+      model.apiKey,
+      model.apiEndpoint,
+    );
 
     return {
       modelId: id,

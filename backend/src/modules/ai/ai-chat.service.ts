@@ -426,6 +426,190 @@ Format the summary in a clear, structured manner using markdown.`;
   }
 
   /**
+   * Test connection to an AI model with custom API key and endpoint
+   * Used for testing models configured in the database
+   */
+  async testModelConnectionWithKey(
+    provider: string,
+    modelId: string,
+    apiKey: string,
+    apiEndpoint: string,
+  ): Promise<{ success: boolean; message: string; latency?: number }> {
+    const startTime = Date.now();
+
+    if (!apiKey) {
+      return {
+        success: false,
+        message: "API key is not configured",
+        latency: 0,
+      };
+    }
+
+    try {
+      const testMessages = [
+        {
+          role: "user" as const,
+          content: "Say 'OK' to confirm you are working.",
+        },
+      ];
+
+      let response;
+
+      // Determine the correct API format based on provider
+      switch (provider.toLowerCase()) {
+        case "xai":
+        case "grok":
+          response = await firstValueFrom(
+            this.httpService.post(
+              apiEndpoint || "https://api.x.ai/v1/chat/completions",
+              {
+                model: modelId || "grok-beta",
+                messages: testMessages,
+                max_tokens: 50,
+                temperature: 0,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: 30000,
+              },
+            ),
+          );
+          break;
+
+        case "openai":
+        case "gpt":
+          response = await firstValueFrom(
+            this.httpService.post(
+              apiEndpoint || "https://api.openai.com/v1/chat/completions",
+              {
+                model: modelId || "gpt-4",
+                messages: testMessages,
+                max_tokens: 50,
+                temperature: 0,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: 30000,
+              },
+            ),
+          );
+          break;
+
+        case "anthropic":
+        case "claude":
+          response = await firstValueFrom(
+            this.httpService.post(
+              apiEndpoint || "https://api.anthropic.com/v1/messages",
+              {
+                model: modelId || "claude-3-sonnet-20240229",
+                max_tokens: 50,
+                messages: testMessages,
+              },
+              {
+                headers: {
+                  "x-api-key": apiKey,
+                  "anthropic-version": "2023-06-01",
+                  "Content-Type": "application/json",
+                },
+                timeout: 30000,
+              },
+            ),
+          );
+          break;
+
+        case "google":
+        case "gemini":
+          const geminiEndpoint =
+            apiEndpoint ||
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelId || "gemini-pro"}:generateContent?key=${apiKey}`;
+          response = await firstValueFrom(
+            this.httpService.post(
+              geminiEndpoint,
+              {
+                contents: [
+                  {
+                    parts: [{ text: testMessages[0].content }],
+                  },
+                ],
+                generationConfig: {
+                  maxOutputTokens: 50,
+                  temperature: 0,
+                },
+              },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                timeout: 30000,
+              },
+            ),
+          );
+          break;
+
+        default:
+          return {
+            success: false,
+            message: `Unsupported provider: ${provider}`,
+            latency: Date.now() - startTime,
+          };
+      }
+
+      const latency = Date.now() - startTime;
+
+      // Extract response content based on provider
+      let content = "";
+      if (
+        provider.toLowerCase() === "anthropic" ||
+        provider.toLowerCase() === "claude"
+      ) {
+        content = response.data?.content?.[0]?.text || "";
+      } else if (
+        provider.toLowerCase() === "google" ||
+        provider.toLowerCase() === "gemini"
+      ) {
+        content =
+          response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } else {
+        content = response.data?.choices?.[0]?.message?.content || "";
+      }
+
+      return {
+        success: true,
+        message: `Connection successful! Response: "${content.substring(0, 100)}${content.length > 100 ? "..." : ""}"`,
+        latency,
+      };
+    } catch (error: any) {
+      const latency = Date.now() - startTime;
+      let errorMessage = "Unknown error";
+
+      if (error.response) {
+        // API returned an error response
+        const status = error.response.status;
+        const data = error.response.data;
+        errorMessage = `API Error (${status}): ${data?.error?.message || data?.message || JSON.stringify(data)}`;
+      } else if (error.code === "ECONNABORTED") {
+        errorMessage = "Connection timeout";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      this.logger.error(`Model connection test failed: ${errorMessage}`);
+
+      return {
+        success: false,
+        message: `Connection failed: ${errorMessage}`,
+        latency,
+      };
+    }
+  }
+
+  /**
    * Generate a mock response for development/testing when API keys are not configured
    */
   private getMockResponse(

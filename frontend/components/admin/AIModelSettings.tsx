@@ -56,6 +56,9 @@ export default function AIModelSettings() {
       if (response.ok) {
         const data = await response.json();
         setModels(data);
+        setError(null);
+      } else if (response.status === 401 || response.status === 403) {
+        setError('Please sign in as an admin to manage AI models');
       } else {
         setError('Failed to fetch AI models');
       }

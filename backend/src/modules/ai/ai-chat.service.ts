@@ -262,6 +262,7 @@ Format the summary in a clear, structured manner using markdown.`;
 
   /**
    * Call Google Gemini API
+   * Using Gemini 2.0 Flash model with system instruction support
    */
   private async callGeminiAPI(
     messages: ChatMessage[],
@@ -277,52 +278,84 @@ Format the summary in a clear, structured manner using markdown.`;
       return this.getMockResponse("gemini", messages);
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    // Use Gemini 2.0 Flash (latest model with better performance)
+    const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash-exp";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     try {
-      // Convert messages to Gemini format
+      // Extract system message for system instruction
       const systemMessage = messages.find((m) => m.role === "system");
       const otherMessages = messages.filter((m) => m.role !== "system");
 
+      // Convert messages to Gemini format
       const contents = otherMessages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
       }));
 
-      // Prepend system message to first user message
-      if (systemMessage && contents.length > 0) {
-        contents[0].parts.unshift({
-          text: `[System Instructions: ${systemMessage.content}]\n\n`,
-        });
+      // Build request body
+      const requestBody: any = {
+        contents,
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          temperature,
+          topP: 0.95,
+          topK: 40,
+        },
+      };
+
+      // Add system instruction if present (Gemini 1.5+ supports this natively)
+      if (systemMessage) {
+        requestBody.systemInstruction = {
+          parts: [{ text: systemMessage.content }],
+        };
       }
 
+      this.logger.log(`Calling Gemini API with model: ${modelName}`);
+
       const response = await firstValueFrom(
-        this.httpService.post(
-          apiUrl,
-          {
-            contents,
-            generationConfig: {
-              maxOutputTokens: maxTokens,
-              temperature,
-            },
+        this.httpService.post(apiUrl, requestBody, {
+          headers: {
+            "Content-Type": "application/json",
           },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        ),
+          timeout: 60000, // 60 second timeout
+        }),
       );
 
       const data = response.data;
+
+      // Check for blocked content or errors
+      if (data.candidates?.[0]?.finishReason === "SAFETY") {
+        this.logger.warn("Gemini response blocked due to safety filters");
+        return {
+          content:
+            "I apologize, but I cannot provide a response to that request due to content safety guidelines.",
+          model: "gemini",
+          tokensUsed: 0,
+        };
+      }
+
       const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const tokensUsed =
+        (data.usageMetadata?.promptTokenCount || 0) +
+        (data.usageMetadata?.candidatesTokenCount || 0);
+
+      this.logger.log(`Gemini response received, tokens used: ${tokensUsed}`);
+
       return {
         content,
         model: "gemini",
-        tokensUsed: data.usageMetadata?.totalTokenCount || 0,
+        tokensUsed,
       };
-    } catch (error) {
-      this.logger.error(`Gemini API error: ${error}`);
+    } catch (error: any) {
+      // Log detailed error information
+      if (error.response) {
+        this.logger.error(
+          `Gemini API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
+        );
+      } else {
+        this.logger.error(`Gemini API error: ${error.message}`);
+      }
       return this.getMockResponse("gemini", messages);
     }
   }

@@ -1007,7 +1007,7 @@ export default function AIModelSettings() {
   );
 }
 
-// Edit Model Modal
+// Edit Model Modal - 与 AddModelModal 使用相同界面风格
 function EditModelModal({
   model,
   onSave,
@@ -1027,11 +1027,21 @@ function EditModelModal({
 
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
-    // 如果用户清空或修改了 API Key，标记为已修改
     if (value !== model.apiKey) {
       setIsApiKeyModified(true);
     }
   };
+
+  const colorOptions = [
+    { value: 'from-blue-500 to-blue-600', label: 'Blue' },
+    { value: 'from-green-500 to-green-600', label: 'Green' },
+    { value: 'from-orange-500 to-orange-600', label: 'Orange' },
+    { value: 'from-purple-500 to-purple-600', label: 'Purple' },
+    { value: 'from-red-500 to-red-600', label: 'Red' },
+    { value: 'from-pink-500 to-pink-600', label: 'Pink' },
+    { value: 'from-indigo-500 to-indigo-600', label: 'Indigo' },
+    { value: 'from-gray-500 to-gray-600', label: 'Gray' },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -1041,184 +1051,227 @@ function EditModelModal({
         </h3>
 
         <div className="space-y-4">
+          {/* Model Type - Read Only */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Display Name
+              Model Type
             </label>
             <input
               type="text"
-              value={formData.displayName}
-              onChange={(e) =>
-                setFormData({ ...formData, displayName: e.target.value })
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={`${model.name} (${model.provider})`}
+              readOnly
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600"
             />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Model ID
-            </label>
-            <input
-              type="text"
-              value={formData.modelId}
-              onChange={(e) =>
-                setFormData({ ...formData, modelId: e.target.value })
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              API Endpoint
-            </label>
-            <input
-              type="text"
-              value={formData.apiEndpoint}
-              onChange={(e) =>
-                setFormData({ ...formData, apiEndpoint: e.target.value })
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              API Key{' '}
-              {model.hasApiKey && !isApiKeyModified && (
-                <span className="text-green-600">(configured)</span>
-              )}
-              {isApiKeyModified && (
-                <span className="text-orange-600">(modified)</span>
-              )}
-            </label>
-            <div className="relative">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => handleApiKeyChange(e.target.value)}
-                placeholder="Enter API key..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showApiKey ? (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              {model.hasApiKey
-                ? 'Current key is shown masked. Enter new value to update, or leave as-is to keep existing.'
-                : 'Enter API key to configure this model.'}
-            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Max Tokens
+                Display Name
               </label>
               <input
-                type="number"
-                value={formData.maxTokens}
+                type="text"
+                value={formData.displayName}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    maxTokens: parseInt(e.target.value),
-                  })
+                  setFormData({ ...formData, displayName: e.target.value })
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Temperature
+                Provider
               </label>
               <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="2"
-                value={formData.temperature}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    temperature: parseFloat(e.target.value),
-                  })
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                type="text"
+                value={formData.provider}
+                readOnly
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600"
               />
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              value={formData.description || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        </div>
+          {/* API Configuration Section - Same style as AddModelModal */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <h4 className="mb-3 text-sm font-semibold text-blue-800">
+              API 配置
+              {model.hasApiKey && !isApiKeyModified && (
+                <span className="ml-2 text-xs font-normal text-green-600">
+                  (已配置)
+                </span>
+              )}
+              {isApiKeyModified && (
+                <span className="ml-2 text-xs font-normal text-orange-600">
+                  (已修改)
+                </span>
+              )}
+            </h4>
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() =>
-              onSave(formData, isApiKeyModified ? apiKey : undefined)
-            }
-            disabled={saving}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  API Endpoint <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.apiEndpoint}
+                  onChange={(e) =>
+                    setFormData({ ...formData, apiEndpoint: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  API Key <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKey}
+                    onChange={(e) => handleApiKeyChange(e.target.value)}
+                    placeholder={model.hasApiKey ? '' : 'sk-...'}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showApiKey ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+
+              <ModelIdSelector
+                value={formData.modelId}
+                onChange={(modelId) => setFormData({ ...formData, modelId })}
+                provider={formData.provider}
+                apiKey={isApiKeyModified ? apiKey : model.apiKey || ''}
+              />
+            </div>
+          </div>
+
+          {/* Display Settings - Collapsed */}
+          <details className="rounded-lg border border-gray-200">
+            <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              显示设置（可选）
+            </summary>
+            <div className="space-y-3 border-t border-gray-200 p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Icon Path
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.icon}
+                    onChange={(e) =>
+                      setFormData({ ...formData, icon: e.target.value })
+                    }
+                    placeholder="/icons/ai/grok.svg"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Color
+                  </label>
+                  <select
+                    value={formData.color}
+                    onChange={(e) =>
+                      setFormData({ ...formData, color: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    {colorOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          {/* Advanced Settings - Collapsed */}
+          <details className="rounded-lg border border-gray-200">
+            <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              高级设置（可选）
+            </summary>
+            <div className="space-y-3 border-t border-gray-200 p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Max Tokens
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.maxTokens}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        maxTokens: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Temperature
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    value={formData.temperature}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        temperature: parseFloat(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={2}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </details>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              取消
+            </button>
+            <button
+              onClick={() =>
+                onSave(formData, isApiKeyModified ? apiKey : undefined)
+              }
+              disabled={saving}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? '保存中...' : '保存更改'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

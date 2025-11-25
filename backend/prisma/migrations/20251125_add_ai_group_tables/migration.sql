@@ -17,24 +17,24 @@ CREATE TYPE "AttachmentType" AS ENUM ('FILE', 'IMAGE', 'LINK', 'RESOURCE');
 CREATE TYPE "TopicResourceType" AS ENUM ('LINK', 'FILE', 'NOTE', 'LIBRARY_RESOURCE');
 
 -- CreateTable
-CREATE TABLE "Topic" (
+CREATE TABLE "topics" (
     "id" TEXT NOT NULL,
     "name" VARCHAR(200) NOT NULL,
     "description" TEXT,
     "type" "TopicType" NOT NULL DEFAULT 'PRIVATE',
     "avatar" TEXT,
     "settings" JSONB DEFAULT '{}',
-    "is_archived" BOOLEAN NOT NULL DEFAULT false,
+    "metadata" JSONB,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "archived_at" TIMESTAMP(3),
     "created_by_id" TEXT NOT NULL,
 
-    CONSTRAINT "Topic_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topics_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicMember" (
+CREATE TABLE "topic_members" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
@@ -42,14 +42,12 @@ CREATE TABLE "TopicMember" (
     "nickname" VARCHAR(100),
     "joined_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "last_read_at" TIMESTAMP(3),
-    "is_muted" BOOLEAN NOT NULL DEFAULT false,
-    "is_pinned" BOOLEAN NOT NULL DEFAULT false,
 
-    CONSTRAINT "TopicMember_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_members_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicAIMember" (
+CREATE TABLE "topic_ai_members" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "ai_model" VARCHAR(50) NOT NULL,
@@ -65,11 +63,11 @@ CREATE TABLE "TopicAIMember" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     "added_by_id" TEXT NOT NULL,
 
-    CONSTRAINT "TopicAIMember_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_ai_members_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicMessage" (
+CREATE TABLE "topic_messages" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "sender_id" TEXT,
@@ -86,11 +84,11 @@ CREATE TABLE "TopicMessage" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
 
-    CONSTRAINT "TopicMessage_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_messages_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicMessageMention" (
+CREATE TABLE "topic_message_mentions" (
     "id" TEXT NOT NULL,
     "message_id" TEXT NOT NULL,
     "user_id" TEXT,
@@ -98,11 +96,11 @@ CREATE TABLE "TopicMessageMention" (
     "mention_type" "MentionType" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "TopicMessageMention_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_message_mentions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicMessageAttachment" (
+CREATE TABLE "topic_message_attachments" (
     "id" TEXT NOT NULL,
     "message_id" TEXT NOT NULL,
     "type" "AttachmentType" NOT NULL,
@@ -114,27 +112,28 @@ CREATE TABLE "TopicMessageAttachment" (
     "link_preview" JSONB,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "TopicMessageAttachment_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_message_attachments_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicMessageReaction" (
+CREATE TABLE "topic_message_reactions" (
     "id" TEXT NOT NULL,
     "message_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "emoji" VARCHAR(50) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "TopicMessageReaction_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_message_reactions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicResource" (
+CREATE TABLE "topic_resources" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "type" "TopicResourceType" NOT NULL,
     "name" VARCHAR(500) NOT NULL,
     "url" TEXT,
+    "description" TEXT,
     "resource_id" TEXT,
     "file_url" TEXT,
     "file_size" INTEGER,
@@ -143,11 +142,11 @@ CREATE TABLE "TopicResource" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "added_by_id" TEXT NOT NULL,
 
-    CONSTRAINT "TopicResource_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_resources_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TopicSummary" (
+CREATE TABLE "topic_summaries" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "title" VARCHAR(500) NOT NULL,
@@ -159,113 +158,122 @@ CREATE TABLE "TopicSummary" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_by_id" TEXT NOT NULL,
 
-    CONSTRAINT "TopicSummary_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "topic_summaries_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE INDEX "Topic_created_by_id_idx" ON "Topic"("created_by_id");
+CREATE INDEX "topics_created_by_id_idx" ON "topics"("created_by_id");
 
 -- CreateIndex
-CREATE INDEX "Topic_type_idx" ON "Topic"("type");
+CREATE INDEX "topics_type_idx" ON "topics"("type");
 
 -- CreateIndex
-CREATE INDEX "Topic_is_archived_idx" ON "Topic"("is_archived");
+CREATE INDEX "topics_created_at_idx" ON "topics"("created_at" DESC);
 
 -- CreateIndex
-CREATE INDEX "TopicMember_topic_id_idx" ON "TopicMember"("topic_id");
+CREATE INDEX "topic_members_topic_id_idx" ON "topic_members"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "TopicMember_user_id_idx" ON "TopicMember"("user_id");
+CREATE INDEX "topic_members_user_id_idx" ON "topic_members"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TopicMember_topic_id_user_id_key" ON "TopicMember"("topic_id", "user_id");
+CREATE UNIQUE INDEX "topic_members_topic_id_user_id_key" ON "topic_members"("topic_id", "user_id");
 
 -- CreateIndex
-CREATE INDEX "TopicAIMember_topic_id_idx" ON "TopicAIMember"("topic_id");
+CREATE INDEX "topic_ai_members_topic_id_idx" ON "topic_ai_members"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "TopicMessage_topic_id_idx" ON "TopicMessage"("topic_id");
+CREATE INDEX "topic_messages_topic_id_idx" ON "topic_messages"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "TopicMessage_sender_id_idx" ON "TopicMessage"("sender_id");
+CREATE INDEX "topic_messages_sender_id_idx" ON "topic_messages"("sender_id");
 
 -- CreateIndex
-CREATE INDEX "TopicMessage_ai_member_id_idx" ON "TopicMessage"("ai_member_id");
+CREATE INDEX "topic_messages_ai_member_id_idx" ON "topic_messages"("ai_member_id");
 
 -- CreateIndex
-CREATE INDEX "TopicMessage_created_at_idx" ON "TopicMessage"("created_at");
+CREATE INDEX "topic_messages_created_at_idx" ON "topic_messages"("created_at");
 
 -- CreateIndex
-CREATE INDEX "TopicMessageMention_message_id_idx" ON "TopicMessageMention"("message_id");
+CREATE INDEX "topic_message_mentions_message_id_idx" ON "topic_message_mentions"("message_id");
 
 -- CreateIndex
-CREATE INDEX "TopicMessageAttachment_message_id_idx" ON "TopicMessageAttachment"("message_id");
+CREATE INDEX "topic_message_mentions_ai_member_id_idx" ON "topic_message_mentions"("ai_member_id");
 
 -- CreateIndex
-CREATE INDEX "TopicMessageReaction_message_id_idx" ON "TopicMessageReaction"("message_id");
+CREATE INDEX "topic_message_attachments_message_id_idx" ON "topic_message_attachments"("message_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TopicMessageReaction_message_id_user_id_emoji_key" ON "TopicMessageReaction"("message_id", "user_id", "emoji");
+CREATE INDEX "topic_message_reactions_message_id_idx" ON "topic_message_reactions"("message_id");
 
 -- CreateIndex
-CREATE INDEX "TopicResource_topic_id_idx" ON "TopicResource"("topic_id");
+CREATE UNIQUE INDEX "topic_message_reactions_message_id_user_id_emoji_key" ON "topic_message_reactions"("message_id", "user_id", "emoji");
 
 -- CreateIndex
-CREATE INDEX "TopicSummary_topic_id_idx" ON "TopicSummary"("topic_id");
+CREATE INDEX "topic_resources_topic_id_idx" ON "topic_resources"("topic_id");
+
+-- CreateIndex
+CREATE INDEX "topic_resources_type_idx" ON "topic_resources"("type");
+
+-- CreateIndex
+CREATE INDEX "topic_summaries_topic_id_idx" ON "topic_summaries"("topic_id");
+
+-- CreateIndex
+CREATE INDEX "topic_summaries_topic_id_created_at_idx" ON "topic_summaries"("topic_id", "created_at" DESC);
 
 -- AddForeignKey
-ALTER TABLE "Topic" ADD CONSTRAINT "Topic_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "topics" ADD CONSTRAINT "topics_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMember" ADD CONSTRAINT "TopicMember_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_members" ADD CONSTRAINT "topic_members_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMember" ADD CONSTRAINT "TopicMember_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_members" ADD CONSTRAINT "topic_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicAIMember" ADD CONSTRAINT "TopicAIMember_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_ai_members" ADD CONSTRAINT "topic_ai_members_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicAIMember" ADD CONSTRAINT "TopicAIMember_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "topic_ai_members" ADD CONSTRAINT "topic_ai_members_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "TopicAIMember"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "topic_ai_members"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessage" ADD CONSTRAINT "TopicMessage_reply_to_id_fkey" FOREIGN KEY ("reply_to_id") REFERENCES "TopicMessage"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_reply_to_id_fkey" FOREIGN KEY ("reply_to_id") REFERENCES "topic_messages"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageMention" ADD CONSTRAINT "TopicMessageMention_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "TopicMessage"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageMention" ADD CONSTRAINT "TopicMessageMention_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageMention" ADD CONSTRAINT "TopicMessageMention_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "TopicAIMember"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "topic_ai_members"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageAttachment" ADD CONSTRAINT "TopicMessageAttachment_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "TopicMessage"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_message_attachments" ADD CONSTRAINT "topic_message_attachments_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageReaction" ADD CONSTRAINT "TopicMessageReaction_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "TopicMessage"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_message_reactions" ADD CONSTRAINT "topic_message_reactions_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicMessageReaction" ADD CONSTRAINT "TopicMessageReaction_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_message_reactions" ADD CONSTRAINT "topic_message_reactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicResource" ADD CONSTRAINT "TopicResource_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_resources" ADD CONSTRAINT "topic_resources_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicResource" ADD CONSTRAINT "TopicResource_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "topic_resources" ADD CONSTRAINT "topic_resources_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicSummary" ADD CONSTRAINT "TopicSummary_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "Topic"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "topic_summaries" ADD CONSTRAINT "topic_summaries_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TopicSummary" ADD CONSTRAINT "TopicSummary_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "topic_summaries" ADD CONSTRAINT "topic_summaries_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

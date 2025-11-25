@@ -815,7 +815,7 @@ export default function LibraryPage() {
 
         {/* Main card content */}
         <Link
-          href={`/resource/${resource.id}`}
+          href={`/?id=${resource.id}`}
           className="block"
           onClick={(e) => {
             if (selectionMode) {
@@ -1437,7 +1437,7 @@ export default function LibraryPage() {
                 Close
               </button>
               <a
-                href={`/resource/${selectedItem.resource.id}`}
+                href={`/?id=${selectedItem.resource.id}`}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
                 View Full Details

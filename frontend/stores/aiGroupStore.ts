@@ -293,6 +293,11 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
         messages: [...state.messages, message],
       }));
       return message;
+    } catch (error) {
+      // Log the error but don't re-throw to prevent UI disruption
+      console.error('Failed to generate AI response:', error);
+      // Return a placeholder message indicating the error
+      throw error; // Re-throw for the caller to handle
     } finally {
       // Remove AI from typing
       set((state) => {

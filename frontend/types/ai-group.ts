@@ -348,23 +348,32 @@ export interface WSReactionEvent {
 // ==================== AI Models ====================
 
 export const AI_MODELS = [
-  { id: 'grok', name: 'Grok', icon: '🤖', description: 'xAI Grok - 快速智能' },
+  {
+    id: 'grok',
+    name: 'Grok',
+    icon: '🤖',
+    iconUrl: '/icons/ai/grok.svg',
+    description: 'xAI Grok - 快速智能',
+  },
   {
     id: 'gpt-4',
     name: 'GPT-4',
     icon: '🧠',
+    iconUrl: '/icons/ai/openai.svg',
     description: 'OpenAI GPT-4 - 深度思考',
   },
   {
     id: 'claude',
     name: 'Claude',
     icon: '🎭',
+    iconUrl: '/icons/ai/claude.svg',
     description: 'Anthropic Claude - 对话专家',
   },
   {
     id: 'gemini',
     name: 'Gemini',
     icon: '💎',
+    iconUrl: '/icons/ai/gemini.svg',
     description: 'Google Gemini - 多模态',
   },
 ] as const;

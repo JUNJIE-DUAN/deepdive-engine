@@ -18,38 +18,7 @@ import Link from 'next/link';
 import TopicSettingsDialog from '@/components/ai-group/TopicSettingsDialog';
 import ResourcesPanel from '@/components/ai-group/ResourcesPanel';
 import SummaryDialog from '@/components/ai-group/SummaryDialog';
-
-// Collapsed Sidebar Icons
-const CollapsedSidebar = () => {
-  const router = useRouter();
-
-  const navItems = [
-    { icon: '🏠', label: 'Home', path: '/' },
-    { icon: '📚', label: 'Library', path: '/library' },
-    { icon: '🤖', label: 'AI Studio', path: '/ai-studio' },
-    { icon: '👥', label: 'AI Group', path: '/ai-group', active: true },
-    { icon: '⚙️', label: 'Settings', path: '/settings' },
-  ];
-
-  return (
-    <div className="flex w-14 flex-col border-r border-gray-200 bg-gray-50 py-4">
-      {navItems.map((item) => (
-        <button
-          key={item.path}
-          onClick={() => router.push(item.path)}
-          className={`mx-2 mb-2 flex h-10 w-10 items-center justify-center rounded-lg text-lg transition-colors ${
-            item.active
-              ? 'bg-blue-100 text-blue-600'
-              : 'text-gray-600 hover:bg-gray-200'
-          }`}
-          title={item.label}
-        >
-          {item.icon}
-        </button>
-      ))}
-    </div>
-  );
-};
+import Sidebar from '@/components/layout/Sidebar';
 
 // Member Panel
 function MemberPanel({
@@ -197,8 +166,18 @@ function MemberPanel({
                     onClick={() => onAIClick(ai)}
                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-blue-100 text-lg">
-                      {model?.icon || '🤖'}
+                    <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-green-100 to-blue-100">
+                      {model?.iconUrl ? (
+                        <img
+                          src={model.iconUrl}
+                          alt={model.name}
+                          className="h-6 w-6"
+                        />
+                      ) : (
+                        <span className="text-lg">
+                          {(model as any)?.icon || '🤖'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <span className="truncate text-sm font-medium text-gray-900">
@@ -284,7 +263,11 @@ function MessageBubble({
     : message.sender?.fullName || message.sender?.username || 'User';
 
   const senderAvatar = isAI ? (
-    <span className="text-lg">{model?.icon || '🤖'}</span>
+    model?.iconUrl ? (
+      <img src={model.iconUrl} alt={model.name} className="h-6 w-6" />
+    ) : (
+      <span className="text-lg">{(model as any)?.icon || '🤖'}</span>
+    )
   ) : message.sender?.avatarUrl ? (
     <img
       src={message.sender.avatarUrl}
@@ -556,6 +539,7 @@ function MessageInput({
         id: ai.id,
         name: ai.displayName,
         icon: model?.icon || '🤖',
+        iconUrl: model?.iconUrl,
       };
     }),
   ];
@@ -726,7 +710,13 @@ function MessageInput({
               onClick={() => handleMentionSelect(entity)}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
             >
-              {entity.icon ? (
+              {(entity as any).iconUrl ? (
+                <img
+                  src={(entity as any).iconUrl}
+                  alt={entity.name}
+                  className="h-6 w-6"
+                />
+              ) : entity.icon ? (
                 <span className="text-lg">{entity.icon}</span>
               ) : (entity as any).avatar ? (
                 <img
@@ -783,10 +773,20 @@ function MessageInput({
                 onClick={() =>
                   setContent((prev) => `${prev}@${ai.displayName} `)
                 }
-                className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-lg transition-colors hover:bg-gray-200"
+                className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 transition-colors hover:bg-gray-200"
                 title={`Mention ${ai.displayName}`}
               >
-                {model?.icon || '🤖'}
+                {model?.iconUrl ? (
+                  <img
+                    src={model.iconUrl}
+                    alt={model.name}
+                    className="h-6 w-6"
+                  />
+                ) : (
+                  <span className="text-lg">
+                    {(model as any)?.icon || '🤖'}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -998,7 +998,7 @@ export default function TopicPage() {
   if (!currentTopic) {
     return (
       <div className="flex h-screen">
-        <CollapsedSidebar />
+        <Sidebar />
         <div className="flex flex-1 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
         </div>
@@ -1008,8 +1008,8 @@ export default function TopicPage() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Collapsed Global Nav */}
-      <CollapsedSidebar />
+      {/* Global Sidebar */}
+      <Sidebar />
 
       {/* Member Panel */}
       <MemberPanel

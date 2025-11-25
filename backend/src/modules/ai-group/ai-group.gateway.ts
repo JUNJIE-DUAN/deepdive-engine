@@ -378,8 +378,13 @@ export class AiGroupGateway
         [],
       );
 
-      // 广播AI响应
-      this.server.to(`topic:${topicId}`).emit("ai:response", aiMessage);
+      // 广播AI响应完成（用于清除typing状态）
+      this.server.to(`topic:${topicId}`).emit("ai:response", {
+        aiMemberId,
+        messageId: aiMessage.id,
+      });
+
+      // 广播新消息（用于显示消息）
       this.server.to(`topic:${topicId}`).emit("message:new", aiMessage);
     } catch (error: unknown) {
       const errorMessage =

@@ -429,23 +429,17 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
       });
     });
 
-    // AI响应完成
-    newSocket.on('ai:response', (message: TopicMessage) => {
-      set((state) => {
-        const newSet = new Set(state.typingAIs);
-        if (message.aiMemberId) {
-          newSet.delete(message.aiMemberId);
-        }
-        // 防止重复添加
-        if (state.messages.some((m) => m.id === message.id)) {
+    // AI响应完成（只清除typing状态，消息通过message:new事件添加）
+    newSocket.on(
+      'ai:response',
+      ({ aiMemberId }: { aiMemberId: string; messageId: string }) => {
+        set((state) => {
+          const newSet = new Set(state.typingAIs);
+          newSet.delete(aiMemberId);
           return { typingAIs: newSet };
-        }
-        return {
-          typingAIs: newSet,
-          messages: [...state.messages, message],
-        };
-      });
-    });
+        });
+      }
+    );
 
     // AI错误
     newSocket.on(

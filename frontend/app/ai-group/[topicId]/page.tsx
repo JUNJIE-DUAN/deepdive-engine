@@ -386,8 +386,16 @@ function MessageBubble({
         >
           {/* AI messages render as Markdown, others as plain text */}
           {isAI ? (
-            <div className="prose prose-sm prose-headings:text-gray-800 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-800 prose-pre:text-gray-100 max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <div className="prose prose-sm prose-headings:text-gray-800 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-800 prose-pre:text-gray-100 prose-img:max-w-full prose-img:h-auto prose-img:rounded-lg max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  img: ({ node, ...props }) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img {...props} alt={props.alt || 'AI Generated Image'} />
+                  ),
+                }}
+              >
                 {message.content}
               </ReactMarkdown>
             </div>

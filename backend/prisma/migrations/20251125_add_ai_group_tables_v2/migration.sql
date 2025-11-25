@@ -1,23 +1,8 @@
--- CreateEnum
-CREATE TYPE "TopicType" AS ENUM ('PRIVATE', 'PUBLIC', 'CHANNEL');
-
--- CreateEnum
-CREATE TYPE "TopicRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER', 'GUEST');
-
--- CreateEnum
-CREATE TYPE "MessageContentType" AS ENUM ('TEXT', 'MARKDOWN', 'CODE', 'FILE', 'IMAGE', 'LINK');
-
--- CreateEnum
-CREATE TYPE "MentionType" AS ENUM ('USER', 'AI', 'ALL');
-
--- CreateEnum
-CREATE TYPE "AttachmentType" AS ENUM ('FILE', 'IMAGE', 'LINK', 'RESOURCE');
-
--- CreateEnum
-CREATE TYPE "TopicResourceType" AS ENUM ('LINK', 'FILE', 'NOTE', 'LIBRARY_RESOURCE');
+-- Note: Enum types already exist from previous migration attempt
+-- Only creating tables and constraints
 
 -- CreateTable
-CREATE TABLE "topics" (
+CREATE TABLE IF NOT EXISTS "topics" (
     "id" TEXT NOT NULL,
     "name" VARCHAR(200) NOT NULL,
     "description" TEXT,
@@ -34,7 +19,7 @@ CREATE TABLE "topics" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_members" (
+CREATE TABLE IF NOT EXISTS "topic_members" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
@@ -47,7 +32,7 @@ CREATE TABLE "topic_members" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_ai_members" (
+CREATE TABLE IF NOT EXISTS "topic_ai_members" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "ai_model" VARCHAR(50) NOT NULL,
@@ -67,7 +52,7 @@ CREATE TABLE "topic_ai_members" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_messages" (
+CREATE TABLE IF NOT EXISTS "topic_messages" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "sender_id" TEXT,
@@ -88,7 +73,7 @@ CREATE TABLE "topic_messages" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_message_mentions" (
+CREATE TABLE IF NOT EXISTS "topic_message_mentions" (
     "id" TEXT NOT NULL,
     "message_id" TEXT NOT NULL,
     "user_id" TEXT,
@@ -100,7 +85,7 @@ CREATE TABLE "topic_message_mentions" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_message_attachments" (
+CREATE TABLE IF NOT EXISTS "topic_message_attachments" (
     "id" TEXT NOT NULL,
     "message_id" TEXT NOT NULL,
     "type" "AttachmentType" NOT NULL,
@@ -116,7 +101,7 @@ CREATE TABLE "topic_message_attachments" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_message_reactions" (
+CREATE TABLE IF NOT EXISTS "topic_message_reactions" (
     "id" TEXT NOT NULL,
     "message_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
@@ -127,7 +112,7 @@ CREATE TABLE "topic_message_reactions" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_resources" (
+CREATE TABLE IF NOT EXISTS "topic_resources" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "type" "TopicResourceType" NOT NULL,
@@ -146,7 +131,7 @@ CREATE TABLE "topic_resources" (
 );
 
 -- CreateTable
-CREATE TABLE "topic_summaries" (
+CREATE TABLE IF NOT EXISTS "topic_summaries" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT NOT NULL,
     "title" VARCHAR(500) NOT NULL,
@@ -162,118 +147,157 @@ CREATE TABLE "topic_summaries" (
 );
 
 -- CreateIndex
-CREATE INDEX "topics_created_by_id_idx" ON "topics"("created_by_id");
+CREATE INDEX IF NOT EXISTS "topics_created_by_id_idx" ON "topics"("created_by_id");
 
 -- CreateIndex
-CREATE INDEX "topics_type_idx" ON "topics"("type");
+CREATE INDEX IF NOT EXISTS "topics_type_idx" ON "topics"("type");
 
 -- CreateIndex
-CREATE INDEX "topics_created_at_idx" ON "topics"("created_at" DESC);
+CREATE INDEX IF NOT EXISTS "topics_created_at_idx" ON "topics"("created_at" DESC);
 
 -- CreateIndex
-CREATE INDEX "topic_members_topic_id_idx" ON "topic_members"("topic_id");
+CREATE INDEX IF NOT EXISTS "topic_members_topic_id_idx" ON "topic_members"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "topic_members_user_id_idx" ON "topic_members"("user_id");
+CREATE INDEX IF NOT EXISTS "topic_members_user_id_idx" ON "topic_members"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "topic_members_topic_id_user_id_key" ON "topic_members"("topic_id", "user_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "topic_members_topic_id_user_id_key" ON "topic_members"("topic_id", "user_id");
 
 -- CreateIndex
-CREATE INDEX "topic_ai_members_topic_id_idx" ON "topic_ai_members"("topic_id");
+CREATE INDEX IF NOT EXISTS "topic_ai_members_topic_id_idx" ON "topic_ai_members"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "topic_messages_topic_id_idx" ON "topic_messages"("topic_id");
+CREATE INDEX IF NOT EXISTS "topic_messages_topic_id_idx" ON "topic_messages"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "topic_messages_sender_id_idx" ON "topic_messages"("sender_id");
+CREATE INDEX IF NOT EXISTS "topic_messages_sender_id_idx" ON "topic_messages"("sender_id");
 
 -- CreateIndex
-CREATE INDEX "topic_messages_ai_member_id_idx" ON "topic_messages"("ai_member_id");
+CREATE INDEX IF NOT EXISTS "topic_messages_ai_member_id_idx" ON "topic_messages"("ai_member_id");
 
 -- CreateIndex
-CREATE INDEX "topic_messages_created_at_idx" ON "topic_messages"("created_at");
+CREATE INDEX IF NOT EXISTS "topic_messages_created_at_idx" ON "topic_messages"("created_at");
 
 -- CreateIndex
-CREATE INDEX "topic_message_mentions_message_id_idx" ON "topic_message_mentions"("message_id");
+CREATE INDEX IF NOT EXISTS "topic_message_mentions_message_id_idx" ON "topic_message_mentions"("message_id");
 
 -- CreateIndex
-CREATE INDEX "topic_message_mentions_ai_member_id_idx" ON "topic_message_mentions"("ai_member_id");
+CREATE INDEX IF NOT EXISTS "topic_message_mentions_ai_member_id_idx" ON "topic_message_mentions"("ai_member_id");
 
 -- CreateIndex
-CREATE INDEX "topic_message_attachments_message_id_idx" ON "topic_message_attachments"("message_id");
+CREATE INDEX IF NOT EXISTS "topic_message_attachments_message_id_idx" ON "topic_message_attachments"("message_id");
 
 -- CreateIndex
-CREATE INDEX "topic_message_reactions_message_id_idx" ON "topic_message_reactions"("message_id");
+CREATE INDEX IF NOT EXISTS "topic_message_reactions_message_id_idx" ON "topic_message_reactions"("message_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "topic_message_reactions_message_id_user_id_emoji_key" ON "topic_message_reactions"("message_id", "user_id", "emoji");
+CREATE UNIQUE INDEX IF NOT EXISTS "topic_message_reactions_message_id_user_id_emoji_key" ON "topic_message_reactions"("message_id", "user_id", "emoji");
 
 -- CreateIndex
-CREATE INDEX "topic_resources_topic_id_idx" ON "topic_resources"("topic_id");
+CREATE INDEX IF NOT EXISTS "topic_resources_topic_id_idx" ON "topic_resources"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "topic_resources_type_idx" ON "topic_resources"("type");
+CREATE INDEX IF NOT EXISTS "topic_resources_type_idx" ON "topic_resources"("type");
 
 -- CreateIndex
-CREATE INDEX "topic_summaries_topic_id_idx" ON "topic_summaries"("topic_id");
+CREATE INDEX IF NOT EXISTS "topic_summaries_topic_id_idx" ON "topic_summaries"("topic_id");
 
 -- CreateIndex
-CREATE INDEX "topic_summaries_topic_id_created_at_idx" ON "topic_summaries"("topic_id", "created_at" DESC);
+CREATE INDEX IF NOT EXISTS "topic_summaries_topic_id_created_at_idx" ON "topic_summaries"("topic_id", "created_at" DESC);
 
--- AddForeignKey
-ALTER TABLE "topics" ADD CONSTRAINT "topics_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey (use DO block to handle if constraint already exists)
+DO $$ BEGIN
+    ALTER TABLE "topics" ADD CONSTRAINT "topics_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_members" ADD CONSTRAINT "topic_members_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_members" ADD CONSTRAINT "topic_members_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_members" ADD CONSTRAINT "topic_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_members" ADD CONSTRAINT "topic_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_ai_members" ADD CONSTRAINT "topic_ai_members_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_ai_members" ADD CONSTRAINT "topic_ai_members_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_ai_members" ADD CONSTRAINT "topic_ai_members_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_ai_members" ADD CONSTRAINT "topic_ai_members_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "topic_ai_members"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "topic_ai_members"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_reply_to_id_fkey" FOREIGN KEY ("reply_to_id") REFERENCES "topic_messages"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_messages" ADD CONSTRAINT "topic_messages_reply_to_id_fkey" FOREIGN KEY ("reply_to_id") REFERENCES "topic_messages"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "topic_ai_members"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_message_mentions" ADD CONSTRAINT "topic_message_mentions_ai_member_id_fkey" FOREIGN KEY ("ai_member_id") REFERENCES "topic_ai_members"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_message_attachments" ADD CONSTRAINT "topic_message_attachments_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_message_attachments" ADD CONSTRAINT "topic_message_attachments_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_message_reactions" ADD CONSTRAINT "topic_message_reactions_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_message_reactions" ADD CONSTRAINT "topic_message_reactions_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "topic_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_message_reactions" ADD CONSTRAINT "topic_message_reactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_message_reactions" ADD CONSTRAINT "topic_message_reactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_resources" ADD CONSTRAINT "topic_resources_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_resources" ADD CONSTRAINT "topic_resources_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_resources" ADD CONSTRAINT "topic_resources_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_resources" ADD CONSTRAINT "topic_resources_added_by_id_fkey" FOREIGN KEY ("added_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_summaries" ADD CONSTRAINT "topic_summaries_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_summaries" ADD CONSTRAINT "topic_summaries_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "topic_summaries" ADD CONSTRAINT "topic_summaries_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "topic_summaries" ADD CONSTRAINT "topic_summaries_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

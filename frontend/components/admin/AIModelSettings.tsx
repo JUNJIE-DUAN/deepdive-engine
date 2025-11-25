@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { config } from '@/lib/config';
+import { getAuthHeader } from '@/lib/auth';
 
 interface AIModel {
   id: string;
@@ -51,6 +52,7 @@ export default function AIModelSettings() {
     setLoading(true);
     try {
       const response = await fetch(`${config.apiUrl}/admin/ai-models`, {
+        headers: { ...getAuthHeader() },
         credentials: 'include',
       });
       if (response.ok) {
@@ -76,7 +78,7 @@ export default function AIModelSettings() {
         `${config.apiUrl}/admin/ai-models/${model.id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           credentials: 'include',
           body: JSON.stringify({ isEnabled: !model.isEnabled }),
         }
@@ -101,7 +103,11 @@ export default function AIModelSettings() {
     try {
       const response = await fetch(
         `${config.apiUrl}/admin/ai-models/${model.id}/set-default`,
-        { method: 'POST', credentials: 'include' }
+        {
+          method: 'POST',
+          headers: { ...getAuthHeader() },
+          credentials: 'include',
+        }
       );
 
       if (response.ok) {
@@ -141,7 +147,7 @@ export default function AIModelSettings() {
         `${config.apiUrl}/admin/ai-models/${model.id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           credentials: 'include',
           body: JSON.stringify(updateData),
         }
@@ -171,7 +177,7 @@ export default function AIModelSettings() {
     try {
       const response = await fetch(`${config.apiUrl}/admin/ai-models`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         credentials: 'include',
         body: JSON.stringify(model),
       });
@@ -206,7 +212,11 @@ export default function AIModelSettings() {
     try {
       const response = await fetch(
         `${config.apiUrl}/admin/ai-models/${model.id}`,
-        { method: 'DELETE', credentials: 'include' }
+        {
+          method: 'DELETE',
+          headers: { ...getAuthHeader() },
+          credentials: 'include',
+        }
       );
 
       if (response.ok) {
@@ -230,7 +240,11 @@ export default function AIModelSettings() {
     try {
       const response = await fetch(
         `${config.apiUrl}/admin/ai-models/${model.id}/test`,
-        { method: 'POST', credentials: 'include' }
+        {
+          method: 'POST',
+          headers: { ...getAuthHeader() },
+          credentials: 'include',
+        }
       );
 
       if (response.ok) {

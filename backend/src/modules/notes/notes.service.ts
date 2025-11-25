@@ -30,24 +30,28 @@ export class NotesService {
       data: {
         userId,
         resourceId: dto.resourceId,
+        title: dto.title,
         content: dto.content,
+        source: dto.source,
         highlights: dto.highlights || [],
         tags: dto.tags || [],
         isPublic: dto.isPublic ?? false,
       },
       include: {
-        resource: {
-          select: {
-            id: true,
-            type: true,
-            title: true,
-          },
-        },
+        resource: dto.resourceId
+          ? {
+              select: {
+                id: true,
+                type: true,
+                title: true,
+              },
+            }
+          : false,
       },
     });
 
     this.logger.log(
-      `Note created for resource ${dto.resourceId} by user ${userId}`,
+      `Note created ${dto.resourceId ? `for resource ${dto.resourceId}` : "(standalone)"} by user ${userId}`,
     );
 
     return note;

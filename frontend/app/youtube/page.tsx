@@ -388,7 +388,7 @@ function YouTubeTLDWContent() {
         body: JSON.stringify({
           title: noteTitle,
           content: contextMenu.message.content,
-          resourceId: null, // Could link to video if we have a resource ID
+          source: 'youtube-ai-chat',
           tags: ['ai-chat', 'youtube'],
         }),
       });
@@ -397,8 +397,13 @@ function YouTubeTLDWContent() {
         setShowNotesModal(false);
         setNoteTitle('');
         setContextMenu({ visible: false, x: 0, y: 0, message: null });
-        // Show success notification (could add toast here)
         alert('Note saved successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to save note:', errorData);
+        alert(
+          `Failed to save note: ${errorData.message || response.statusText}`
+        );
       }
     } catch (error) {
       console.error('Failed to save note:', error);

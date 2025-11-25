@@ -349,12 +349,18 @@ model LearningPathStep {
 // ============ 笔记系统 ============
 
 model Note {
-  id         String @id @default(uuid())
-  userId     String @map("user_id")
-  resourceId String @map("resource_id")
+  id         String  @id @default(uuid())
+  userId     String  @map("user_id")
+  resourceId String? @map("resource_id")
+
+  // 笔记标题 (standalone notes)
+  title String? @db.VarChar(500)
 
   // 笔记内容
   content String @db.Text
+
+  // 笔记来源 (e.g., 'ai-chat', 'pdf', 'youtube')
+  source String? @db.VarChar(50)
 
   // 高亮标注数据 (JSON)
   highlights Json? @default("[]")
@@ -374,8 +380,8 @@ model Note {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource? @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([resourceId])

@@ -10,11 +10,20 @@ import {
  * 创建笔记DTO
  */
 export class CreateNoteDto {
+  @IsOptional()
   @IsUUID()
-  resourceId!: string;
+  resourceId?: string;
+
+  @IsOptional()
+  @IsString()
+  title?: string;
 
   @IsString()
   content!: string;
+
+  @IsOptional()
+  @IsString()
+  source?: string;
 
   @IsOptional()
   @IsArray()

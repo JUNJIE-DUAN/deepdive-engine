@@ -1,0 +1,330 @@
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  ConnectedSocket,
+  MessageBody,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { Logger, UseGuards } from '@nestjs/common';
+import { AiGroupService } from './ai-group.service';
+import { SendMessageDto } from './dto';
+
+interface AuthenticatedSocket extends Socket {
+  userId?: string;
+  currentTopicId?: string;
+}
+
+@WebSocketGateway({
+  namespace: '/ai-group',
+  cors: {
+    origin: ['http://localhost:3000', 'http://localhost:3001', process.env.FRONTEND_URL],
+    credentials: true,
+  },
+})
+export class AiGroupGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
+
+  private logger = new Logger('AiGroupGateway');
+  private userSockets = new Map<string, Set<string>>(); // userId -> Set<socketId>
+  private socketUsers = new Map<string, string>(); // socketId -> userId
+
+  constructor(private readonly aiGroupService: AiGroupService) {}
+
+  async handleConnection(client: AuthenticatedSocket) {
+    try {
+      // 从handshake中获取用户信息（由前端传入）
+      const userId = client.handshake.auth?.userId || client.handshake.query?.userId;
+
+      if (!userId || typeof userId !== 'string') {
+        this.logger.warn(`Connection rejected: no userId provided`);
+        client.disconnect();
+        return;
+      }
+
+      client.userId = userId;
+      this.socketUsers.set(client.id, userId);
+
+      // 记录用户的socket连接
+      if (!this.userSockets.has(userId)) {
+        this.userSockets.set(userId, new Set());
+      }
+      this.userSockets.get(userId)?.add(client.id);
+
+      this.logger.log(`Client connected: ${client.id}, userId: ${userId}`);
+    } catch (error) {
+      this.logger.error(`Connection error: ${error.message}`);
+      client.disconnect();
+    }
+  }
+
+  handleDisconnect(client: AuthenticatedSocket) {
+    const userId = this.socketUsers.get(client.id);
+    if (userId) {
+      this.userSockets.get(userId)?.delete(client.id);
+      if (this.userSockets.get(userId)?.size === 0) {
+        this.userSockets.delete(userId);
+      }
+    }
+    this.socketUsers.delete(client.id);
+    this.logger.log(`Client disconnected: ${client.id}`);
+  }
+
+  // 加入Topic房间
+  @SubscribeMessage('topic:join')
+  async handleJoinTopic(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { topicId: string },
+  ) {
+    const { topicId } = data;
+    const userId = client.userId;
+
+    if (!userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      // 验证用户是否有权限访问该Topic
+      await this.aiGroupService.getTopicById(topicId, userId);
+
+      // 离开之前的Topic房间
+      if (client.currentTopicId) {
+        client.leave(`topic:${client.currentTopicId}`);
+      }
+
+      // 加入新的Topic房间
+      client.join(`topic:${topicId}`);
+      client.currentTopicId = topicId;
+
+      // 通知其他成员有人加入
+      client.to(`topic:${topicId}`).emit('member:online', { userId });
+
+      this.logger.log(`User ${userId} joined topic ${topicId}`);
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Join topic error: ${error.message}`);
+      return { error: error.message };
+    }
+  }
+
+  // 离开Topic房间
+  @SubscribeMessage('topic:leave')
+  async handleLeaveTopic(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { topicId: string },
+  ) {
+    const { topicId } = data;
+    const userId = client.userId;
+
+    if (client.currentTopicId === topicId) {
+      client.leave(`topic:${topicId}`);
+      client.currentTopicId = undefined;
+
+      // 通知其他成员有人离开
+      client.to(`topic:${topicId}`).emit('member:offline', { userId });
+
+      this.logger.log(`User ${userId} left topic ${topicId}`);
+    }
+
+    return { success: true };
+  }
+
+  // 发送消息
+  @SubscribeMessage('message:send')
+  async handleSendMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { topicId: string } & SendMessageDto,
+  ) {
+    const { topicId, ...messageDto } = data;
+    const userId = client.userId;
+
+    if (!userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const message = await this.aiGroupService.sendMessage(topicId, userId, messageDto);
+
+      // 广播消息给Topic内所有成员
+      this.server.to(`topic:${topicId}`).emit('message:new', message);
+
+      // 检查是否有@AI的mention，如果有，触发AI响应
+      const aiMentions = messageDto.mentions?.filter((m) => m.mentionType === 'AI');
+      if (aiMentions && aiMentions.length > 0) {
+        for (const mention of aiMentions) {
+          if (mention.aiMemberId) {
+            // 通知正在输入
+            this.server.to(`topic:${topicId}`).emit('ai:typing', {
+              topicId,
+              aiMemberId: mention.aiMemberId,
+            });
+
+            // 生成AI响应（异步）
+            this.generateAndBroadcastAIResponse(topicId, userId, mention.aiMemberId);
+          }
+        }
+      }
+
+      return { success: true, message };
+    } catch (error) {
+      this.logger.error(`Send message error: ${error.message}`);
+      return { error: error.message };
+    }
+  }
+
+  // 正在输入提示
+  @SubscribeMessage('message:typing')
+  async handleTyping(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { topicId: string },
+  ) {
+    const { topicId } = data;
+    const userId = client.userId;
+
+    if (!userId) return;
+
+    client.to(`topic:${topicId}`).emit('member:typing', { userId });
+  }
+
+  // 标记消息已读
+  @SubscribeMessage('message:read')
+  async handleReadMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { topicId: string; messageId: string },
+  ) {
+    const { topicId, messageId } = data;
+    const userId = client.userId;
+
+    if (!userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      await this.aiGroupService.markAsRead(topicId, userId, messageId);
+      return { success: true };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // 添加表情反应
+  @SubscribeMessage('reaction:add')
+  async handleAddReaction(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { topicId: string; messageId: string; emoji: string },
+  ) {
+    const { topicId, messageId, emoji } = data;
+    const userId = client.userId;
+
+    if (!userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      await this.aiGroupService.addReaction(topicId, userId, messageId, emoji);
+
+      // 广播反应事件
+      this.server.to(`topic:${topicId}`).emit('reaction:add', {
+        messageId,
+        userId,
+        emoji,
+      });
+
+      return { success: true };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // 移除表情反应
+  @SubscribeMessage('reaction:remove')
+  async handleRemoveReaction(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { topicId: string; messageId: string; emoji: string },
+  ) {
+    const { topicId, messageId, emoji } = data;
+    const userId = client.userId;
+
+    if (!userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      await this.aiGroupService.removeReaction(topicId, userId, messageId, emoji);
+
+      // 广播反应移除事件
+      this.server.to(`topic:${topicId}`).emit('reaction:remove', {
+        messageId,
+        userId,
+        emoji,
+      });
+
+      return { success: true };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // ==================== Helper Methods ====================
+
+  // 生成并广播AI响应
+  private async generateAndBroadcastAIResponse(
+    topicId: string,
+    userId: string,
+    aiMemberId: string,
+  ) {
+    try {
+      const aiMessage = await this.aiGroupService.generateAIResponse(
+        topicId,
+        userId,
+        aiMemberId,
+        [],
+      );
+
+      // 广播AI响应
+      this.server.to(`topic:${topicId}`).emit('ai:response', aiMessage);
+      this.server.to(`topic:${topicId}`).emit('message:new', aiMessage);
+    } catch (error) {
+      this.logger.error(`AI response error: ${error.message}`);
+      this.server.to(`topic:${topicId}`).emit('ai:error', {
+        aiMemberId,
+        error: error.message,
+      });
+    }
+  }
+
+  // 广播消息给指定用户（跨房间）
+  emitToUser(userId: string, event: string, data: any) {
+    const socketIds = this.userSockets.get(userId);
+    if (socketIds) {
+      socketIds.forEach((socketId) => {
+        this.server.to(socketId).emit(event, data);
+      });
+    }
+  }
+
+  // 广播消息给Topic内所有成员
+  emitToTopic(topicId: string, event: string, data: any) {
+    this.server.to(`topic:${topicId}`).emit(event, data);
+  }
+
+  // 获取Topic内在线用户
+  async getOnlineUsersInTopic(topicId: string): Promise<string[]> {
+    const room = this.server.adapter.rooms?.get(`topic:${topicId}`);
+    if (!room) return [];
+
+    const onlineUserIds: string[] = [];
+    room.forEach((socketId) => {
+      const userId = this.socketUsers.get(socketId);
+      if (userId && !onlineUserIds.includes(userId)) {
+        onlineUserIds.push(userId);
+      }
+    });
+
+    return onlineUserIds;
+  }
+}

@@ -525,34 +525,45 @@ Format the summary in a clear, structured manner using markdown.`;
 
         case "google":
         case "gemini":
-          const geminiEndpoint =
-            apiEndpoint ||
-            `https://generativelanguage.googleapis.com/v1beta/models/${modelId || "gemini-pro"}:generateContent?key=${apiKey}`;
           // Check if this is an image generation model
           const isImageModel =
             modelId?.includes("image") || modelId?.includes("imagen");
+
+          // For image models, use a simple text test without image generation
+          // This avoids the cost of generating images just for connection testing
+          const geminiTestPrompt = isImageModel
+            ? "Hello" // Simple prompt for image models
+            : testMessages[0].content;
+
           const geminiConfig: Record<string, unknown> = isImageModel
-            ? {
-                responseModalities: ["TEXT", "IMAGE"],
-              }
+            ? {} // Don't request image generation for connection test
             : {
                 maxOutputTokens: 50,
                 temperature: 0,
               };
+
+          // Build endpoint - use header auth instead of query param for better security
+          const geminiEndpoint =
+            apiEndpoint ||
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelId || "gemini-pro"}:generateContent`;
+
           response = await firstValueFrom(
             this.httpService.post(
               geminiEndpoint,
               {
                 contents: [
                   {
-                    parts: [{ text: testMessages[0].content }],
+                    parts: [{ text: geminiTestPrompt }],
                   },
                 ],
-                generationConfig: geminiConfig,
+                ...(Object.keys(geminiConfig).length > 0
+                  ? { generationConfig: geminiConfig }
+                  : {}),
               },
               {
                 headers: {
                   "Content-Type": "application/json",
+                  "x-goog-api-key": apiKey,
                 },
                 timeout: 30000,
               },

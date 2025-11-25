@@ -167,14 +167,11 @@ export class AiGroupGateway
       // 广播消息给Topic内所有成员
       this.server.to(`topic:${topicId}`).emit("message:new", message);
 
-      // 检查是否有@AI的mention，如果有，触发AI响应
-      const aiMentions = messageDto.mentions?.filter(
-        (m) => m.mentionType === "AI",
-      );
-      if (aiMentions && aiMentions.length > 0) {
-        for (const mention of aiMentions) {
-          if (mention.aiMemberId) {
-            // 通知正在输入
+      // 处理 mentions
+      if (messageDto.mentions && messageDto.mentions.length > 0) {
+        for (const mention of messageDto.mentions) {
+          if (mention.mentionType === "AI" && mention.aiMemberId) {
+            // @AI：通知正在输入并生成响应
             this.server.to(`topic:${topicId}`).emit("ai:typing", {
               topicId,
               aiMemberId: mention.aiMemberId,
@@ -186,6 +183,25 @@ export class AiGroupGateway
               userId,
               mention.aiMemberId,
             );
+          } else if (
+            mention.mentionType === "USER" &&
+            mention.userId &&
+            message
+          ) {
+            // @真人用户：向被@用户发送通知（即使他们不在房间内）
+            this.logger.log(
+              `User ${userId} mentioned user ${mention.userId} in topic ${topicId}`,
+            );
+            this.emitToUser(mention.userId, "mention:new", {
+              topicId,
+              messageId: message.id,
+              fromUserId: userId,
+              content:
+                message.content.length > 100
+                  ? message.content.substring(0, 100) + "..."
+                  : message.content,
+              timestamp: message.createdAt,
+            });
           }
         }
       }

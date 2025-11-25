@@ -9,9 +9,11 @@ import {
   Query,
   UseGuards,
   Request,
+  Logger,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { AiGroupService } from "./ai-group.service";
+import { AiGroupGateway } from "./ai-group.gateway";
 import {
   CreateTopicDto,
   UpdateTopicDto,
@@ -24,12 +26,17 @@ import {
   AddResourceDto,
   GenerateSummaryDto,
 } from "./dto";
-import { TopicType } from "@prisma/client";
+import { TopicType, MentionType } from "@prisma/client";
 
 @Controller("topics")
 @UseGuards(JwtAuthGuard)
 export class AiGroupController {
-  constructor(private readonly aiGroupService: AiGroupService) {}
+  private readonly logger = new Logger(AiGroupController.name);
+
+  constructor(
+    private readonly aiGroupService: AiGroupService,
+    private readonly aiGroupGateway: AiGroupGateway,
+  ) {}
 
   // ==================== Topic CRUD ====================
 
@@ -188,7 +195,84 @@ export class AiGroupController {
     @Param("topicId") topicId: string,
     @Body() dto: SendMessageDto,
   ) {
-    return this.aiGroupService.sendMessage(topicId, req.user.id, dto);
+    const message = await this.aiGroupService.sendMessage(
+      topicId,
+      req.user.id,
+      dto,
+    );
+
+    if (!message) {
+      return null;
+    }
+
+    // 通过 WebSocket 广播新消息给所有房间成员
+    this.logger.log(`Broadcasting message ${message.id} to topic ${topicId}`);
+    this.aiGroupGateway.emitToTopic(topicId, "message:new", message);
+
+    // 处理 mentions - 向被@的用户发送通知
+    if (dto.mentions && dto.mentions.length > 0) {
+      for (const mention of dto.mentions) {
+        if (mention.mentionType === MentionType.AI && mention.aiMemberId) {
+          // @AI：通知正在输入并生成响应
+          this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
+            topicId,
+            aiMemberId: mention.aiMemberId,
+          });
+
+          // 生成AI响应（异步）
+          this.generateAIResponseInBackground(
+            topicId,
+            req.user.id,
+            mention.aiMemberId,
+          );
+        } else if (mention.mentionType === MentionType.USER && mention.userId) {
+          // @真人用户：向被@用户发送通知
+          this.logger.log(
+            `User ${req.user.id} mentioned user ${mention.userId} in topic ${topicId}`,
+          );
+          this.aiGroupGateway.emitToUser(mention.userId, "mention:new", {
+            topicId,
+            messageId: message.id,
+            fromUserId: req.user.id,
+            content:
+              message.content.length > 100
+                ? message.content.substring(0, 100) + "..."
+                : message.content,
+            timestamp: message.createdAt,
+          });
+        }
+      }
+    }
+
+    return message;
+  }
+
+  // 后台生成 AI 响应
+  private async generateAIResponseInBackground(
+    topicId: string,
+    userId: string,
+    aiMemberId: string,
+  ) {
+    try {
+      const aiMessage = await this.aiGroupService.generateAIResponse(
+        topicId,
+        userId,
+        aiMemberId,
+        [],
+      );
+
+      // 广播AI响应
+      this.aiGroupGateway.emitToTopic(topicId, "ai:response", aiMessage);
+      this.aiGroupGateway.emitToTopic(topicId, "message:new", aiMessage);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`AI response error: ${errorMessage}`);
+      this.aiGroupGateway.emitToTopic(topicId, "ai:error", {
+        aiMemberId,
+        error: errorMessage,
+      });
+    }
   }
 
   @Delete(":topicId/messages/:messageId")

@@ -26,10 +26,29 @@ export class NotesService {
    * 创建笔记
    */
   async createNote(userId: string, dto: CreateNoteDto) {
+    // CRITICAL FIX: Validate resourceId if provided to prevent FOREIGN_KEY_VIOLATION
+    // Empty strings or invalid UUIDs should be treated as null
+    let resourceId: string | undefined = dto.resourceId;
+
+    if (resourceId) {
+      // Check if resourceId is a valid UUID and exists
+      const resource = await this.prisma.resource.findUnique({
+        where: { id: resourceId },
+        select: { id: true },
+      });
+
+      if (!resource) {
+        this.logger.warn(
+          `Invalid resourceId ${resourceId} provided for note creation, creating standalone note`,
+        );
+        resourceId = undefined; // Create standalone note instead of failing
+      }
+    }
+
     const note = await this.prisma.note.create({
       data: {
         userId,
-        resourceId: dto.resourceId,
+        resourceId,
         title: dto.title,
         content: dto.content,
         source: dto.source,
@@ -38,7 +57,7 @@ export class NotesService {
         isPublic: dto.isPublic ?? false,
       },
       include: {
-        resource: dto.resourceId
+        resource: resourceId
           ? {
               select: {
                 id: true,
@@ -51,7 +70,7 @@ export class NotesService {
     });
 
     this.logger.log(
-      `Note created ${dto.resourceId ? `for resource ${dto.resourceId}` : "(standalone)"} by user ${userId}`,
+      `Note created ${resourceId ? `for resource ${resourceId}` : "(standalone)"} by user ${userId}`,
     );
 
     return note;

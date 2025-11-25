@@ -299,6 +299,9 @@ export class AdminService {
     temperature?: number;
     description?: string;
   }) {
+    // Trim apiKey to remove any whitespace from copy-paste
+    const apiKey = data.apiKey?.trim() || null;
+
     const model = await this.prisma.aIModel.create({
       data: {
         name: data.name,
@@ -308,7 +311,7 @@ export class AdminService {
         icon: data.icon,
         color: data.color,
         apiEndpoint: data.apiEndpoint,
-        apiKey: data.apiKey,
+        apiKey: apiKey,
         maxTokens: data.maxTokens ?? 4096,
         temperature: data.temperature ?? 0.7,
         description: data.description,
@@ -354,12 +357,15 @@ export class AdminService {
     }
 
     // 如果apiKey为空字符串，设为null；如果是"***configured***"则保持不变
+    // 同时对apiKey进行trim处理，防止复制时带入空格
     let apiKeyUpdate = undefined;
     if (data.apiKey !== undefined) {
-      if (data.apiKey === "" || data.apiKey === null) {
+      const trimmedKey =
+        typeof data.apiKey === "string" ? data.apiKey.trim() : data.apiKey;
+      if (trimmedKey === "" || trimmedKey === null) {
         apiKeyUpdate = null;
-      } else if (data.apiKey !== "***configured***") {
-        apiKeyUpdate = data.apiKey;
+      } else if (trimmedKey !== "***configured***") {
+        apiKeyUpdate = trimmedKey;
       }
     }
 

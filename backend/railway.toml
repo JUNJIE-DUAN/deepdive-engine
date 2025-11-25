@@ -2,11 +2,22 @@
 builder = "nixpacks"
 
 [build.nixpacksPlan.phases.setup]
-aptPkgs = ["bzip2"]
+nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake"]
+aptPkgs = [
+  "bzip2",
+  "libcairo2-dev",
+  "libjpeg-dev",
+  "libpango1.0-dev",
+  "libgif-dev",
+  "openssl",
+  "libssl-dev",
+  "build-essential",
+  "pkg-config"
+]
 
 [build.nixpacksPlan]
 phases.install.cmds = ["npm ci --legacy-peer-deps"]
-phases.build.cmds = ["npm run build", "npx prisma generate"]
+phases.build.cmds = ["npx prisma generate", "npm run build"]
 
 [deploy]
 startCommand = "sh -c 'set -e; echo \"🚀 Starting deployment...\"; echo \"🔍 Running diagnostics...\"; npm run diagnose || echo \"⚠️  Diagnostics failed, continuing...\"; echo \"📦 Running migrations...\"; npm run deploy || exit 1; echo \"✅ Deploy OK, starting server...\"; exec npm run start:prod'"

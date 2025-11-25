@@ -1,5 +1,16 @@
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake"]
+aptPkgs = [
+  "bzip2",
+  "libcairo2-dev",
+  "libjpeg-dev",
+  "libpango1.0-dev",
+  "libgif-dev",
+  "openssl",
+  "libssl-dev",
+  "build-essential",
+  "pkg-config"
+]
 
 [phases.install]
 cmds = ["npm install --legacy-peer-deps"]

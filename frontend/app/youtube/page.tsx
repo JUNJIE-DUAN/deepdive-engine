@@ -98,6 +98,17 @@ function YouTubeTLDWContent() {
   // Key moments states
   const [keyMoments, setKeyMoments] = useState<KeyMoment[]>([]);
 
+  // Context menu states
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    message: AIMessage | null;
+  }>({ visible: false, x: 0, y: 0, message: null });
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const activeSegmentRef = useRef<HTMLDivElement>(null);
@@ -342,6 +353,70 @@ function YouTubeTLDWContent() {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [aiMessages]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () =>
+      setContextMenu({ visible: false, x: 0, y: 0, message: null });
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  // Handle right-click on message
+  const handleMessageContextMenu = (
+    e: React.MouseEvent,
+    message: AIMessage
+  ) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      message,
+    });
+  };
+
+  // Save message to notes
+  const saveToNotes = async () => {
+    if (!contextMenu.message || !noteTitle.trim()) return;
+
+    setSavingNote(true);
+    try {
+      const response = await fetch(`${config.apiUrl}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: noteTitle,
+          content: contextMenu.message.content,
+          resourceId: null, // Could link to video if we have a resource ID
+          tags: ['ai-chat', 'youtube'],
+        }),
+      });
+
+      if (response.ok) {
+        setShowNotesModal(false);
+        setNoteTitle('');
+        setContextMenu({ visible: false, x: 0, y: 0, message: null });
+        // Show success notification (could add toast here)
+        alert('Note saved successfully!');
+      }
+    } catch (error) {
+      console.error('Failed to save note:', error);
+      alert('Failed to save note');
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // Copy message to clipboard
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setContextMenu({ visible: false, x: 0, y: 0, message: null });
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
 
   // Send AI message with video context
   const sendAIMessage = async () => {
@@ -962,11 +1037,9 @@ function YouTubeTLDWContent() {
                                   ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
                                   : 'bg-gray-100 text-gray-800'
                               }`}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                // TODO: Add context menu to add to notes
-                                console.log('Right-click detected on message');
-                              }}
+                              onContextMenu={(e) =>
+                                handleMessageContextMenu(e, msg)
+                              }
                             >
                               <div className="prose-sm prose max-w-none text-sm leading-relaxed [&>*]:my-0.5 [&>ol]:my-0.5 [&>p]:my-0.5 [&>ul]:my-0.5">
                                 <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -1189,6 +1262,113 @@ function YouTubeTLDWContent() {
           </svg>
         </button>
       </main>
+
+      {/* Context Menu */}
+      {contextMenu.visible && contextMenu.message && (
+        <div
+          className="fixed z-50 min-w-[180px] rounded-lg border border-gray-200 bg-white py-1 shadow-xl"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              setShowNotesModal(true);
+              setNoteTitle(
+                `AI Response - ${new Date(contextMenu.message!.timestamp).toLocaleDateString()}`
+              );
+            }}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            Add to Notes
+          </button>
+          <button
+            onClick={() => copyToClipboard(contextMenu.message!.content)}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+            Copy to Clipboard
+          </button>
+        </div>
+      )}
+
+      {/* Save to Notes Modal */}
+      {showNotesModal && contextMenu.message && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">
+              Save to Notes
+            </h3>
+
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Title
+              </label>
+              <input
+                type="text"
+                value={noteTitle}
+                onChange={(e) => setNoteTitle(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                placeholder="Enter note title..."
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Content Preview
+              </label>
+              <div className="max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="prose-sm prose max-w-none text-sm text-gray-700">
+                  <ReactMarkdown>{contextMenu.message.content}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowNotesModal(false);
+                  setNoteTitle('');
+                }}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveToNotes}
+                disabled={savingNote || !noteTitle.trim()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {savingNote ? 'Saving...' : 'Save Note'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

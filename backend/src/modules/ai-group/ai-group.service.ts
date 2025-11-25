@@ -1237,25 +1237,60 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
 
     try {
       let result;
-      if (aiModelConfig && aiModelConfig.apiKey) {
-        // Use database-configured API key
+
+      // Determine API key: database first, then environment variable
+      let apiKey: string | null = null;
+      let apiKeySource = "none";
+
+      if (aiModelConfig?.apiKey) {
+        apiKey = aiModelConfig.apiKey;
+        apiKeySource = "database";
+      } else {
+        // Try to get API key from environment variables
+        const envKeyMap: Record<string, string> = {
+          grok: "XAI_API_KEY",
+          "gpt-4": "OPENAI_API_KEY",
+          claude: "ANTHROPIC_API_KEY",
+          gemini: "GOOGLE_API_KEY",
+        };
+        const envKeyName = envKeyMap[aiMember.aiModel.toLowerCase()];
+        if (envKeyName && process.env[envKeyName]) {
+          apiKey = process.env[envKeyName] as string;
+          apiKeySource = `env:${envKeyName}`;
+        }
+      }
+
+      this.logger.log(
+        `API key source for ${aiMember.aiModel}: ${apiKeySource}, hasKey=${!!apiKey}`,
+      );
+
+      if (apiKey) {
+        // Use the API key (from database or environment)
+        const provider = aiModelConfig?.provider || aiMember.aiModel;
+        const modelId =
+          aiModelConfig?.modelId || this.getDefaultModelId(aiMember.aiModel);
+        const apiEndpoint =
+          aiModelConfig?.apiEndpoint ||
+          this.getDefaultEndpoint(aiMember.aiModel);
+
         this.logger.log(
-          `Using database-configured API key for ${aiModelConfig.provider}`,
+          `Calling AI API: provider=${provider}, modelId=${modelId}`,
         );
+
         result = await this.aiChatService.generateChatCompletionWithKey({
-          provider: aiModelConfig.provider,
-          modelId: aiModelConfig.modelId,
-          apiKey: aiModelConfig.apiKey,
-          apiEndpoint: aiModelConfig.apiEndpoint || undefined,
+          provider,
+          modelId,
+          apiKey,
+          apiEndpoint,
           systemPrompt,
           messages: chatMessages,
           maxTokens: 1024,
-          temperature: aiModelConfig.temperature || 0.7,
+          temperature: aiModelConfig?.temperature || 0.7,
         });
       } else {
-        // Fall back to environment variable configuration
+        // No API key available - will return mock response
         this.logger.warn(
-          `No database config found for ${aiMember.aiModel}, falling back to env vars`,
+          `No API key found for ${aiMember.aiModel} (checked database and env vars). Configure API key in Admin panel or set environment variable.`,
         );
         result = await this.aiChatService.generateChatCompletion({
           model: aiMember.aiModel,
@@ -1478,5 +1513,33 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     });
 
     return users;
+  }
+
+  // ==================== AI Model Defaults ====================
+
+  /**
+   * Get default model ID for a given AI model name
+   */
+  private getDefaultModelId(modelName: string): string {
+    const defaults: Record<string, string> = {
+      grok: "grok-3-latest",
+      "gpt-4": "gpt-4-turbo",
+      claude: "claude-sonnet-4-20250514",
+      gemini: "gemini-2.0-flash",
+    };
+    return defaults[modelName.toLowerCase()] || modelName;
+  }
+
+  /**
+   * Get default API endpoint for a given AI model name
+   */
+  private getDefaultEndpoint(modelName: string): string {
+    const defaults: Record<string, string> = {
+      grok: "https://api.x.ai/v1/chat/completions",
+      "gpt-4": "https://api.openai.com/v1/chat/completions",
+      claude: "https://api.anthropic.com/v1/messages",
+      gemini: "https://generativelanguage.googleapis.com/v1beta/models",
+    };
+    return defaults[modelName.toLowerCase()] || "";
   }
 }

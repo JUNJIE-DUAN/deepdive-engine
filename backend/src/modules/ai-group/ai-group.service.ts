@@ -1051,6 +1051,9 @@ ${messagesForSummary
     }
 
     // 获取上下文消息
+    // CRITICAL FIX: Enforce maximum context window to prevent overflow
+    // Even if aiMember.contextWindow is larger, limit to 15 messages for safety
+    const MAX_CONTEXT_MESSAGES = 15;
     const contextMessages = await this.prisma.topicMessage.findMany({
       where: {
         topicId,
@@ -1061,7 +1064,7 @@ ${messagesForSummary
         aiMember: { select: { displayName: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: aiMember.contextWindow,
+      take: Math.min(aiMember.contextWindow || 20, MAX_CONTEXT_MESSAGES),
     });
 
     // 构建Prompt
@@ -1071,6 +1074,7 @@ ${messagesForSummary
     });
 
     // 获取Topic关联的资源内容作为上下文
+    // CRITICAL FIX: Do NOT fetch full content field to avoid context overflow
     const topicResources = await this.prisma.topicResource.findMany({
       where: { topicId },
       include: {
@@ -1078,13 +1082,13 @@ ${messagesForSummary
           select: {
             title: true,
             abstract: true,
-            content: true,
+            // content: true, // REMOVED - can be gigabytes, causes context overflow
             sourceUrl: true,
             type: true,
           },
         },
       },
-      take: 10, // 限制资源数量避免上下文过长
+      take: 5, // Reduced from 10 to further limit context size
       orderBy: { createdAt: "desc" },
     });
 
@@ -1097,11 +1101,11 @@ ${messagesForSummary
           const r = tr.resource!;
           let summary = `- **${r.title || tr.name}**`;
           if (r.sourceUrl) summary += ` (${r.sourceUrl})`;
-          if (r.abstract) summary += `\n  ${r.abstract}`;
-          // 包含部分内容（截断以避免过长）
-          if (r.content) {
-            const contentPreview = r.content.substring(0, 500);
-            summary += `\n  Content: ${contentPreview}${r.content.length > 500 ? "..." : ""}`;
+          // Use abstract only - it's designed to be a short summary
+          if (r.abstract) {
+            // Limit abstract to 300 chars to be extra safe
+            const abstractPreview = r.abstract.substring(0, 300);
+            summary += `\n  ${abstractPreview}${r.abstract.length > 300 ? "..." : ""}`;
           }
           return summary;
         })
@@ -1123,11 +1127,13 @@ ${messagesForSummary
     // 1. 从最近的用户消息中提取所有URL
     const allUrls: string[] = [];
     for (const msg of recentUserMessages) {
-      const urls = this.searchService.extractUrls(msg.content);
+      // CRITICAL FIX: Truncate message content before URL extraction to prevent processing massive messages
+      const messageSample = msg.content.substring(0, 10000);
+      const urls = this.searchService.extractUrls(messageSample);
       allUrls.push(...urls);
     }
-    // 去重
-    const uniqueUrls = [...new Set(allUrls)];
+    // 去重并限制URL数量
+    const uniqueUrls = [...new Set(allUrls)].slice(0, 2); // Reduced from 3 to 2 URLs max
 
     if (uniqueUrls.length > 0) {
       this.logger.log(
@@ -1173,15 +1179,28 @@ ${topic?.description ? `Group description: ${topic.description}` : ""}${resource
 Respond naturally and helpfully to the discussion. When relevant, reference the shared materials, fetched web content, and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
 
     // Build chat messages for AI service
+    // CRITICAL FIX: Truncate message content to prevent context overflow
+    const MAX_MESSAGE_LENGTH = 4000; // Max chars per message (~1000 tokens)
     const chatMessages: ChatMessage[] = contextMessages.reverse().map((m) => {
       const senderName = m.sender
         ? m.sender.fullName || m.sender.username || "User"
         : m.aiMember?.displayName || "AI";
       const isAI = !!m.aiMemberId;
 
+      // Truncate content if too long
+      let content = m.content;
+      if (content.length > MAX_MESSAGE_LENGTH) {
+        content =
+          content.substring(0, MAX_MESSAGE_LENGTH) +
+          "\n\n[Message truncated due to length...]";
+        this.logger.warn(
+          `Message ${m.id} truncated from ${m.content.length} to ${MAX_MESSAGE_LENGTH} chars`,
+        );
+      }
+
       return {
         role: isAI ? "assistant" : "user",
-        content: m.content,
+        content,
         name: senderName,
       } as ChatMessage;
     });

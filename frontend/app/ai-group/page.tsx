@@ -10,8 +10,14 @@ import Sidebar from '@/components/layout/Sidebar';
 export default function AIGroupPage() {
   const router = useRouter();
   const { user, accessToken, isLoading: authLoading } = useAuth();
-  const { topics, isLoadingTopics, fetchTopics, createTopic } =
-    useAiGroupStore();
+  const {
+    topics,
+    isLoadingTopics,
+    fetchTopics,
+    createTopic,
+    deleteTopic,
+    updateTopic,
+  } = useAiGroupStore();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,7 +181,25 @@ export default function AIGroupPage() {
                 <TopicCard
                   key={topic.id}
                   topic={topic}
+                  currentUserId={user?.id}
                   onClick={() => router.push(`/ai-group/${topic.id}`)}
+                  onEdit={async (topic) => {
+                    const newName = prompt('Enter new topic name:', topic.name);
+                    if (newName && newName !== topic.name) {
+                      await updateTopic(topic.id, { name: newName });
+                      await fetchTopics();
+                    }
+                  }}
+                  onDelete={async (topicId) => {
+                    if (
+                      confirm(
+                        'Are you sure you want to delete this topic? This action cannot be undone.'
+                      )
+                    ) {
+                      await deleteTopic(topicId);
+                      await fetchTopics();
+                    }
+                  }}
                 />
               ))}
 
@@ -222,7 +246,19 @@ export default function AIGroupPage() {
 }
 
 // Topic Card Component
-function TopicCard({ topic, onClick }: { topic: Topic; onClick: () => void }) {
+function TopicCard({
+  topic,
+  currentUserId,
+  onClick,
+  onEdit,
+  onDelete,
+}: {
+  topic: Topic;
+  currentUserId?: string;
+  onClick: () => void;
+  onEdit: (topic: Topic) => void;
+  onDelete: (topicId: string) => void;
+}) {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -238,116 +274,169 @@ function TopicCard({ topic, onClick }: { topic: Topic; onClick: () => void }) {
     return date.toLocaleDateString();
   };
 
-  return (
-    <div
-      onClick={onClick}
-      className="group cursor-pointer rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
-    >
-      {/* Avatar */}
-      <div className="flex items-start justify-between">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 text-2xl">
-          {topic.avatar || '💬'}
-        </div>
-        {topic.unreadCount && topic.unreadCount > 0 && (
-          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-2 text-xs font-semibold text-white">
-            {topic.unreadCount > 99 ? '99+' : topic.unreadCount}
-          </span>
-        )}
-      </div>
+  // Check if current user is the creator (owner)
+  const isOwner = currentUserId === topic.createdById;
 
-      {/* Title & Description */}
-      <h3 className="mt-3 truncate text-base font-semibold text-gray-900 group-hover:text-blue-600">
-        {topic.name}
-      </h3>
-      {topic.description && (
-        <p className="mt-1 line-clamp-2 text-sm text-gray-500">
-          {topic.description}
-        </p>
+  return (
+    <div className="group relative cursor-pointer rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+      {/* Action Buttons - only show for owner */}
+      {isOwner && (
+        <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(topic);
+            }}
+            className="rounded-lg bg-white p-1.5 text-gray-400 shadow-sm hover:bg-gray-50 hover:text-blue-600"
+            title="Edit topic"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(topic.id);
+            }}
+            className="rounded-lg bg-white p-1.5 text-gray-400 shadow-sm hover:bg-red-50 hover:text-red-600"
+            title="Delete topic"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+        </div>
       )}
 
-      {/* Stats */}
-      <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
-          </svg>
-          {topic.memberCount}
-        </span>
-        <span className="flex items-center gap-1">
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
-          {topic.aiMemberCount} AI
-        </span>
-        <span className="ml-auto">{formatTime(topic.updatedAt)}</span>
-      </div>
-
-      {/* Member Avatars */}
-      <div className="mt-3 flex items-center">
-        <div className="flex -space-x-2">
-          {topic.members.slice(0, 4).map((member, idx) => (
-            <div
-              key={member.id}
-              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-xs font-medium text-gray-600"
-              title={member.user.fullName || member.user.username || 'User'}
-            >
-              {member.user.avatarUrl ? (
-                <img
-                  src={member.user.avatarUrl}
-                  alt=""
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
-                (member.user.fullName ||
-                  member.user.username ||
-                  'U')[0].toUpperCase()
-              )}
-            </div>
-          ))}
-          {topic.memberCount > 4 && (
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-100 text-xs font-medium text-gray-500">
-              +{topic.memberCount - 4}
-            </div>
+      {/* Card Content */}
+      <div onClick={onClick}>
+        {/* Avatar */}
+        <div className="flex items-start justify-between">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 text-2xl">
+            {topic.avatar || '💬'}
+          </div>
+          {topic.unreadCount && topic.unreadCount > 0 && (
+            <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-2 text-xs font-semibold text-white">
+              {topic.unreadCount > 99 ? '99+' : topic.unreadCount}
+            </span>
           )}
         </div>
 
-        {/* AI Avatars */}
-        {topic.aiMembers.length > 0 && (
-          <>
-            <div className="mx-2 h-4 w-px bg-gray-200" />
-            <div className="flex -space-x-2">
-              {topic.aiMembers.slice(0, 2).map((ai) => (
-                <div
-                  key={ai.id}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-green-100 to-blue-100 text-xs"
-                  title={ai.displayName}
-                >
-                  🤖
-                </div>
-              ))}
-            </div>
-          </>
+        {/* Title & Description */}
+        <h3 className="mt-3 truncate text-base font-semibold text-gray-900 group-hover:text-blue-600">
+          {topic.name}
+        </h3>
+        {topic.description && (
+          <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+            {topic.description}
+          </p>
         )}
+
+        {/* Stats */}
+        <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
+          <span className="flex items-center gap-1">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            {topic.memberCount}
+          </span>
+          <span className="flex items-center gap-1">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            {topic.aiMemberCount} AI
+          </span>
+          <span className="ml-auto">{formatTime(topic.updatedAt)}</span>
+        </div>
+
+        {/* Member Avatars */}
+        <div className="mt-3 flex items-center">
+          <div className="flex -space-x-2">
+            {topic.members.slice(0, 4).map((member, idx) => (
+              <div
+                key={member.id}
+                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-xs font-medium text-gray-600"
+                title={member.user.fullName || member.user.username || 'User'}
+              >
+                {member.user.avatarUrl ? (
+                  <img
+                    src={member.user.avatarUrl}
+                    alt=""
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  (member.user.fullName ||
+                    member.user.username ||
+                    'U')[0].toUpperCase()
+                )}
+              </div>
+            ))}
+            {topic.memberCount > 4 && (
+              <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-100 text-xs font-medium text-gray-500">
+                +{topic.memberCount - 4}
+              </div>
+            )}
+          </div>
+
+          {/* AI Avatars */}
+          {topic.aiMembers.length > 0 && (
+            <>
+              <div className="mx-2 h-4 w-px bg-gray-200" />
+              <div className="flex -space-x-2">
+                {topic.aiMembers.slice(0, 2).map((ai) => (
+                  <div
+                    key={ai.id}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-green-100 to-blue-100 text-xs"
+                    title={ai.displayName}
+                  >
+                    🤖
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

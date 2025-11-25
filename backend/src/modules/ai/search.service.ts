@@ -310,8 +310,9 @@ export class SearchService {
         .trim();
 
       // Limit content length for AI context
-      if (content.length > 8000) {
-        content = content.substring(0, 8000) + "...";
+      // CRITICAL FIX: Reduced from 8000 to 3000 to prevent context overflow
+      if (content.length > 3000) {
+        content = content.substring(0, 3000) + "...";
       }
 
       this.logger.log(

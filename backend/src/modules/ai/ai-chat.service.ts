@@ -836,9 +836,28 @@ Format the summary in a clear, structured manner using markdown.`;
     maxTokens: number,
     temperature: number,
   ): Promise<ChatCompletionResult> {
-    const url =
-      apiEndpoint ||
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+    // Build the correct Gemini API URL
+    // If apiEndpoint is the base URL like "https://generativelanguage.googleapis.com/v1beta/models"
+    // we need to append the model ID and action
+    let url: string;
+    if (apiEndpoint) {
+      // Check if apiEndpoint already includes the model and action
+      if (apiEndpoint.includes(":generateContent")) {
+        url = apiEndpoint.includes("key=")
+          ? apiEndpoint
+          : `${apiEndpoint}${apiEndpoint.includes("?") ? "&" : "?"}key=${apiKey}`;
+      } else {
+        // Append model ID and action
+        const baseUrl = apiEndpoint.endsWith("/")
+          ? apiEndpoint.slice(0, -1)
+          : apiEndpoint;
+        url = `${baseUrl}/${modelId}:generateContent?key=${apiKey}`;
+      }
+    } else {
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+    }
+
+    this.logger.log(`Calling Gemini API: ${url.replace(apiKey, "***")}`);
 
     // Extract system message for system instruction
     const systemMessage = messages.find((m) => m.role === "system");

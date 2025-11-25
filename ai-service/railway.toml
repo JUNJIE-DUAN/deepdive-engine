@@ -1,5 +1,5 @@
 [build]
-builder = "nixpacks"
+# Use Dockerfile for build (default behavior when Dockerfile exists)
 
 [deploy]
 healthcheckPath = "/"

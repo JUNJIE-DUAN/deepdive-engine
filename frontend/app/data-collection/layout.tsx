@@ -4,9 +4,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import {
   LayoutDashboard,
   Database,
-  Calendar,
   Activity,
-  Shield,
   History,
   Users,
   Bot,
@@ -22,59 +20,43 @@ export default function DataCollectionLayout({
   const pathname = usePathname();
 
   const tabs = [
+    // 核心管理
     {
       name: 'Dashboard',
       href: '/data-collection/dashboard',
       icon: LayoutDashboard,
-      description: 'Overview and statistics',
+      description: 'System overview and key metrics',
     },
     {
       name: 'Users',
       href: '/data-collection/users',
       icon: Users,
-      description: 'User management',
+      description: 'User accounts and permissions',
     },
     {
-      name: 'Config',
+      name: 'Collection',
       href: '/data-collection/config',
       icon: Database,
-      description: 'Configure data sources',
-    },
-    {
-      name: 'Whitelists',
-      href: '/data-collection/whitelists',
-      icon: Shield,
-      description: 'Manage domain whitelists',
-    },
-    {
-      name: 'Scheduler',
-      href: '/data-collection/scheduler',
-      icon: Calendar,
-      description: 'Collection schedules',
-    },
-    {
-      name: 'Monitor',
-      href: '/data-collection/monitor',
-      icon: Activity,
-      description: 'Real-time monitoring',
-    },
-    {
-      name: 'Quality',
-      href: '/data-collection/quality',
-      icon: Shield,
-      description: 'Data quality management',
-    },
-    {
-      name: 'History',
-      href: '/data-collection/history',
-      icon: History,
-      description: 'Collection history',
+      description: 'Data sources and collection rules',
     },
     {
       name: 'AI Models',
       href: '/data-collection/ai-models',
       icon: Bot,
-      description: 'Configure AI models and API keys',
+      description: 'AI model configuration and API keys',
+    },
+    // 运维监控
+    {
+      name: 'Monitor',
+      href: '/data-collection/monitor',
+      icon: Activity,
+      description: 'Real-time system monitoring',
+    },
+    {
+      name: 'History',
+      href: '/data-collection/history',
+      icon: History,
+      description: 'Task execution history',
     },
   ];
 

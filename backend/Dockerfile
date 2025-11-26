@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     g++ \
     pkg-config \
+    bzip2 \
     libcairo2-dev \
     libpango1.0-dev \
     libjpeg-dev \

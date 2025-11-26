@@ -922,7 +922,7 @@ Format the summary in a clear, structured manner using markdown.`;
 
   /**
    * Helper method to call Gemini API with key
-   * Supports both text and image generation using gemini-2.0-flash-exp
+   * Supports both text and image generation
    */
   private async callGeminiApiWithKey(
     apiKey: string,
@@ -937,12 +937,25 @@ Format the summary in a clear, structured manner using markdown.`;
     const userContent = lastUserMessage?.content?.toLowerCase() || "";
     const isImageRequest = this.isImageGenerationRequest(userContent);
 
-    // Use image generation model if user requests image
-    // gemini-2.0-flash-exp supports native image generation
-    const effectiveModelId = isImageRequest
-      ? "gemini-2.0-flash-exp"
-      : modelId.includes("gemini")
-        ? modelId
+    // Check if the configured model is Imagen (dedicated image generation)
+    const isImagenModel = modelId.toLowerCase().includes("imagen");
+
+    // If using Imagen model for image generation, use dedicated Imagen API
+    if (isImageRequest && isImagenModel) {
+      this.logger.log(`Using Imagen model for image generation: ${modelId}`);
+      return await this.callImagenApi(
+        apiKey,
+        modelId,
+        lastUserMessage?.content || "",
+      );
+    }
+
+    // For text or non-Imagen image requests, use Gemini API
+    // Use the configured model, or fallback to gemini-2.0-flash
+    const effectiveModelId = modelId.includes("gemini")
+      ? modelId
+      : isImageRequest
+        ? "gemini-2.0-flash-exp" // Fallback for image generation if no gemini model configured
         : "gemini-2.0-flash";
 
     // Build the correct Gemini API URL
@@ -1197,6 +1210,96 @@ Format the summary in a clear, structured manner using markdown.`;
       return {
         content: `抱歉，图像生成失败: ${error.response?.data?.error?.message || error.message}\n\n请检查 OpenAI API Key 是否有 DALL-E 3 的访问权限。`,
         model: "dall-e-3",
+        tokensUsed: 0,
+      };
+    }
+  }
+
+  /**
+   * Call Google Imagen API for image generation
+   * Imagen 3 produces high-quality images
+   */
+  private async callImagenApi(
+    apiKey: string,
+    modelId: string,
+    prompt: string,
+  ): Promise<ChatCompletionResult> {
+    // Determine the correct Imagen model name
+    // Common Imagen models: imagen-3.0-generate-001, imagen-3.0-fast-generate-001
+    const imagenModel = modelId.includes("imagen")
+      ? modelId
+      : "imagen-3.0-generate-001";
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${imagenModel}:generateImages?key=${apiKey}`;
+
+    this.logger.log(`[Imagen] Calling API: ${url.replace(apiKey, "***")}`);
+    this.logger.log(
+      `[Imagen] Model: ${imagenModel}, Prompt length: ${prompt.length}`,
+    );
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          url,
+          {
+            prompt: prompt,
+            config: {
+              numberOfImages: 1,
+              aspectRatio: "1:1",
+              outputMimeType: "image/png",
+            },
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            timeout: 120000, // 2 minutes for image generation
+          },
+        ),
+      );
+
+      const data = response.data;
+      this.logger.log(
+        `[Imagen] Response received, has images: ${!!data.generatedImages}`,
+      );
+
+      if (data.generatedImages && data.generatedImages.length > 0) {
+        const images = data.generatedImages
+          .map((img: any, index: number) => {
+            if (img.image?.imageBytes) {
+              return `![Generated Image ${index + 1}](data:image/png;base64,${img.image.imageBytes})`;
+            }
+            return null;
+          })
+          .filter(Boolean);
+
+        if (images.length > 0) {
+          this.logger.log(
+            `[Imagen] Successfully generated ${images.length} image(s)`,
+          );
+          return {
+            content: images.join("\n\n"),
+            model: imagenModel,
+            tokensUsed: 0,
+          };
+        }
+      }
+
+      // If no images, log the response structure
+      this.logger.warn(
+        `[Imagen] No images in response: ${JSON.stringify(data).substring(0, 500)}`,
+      );
+      throw new Error("No images generated");
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error?.message || error.message;
+      this.logger.error(`[Imagen] API error: ${errorMsg}`);
+      this.logger.error(
+        `[Imagen] Full error: ${JSON.stringify(error.response?.data || {}).substring(0, 500)}`,
+      );
+
+      return {
+        content: `抱歉，Imagen 图像生成失败: ${errorMsg}\n\n请确认:\n1. Google API Key 具有 Imagen API 访问权限\n2. 模型 ID 正确 (如 imagen-3.0-generate-001)\n3. Imagen API 已在 Google Cloud 项目中启用`,
+        model: imagenModel,
         tokensUsed: 0,
       };
     }

@@ -363,12 +363,16 @@ function YouTubeTLDWContent() {
     }
   }, [aiMessages]);
 
-  // Close context menu on click outside
+  // Close context menu on click outside (left click only)
   useEffect(() => {
-    const handleClick = () =>
-      setContextMenu({ visible: false, x: 0, y: 0, message: null });
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only close on left click (button 0), not right click (button 2)
+      if (e.button === 0) {
+        setContextMenu({ visible: false, x: 0, y: 0, message: null });
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
   }, []);
 
   // Handle right-click on message

@@ -1131,28 +1131,23 @@ function YouTubeTLDWContent() {
 
                   {/* Chat Input */}
                   <div className="border-t border-gray-200 bg-white p-4">
-                    {/* Model Selector */}
+                    {/* Model Selector - Dropdown */}
                     <div className="mb-3 flex items-center gap-2">
                       <span className="text-xs font-medium text-gray-500">
                         AI 模型:
                       </span>
-                      <div className="flex flex-wrap gap-1">
+                      <select
+                        value={aiModel}
+                        onChange={(e) => setAiModel(e.target.value)}
+                        disabled={isStreaming}
+                        className={`cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium shadow-sm transition-all hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 ${isStreaming ? 'cursor-not-allowed opacity-50' : ''}`}
+                      >
                         {aiModels.map((model) => (
-                          <button
-                            key={model.id}
-                            onClick={() => setAiModel(model.id)}
-                            disabled={isStreaming}
-                            className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                              aiModel === model.id
-                                ? `bg-gradient-to-br ${model.color || 'from-blue-500 to-blue-600'} text-white shadow-sm`
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            } ${isStreaming ? 'cursor-not-allowed opacity-50' : ''}`}
-                          >
-                            <span>{model.icon}</span>
-                            <span>{model.name.split(' ')[0]}</span>
-                          </button>
+                          <option key={model.id} value={model.id}>
+                            {model.name} ({model.provider})
+                          </option>
                         ))}
-                      </div>
+                      </select>
                     </div>
                     <div className="flex gap-2">
                       <input

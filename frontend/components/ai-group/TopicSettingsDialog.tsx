@@ -227,7 +227,7 @@ function AISettings({
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-blue-100 text-xl">
-                    {model?.icon || '🤖'}
+                    🤖
                   </div>
                   <div>
                     <div className="font-medium text-gray-900">
@@ -376,7 +376,7 @@ function AddAIDialog({
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-xl">{model.icon}</span>
+                    <span className="text-xl">🤖</span>
                     <span className="text-sm font-medium">{model.name}</span>
                   </button>
                 ))}
@@ -504,7 +504,7 @@ function EditAIDialog({
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-blue-100 text-2xl">
-            {model?.icon || '🤖'}
+            🤖
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900">

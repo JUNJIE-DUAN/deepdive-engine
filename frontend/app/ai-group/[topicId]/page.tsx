@@ -680,6 +680,12 @@ function MessageInput({
     // DEBUG: Log the content and available AI members
     console.log('[Mentions Debug] handleSend called with content:', content);
     console.log(
+      '[Mentions Debug] topic.aiMembers exists:',
+      !!topic.aiMembers,
+      'length:',
+      topic.aiMembers?.length || 0
+    );
+    console.log(
       '[Mentions Debug] Available AI members:',
       topic.aiMembers?.map((a) => ({
         id: a.id,
@@ -714,7 +720,10 @@ function MessageInput({
       } else {
         // Find matching user or AI
         // Support both exact match and hyphenated match (e.g., @John-Doe matches "John Doe")
-        const user = topic.members.find((m) => {
+        const members = topic.members || [];
+        const aiMembers = topic.aiMembers || [];
+
+        const user = members.find((m) => {
           const displayName = (
             m.nickname ||
             m.user.fullName ||
@@ -731,11 +740,11 @@ function MessageInput({
         // 3. Match on base name (without parenthetical suffix like "(xAI)")
         // 4. Prefix match
         const ai =
-          topic.aiMembers.find((a) => a.displayName.toLowerCase() === name) ||
-          topic.aiMembers.find(
+          aiMembers.find((a) => a.displayName.toLowerCase() === name) ||
+          aiMembers.find(
             (a) => a.displayName.toLowerCase().replace(/\s+/g, '-') === name
           ) ||
-          topic.aiMembers.find((a) => {
+          aiMembers.find((a) => {
             // Strip parenthetical suffix: "AI-Grok (xAI)" -> "AI-Grok"
             const baseName = a.displayName
               .replace(/\s*\([^)]*\)\s*/g, '')
@@ -744,7 +753,7 @@ function MessageInput({
               .replace(/\s+/g, '-');
             return baseName === name;
           }) ||
-          topic.aiMembers.find(
+          aiMembers.find(
             (a) =>
               a.displayName.toLowerCase().startsWith(name + '-') ||
               a.displayName.toLowerCase().startsWith(name + ' ')

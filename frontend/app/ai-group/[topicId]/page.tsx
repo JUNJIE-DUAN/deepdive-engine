@@ -966,34 +966,10 @@ export default function TopicPage() {
       });
 
       setReplyTo(null);
-
-      // Check if any AI members were mentioned and trigger their responses
-      const aiMentions = mentions.filter(
-        (m) => m.aiMemberId || m.mentionType === MentionType.ALL_AI
-      );
-
-      if (aiMentions.length > 0) {
-        // Get unique AI member IDs to respond
-        const aiMemberIds = new Set<string>();
-
-        for (const mention of aiMentions) {
-          if (mention.aiMemberId) {
-            aiMemberIds.add(mention.aiMemberId);
-          } else if (mention.mentionType === MentionType.ALL_AI) {
-            // Add all AI members
-            currentTopic?.aiMembers?.forEach((ai) => aiMemberIds.add(ai.id));
-          }
-        }
-
-        // Trigger AI responses (don't await, let them happen in background)
-        for (const aiMemberId of aiMemberIds) {
-          generateAIResponse(topicId, aiMemberId).catch((err) => {
-            console.error('Failed to generate AI response:', err);
-          });
-        }
-      }
+      // AI responses are handled by the backend controller automatically
+      // No need to trigger them here - that would cause duplicate responses
     },
-    [topicId, currentTopic, sendMessage, replyTo, generateAIResponse]
+    [topicId, currentTopic, sendMessage, replyTo]
   );
 
   const handleReaction = useCallback(

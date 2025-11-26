@@ -1362,16 +1362,28 @@ Format the summary in a clear, structured manner using markdown.`;
       if (part.inlineData) {
         // Image data is returned as base64
         const mimeType = part.inlineData.mimeType || "image/png";
-        const base64Data = part.inlineData.data;
+        // CRITICAL: Remove all whitespace from base64 data (Gemini may include newlines)
+        const base64Data = part.inlineData.data?.replace(/\s/g, "") || "";
         this.logger.log(
           `[Gemini] Part ${i} inlineData: mimeType=${mimeType}, dataLength=${base64Data?.length || 0}`,
         );
 
         if (base64Data && base64Data.length > 0) {
+          // Validate base64 format
+          const validBase64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+          if (!validBase64Regex.test(base64Data)) {
+            this.logger.warn(
+              `[Gemini] Part ${i} base64 has invalid characters!`,
+            );
+          }
+
           const imageMarkdown = `![Generated Image](data:${mimeType};base64,${base64Data})`;
           images.push(imageMarkdown);
           this.logger.log(
             `[Gemini] Part ${i} image markdown created, length: ${imageMarkdown.length}`,
+          );
+          this.logger.log(
+            `[Gemini] Part ${i} base64 preview (first 50 chars): ${base64Data.substring(0, 50)}`,
           );
         } else {
           this.logger.warn(`[Gemini] Part ${i} has inlineData but no data!`);

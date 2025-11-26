@@ -951,12 +951,35 @@ Format the summary in a clear, structured manner using markdown.`;
     }
 
     // For text or non-Imagen image requests, use Gemini API
-    // Use the configured model, or fallback to gemini-2.0-flash
-    const effectiveModelId = modelId.includes("gemini")
-      ? modelId
-      : isImageRequest
-        ? "gemini-2.0-flash-exp" // Fallback for image generation if no gemini model configured
-        : "gemini-2.0-flash";
+    // IMPORTANT: For image generation, ALWAYS use gemini-2.0-flash-exp as it's the only
+    // model that supports native image generation with responseModalities: ["TEXT", "IMAGE"]
+    // Other models like "gemini-3-pro-image-preview" are "thinking" models that require
+    // special thought_signature format and don't support direct image generation.
+    let effectiveModelId: string;
+    if (isImageRequest) {
+      // For image generation, always use the model that supports it
+      effectiveModelId = "gemini-2.0-flash-exp";
+      this.logger.log(
+        `Image generation requested - using ${effectiveModelId} (configured: ${modelId})`,
+      );
+    } else {
+      // For text, use configured model or fallback
+      // But avoid "preview" or experimental models that might have special requirements
+      const isExperimentalModel =
+        modelId.includes("preview") ||
+        modelId.includes("thinking") ||
+        modelId.includes("gemini-3");
+      if (isExperimentalModel) {
+        effectiveModelId = "gemini-2.0-flash";
+        this.logger.warn(
+          `Model ${modelId} may have special requirements, falling back to ${effectiveModelId}`,
+        );
+      } else {
+        effectiveModelId = modelId.includes("gemini")
+          ? modelId
+          : "gemini-2.0-flash";
+      }
+    }
 
     // Build the correct Gemini API URL
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${effectiveModelId}:generateContent?key=${apiKey}`;

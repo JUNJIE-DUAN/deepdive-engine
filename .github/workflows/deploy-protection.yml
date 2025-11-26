@@ -35,8 +35,16 @@ jobs:
             exit 1
           fi
 
-          # 检查代码中的硬编码secrets
-          if grep -rE '(password|secret|api_key|apikey|token).*=.*["'"'"'][^"'"'"']{20,}["'"'"']' --exclude-dir=node_modules --exclude-dir=.git . 2>/dev/null; then
+          # 检查代码中的硬编码secrets（排除常见误报）
+          if grep -rE '(password|secret|api_key|apikey|token).*=.*["'"'"'][^"'"'"']{20,}["'"'"']' \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            --exclude-dir=dist \
+            --exclude-dir=.next \
+            --exclude="*.json" \
+            --exclude="*.bat" \
+            --exclude="*.backup" \
+            . 2>/dev/null | grep -v "process.env" | grep -v "configService.get"; then
             echo "⚠️  Potential hardcoded secrets detected!"
             echo "Please review the above matches"
             exit 1

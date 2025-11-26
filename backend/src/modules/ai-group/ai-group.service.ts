@@ -1379,12 +1379,22 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
       }
       aiResponse = result.content;
       tokensUsed = result.tokensUsed;
+      this.logger.log(
+        `[AI Response Debug] Content received from AI, length: ${aiResponse?.length || 0}`,
+      );
+      // Log first 200 chars to see if it contains image markdown
+      this.logger.log(
+        `[AI Response Debug] Content preview: ${aiResponse?.substring(0, 200)}...`,
+      );
     } catch (error) {
       this.logger.error(`Failed to generate AI response: ${error}`);
       aiResponse = `I apologize, but I'm having trouble generating a response at the moment. Please try again later.`;
     }
 
     // 创建AI消息
+    this.logger.log(
+      `[AI Response Debug] Saving to DB, content length: ${aiResponse?.length || 0}`,
+    );
     const message = await this.prisma.topicMessage.create({
       data: {
         topicId,
@@ -1407,6 +1417,10 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
         },
       },
     });
+
+    this.logger.log(
+      `[AI Response Debug] Saved to DB, message.content length: ${message.content?.length || 0}`,
+    );
 
     // 更新Topic的updatedAt
     await this.prisma.topic.update({

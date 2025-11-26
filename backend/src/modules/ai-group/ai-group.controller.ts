@@ -322,6 +322,12 @@ export class AiGroupController {
       this.logger.log(
         `[AI Response] Success for topic=${topicId}, messageId=${aiMessage.id}`,
       );
+      this.logger.log(
+        `[AI Response Debug] Broadcasting message, content length: ${aiMessage.content?.length || 0}`,
+      );
+      this.logger.log(
+        `[AI Response Debug] Content preview: ${aiMessage.content?.substring(0, 100)}...`,
+      );
 
       // 广播AI响应
       this.aiGroupGateway.emitToTopic(topicId, "ai:response", {

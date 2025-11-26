@@ -378,7 +378,9 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
         topicId: message.topicId,
         senderId: message.senderId,
         aiMemberId: message.aiMemberId,
-        content: message.content?.substring(0, 50),
+        contentLength: message.content?.length || 0,
+        contentPreview: message.content?.substring(0, 100),
+        hasImageMarkdown: message.content?.includes('!['),
         socketId: newSocket.id,
       });
       set((state) => {

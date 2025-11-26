@@ -52,8 +52,24 @@ function MemberPanel({
       {/* Topic Header */}
       <div className="border-b border-gray-200 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 text-xl">
-            {topic.avatar || '💬'}
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-500">
+            {topic.avatar ? (
+              <span className="text-xl">{topic.avatar}</span>
+            ) : (
+              <svg
+                className="h-5 w-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"
+                />
+              </svg>
+            )}
           </div>
           <div className="flex-1 overflow-hidden">
             <h2 className="truncate font-semibold text-gray-900">
@@ -200,17 +216,27 @@ function MemberPanel({
                     onClick={() => onAIClick(ai)}
                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-green-100 to-blue-100">
+                    <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-cyan-500">
                       {model?.iconUrl ? (
                         <img
                           src={model.iconUrl}
                           alt={model.name}
-                          className="h-6 w-6"
+                          className="h-5 w-5"
                         />
                       ) : (
-                        <span className="text-lg">
-                          {(model as any)?.icon || '🤖'}
-                        </span>
+                        <svg
+                          className="h-5 w-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
                       )}
                     </div>
                     <div className="flex-1 overflow-hidden">
@@ -311,9 +337,21 @@ const MessageBubble = memo(function MessageBubble({
 
   const senderAvatar = isAI ? (
     model?.iconUrl ? (
-      <img src={model.iconUrl} alt={model.name} className="h-6 w-6" />
+      <img src={model.iconUrl} alt={model.name} className="h-5 w-5" />
     ) : (
-      <span className="text-lg">{(model as any)?.icon || '🤖'}</span>
+      <svg
+        className="h-5 w-5 text-blue-600"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+        />
+      </svg>
     )
   ) : message.sender?.avatarUrl ? (
     <img
@@ -602,6 +640,8 @@ function VirtualizedMessageList({
   onReply: (message: TopicMessage) => void;
   onReact: (messageId: string, emoji: string) => void;
 }) {
+  const lastMessageCountRef = useRef(messages.length);
+
   const rowVirtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => containerRef.current,
@@ -609,11 +649,16 @@ function VirtualizedMessageList({
     overscan: 5, // Render 5 extra items above/below viewport
   });
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom ONLY when new messages arrive (not on every render)
   useEffect(() => {
-    if (messages.length > 0) {
-      rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+    // Only scroll if message count increased (new message arrived)
+    if (messages.length > lastMessageCountRef.current && messages.length > 0) {
+      // Use requestAnimationFrame to avoid jitter
+      requestAnimationFrame(() => {
+        rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+      });
     }
+    lastMessageCountRef.current = messages.length;
   }, [messages.length, rowVirtualizer]);
 
   return (
@@ -720,14 +765,14 @@ function MessageInput({
       id: 'all',
       name: 'Everyone',
       mention: 'Everyone',
-      icon: '👥',
+      icon: 'users', // SVG icon type
     },
     {
       type: 'all_ai',
       id: 'all_ai',
       name: 'All AIs',
       mention: 'AllAIs',
-      icon: '🤖',
+      icon: 'cpu', // SVG icon type
     },
     ...topic.members.map((m) => {
       const displayName =
@@ -751,7 +796,7 @@ function MessageInput({
         id: ai.id,
         name: ai.displayName,
         mention: baseName.replace(/\s+/g, '-'), // Replace spaces with hyphens for @mention
-        icon: model?.icon || '🤖',
+        icon: 'cpu', // SVG icon type for AI
         iconUrl: model?.iconUrl,
       };
     }),
@@ -988,10 +1033,40 @@ function MessageInput({
                 <img
                   src={(entity as any).iconUrl}
                   alt={entity.name}
-                  className="h-6 w-6"
+                  className="h-5 w-5"
                 />
-              ) : entity.icon ? (
-                <span className="text-lg">{entity.icon}</span>
+              ) : entity.icon === 'users' ? (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
+                  <svg
+                    className="h-4 w-4 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                </div>
+              ) : entity.icon === 'cpu' ? (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-100">
+                  <svg
+                    className="h-4 w-4 text-cyan-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
               ) : (entity as any).avatar ? (
                 <img
                   src={(entity as any).avatar}
@@ -999,7 +1074,7 @@ function MessageInput({
                   className="h-6 w-6 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
                   {entity.name[0].toUpperCase()}
                 </div>
               )}
@@ -1058,12 +1133,22 @@ function MessageInput({
                   <img
                     src={model.iconUrl}
                     alt={model.name}
-                    className="h-6 w-6"
+                    className="h-5 w-5"
                   />
                 ) : (
-                  <span className="text-lg">
-                    {(model as any)?.icon || '🤖'}
-                  </span>
+                  <svg
+                    className="h-5 w-5 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
                 )}
               </button>
             );
@@ -1134,7 +1219,6 @@ export default function TopicPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Load topic and messages
@@ -1175,10 +1259,8 @@ export default function TopicPage() {
     }
   }, [topicId, joinTopicRoom, leaveTopicRoom]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Note: Auto-scroll is handled by VirtualizedMessageList component
+  // Removed duplicate scroll here to prevent jittering
 
   const handleSendMessage = useCallback(
     async (
@@ -1361,8 +1443,24 @@ export default function TopicPage() {
         {/* Chat Header */}
         <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 text-xl">
-              {currentTopic.avatar || '💬'}
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-500">
+              {currentTopic.avatar ? (
+                <span className="text-xl">{currentTopic.avatar}</span>
+              ) : (
+                <svg
+                  className="h-5 w-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"
+                  />
+                </svg>
+              )}
             </div>
             <div>
               <h1 className="font-semibold text-gray-900">

@@ -347,8 +347,24 @@ function TopicCard({
       <div onClick={onClick}>
         {/* Avatar */}
         <div className="flex items-start justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 text-2xl">
-            {topic.avatar || '💬'}
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500">
+            {topic.avatar ? (
+              <span className="text-2xl">{topic.avatar}</span>
+            ) : (
+              <svg
+                className="h-6 w-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"
+                />
+              </svg>
+            )}
           </div>
           {topic.unreadCount && topic.unreadCount > 0 && (
             <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-2 text-xs font-semibold text-white">
@@ -457,15 +473,38 @@ function TopicCard({
             <>
               <div className="mx-2 h-4 w-px bg-gray-200" />
               <div className="flex -space-x-2">
-                {topic.aiMembers.slice(0, 2).map((ai) => (
-                  <div
-                    key={ai.id}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-green-100 to-blue-100 text-xs"
-                    title={ai.displayName}
-                  >
-                    🤖
-                  </div>
-                ))}
+                {topic.aiMembers.slice(0, 2).map((ai) => {
+                  const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+                  return (
+                    <div
+                      key={ai.id}
+                      className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-blue-500 to-cyan-500"
+                      title={ai.displayName}
+                    >
+                      {model?.iconUrl ? (
+                        <img
+                          src={model.iconUrl}
+                          alt={model.name}
+                          className="h-4 w-4"
+                        />
+                      ) : (
+                        <svg
+                          className="h-4 w-4 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}

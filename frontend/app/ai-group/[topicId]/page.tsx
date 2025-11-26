@@ -21,11 +21,9 @@ import SummaryDialog from '@/components/ai-group/SummaryDialog';
 import Sidebar from '@/components/layout/Sidebar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useVirtualizer } from '@tanstack/react-virtual';
 
-// Performance constants
-const MAX_MESSAGES_IN_MEMORY = 200; // Maximum messages to keep in memory
-const VIRTUAL_ITEM_SIZE = 120; // Estimated height of each message in pixels
+// Performance constant - messages are limited in store (aiGroupStore.ts)
+const MAX_MESSAGES_IN_MEMORY = 200; // Reference: actual limit is in store
 
 // Member Panel
 function MemberPanel({
@@ -625,69 +623,33 @@ const MessageBubble = memo(function MessageBubble({
   );
 });
 
-// Virtualized Message List Component for performance
-// Only renders visible messages, dramatically improving performance with many messages
-function VirtualizedMessageList({
+// Simple Message List Component - stable and performant with message limit
+function SimpleMessageList({
   messages,
   currentUserId,
-  containerRef,
   onReply,
   onReact,
+  messagesEndRef,
 }: {
   messages: TopicMessage[];
   currentUserId: string;
-  containerRef: React.RefObject<HTMLDivElement | null>;
   onReply: (message: TopicMessage) => void;
   onReact: (messageId: string, emoji: string) => void;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const lastMessageCountRef = useRef(messages.length);
-
-  const rowVirtualizer = useVirtualizer({
-    count: messages.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => VIRTUAL_ITEM_SIZE,
-    overscan: 5, // Render 5 extra items above/below viewport
-  });
-
-  // Auto-scroll to bottom ONLY when new messages arrive (not on every render)
-  useEffect(() => {
-    // Only scroll if message count increased (new message arrived)
-    if (messages.length > lastMessageCountRef.current && messages.length > 0) {
-      // Use requestAnimationFrame to avoid jitter
-      requestAnimationFrame(() => {
-        rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
-      });
-    }
-    lastMessageCountRef.current = messages.length;
-  }, [messages.length, rowVirtualizer]);
-
   return (
-    <div
-      className="relative w-full py-4"
-      style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
-    >
-      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-        const message = messages[virtualRow.index];
-        return (
-          <div
-            key={message.id}
-            data-index={virtualRow.index}
-            ref={rowVirtualizer.measureElement}
-            className="absolute left-0 top-0 w-full"
-            style={{
-              transform: `translateY(${virtualRow.start}px)`,
-            }}
-          >
-            <MessageBubble
-              message={message}
-              isOwnMessage={message.senderId === currentUserId}
-              onReply={onReply}
-              onReact={onReact}
-              currentUserId={currentUserId}
-            />
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-1 px-4 py-4">
+      {messages.map((message) => (
+        <MessageBubble
+          key={message.id}
+          message={message}
+          isOwnMessage={message.senderId === currentUserId}
+          onReply={onReply}
+          onReact={onReact}
+          currentUserId={currentUserId}
+        />
+      ))}
+      <div ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
     </div>
   );
 }
@@ -1220,6 +1182,8 @@ export default function TopicPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef(0);
 
   // Load topic and messages
   useEffect(() => {
@@ -1259,8 +1223,19 @@ export default function TopicPage() {
     }
   }, [topicId, joinTopicRoom, leaveTopicRoom]);
 
-  // Note: Auto-scroll is handled by VirtualizedMessageList component
-  // Removed duplicate scroll here to prevent jittering
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messages.length > lastMessageCountRef.current && messages.length > 0) {
+      // Only scroll on new messages, not initial load
+      if (lastMessageCountRef.current > 0) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        // On initial load, scroll instantly without animation
+        messagesEndRef.current?.scrollIntoView();
+      }
+    }
+    lastMessageCountRef.current = messages.length;
+  }, [messages.length]);
 
   const handleSendMessage = useCallback(
     async (
@@ -1576,12 +1551,12 @@ export default function TopicPage() {
               <p className="mt-1 text-sm">Start the conversation!</p>
             </div>
           ) : (
-            <VirtualizedMessageList
+            <SimpleMessageList
               messages={messages}
               currentUserId={user?.id || ''}
-              containerRef={messagesContainerRef}
               onReply={setReplyTo}
               onReact={handleReaction}
+              messagesEndRef={messagesEndRef}
             />
           )}
 

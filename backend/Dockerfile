@@ -7,11 +7,14 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
+
+# Copy Prisma schema
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies (use install instead of ci for monorepo)
+# In a workspace setup, we install only production dependencies
+RUN npm install --production --no-package-lock && npm cache clean --force
 
 # Copy source code
 COPY . .

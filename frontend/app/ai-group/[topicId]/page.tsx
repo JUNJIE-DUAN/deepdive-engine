@@ -74,12 +74,18 @@ function extractImagesFromMarkdown(content: string): {
 
 // Standalone Image Component - renders base64 images directly
 function Base64Image({ src, alt }: { src: string; alt: string }) {
+  // Log immediately on render (before hooks)
+  console.log(
+    '[Base64Image] Component mounting, src length:',
+    src?.length || 0
+  );
+
   const [imgError, setImgError] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
 
   useEffect(() => {
     console.log(
-      '[Base64Image] Rendering image, size:',
+      '[Base64Image] useEffect running, size:',
       src.length,
       'bytes (~',
       Math.round(src.length / 1024),
@@ -621,14 +627,35 @@ const MessageBubble = memo(function MessageBubble({
                 <>
                   {/* Render extracted images first */}
                   {images.length > 0 && (
-                    <div className="mb-2">
+                    <div className="mb-2 space-y-2">
                       {images.map((img, idx) => {
                         console.log(
                           `[MessageBubble] Rendering image ${idx}, src length:`,
                           img.src?.length
                         );
+                        // Debug: Try rendering a simple img tag directly
                         return (
-                          <Base64Image key={idx} src={img.src} alt={img.alt} />
+                          <div key={idx}>
+                            <Base64Image src={img.src} alt={img.alt} />
+                            {/* Fallback: Direct img tag for debugging */}
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-xs text-blue-600">
+                                Debug: Show raw image
+                              </summary>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={img.src}
+                                alt="Debug"
+                                style={{ maxWidth: '100%', maxHeight: '300px' }}
+                                onLoad={() =>
+                                  console.log('[Debug img] Loaded!')
+                                }
+                                onError={(e) =>
+                                  console.error('[Debug img] Failed:', e)
+                                }
+                              />
+                            </details>
+                          </div>
                         );
                       })}
                     </div>

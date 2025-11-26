@@ -25,7 +25,126 @@ import remarkGfm from 'remark-gfm';
 // Performance constant - messages are limited in store (aiGroupStore.ts)
 const MAX_MESSAGES_IN_MEMORY = 200; // Reference: actual limit is in store
 
-// Markdown Image Component with proper hooks
+// Extract base64 images from markdown content
+function extractImagesFromMarkdown(content: string): {
+  images: Array<{ alt: string; src: string }>;
+  textContent: string;
+} {
+  // Match markdown image syntax with data URIs: ![alt](data:image/...;base64,...)
+  const imageRegex =
+    /!\[([^\]]*)\]\((data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)\)/g;
+  const images: Array<{ alt: string; src: string }> = [];
+  let textContent = content;
+
+  let match;
+  while ((match = imageRegex.exec(content)) !== null) {
+    images.push({
+      alt: match[1] || 'Generated Image',
+      src: match[2],
+    });
+  }
+
+  // Remove image markdown from text content
+  textContent = content.replace(imageRegex, '').trim();
+
+  console.log(
+    '[Image Extract] Found',
+    images.length,
+    'images, text length:',
+    textContent.length
+  );
+
+  return { images, textContent };
+}
+
+// Standalone Image Component - renders base64 images directly
+function Base64Image({ src, alt }: { src: string; alt: string }) {
+  const [imgError, setImgError] = useState<string | null>(null);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  useEffect(() => {
+    console.log(
+      '[Base64Image] Rendering image, size:',
+      src.length,
+      'bytes (~',
+      Math.round(src.length / 1024),
+      'KB)'
+    );
+
+    // Validate base64 format
+    const match = src.match(/^data:([^;]+);base64,(.+)$/);
+    if (match) {
+      const [, mimeType, base64Data] = match;
+      console.log('[Base64Image] MIME type:', mimeType);
+      console.log('[Base64Image] Base64 length:', base64Data.length);
+
+      // Check if base64 is valid
+      try {
+        // Try to decode a small portion to validate
+        atob(base64Data.substring(0, 100));
+        console.log('[Base64Image] Base64 appears valid (prefix decoded OK)');
+      } catch (e) {
+        console.error('[Base64Image] Base64 decoding failed:', e);
+      }
+    }
+  }, [src]);
+
+  if (imgError) {
+    return (
+      <div className="my-3 rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+        <span className="block text-red-600">Image failed to load</span>
+        <span className="mt-1 block text-xs text-gray-500">{imgError}</span>
+        <a
+          href={src}
+          download={`generated-image-${Date.now()}.png`}
+          className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800"
+        >
+          Download Image ({Math.round(src.length / 1024)} KB)
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="my-3">
+      {!imgLoaded && (
+        <div className="animate-pulse rounded-lg bg-gray-200 p-8 text-center text-gray-500">
+          Loading image ({Math.round(src.length / 1024)} KB)...
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className={`h-auto max-w-full rounded-lg shadow-md ${!imgLoaded ? 'hidden' : ''}`}
+        style={{
+          maxHeight: '500px',
+          objectFit: 'contain',
+        }}
+        onLoad={() => {
+          console.log('[Base64Image] Image loaded successfully!');
+          setImgLoaded(true);
+        }}
+        onError={(e) => {
+          console.error('[Base64Image] Image failed to load');
+          console.error('[Base64Image] Event:', e);
+          setImgError(`Failed to decode (${Math.round(src.length / 1024)} KB)`);
+        }}
+      />
+      {imgLoaded && (
+        <a
+          href={src}
+          download={`generated-image-${Date.now()}.png`}
+          className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800"
+        >
+          Download Image
+        </a>
+      )}
+    </div>
+  );
+}
+
+// Markdown Image Component (fallback for non-base64 images)
 function MarkdownImage({
   src,
   alt,
@@ -35,80 +154,22 @@ function MarkdownImage({
   alt?: string;
   [key: string]: unknown;
 }) {
-  const [imgError, setImgError] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const isDataUri = src?.startsWith('data:');
+  if (!src) return null;
 
-  // Debug: Log image info
-  useEffect(() => {
-    if (isDataUri && src) {
-      console.log(
-        '[Image Debug] Data URI image detected, size:',
-        src.length,
-        'bytes (~',
-        Math.round(src.length / 1024),
-        'KB)'
-      );
-    }
-  }, [src, isDataUri]);
-
-  if (imgError) {
-    return (
-      <span className="my-2 block rounded-lg border border-red-200 bg-red-50 p-4 text-center">
-        <span className="text-red-600">Image failed to load</span>
-        {isDataUri && src && (
-          <a
-            href={src}
-            download={`generated-image-${Date.now()}.png`}
-            className="mt-2 block text-xs text-blue-600 hover:text-blue-800"
-          >
-            Download Image ({Math.round(src.length / 1024)} KB)
-          </a>
-        )}
-      </span>
-    );
+  // For data URIs, use the standalone component
+  if (src.startsWith('data:')) {
+    return <Base64Image src={src} alt={alt || 'Generated Image'} />;
   }
 
+  // For regular URLs, render normally
   return (
-    <span className="my-2 block">
-      {!imgLoaded && (
-        <span className="block animate-pulse rounded-lg bg-gray-200 p-8 text-center text-gray-500">
-          Loading image...
-        </span>
-      )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt || 'AI Generated Image'}
-        className={`h-auto max-w-full rounded-lg shadow-md ${!imgLoaded ? 'hidden' : ''}`}
-        style={{
-          maxHeight: '400px',
-          objectFit: 'contain',
-        }}
-        loading="lazy"
-        onLoad={() => {
-          console.log('[Image Debug] Image loaded successfully');
-          setImgLoaded(true);
-        }}
-        onError={() => {
-          console.error(
-            '[Image Debug] Image failed to load:',
-            isDataUri ? `data URI (${src?.length} bytes)` : src
-          );
-          setImgError(true);
-        }}
-        {...props}
-      />
-      {isDataUri && imgLoaded && (
-        <a
-          href={src}
-          download={`generated-image-${Date.now()}.png`}
-          className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800"
-        >
-          Download Image
-        </a>
-      )}
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt || 'Image'}
+      className="h-auto max-w-full rounded-lg"
+      {...props}
+    />
   );
 }
 
@@ -534,45 +595,75 @@ const MessageBubble = memo(function MessageBubble({
                 : 'bg-gray-100 text-gray-800'
           }`}
         >
-          {/* AI messages render as Markdown, others as plain text */}
-          {/* Collapsible content wrapper */}
-          <div
-            ref={contentRef}
-            className={`relative ${
-              !isExpanded && needsCollapse
-                ? 'max-h-[120px] overflow-hidden'
-                : ''
-            }`}
-          >
-            {isAI ? (
-              <div className="prose prose-sm prose-headings:text-gray-800 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-800 prose-pre:text-gray-100 max-w-none">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    img: ({ node, ...props }) => <MarkdownImage {...props} />,
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              </div>
-            ) : (
+          {/* AI messages: Extract images and render separately, then render text as Markdown */}
+          {isAI ? (
+            (() => {
+              const { images, textContent } = extractImagesFromMarkdown(
+                message.content || ''
+              );
+              return (
+                <>
+                  {/* Render extracted images first */}
+                  {images.map((img, idx) => (
+                    <Base64Image key={idx} src={img.src} alt={img.alt} />
+                  ))}
+                  {/* Then render text content */}
+                  {textContent && (
+                    <div
+                      ref={contentRef}
+                      className={`relative ${
+                        !isExpanded && needsCollapse
+                          ? 'max-h-[120px] overflow-hidden'
+                          : ''
+                      }`}
+                    >
+                      <div className="prose prose-sm prose-headings:text-gray-800 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-800 prose-pre:text-gray-100 max-w-none">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            img: ({ node, ...props }) => (
+                              <MarkdownImage {...props} />
+                            ),
+                          }}
+                        >
+                          {textContent}
+                        </ReactMarkdown>
+                      </div>
+                      {/* Gradient fade for collapsed content */}
+                      {!isExpanded && needsCollapse && (
+                        <div
+                          className={`absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-green-50 to-transparent`}
+                        />
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <div
+              ref={contentRef}
+              className={`relative ${
+                !isExpanded && needsCollapse
+                  ? 'max-h-[120px] overflow-hidden'
+                  : ''
+              }`}
+            >
               <div className="whitespace-pre-wrap break-words text-sm">
                 {highlightMentions(message.content, message.mentions)}
               </div>
-            )}
-            {/* Gradient fade for collapsed content */}
-            {!isExpanded && needsCollapse && (
-              <div
-                className={`absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t ${
-                  isOwnMessage
-                    ? 'from-blue-600 to-transparent'
-                    : isAI
-                      ? 'from-green-50 to-transparent'
+              {/* Gradient fade for collapsed content */}
+              {!isExpanded && needsCollapse && (
+                <div
+                  className={`absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t ${
+                    isOwnMessage
+                      ? 'from-blue-600 to-transparent'
                       : 'from-gray-100 to-transparent'
-                }`}
-              />
-            )}
-          </div>
+                  }`}
+                />
+              )}
+            </div>
+          )}
           {/* Expand/Collapse button */}
           {needsCollapse && (
             <button

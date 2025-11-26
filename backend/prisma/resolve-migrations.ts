@@ -48,6 +48,38 @@ async function forceDeleteFailedMigration(migrationName: string) {
   }
 }
 
+/**
+ * Ensure all enum values exist in the database
+ * This handles cases where schema has enum values that weren't in original migration
+ */
+async function ensureEnumValues(prisma: PrismaClient) {
+  console.log("🔍 Checking enum values...");
+
+  try {
+    // Check if ALL_AI exists in MentionType enum
+    const enumValues = await prisma.$queryRaw<Array<{ enumlabel: string }>>`
+      SELECT enumlabel FROM pg_enum
+      WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'MentionType')
+    `;
+
+    const existingValues = enumValues.map((e) => e.enumlabel);
+    console.log(`   Current MentionType values: ${existingValues.join(", ")}`);
+
+    if (!existingValues.includes("ALL_AI")) {
+      console.log("   Adding ALL_AI to MentionType enum...");
+      await prisma.$executeRawUnsafe(
+        `ALTER TYPE "MentionType" ADD VALUE IF NOT EXISTS 'ALL_AI'`,
+      );
+      console.log("   ✅ ALL_AI added to MentionType enum");
+    } else {
+      console.log("   ✅ ALL_AI already exists in MentionType enum");
+    }
+  } catch (error) {
+    console.error("   ⚠️  Error checking/adding enum values:", error);
+    // Don't fail deployment for this - the enum might already exist
+  }
+}
+
 async function resolveMigrations() {
   console.log("🔍 Proactively checking for failed migrations in database...");
 
@@ -67,6 +99,9 @@ async function resolveMigrations() {
     // Connect to database first
     await prisma.$connect();
     console.log("✅ Connected to database");
+
+    // Ensure all enum values exist before running migrations
+    await ensureEnumValues(prisma);
 
     // Check for ANY failed or incomplete migrations
     const failedMigrations = await prisma.$queryRaw<

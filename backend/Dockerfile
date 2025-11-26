@@ -19,9 +19,8 @@ COPY package.json ./
 # Copy Prisma schema
 COPY prisma ./prisma/
 
-# Install dependencies (use install instead of ci for monorepo)
-# In a workspace setup, we install only production dependencies
-RUN npm install --production --no-package-lock --legacy-peer-deps && npm cache clean --force
+# Install ALL dependencies (including devDependencies for build)
+RUN npm install --no-package-lock --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -31,6 +30,9 @@ RUN npx prisma generate
 
 # Build the application
 RUN npm run build
+
+# Remove devDependencies for smaller production image
+RUN npm prune --production --legacy-peer-deps
 
 # Production stage
 FROM node:20-alpine AS runner

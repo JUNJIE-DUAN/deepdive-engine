@@ -647,8 +647,18 @@ export class AiGroupService {
       messages.pop();
     }
 
+    // Debug: Log content lengths for image messages
+    const messagesWithImageInfo = messages.map((m) => {
+      if (m.content && m.content.includes("![")) {
+        this.logger.log(
+          `[getMessages] Message ${m.id} has image, content length: ${m.content.length}`,
+        );
+      }
+      return m;
+    });
+
     return {
-      messages: messages.reverse(), // 返回时按时间正序
+      messages: messagesWithImageInfo.reverse(), // 返回时按时间正序
       hasMore,
       nextCursor: hasMore ? messages[0]?.id : null,
     };

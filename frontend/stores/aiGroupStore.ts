@@ -184,6 +184,19 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     set({ isLoadingMessages: true });
     try {
       const response = await api.getMessages(topicId, { cursor, limit: 50 });
+
+      // Debug: Log image message content lengths
+      response.messages.forEach((m) => {
+        if (m.content?.includes('![')) {
+          console.log('[fetchMessages] Image message found:', {
+            messageId: m.id,
+            contentLength: m.content.length,
+            hasBase64: m.content.includes('data:image'),
+            preview: m.content.substring(0, 100),
+          });
+        }
+      });
+
       set((state) => {
         let newMessages = cursor
           ? [...response.messages, ...state.messages]

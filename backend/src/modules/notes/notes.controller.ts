@@ -31,7 +31,6 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
  * - POST /api/v1/notes/:id/graph-nodes - 关联知识图谱节点
  */
 @Controller("notes")
-@UseGuards(JwtAuthGuard)
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
@@ -39,6 +38,7 @@ export class NotesController {
    * 创建笔记
    */
   @Post()
+  @UseGuards(JwtAuthGuard)
   async createNote(@Request() req: any, @Body() dto: CreateNoteDto) {
     const userId = req.user?.id;
     if (!userId) {
@@ -51,6 +51,7 @@ export class NotesController {
    * 获取用户的所有笔记（分页）
    */
   @Get()
+  @UseGuards(JwtAuthGuard)
   async getUserNotes(
     @Request() req: any,
     @Query("skip") skip?: string,
@@ -90,6 +91,7 @@ export class NotesController {
    * 更新笔记
    */
   @Patch(":id")
+  @UseGuards(JwtAuthGuard)
   async updateNote(
     @Param("id") id: string,
     @Request() req: any,
@@ -106,6 +108,7 @@ export class NotesController {
    * 删除笔记
    */
   @Delete(":id")
+  @UseGuards(JwtAuthGuard)
   async deleteNote(@Param("id") id: string, @Request() req: any) {
     const userId = req.user?.id;
     if (!userId) {
@@ -118,6 +121,7 @@ export class NotesController {
    * 添加高亮标注
    */
   @Post(":id/highlights")
+  @UseGuards(JwtAuthGuard)
   async addHighlight(
     @Param("id") id: string,
     @Request() req: any,
@@ -134,6 +138,7 @@ export class NotesController {
    * 删除高亮标注
    */
   @Delete(":id/highlights/:highlightId")
+  @UseGuards(JwtAuthGuard)
   async removeHighlight(
     @Param("id") id: string,
     @Param("highlightId") highlightId: string,
@@ -150,6 +155,7 @@ export class NotesController {
    * 请求AI解释
    */
   @Post(":id/ai-explain")
+  @UseGuards(JwtAuthGuard)
   async requestAIExplanation(
     @Param("id") id: string,
     @Request() req: any,
@@ -167,6 +173,7 @@ export class NotesController {
    * 关联知识图谱节点
    */
   @Post(":id/graph-nodes")
+  @UseGuards(JwtAuthGuard)
   async linkGraphNode(
     @Param("id") id: string,
     @Request() req: any,

@@ -1,15 +1,19 @@
 # Multi-stage build for production
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 # Install dependencies for native modules (canvas requires cairo, pango, etc.)
-RUN apk add --no-cache python3 make g++ \
-    pkgconfig \
-    cairo-dev \
-    pango-dev \
-    jpeg-dev \
-    giflib-dev \
-    librsvg-dev \
-    pixman-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    pkg-config \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libpixman-1-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -35,18 +39,22 @@ RUN npm run build
 RUN npm prune --production --legacy-peer-deps
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
-# Install curl for healthcheck and runtime libs for canvas
-RUN apk add --no-cache curl \
-    cairo \
-    pango \
-    jpeg \
-    giflib \
-    librsvg \
-    pixman
+# Install curl for healthcheck, OpenSSL for Prisma, and runtime libs for canvas
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    openssl \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libjpeg62-turbo \
+    libgif7 \
+    librsvg2-2 \
+    libpixman-1-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
@@ -55,8 +63,8 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs nodejs && \
     chown -R nodejs:nodejs /app
 
 USER nodejs

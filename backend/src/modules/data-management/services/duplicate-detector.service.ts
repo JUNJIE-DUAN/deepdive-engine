@@ -207,12 +207,14 @@ export class DuplicateDetectorService {
       }
 
       // 从ImportTask中查找相同contentHash的任务
+      // 使用 Prisma JSON 字段的 path + equals 语法
       const duplicates = await (this.prisma as any).importTask.findMany({
         where: {
           resourceType,
           status: "SUCCESS",
           metadata: {
-            contentHash: contentHash,
+            path: ["contentHash"],
+            equals: contentHash,
           },
         },
         select: {

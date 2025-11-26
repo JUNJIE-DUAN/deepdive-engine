@@ -29,6 +29,111 @@ export class AiChatService {
   constructor(private readonly httpService: HttpService) {}
 
   /**
+   * Extract URLs from text content
+   */
+  private extractUrls(text: string): string[] {
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/g;
+    return text.match(urlRegex) || [];
+  }
+
+  /**
+   * Fetch content from a URL and extract text
+   * Used to provide context to AI models that can't access URLs directly
+   */
+  private async fetchUrlContent(url: string): Promise<string | null> {
+    try {
+      this.logger.log(`Fetching URL content: ${url}`);
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          timeout: 15000,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          },
+          responseType: "text",
+        }),
+      );
+
+      const html = response.data;
+
+      // Extract text content from HTML (simple extraction)
+      // Remove scripts, styles, and HTML tags
+      let text = html
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/\s+/g, " ")
+        .trim();
+
+      // Limit content length to avoid token limits
+      const maxLength = 8000;
+      if (text.length > maxLength) {
+        text = text.substring(0, maxLength) + "... [内容已截断]";
+      }
+
+      this.logger.log(`Fetched ${text.length} characters from ${url}`);
+      return text;
+    } catch (error) {
+      this.logger.error(`Failed to fetch URL ${url}: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Process messages to fetch URL content and augment context
+   */
+  private async augmentMessagesWithUrlContent(
+    messages: ChatMessage[],
+  ): Promise<ChatMessage[]> {
+    const augmentedMessages: ChatMessage[] = [];
+
+    for (const message of messages) {
+      if (message.role === "user") {
+        const urls = this.extractUrls(message.content);
+        if (urls.length > 0) {
+          let augmentedContent = message.content;
+
+          // Fetch content from each URL (limit to first 2 URLs)
+          const urlsToFetch = urls.slice(0, 2);
+          const fetchedContents: string[] = [];
+
+          for (const url of urlsToFetch) {
+            const content = await this.fetchUrlContent(url);
+            if (content) {
+              fetchedContents.push(`\n\n--- 网页内容 (${url}) ---\n${content}`);
+            }
+          }
+
+          if (fetchedContents.length > 0) {
+            augmentedContent += fetchedContents.join("\n");
+            this.logger.log(
+              `Augmented message with content from ${fetchedContents.length} URL(s)`,
+            );
+          }
+
+          augmentedMessages.push({
+            ...message,
+            content: augmentedContent,
+          });
+        } else {
+          augmentedMessages.push(message);
+        }
+      } else {
+        augmentedMessages.push(message);
+      }
+    }
+
+    return augmentedMessages;
+  }
+
+  /**
    * Generate a chat completion using the specified AI model
    */
   async generateChatCompletion(
@@ -690,12 +795,17 @@ Format the summary in a clear, structured manner using markdown.`;
       `API key confirmed for ${provider}: ${apiKey.substring(0, 8)}...${apiKey.slice(-4)}`,
     );
 
+    // Augment messages with URL content for all AI providers
+    // This enables AI models to "access" URLs by fetching content server-side
+    const augmentedMessages =
+      await this.augmentMessagesWithUrlContent(messages);
+
     // Build full messages with system prompt
     const fullMessages: ChatMessage[] = [];
     if (systemPrompt) {
       fullMessages.push({ role: "system", content: systemPrompt });
     }
-    fullMessages.push(...messages);
+    fullMessages.push(...augmentedMessages);
 
     try {
       switch (provider.toLowerCase()) {

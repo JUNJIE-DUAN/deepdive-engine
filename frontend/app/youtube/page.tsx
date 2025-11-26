@@ -14,6 +14,7 @@ import KeyMomentsPanel, {
 } from '@/components/youtube/KeyMomentsPanel';
 import { SubtitleExportButton } from '@/components/youtube';
 import { useAIModels } from '@/hooks/useAIModels';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TranscriptSegment {
   text: string;
@@ -64,6 +65,9 @@ function YouTubeTLDWContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const videoId = searchParams?.get('videoId') || '';
+
+  // Auth context for API calls
+  const { accessToken } = useAuth();
 
   // 动态获取 AI 模型列表
   const { models: aiModels } = useAIModels();
@@ -373,6 +377,7 @@ function YouTubeTLDWContent() {
     message: AIMessage
   ) => {
     e.preventDefault();
+    e.stopPropagation();
     setContextMenu({
       visible: true,
       x: e.clientX,
@@ -385,11 +390,19 @@ function YouTubeTLDWContent() {
   const saveToNotes = async () => {
     if (!contextMenu.message || !noteTitle.trim()) return;
 
+    if (!accessToken) {
+      alert('Please sign in to save notes');
+      return;
+    }
+
     setSavingNote(true);
     try {
       const response = await fetch(`${config.apiUrl}/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           title: noteTitle,
           content: contextMenu.message.content,

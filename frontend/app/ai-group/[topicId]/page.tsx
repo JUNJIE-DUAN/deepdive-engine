@@ -597,11 +597,14 @@ function MessageInput({
     }),
     ...topic.aiMembers.map((ai) => {
       const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+      // Strip parenthetical suffix like "(xAI)" from display name for @mention
+      // "AI-Grok (xAI)" -> "AI-Grok"
+      const baseName = ai.displayName.replace(/\s*\([^)]*\)\s*/g, '').trim();
       return {
         type: 'ai',
         id: ai.id,
         name: ai.displayName,
-        mention: ai.displayName.replace(/\s+/g, '-'), // Replace spaces with hyphens for @mention
+        mention: baseName.replace(/\s+/g, '-'), // Replace spaces with hyphens for @mention
         icon: model?.icon || '🤖',
         iconUrl: model?.iconUrl,
       };
@@ -705,16 +708,29 @@ function MessageInput({
           const hyphenatedName = displayName.replace(/\s+/g, '-');
           return displayName === name || hyphenatedName === name;
         });
-        // Try exact match first, then hyphenated match, then prefix match for AI members
+        // Try matching AI members:
+        // 1. Exact match on displayName
+        // 2. Match on hyphenated displayName
+        // 3. Match on base name (without parenthetical suffix like "(xAI)")
+        // 4. Prefix match
         const ai =
           topic.aiMembers.find((a) => a.displayName.toLowerCase() === name) ||
           topic.aiMembers.find(
             (a) => a.displayName.toLowerCase().replace(/\s+/g, '-') === name
           ) ||
+          topic.aiMembers.find((a) => {
+            // Strip parenthetical suffix: "AI-Grok (xAI)" -> "AI-Grok"
+            const baseName = a.displayName
+              .replace(/\s*\([^)]*\)\s*/g, '')
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, '-');
+            return baseName === name;
+          }) ||
           topic.aiMembers.find(
             (a) =>
               a.displayName.toLowerCase().startsWith(name + '-') ||
-              a.displayName.toLowerCase().startsWith(name)
+              a.displayName.toLowerCase().startsWith(name + ' ')
           );
 
         if (user) {
@@ -843,8 +859,12 @@ function MessageInput({
         <div className="flex gap-1">
           {topic.aiMembers.slice(0, 2).map((ai) => {
             const model = AI_MODELS.find((m) => m.id === ai.aiModel);
-            // Use hyphenated version of displayName for @mention (no spaces)
-            const mentionName = ai.displayName.replace(/\s+/g, '-');
+            // Strip parenthetical suffix and use hyphenated version for @mention
+            // "AI-Grok (xAI)" -> "AI-Grok"
+            const baseName = ai.displayName
+              .replace(/\s*\([^)]*\)\s*/g, '')
+              .trim();
+            const mentionName = baseName.replace(/\s+/g, '-');
             return (
               <button
                 key={ai.id}

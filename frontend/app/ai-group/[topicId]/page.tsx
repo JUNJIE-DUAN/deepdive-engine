@@ -282,10 +282,23 @@ const MessageBubble = memo(function MessageBubble({
   currentUserId: string;
 }) {
   const [showActions, setShowActions] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [needsCollapse, setNeedsCollapse] = useState(false);
   const isAI = !!message.aiMemberId;
   const model = isAI
     ? AI_MODELS.find((m) => m.id === message.aiMember?.aiModel)
     : null;
+
+  // Check if content exceeds 5 lines (~120px at ~24px line height)
+  useEffect(() => {
+    if (contentRef.current) {
+      const lineHeight = 24; // Approximate line height in pixels
+      const maxLines = 5;
+      const maxHeight = lineHeight * maxLines;
+      setNeedsCollapse(contentRef.current.scrollHeight > maxHeight);
+    }
+  }, [message.content]);
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -390,57 +403,92 @@ const MessageBubble = memo(function MessageBubble({
           }`}
         >
           {/* AI messages render as Markdown, others as plain text */}
-          {isAI ? (
-            <div className="prose prose-sm prose-headings:text-gray-800 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-800 prose-pre:text-gray-100 max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  img: ({ node, src, alt, ...props }) => {
-                    // Handle base64 data URIs for AI generated images
-                    const isDataUri = src?.startsWith('data:');
-                    return (
-                      <span className="my-2 block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={src}
-                          alt={alt || 'AI Generated Image'}
-                          className="h-auto max-w-full rounded-lg shadow-md"
-                          style={{
-                            maxHeight: '400px',
-                            objectFit: 'contain',
-                          }}
-                          loading="lazy"
-                          onError={(e) => {
-                            console.error(
-                              'Image failed to load:',
-                              isDataUri ? 'data URI' : src
-                            );
-                            (e.target as HTMLImageElement).style.display =
-                              'none';
-                          }}
-                          {...props}
-                        />
-                        {isDataUri && (
-                          <a
-                            href={src}
-                            download={`generated-image-${Date.now()}.png`}
-                            className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            📥 Download Image
-                          </a>
-                        )}
-                      </span>
-                    );
-                  },
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <div className="whitespace-pre-wrap break-words text-sm">
-              {highlightMentions(message.content, message.mentions)}
-            </div>
+          {/* Collapsible content wrapper */}
+          <div
+            ref={contentRef}
+            className={`relative ${
+              !isExpanded && needsCollapse
+                ? 'max-h-[120px] overflow-hidden'
+                : ''
+            }`}
+          >
+            {isAI ? (
+              <div className="prose prose-sm prose-headings:text-gray-800 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-800 prose-pre:text-gray-100 max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    img: ({ node, src, alt, ...props }) => {
+                      // Handle base64 data URIs for AI generated images
+                      const isDataUri = src?.startsWith('data:');
+                      return (
+                        <span className="my-2 block">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={src}
+                            alt={alt || 'AI Generated Image'}
+                            className="h-auto max-w-full rounded-lg shadow-md"
+                            style={{
+                              maxHeight: '400px',
+                              objectFit: 'contain',
+                            }}
+                            loading="lazy"
+                            onError={(e) => {
+                              console.error(
+                                'Image failed to load:',
+                                isDataUri ? 'data URI' : src
+                              );
+                              (e.target as HTMLImageElement).style.display =
+                                'none';
+                            }}
+                            {...props}
+                          />
+                          {isDataUri && (
+                            <a
+                              href={src}
+                              download={`generated-image-${Date.now()}.png`}
+                              className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              📥 Download Image
+                            </a>
+                          )}
+                        </span>
+                      );
+                    },
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div className="whitespace-pre-wrap break-words text-sm">
+                {highlightMentions(message.content, message.mentions)}
+              </div>
+            )}
+            {/* Gradient fade for collapsed content */}
+            {!isExpanded && needsCollapse && (
+              <div
+                className={`absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t ${
+                  isOwnMessage
+                    ? 'from-blue-600 to-transparent'
+                    : isAI
+                      ? 'from-green-50 to-transparent'
+                      : 'from-gray-100 to-transparent'
+                }`}
+              />
+            )}
+          </div>
+          {/* Expand/Collapse button */}
+          {needsCollapse && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className={`mt-1 text-xs font-medium ${
+                isOwnMessage
+                  ? 'text-blue-200 hover:text-white'
+                  : 'text-blue-600 hover:text-blue-800'
+              }`}
+            >
+              {isExpanded ? '▲ 收起' : '▼ 展开全部'}
+            </button>
           )}
 
           {/* Attachments */}

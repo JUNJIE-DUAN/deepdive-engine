@@ -567,22 +567,41 @@ function MessageInput({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // All mentionable entities
+  // Note: 'mention' is what gets inserted (no spaces), 'name' is for display
   const mentionableEntities = [
-    { type: 'all', id: 'all', name: 'Everyone', icon: '👥' },
-    { type: 'all_ai', id: 'all_ai', name: 'All AIs', icon: '🤖' },
-    ...topic.members.map((m) => ({
-      type: 'user',
-      id: m.userId,
-      name: m.nickname || m.user.fullName || m.user.username || 'User',
-      icon: null,
-      avatar: m.user.avatarUrl,
-    })),
+    {
+      type: 'all',
+      id: 'all',
+      name: 'Everyone',
+      mention: 'Everyone',
+      icon: '👥',
+    },
+    {
+      type: 'all_ai',
+      id: 'all_ai',
+      name: 'All AIs',
+      mention: 'AllAIs',
+      icon: '🤖',
+    },
+    ...topic.members.map((m) => {
+      const displayName =
+        m.nickname || m.user.fullName || m.user.username || 'User';
+      return {
+        type: 'user',
+        id: m.userId,
+        name: displayName,
+        mention: displayName.replace(/\s+/g, '-'), // Replace spaces with hyphens for @mention
+        icon: null,
+        avatar: m.user.avatarUrl,
+      };
+    }),
     ...topic.aiMembers.map((ai) => {
       const model = AI_MODELS.find((m) => m.id === ai.aiModel);
       return {
         type: 'ai',
         id: ai.id,
         name: ai.displayName,
+        mention: ai.displayName.replace(/\s+/g, '-'), // Replace spaces with hyphens for @mention
         icon: model?.icon || '🤖',
         iconUrl: model?.iconUrl,
       };
@@ -635,7 +654,8 @@ function MessageInput({
     const textAfterCursor = content.slice(cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
 
-    const mentionText = `@${entity.name} `;
+    // Use entity.mention (no spaces) instead of entity.name for the actual @mention text
+    const mentionText = `@${entity.mention} `;
     const newContent =
       textBeforeCursor.slice(0, atIndex) + mentionText + textAfterCursor;
     setContent(newContent);
@@ -673,19 +693,24 @@ function MessageInput({
         mentions.push({ mentionType: MentionType.ALL_AI });
       } else {
         // Find matching user or AI
-        // Support both exact match and prefix match (e.g., @AI matches "AI-Gemini")
-        const user = topic.members.find(
-          (m) =>
-            (
-              m.nickname ||
-              m.user.fullName ||
-              m.user.username ||
-              ''
-            ).toLowerCase() === name
-        );
-        // Try exact match first, then prefix match for AI members
+        // Support both exact match and hyphenated match (e.g., @John-Doe matches "John Doe")
+        const user = topic.members.find((m) => {
+          const displayName = (
+            m.nickname ||
+            m.user.fullName ||
+            m.user.username ||
+            ''
+          ).toLowerCase();
+          // Match against both original name and hyphenated version
+          const hyphenatedName = displayName.replace(/\s+/g, '-');
+          return displayName === name || hyphenatedName === name;
+        });
+        // Try exact match first, then hyphenated match, then prefix match for AI members
         const ai =
           topic.aiMembers.find((a) => a.displayName.toLowerCase() === name) ||
+          topic.aiMembers.find(
+            (a) => a.displayName.toLowerCase().replace(/\s+/g, '-') === name
+          ) ||
           topic.aiMembers.find(
             (a) =>
               a.displayName.toLowerCase().startsWith(name + '-') ||
@@ -818,12 +843,12 @@ function MessageInput({
         <div className="flex gap-1">
           {topic.aiMembers.slice(0, 2).map((ai) => {
             const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+            // Use hyphenated version of displayName for @mention (no spaces)
+            const mentionName = ai.displayName.replace(/\s+/g, '-');
             return (
               <button
                 key={ai.id}
-                onClick={() =>
-                  setContent((prev) => `${prev}@${ai.displayName} `)
-                }
+                onClick={() => setContent((prev) => `${prev}@${mentionName} `)}
                 className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 transition-colors hover:bg-gray-200"
                 title={`Mention ${ai.displayName}`}
               >

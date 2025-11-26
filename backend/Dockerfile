@@ -14,7 +14,7 @@ COPY prisma ./prisma/
 
 # Install dependencies (use install instead of ci for monorepo)
 # In a workspace setup, we install only production dependencies
-RUN npm install --production --no-package-lock && npm cache clean --force
+RUN npm install --production --no-package-lock --legacy-peer-deps && npm cache clean --force
 
 # Copy source code
 COPY . .

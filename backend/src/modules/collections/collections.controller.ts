@@ -38,30 +38,30 @@ export class CollectionsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 
   /**
-   * 创建收藏集（可选认证）
-   * - 有认证：为用户创建收藏集
-   * - 无认证：为anonymous用户创建收藏集
+   * 创建收藏集（需要认证）
    */
   @Post()
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   async createCollection(
     @Request() req: any,
     @Body() dto: CreateCollectionDto,
   ) {
-    const userId = req.user?.id || "anonymous";
-    return this.collectionsService.createCollection(userId, dto);
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.createCollection(req.user.id, dto);
   }
 
   /**
-   * 获取用户的所有收藏集（可选认证）
-   * - 有认证：返回用户的所有收藏集
-   * - 无认证：返回公开的收藏集或创建默认匿名收藏集
+   * 获取用户的所有收藏集（需要认证）
    */
   @Get()
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getUserCollections(@Request() req: any) {
-    const userId = req.user?.id || "anonymous";
-    return this.collectionsService.getUserCollections(userId);
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.getUserCollections(req.user.id);
   }
 
   /**
@@ -104,35 +104,39 @@ export class CollectionsController {
   }
 
   /**
-   * 添加资源到收藏集（可选认证）
-   * - 有认证：为用户添加
-   * - 无认证：为anonymous用户添加
+   * 添加资源到收藏集（需要认证）
    */
   @Post(":id/items")
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   async addToCollection(
     @Param("id") id: string,
     @Request() req: any,
     @Body() dto: AddToCollectionDto,
   ) {
-    const userId = req.user?.id || "anonymous";
-    return this.collectionsService.addToCollection(id, userId, dto);
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.addToCollection(id, req.user.id, dto);
   }
 
   /**
-   * 从收藏集移除资源（可选认证）
-   * - 有认证：从用户的收藏集移除
-   * - 无认证：从anonymous用户的收藏集移除
+   * 从收藏集移除资源（需要认证）
    */
   @Delete(":id/items/:resourceId")
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   async removeFromCollection(
     @Param("id") id: string,
     @Param("resourceId") resourceId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || "anonymous";
-    return this.collectionsService.removeFromCollection(id, resourceId, userId);
+    if (!req.user?.id) {
+      throw new UnauthorizedException("User authentication required");
+    }
+    return this.collectionsService.removeFromCollection(
+      id,
+      resourceId,
+      req.user.id,
+    );
   }
 
   /**

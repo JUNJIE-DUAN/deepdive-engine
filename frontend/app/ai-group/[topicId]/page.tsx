@@ -31,8 +31,8 @@ function extractImagesFromMarkdown(content: string): {
   textContent: string;
 } {
   // Match markdown image syntax with data URIs: ![alt](data:image/...;base64,...)
-  const imageRegex =
-    /!\[([^\]]*)\]\((data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)\)/g;
+  // Use a more permissive regex that captures until the closing parenthesis
+  const imageRegex = /!\[([^\]]*)\]\((data:image\/[^)]+)\)/g;
   const images: Array<{ alt: string; src: string }> = [];
   let textContent = content;
 

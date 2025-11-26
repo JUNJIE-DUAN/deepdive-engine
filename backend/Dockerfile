@@ -1,36 +1,54 @@
-FROM node:20-alpine3.18 AS builder
+# Multi-stage build for production
+FROM node:20-alpine AS builder
+
+# Install dependencies for native modules
+RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev openssl openssl-dev
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
 
-COPY package.json ./
-RUN npm install --legacy-peer-deps
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
 
+# Copy source code
 COPY . .
-RUN npm run prisma:generate
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Build the application
 RUN npm run build
 
-FROM node:20-alpine3.18
+# Production stage
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Alpine 3.18 has OpenSSL 3.0, install runtime deps
-RUN apk add --no-cache dumb-init curl cairo jpeg pango giflib openssl 
+# Install curl for healthcheck
+RUN apk add --no-cache curl
 
-COPY --from=builder /app/node_modules ./node_modules
+# Copy built application
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
-COPY package.json ./
-COPY docker-entrypoint.sh ./
 
-RUN chmod +x docker-entrypoint.sh
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
-USER nestjs
+USER nodejs
 
+# Expose port
 EXPOSE 4000
-ENV PORT=4000
 
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "./docker-entrypoint.sh"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:4000/health || exit 1
+
+# Start command
+CMD ["node", "dist/main"]

@@ -64,16 +64,6 @@ jobs:
         ports:
           - 5432:5432
 
-      mongodb:
-        image: mongo:7
-        options: >-
-          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 27017:27017
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -91,7 +81,6 @@ jobs:
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/deepdive_test
-          MONGODB_URI: mongodb://localhost:27017/deepdive_test
         run: |
           npx prisma generate
           npx prisma migrate deploy
@@ -100,7 +89,6 @@ jobs:
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/deepdive_test
-          MONGODB_URI: mongodb://localhost:27017/deepdive_test
           JWT_SECRET: test_secret
         run: npm test
 
@@ -171,7 +159,6 @@ jobs:
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/deepdive
-          MONGODB_URI: mongodb://localhost:27017/deepdive
         run: npm run build
 
   # 全部成功后的通知

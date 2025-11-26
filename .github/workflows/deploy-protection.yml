@@ -36,7 +36,7 @@ jobs:
           fi
 
           # 检查代码中的硬编码secrets
-          if grep -rE '(password|secret|api_key|apikey|token).*=.*["\'](?!process\.env)[^"\']{20,}["\']' --exclude-dir=node_modules --exclude-dir=.git .; then
+          if grep -rE '(password|secret|api_key|apikey|token).*=.*["'"'"'][^"'"'"']{20,}["'"'"']' --exclude-dir=node_modules --exclude-dir=.git . 2>/dev/null; then
             echo "⚠️  Potential hardcoded secrets detected!"
             echo "Please review the above matches"
             exit 1

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { MongoDBService } from "../../common/mongodb/mongodb.service";
+import { MongoDBService } from "../../common/mongodb/mongodb.service.postgres";
 import { DeduplicationService } from "./deduplication.service";
 import { AIEnrichmentService } from "../resources/ai-enrichment.service";
 import { HackernewsCommentsService } from "./hackernews-comments.service";

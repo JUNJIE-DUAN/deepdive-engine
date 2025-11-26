@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { MongoDBService } from "../../common/mongodb/mongodb.service";
+import { MongoDBService } from "../../common/mongodb/mongodb.service.postgres";
 import { DeduplicationService } from "./deduplication.service";
 import { getErrorStack } from "../../common/utils/error.utils";
 import axios from "axios";

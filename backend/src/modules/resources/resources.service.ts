@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { MongoDBService } from "../../common/mongodb/mongodb.service";
+import { MongoDBService } from "../../common/mongodb/mongodb.service.postgres";
 import { ensureError } from "../../common/utils/error.utils";
 import { Prisma } from "@prisma/client";
 import { SourceWhitelistService } from "../data-management/services/source-whitelist.service";

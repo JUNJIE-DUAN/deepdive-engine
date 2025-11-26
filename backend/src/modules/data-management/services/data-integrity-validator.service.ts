@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../../common/prisma/prisma.service";
-import { MongoDBService } from "../../../common/mongodb/mongodb.service";
+import { MongoDBService } from "../../../common/mongodb/mongodb.service.postgres";
 
 export interface IntegrityReport {
   timestamp: Date;

@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../../../common/prisma/prisma.service";
-import { MongoDBService } from "../../../common/mongodb/mongodb.service";
+import { MongoDBService } from "../../../common/mongodb/mongodb.service.postgres";
 import { ResourceType, ImportTaskStatus } from "@prisma/client";
 import { getErrorMessage } from "../../../common/utils/error.utils";
 import {

@@ -192,8 +192,11 @@ model Resource {
   workspaceResources WorkspaceResource[]
 
   // AI Group 相关
-  topicAttachments   TopicMessageAttachment[] @relation("TopicAttachmentResource")
-  topicResources     TopicResource[]          @relation("TopicSharedResource")
+  topicAttachments TopicMessageAttachment[] @relation("TopicAttachmentResource")
+  topicResources   TopicResource[]          @relation("TopicSharedResource")
+
+  // Raw data collection (replaces MongoDB)
+  rawDataRecords RawData[]
 
   @@index([type, publishedAt(sort: Desc)])
   @@index([qualityScore(sort: Desc)])
@@ -1522,4 +1525,35 @@ model AIModel {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("ai_models")
+}
+
+// ============ Raw Data Collection (replaces MongoDB) ============
+
+model RawData {
+  id String @id @default(uuid())
+
+  // Data source type (arxiv, github, hackernews, rss, blog, etc.)
+  source String @db.VarChar(50)
+
+  // External ID for deduplication (e.g., arXiv ID, GitHub repo name)
+  externalId String? @map("external_id") @db.VarChar(500)
+
+  // Complete raw data stored as JSONB
+  data Json
+
+  // Reference to PostgreSQL Resource (bidirectional link)
+  resourceId String?   @map("resource_id")
+  resource   Resource? @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+
+  // Metadata
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Indexes for performance
+  @@index([source])
+  @@index([externalId])
+  @@index([resourceId])
+  @@index([createdAt])
+  // GIN index for JSONB data (created via raw SQL migration)
+  @@map("raw_data")
 }

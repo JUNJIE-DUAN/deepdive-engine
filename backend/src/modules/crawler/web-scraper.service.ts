@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { MongoDBService } from "../../common/mongodb/mongodb.service";
+import { MongoDBService } from "../../common/mongodb/mongodb.service.postgres";
 import { DeduplicationService } from "./deduplication.service";
 import * as cheerio from "cheerio";
 import axios from "axios";

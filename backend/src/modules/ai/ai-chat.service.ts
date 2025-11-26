@@ -824,6 +824,11 @@ Format the summary in a clear, structured manner using markdown.`;
     headers: Record<string, string>,
     modelName: string,
   ): Promise<ChatCompletionResult> {
+    this.logger.log(
+      `[${modelName}] Calling API: ${url.replace(/Bearer\s+\S+/, "Bearer ***")}`,
+    );
+    this.logger.log(`[${modelName}] Request body model: ${body.model}`);
+
     const response = await firstValueFrom(
       this.httpService.post(url, body, {
         headers: {
@@ -835,8 +840,36 @@ Format the summary in a clear, structured manner using markdown.`;
     );
 
     const data = response.data;
+    const content = data.choices?.[0]?.message?.content;
+
+    // Log response details for debugging
+    this.logger.log(`[${modelName}] Response status: ${response.status}`);
+    this.logger.log(
+      `[${modelName}] Response has choices: ${!!data.choices}, length: ${data.choices?.length || 0}`,
+    );
+    if (data.choices?.[0]) {
+      this.logger.log(
+        `[${modelName}] Choice finish_reason: ${data.choices[0].finish_reason}`,
+      );
+      this.logger.log(
+        `[${modelName}] Message content length: ${content?.length || 0}`,
+      );
+    }
+    if (data.error) {
+      this.logger.error(
+        `[${modelName}] API returned error: ${JSON.stringify(data.error)}`,
+      );
+    }
+
+    if (!content) {
+      this.logger.warn(
+        `[${modelName}] API returned empty content, full response: ${JSON.stringify(data).substring(0, 500)}`,
+      );
+    }
+
     return {
-      content: data.choices?.[0]?.message?.content || "",
+      content:
+        content || `[${modelName}] No response content received from API.`,
       model: modelName,
       tokensUsed: data.usage?.total_tokens || 0,
     };
@@ -969,6 +1002,45 @@ Format the summary in a clear, structured manner using markdown.`;
 
     const data = response.data;
 
+    // Log response details for debugging
+    this.logger.log(`[Gemini] Response status: ${response.status}`);
+    this.logger.log(
+      `[Gemini] Has candidates: ${!!data.candidates}, length: ${data.candidates?.length || 0}`,
+    );
+
+    if (data.candidates?.[0]) {
+      const candidate = data.candidates[0];
+      this.logger.log(
+        `[Gemini] Candidate finishReason: ${candidate.finishReason}`,
+      );
+      this.logger.log(
+        `[Gemini] Has content: ${!!candidate.content}, parts: ${candidate.content?.parts?.length || 0}`,
+      );
+
+      // Check for safety ratings that might block response
+      if (candidate.safetyRatings) {
+        const blocked = candidate.safetyRatings.filter(
+          (r: any) => r.probability === "HIGH" || r.blocked,
+        );
+        if (blocked.length > 0) {
+          this.logger.warn(
+            `[Gemini] Safety blocked: ${JSON.stringify(blocked)}`,
+          );
+        }
+      }
+    }
+
+    if (data.promptFeedback?.blockReason) {
+      this.logger.error(
+        `[Gemini] Prompt blocked: ${data.promptFeedback.blockReason}`,
+      );
+      return {
+        content: `Response blocked by Gemini safety filters: ${data.promptFeedback.blockReason}`,
+        model: "gemini",
+        tokensUsed: 0,
+      };
+    }
+
     // Process response - handle both text and image parts
     const parts = data.candidates?.[0]?.content?.parts || [];
     let textContent = "";
@@ -992,11 +1064,18 @@ Format the summary in a clear, structured manner using markdown.`;
     if (images.length > 0) {
       finalContent =
         images.join("\n\n") + (textContent ? "\n\n" + textContent : "");
-      this.logger.log(`Gemini generated ${images.length} image(s)`);
+      this.logger.log(`[Gemini] Generated ${images.length} image(s)`);
+    }
+
+    if (!finalContent) {
+      this.logger.warn(
+        `[Gemini] Empty response, full data: ${JSON.stringify(data).substring(0, 500)}`,
+      );
     }
 
     return {
-      content: finalContent || "I was unable to generate a response.",
+      content:
+        finalContent || "[Gemini] No response content received from API.",
       model: "gemini",
       tokensUsed:
         (data.usageMetadata?.promptTokenCount || 0) +

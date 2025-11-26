@@ -25,6 +25,93 @@ import remarkGfm from 'remark-gfm';
 // Performance constant - messages are limited in store (aiGroupStore.ts)
 const MAX_MESSAGES_IN_MEMORY = 200; // Reference: actual limit is in store
 
+// Markdown Image Component with proper hooks
+function MarkdownImage({
+  src,
+  alt,
+  ...props
+}: {
+  src?: string;
+  alt?: string;
+  [key: string]: unknown;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const isDataUri = src?.startsWith('data:');
+
+  // Debug: Log image info
+  useEffect(() => {
+    if (isDataUri && src) {
+      console.log(
+        '[Image Debug] Data URI image detected, size:',
+        src.length,
+        'bytes (~',
+        Math.round(src.length / 1024),
+        'KB)'
+      );
+    }
+  }, [src, isDataUri]);
+
+  if (imgError) {
+    return (
+      <span className="my-2 block rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+        <span className="text-red-600">Image failed to load</span>
+        {isDataUri && src && (
+          <a
+            href={src}
+            download={`generated-image-${Date.now()}.png`}
+            className="mt-2 block text-xs text-blue-600 hover:text-blue-800"
+          >
+            Download Image ({Math.round(src.length / 1024)} KB)
+          </a>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span className="my-2 block">
+      {!imgLoaded && (
+        <span className="block animate-pulse rounded-lg bg-gray-200 p-8 text-center text-gray-500">
+          Loading image...
+        </span>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt || 'AI Generated Image'}
+        className={`h-auto max-w-full rounded-lg shadow-md ${!imgLoaded ? 'hidden' : ''}`}
+        style={{
+          maxHeight: '400px',
+          objectFit: 'contain',
+        }}
+        loading="lazy"
+        onLoad={() => {
+          console.log('[Image Debug] Image loaded successfully');
+          setImgLoaded(true);
+        }}
+        onError={() => {
+          console.error(
+            '[Image Debug] Image failed to load:',
+            isDataUri ? `data URI (${src?.length} bytes)` : src
+          );
+          setImgError(true);
+        }}
+        {...props}
+      />
+      {isDataUri && imgLoaded && (
+        <a
+          href={src}
+          download={`generated-image-${Date.now()}.png`}
+          className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800"
+        >
+          Download Image
+        </a>
+      )}
+    </span>
+  );
+}
+
 // Member Panel
 function MemberPanel({
   topic,
@@ -306,7 +393,6 @@ const MessageBubble = memo(function MessageBubble({
   currentUserId: string;
 }) {
   const [showActions, setShowActions] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [needsCollapse, setNeedsCollapse] = useState(false);
   const isAI = !!message.aiMemberId;
@@ -314,15 +400,25 @@ const MessageBubble = memo(function MessageBubble({
     ? AI_MODELS.find((m) => m.id === message.aiMember?.aiModel)
     : null;
 
+  // Check if message contains an image (markdown image syntax)
+  const hasImage = message.content?.includes('![');
+
+  // Auto-expand messages with images
+  const [isExpanded, setIsExpanded] = useState(hasImage);
+
   // Check if content exceeds 5 lines (~120px at ~24px line height)
+  // But don't collapse messages with images
   useEffect(() => {
-    if (contentRef.current) {
+    if (contentRef.current && !hasImage) {
       const lineHeight = 24; // Approximate line height in pixels
       const maxLines = 5;
       const maxHeight = lineHeight * maxLines;
       setNeedsCollapse(contentRef.current.scrollHeight > maxHeight);
+    } else if (hasImage) {
+      // Messages with images should not be collapsed
+      setNeedsCollapse(false);
     }
-  }, [message.content]);
+  }, [message.content, hasImage]);
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -453,43 +549,7 @@ const MessageBubble = memo(function MessageBubble({
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    img: ({ node, src, alt, ...props }) => {
-                      // Handle base64 data URIs for AI generated images
-                      const isDataUri = src?.startsWith('data:');
-                      return (
-                        <span className="my-2 block">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={src}
-                            alt={alt || 'AI Generated Image'}
-                            className="h-auto max-w-full rounded-lg shadow-md"
-                            style={{
-                              maxHeight: '400px',
-                              objectFit: 'contain',
-                            }}
-                            loading="lazy"
-                            onError={(e) => {
-                              console.error(
-                                'Image failed to load:',
-                                isDataUri ? 'data URI' : src
-                              );
-                              (e.target as HTMLImageElement).style.display =
-                                'none';
-                            }}
-                            {...props}
-                          />
-                          {isDataUri && (
-                            <a
-                              href={src}
-                              download={`generated-image-${Date.now()}.png`}
-                              className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800"
-                            >
-                              📥 Download Image
-                            </a>
-                          )}
-                        </span>
-                      );
-                    },
+                    img: ({ node, ...props }) => <MarkdownImage {...props} />,
                   }}
                 >
                   {message.content}

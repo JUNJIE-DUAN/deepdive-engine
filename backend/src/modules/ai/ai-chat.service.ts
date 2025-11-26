@@ -1401,6 +1401,61 @@ Format the summary in a clear, structured manner using markdown.`;
       );
     }
 
+    // FALLBACK: If this was an image request but Gemini didn't return any images,
+    // fall back to Imagen API for image generation
+    if (isImageRequest && images.length === 0) {
+      this.logger.warn(
+        `[Gemini] Image generation requested but no images returned, falling back to Imagen API`,
+      );
+
+      // Get the original user prompt for Imagen
+      const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+      const userPrompt = lastUserMessage?.content || "";
+
+      // Try Imagen API as fallback
+      try {
+        const imagenResult = await this.callImagenApi(
+          apiKey,
+          "imagen-3.0-generate-001",
+          userPrompt,
+        );
+
+        // If Imagen succeeded, combine with Gemini's text response
+        if (
+          imagenResult.content &&
+          !imagenResult.content.includes("图像生成失败")
+        ) {
+          this.logger.log(`[Imagen Fallback] Successfully generated image`);
+          // If Gemini provided useful text, append it
+          if (textContent && textContent.length > 50) {
+            return {
+              content: imagenResult.content + "\n\n" + textContent,
+              model: "gemini+imagen",
+              tokensUsed:
+                (data.usageMetadata?.promptTokenCount || 0) +
+                (data.usageMetadata?.candidatesTokenCount || 0),
+            };
+          }
+          return imagenResult;
+        }
+      } catch (imagenError) {
+        this.logger.error(`[Imagen Fallback] Failed: ${imagenError}`);
+      }
+
+      // If Imagen also failed, return Gemini's text response with explanation
+      if (textContent) {
+        return {
+          content:
+            textContent +
+            "\n\n*注意：AI 生成了描述但未能生成实际图片。您可以尝试使用 DALL-E 3 (OpenAI) 模型来生成图片。*",
+          model: "gemini",
+          tokensUsed:
+            (data.usageMetadata?.promptTokenCount || 0) +
+            (data.usageMetadata?.candidatesTokenCount || 0),
+        };
+      }
+    }
+
     if (!finalContent) {
       this.logger.warn(
         `[Gemini] Empty response, full data: ${JSON.stringify(data).substring(0, 500)}`,

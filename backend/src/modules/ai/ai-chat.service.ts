@@ -37,6 +37,142 @@ export class AiChatService {
   }
 
   /**
+   * Detect if a message needs web search
+   * Looks for keywords like "搜索", "查找", "最新", "新闻", "search", etc.
+   */
+  private needsWebSearch(text: string): boolean {
+    const searchKeywords = [
+      "搜索",
+      "搜一下",
+      "查找",
+      "查一下",
+      "查询",
+      "最新",
+      "新闻",
+      "今天",
+      "昨天",
+      "本周",
+      "现在",
+      "目前",
+      "当前",
+      "实时",
+      "热点",
+      "trending",
+      "search",
+      "look up",
+      "find out",
+      "latest",
+      "news",
+      "current",
+      "recent",
+      "today",
+    ];
+    const lowerText = text.toLowerCase();
+    return searchKeywords.some((keyword) => lowerText.includes(keyword));
+  }
+
+  /**
+   * Extract search query from user message
+   */
+  private extractSearchQuery(text: string): string {
+    // Remove common prefixes and clean up the query
+    let query = text
+      .replace(/@[\w-]+\s*/g, "") // Remove @mentions
+      .replace(/搜索|搜一下|查找|查一下|查询|帮我|请|给我/g, "")
+      .replace(/search|look up|find/gi, "")
+      .trim();
+
+    // Limit query length
+    if (query.length > 100) {
+      query = query.substring(0, 100);
+    }
+
+    return query;
+  }
+
+  /**
+   * Perform web search using DuckDuckGo
+   */
+  private async webSearch(query: string): Promise<string> {
+    try {
+      this.logger.log(`Performing web search for: ${query}`);
+
+      // Use DuckDuckGo HTML search
+      const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+
+      const response = await firstValueFrom(
+        this.httpService.get(searchUrl, {
+          timeout: 10000,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "text/html",
+          },
+          responseType: "text",
+        }),
+      );
+
+      const html = response.data;
+
+      // Extract search results from DuckDuckGo HTML
+      const results: { title: string; snippet: string; url: string }[] = [];
+
+      // Match result blocks
+      const resultRegex =
+        /<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>([^<]*)</g;
+      let match;
+      let count = 0;
+
+      while ((match = resultRegex.exec(html)) !== null && count < 5) {
+        const url = match[1];
+        const title = match[2].trim();
+        const snippet = match[3].trim();
+
+        if (title && snippet) {
+          results.push({ title, snippet, url });
+          count++;
+        }
+      }
+
+      // Alternative extraction if first pattern didn't work
+      if (results.length === 0) {
+        const altRegex =
+          /<h2[^>]*class="result__title"[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+        while ((match = altRegex.exec(html)) !== null && count < 5) {
+          const url = match[1];
+          const title = match[2].replace(/<[^>]+>/g, "").trim();
+          const snippet = match[3].replace(/<[^>]+>/g, "").trim();
+
+          if (title && snippet) {
+            results.push({ title, snippet, url });
+            count++;
+          }
+        }
+      }
+
+      if (results.length === 0) {
+        this.logger.warn(`No search results found for: ${query}`);
+        return `[搜索 "${query}" 未找到结果]`;
+      }
+
+      // Format results for AI
+      const formattedResults = results
+        .map(
+          (r, i) =>
+            `${i + 1}. **${r.title}**\n   ${r.snippet}\n   来源: ${r.url}`,
+        )
+        .join("\n\n");
+
+      this.logger.log(`Found ${results.length} search results for: ${query}`);
+
+      return `\n\n--- 网络搜索结果 (${query}) ---\n${formattedResults}`;
+    } catch (error) {
+      this.logger.error(`Web search failed for "${query}": ${error}`);
+      return `[搜索失败: ${error}]`;
+    }
+  }
+
+  /**
    * Fetch content from a URL and extract text
    * Used to provide context to AI models that can't access URLs directly
    */
@@ -87,7 +223,8 @@ export class AiChatService {
   }
 
   /**
-   * Process messages to fetch URL content and augment context
+   * Process messages to fetch URL content and perform web search if needed
+   * This gives all AI models the ability to access the internet
    */
   private async augmentMessagesWithUrlContent(
     messages: ChatMessage[],
@@ -96,11 +233,11 @@ export class AiChatService {
 
     for (const message of messages) {
       if (message.role === "user") {
+        let augmentedContent = message.content;
         const urls = this.extractUrls(message.content);
-        if (urls.length > 0) {
-          let augmentedContent = message.content;
 
-          // Fetch content from each URL (limit to first 2 URLs)
+        // 1. Fetch content from URLs if present
+        if (urls.length > 0) {
           const urlsToFetch = urls.slice(0, 2);
           const fetchedContents: string[] = [];
 
@@ -117,14 +254,22 @@ export class AiChatService {
               `Augmented message with content from ${fetchedContents.length} URL(s)`,
             );
           }
-
-          augmentedMessages.push({
-            ...message,
-            content: augmentedContent,
-          });
-        } else {
-          augmentedMessages.push(message);
         }
+
+        // 2. Perform web search if message indicates search intent (and no URLs)
+        if (urls.length === 0 && this.needsWebSearch(message.content)) {
+          const searchQuery = this.extractSearchQuery(message.content);
+          if (searchQuery.length > 3) {
+            this.logger.log(`Detected search intent, query: ${searchQuery}`);
+            const searchResults = await this.webSearch(searchQuery);
+            augmentedContent += searchResults;
+          }
+        }
+
+        augmentedMessages.push({
+          ...message,
+          content: augmentedContent,
+        });
       } else {
         augmentedMessages.push(message);
       }

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AI_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
+// Use the main backend API URL (NestJS), not separate AI service
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, context, model = 'grok', stream = true } = body;
+    const { message, context, model = 'gemini', stream = true } = body;
 
-    // Forward request to AI service (using simple-chat endpoint)
-    const response = await fetch(`${AI_SERVICE_URL}/api/v1/ai/simple-chat`, {
+    // Forward request to NestJS backend simple-chat endpoint
+    const response = await fetch(`${API_URL}/api/v1/ai/simple-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI service error:', response.status, errorText);
       throw new Error(`AI service responded with status: ${response.status}`);
     }
 

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AI_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
+// Use the main backend API URL (NestJS)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { content, action, model = 'grok-3' } = body;
+    const { content, action, model = 'gemini' } = body;
 
-    // Forward request to AI service
-    const response = await fetch(`${AI_SERVICE_URL}/api/v1/ai/quick-action`, {
+    // Forward request to NestJS backend
+    const response = await fetch(`${API_URL}/api/v1/ai/quick-action`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

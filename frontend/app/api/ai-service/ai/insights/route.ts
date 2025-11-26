@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AI_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
+// Use the main backend API URL (NestJS)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { content, language = 'zh' } = body;
 
-    // Forward request to AI service
-    const response = await fetch(`${AI_SERVICE_URL}/api/v1/ai/insights`, {
+    // Forward request to NestJS backend
+    const response = await fetch(`${API_URL}/api/v1/ai/insights`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      // Try to get error details from the response
       let errorDetail = `AI service responded with status: ${response.status}`;
       try {
         const errorData = await response.json();

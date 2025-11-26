@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Try NestJS backend first, fallback to AI service
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const AI_SERVICE_URL =
   process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
 
@@ -12,7 +14,7 @@ export async function POST(request: NextRequest) {
     const {
       segments,
       targetLanguage = 'zh-CN',
-      model = 'gpt-4o-mini',
+      model = 'gemini',
       batchSize = 10,
     } = body;
 
@@ -25,23 +27,41 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 300000); // 5分钟超时
 
     try {
-      // Forward request to AI service
-      const response = await fetch(
-        `${AI_SERVICE_URL}/api/v1/ai/translate-segments`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            segments,
-            targetLanguage,
-            model,
-            batchSize,
-          }),
-          signal: controller.signal,
-        }
-      );
+      // Try NestJS backend first (translate-segments endpoint)
+      let response = await fetch(`${API_URL}/api/v1/ai/translate-segments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          segments,
+          targetLanguage,
+          model,
+          batchSize,
+        }),
+        signal: controller.signal,
+      });
+
+      // If NestJS doesn't have this endpoint, try AI service
+      if (response.status === 404) {
+        console.log('NestJS endpoint not found, trying AI service...');
+        response = await fetch(
+          `${AI_SERVICE_URL}/api/v1/ai/translate-segments`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              segments,
+              targetLanguage,
+              model,
+              batchSize,
+            }),
+            signal: controller.signal,
+          }
+        );
+      }
 
       clearTimeout(timeoutId);
 

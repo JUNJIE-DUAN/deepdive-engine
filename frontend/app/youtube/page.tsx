@@ -118,6 +118,16 @@ function YouTubeTLDWContent() {
   const [noteTitle, setNoteTitle] = useState('');
   const [savingNote, setSavingNote] = useState(false);
 
+  // Notes tab states
+  interface SavedNote {
+    id: string;
+    title: string;
+    content: string;
+    createdAt: string;
+  }
+  const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const activeSegmentRef = useRef<HTMLDivElement>(null);
@@ -363,11 +373,50 @@ function YouTubeTLDWContent() {
     }
   }, [aiMessages]);
 
+  // Context menu ref
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  // Load notes when switching to notes tab
+  const loadNotes = useCallback(async () => {
+    if (!accessToken) return;
+
+    setLoadingNotes(true);
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/notes?source=youtube-ai-chat&limit=20`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSavedNotes(data.items || data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load notes:', error);
+    } finally {
+      setLoadingNotes(false);
+    }
+  }, [accessToken]);
+
+  // Load notes when switching to notes tab
+  useEffect(() => {
+    if (activeTab === 'notes' && accessToken) {
+      loadNotes();
+    }
+  }, [activeTab, accessToken, loadNotes]);
+
   // Close context menu on click outside (left click only)
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       // Only close on left click (button 0), not right click (button 2)
       if (e.button === 0) {
+        // Don't close if clicking inside the context menu
+        if (contextMenuRef.current?.contains(e.target as Node)) {
+          return;
+        }
         setContextMenu({ visible: false, x: 0, y: 0, message: null });
       }
     };
@@ -419,6 +468,8 @@ function YouTubeTLDWContent() {
         setShowNotesModal(false);
         setNoteTitle('');
         setContextMenu({ visible: false, x: 0, y: 0, message: null });
+        // Refresh notes list
+        loadNotes();
         alert('Note saved successfully!');
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -1219,8 +1270,48 @@ function YouTubeTLDWContent() {
               )}
 
               {activeTab === 'notes' && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-sm text-gray-400">Notes 功能开发中</div>
+                <div className="flex h-full flex-col p-4">
+                  {!accessToken ? (
+                    <div className="flex flex-1 items-center justify-center">
+                      <div className="text-center text-sm text-gray-400">
+                        Please sign in to view saved notes
+                      </div>
+                    </div>
+                  ) : loadingNotes ? (
+                    <div className="flex flex-1 items-center justify-center">
+                      <div className="text-sm text-gray-400">
+                        Loading notes...
+                      </div>
+                    </div>
+                  ) : savedNotes.length === 0 ? (
+                    <div className="flex flex-1 items-center justify-center">
+                      <div className="text-center text-sm text-gray-400">
+                        <p>No saved notes yet</p>
+                        <p className="mt-1 text-xs">
+                          Right-click on AI responses to save them
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 overflow-y-auto">
+                      {savedNotes.map((note) => (
+                        <div
+                          key={note.id}
+                          className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
+                        >
+                          <h4 className="mb-1 text-sm font-medium text-gray-900">
+                            {note.title}
+                          </h4>
+                          <div className="prose-sm prose line-clamp-3 max-w-none text-xs text-gray-600">
+                            <ReactMarkdown>{note.content}</ReactMarkdown>
+                          </div>
+                          <div className="mt-2 text-[10px] text-gray-400">
+                            {new Date(note.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1276,9 +1367,11 @@ function YouTubeTLDWContent() {
       {/* Context Menu */}
       {contextMenu.visible && contextMenu.message && (
         <div
+          ref={contextMenuRef}
           className="fixed z-50 min-w-[180px] rounded-lg border border-gray-200 bg-white py-1 shadow-xl"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => {

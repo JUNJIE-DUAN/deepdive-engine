@@ -1,12 +1,67 @@
 import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { firstValueFrom } from "rxjs";
+import { PrismaService } from "../../common/prisma/prisma.service";
 
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  /**
+   * 获取已启用的 AI 模型列表（公共 API）
+   * 返回前端需要的模型信息（不包含 API Key）
+   */
+  async getEnabledModels() {
+    const models = await this.prisma.aIModel.findMany({
+      where: {
+        isEnabled: true,
+      },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        provider: true,
+        modelId: true,
+        icon: true,
+        color: true,
+        description: true,
+        isDefault: true,
+      },
+    });
+
+    return models.map((model) => ({
+      id: model.name, // 使用 name 作为前端的 id（兼容现有代码）
+      dbId: model.id, // 数据库实际 ID
+      name: model.displayName,
+      provider: model.provider,
+      modelId: model.modelId,
+      icon: model.icon,
+      iconUrl: this.getIconUrl(model.name),
+      color: model.color,
+      description:
+        model.description || `${model.provider} ${model.displayName}`,
+      isDefault: model.isDefault,
+    }));
+  }
+
+  /**
+   * 根据模型名称获取图标 URL
+   */
+  private getIconUrl(name: string): string {
+    const iconMap: Record<string, string> = {
+      grok: "/icons/ai/grok.svg",
+      "gpt-4": "/icons/ai/openai.svg",
+      claude: "/icons/ai/claude.svg",
+      gemini: "/icons/ai/gemini.svg",
+    };
+    return iconMap[name.toLowerCase()] || "/icons/ai/default.svg";
+  }
 
   async translateText(
     text: string,

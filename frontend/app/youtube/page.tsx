@@ -13,6 +13,7 @@ import KeyMomentsPanel, {
   type KeyMoment,
 } from '@/components/youtube/KeyMomentsPanel';
 import { SubtitleExportButton } from '@/components/youtube';
+import { useAIModels } from '@/hooks/useAIModels';
 
 interface TranscriptSegment {
   text: string;
@@ -63,6 +64,9 @@ function YouTubeTLDWContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const videoId = searchParams?.get('videoId') || '';
+
+  // 动态获取 AI 模型列表
+  const { models: aiModels } = useAIModels();
 
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -1132,45 +1136,20 @@ function YouTubeTLDWContent() {
                       <span className="text-xs font-medium text-gray-500">
                         AI 模型:
                       </span>
-                      <div className="flex gap-1">
-                        {[
-                          {
-                            id: 'grok',
-                            name: 'Grok',
-                            icon: '⚡',
-                            color: 'from-blue-500 to-blue-600',
-                          },
-                          {
-                            id: 'gpt-4',
-                            name: 'GPT-4',
-                            icon: '🧠',
-                            color: 'from-green-500 to-green-600',
-                          },
-                          {
-                            id: 'claude',
-                            name: 'Claude',
-                            icon: '🎭',
-                            color: 'from-orange-500 to-orange-600',
-                          },
-                          {
-                            id: 'gemini',
-                            name: 'Gemini',
-                            icon: '✨',
-                            color: 'from-purple-500 to-purple-600',
-                          },
-                        ].map((model) => (
+                      <div className="flex flex-wrap gap-1">
+                        {aiModels.map((model) => (
                           <button
                             key={model.id}
                             onClick={() => setAiModel(model.id)}
                             disabled={isStreaming}
                             className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all ${
                               aiModel === model.id
-                                ? `bg-gradient-to-br ${model.color} text-white shadow-sm`
+                                ? `bg-gradient-to-br ${model.color || 'from-blue-500 to-blue-600'} text-white shadow-sm`
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             } ${isStreaming ? 'cursor-not-allowed opacity-50' : ''}`}
                           >
                             <span>{model.icon}</span>
-                            <span>{model.name}</span>
+                            <span>{model.name.split(' ')[0]}</span>
                           </button>
                         ))}
                       </div>

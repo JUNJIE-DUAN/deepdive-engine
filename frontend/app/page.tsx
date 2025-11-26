@@ -30,6 +30,7 @@ import {
 import { useResourceStore } from '@/stores/aiOfficeStore';
 import type { Resource as AIOfficeResource } from '@/types/ai-office';
 import { ThumbsUp, TrendingUp, Clock, Star, ChevronDown } from 'lucide-react';
+import { useAIModels } from '@/hooks/useAIModels';
 
 interface Resource {
   id: string;
@@ -170,7 +171,8 @@ function HomeContent() {
   } | null>(null);
   const [savingNote, setSavingNote] = useState(false);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
-  const [aiModel, setAiModel] = useState<'grok' | 'openai'>('grok');
+  const { models: aiModels } = useAIModels();
+  const [aiModel, setAiModel] = useState('grok');
   const [isStreaming, setIsStreaming] = useState(false);
 
   // PDF text extraction state
@@ -2580,13 +2582,14 @@ function HomeContent() {
                     </div>
                     <select
                       value={aiModel}
-                      onChange={(e) =>
-                        setAiModel(e.target.value as 'grok' | 'openai')
-                      }
+                      onChange={(e) => setAiModel(e.target.value)}
                       className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium shadow-sm transition-all hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     >
-                      <option value="grok">Grok-3 (x.AI)</option>
-                      <option value="openai">GPT-4o-mini (OpenAI)</option>
+                      {aiModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name} ({model.provider})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -2706,7 +2709,7 @@ function HomeContent() {
                       <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-red-600"></div>
                       <span className="text-sm text-gray-600">
                         {isStreaming
-                          ? `${aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'} is thinking...`
+                          ? `${aiModels.find((m) => m.id === aiModel)?.name || aiModel} is thinking...`
                           : 'AI processing...'}
                       </span>
                     </div>
@@ -2884,7 +2887,8 @@ function HomeContent() {
                             <div className="flex items-center gap-2">
                               <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-red-600"></div>
                               <p className="text-xs">
-                                {aiModel === 'grok' ? 'Grok-3' : 'GPT-4o-mini'}
+                                {aiModels.find((m) => m.id === aiModel)?.name ||
+                                  aiModel}
                                 正在思考...
                               </p>
                             </div>

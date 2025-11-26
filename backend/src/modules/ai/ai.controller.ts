@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
   BadRequestException,
@@ -19,6 +20,16 @@ export class AiController {
   private readonly logger = new Logger(AiController.name);
 
   constructor(private readonly aiService: AiService) {}
+
+  /**
+   * 获取已启用的 AI 模型列表（公共 API，无需认证）
+   * GET /api/v1/ai/models
+   */
+  @Get("models")
+  async getEnabledModels() {
+    this.logger.log("Fetching enabled AI models");
+    return this.aiService.getEnabledModels();
+  }
 
   @Post("translate-single")
   async translateSingle(@Body() body: TranslateSingleRequest) {

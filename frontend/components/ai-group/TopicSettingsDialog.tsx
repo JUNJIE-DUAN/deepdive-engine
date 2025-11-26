@@ -4,11 +4,11 @@ import { useState } from 'react';
 import {
   Topic,
   TopicAIMember,
-  AI_MODELS,
   UpdateTopicDto,
   AddAIMemberDto,
 } from '@/types/ai-group';
 import { useAiGroupStore } from '@/stores/aiGroupStore';
+import { useAIModels, AIModel } from '@/hooks/useAIModels';
 
 interface TopicSettingsDialogProps {
   topic: Topic;
@@ -196,6 +196,9 @@ function AISettings({
 }) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingAI, setEditingAI] = useState<TopicAIMember | null>(null);
+  const { models } = useAIModels();
+
+  const findModel = (aiModel: string) => models.find((m) => m.id === aiModel);
 
   return (
     <div className="space-y-4">
@@ -216,7 +219,7 @@ function AISettings({
       ) : (
         <div className="space-y-2">
           {topic.aiMembers.map((ai) => {
-            const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+            const model = findModel(ai.aiModel);
             return (
               <div
                 key={ai.id}
@@ -322,6 +325,7 @@ function AddAIDialog({
   const [systemPrompt, setSystemPrompt] = useState('');
   const [autoRespond, setAutoRespond] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const { models, loading } = useAIModels();
 
   const handleAdd = async () => {
     if (!selectedModel || !displayName.trim()) return;
@@ -353,25 +357,31 @@ function AddAIDialog({
             <label className="mb-2 block text-sm font-medium text-gray-700">
               Select Model
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {AI_MODELS.map((model) => (
-                <button
-                  key={model.id}
-                  onClick={() => {
-                    setSelectedModel(model.id);
-                    if (!displayName) setDisplayName(`AI-${model.name}`);
-                  }}
-                  className={`flex items-center gap-2 rounded-lg border-2 p-3 text-left transition-colors ${
-                    selectedModel === model.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-xl">{model.icon}</span>
-                  <span className="text-sm font-medium">{model.name}</span>
-                </button>
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {models.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      if (!displayName) setDisplayName(`AI-${model.name}`);
+                    }}
+                    className={`flex items-center gap-2 rounded-lg border-2 p-3 text-left transition-colors ${
+                      selectedModel === model.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-xl">{model.icon}</span>
+                    <span className="text-sm font-medium">{model.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -468,6 +478,7 @@ function EditAIDialog({
   const [systemPrompt, setSystemPrompt] = useState(ai.systemPrompt || '');
   const [autoRespond, setAutoRespond] = useState(ai.autoRespond);
   const [isSaving, setIsSaving] = useState(false);
+  const { models } = useAIModels();
 
   const handleSave = async () => {
     if (!displayName.trim()) return;
@@ -486,7 +497,7 @@ function EditAIDialog({
     }
   };
 
-  const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+  const model = models.find((m) => m.id === ai.aiModel);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

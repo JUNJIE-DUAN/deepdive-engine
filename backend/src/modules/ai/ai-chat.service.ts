@@ -481,13 +481,24 @@ Format the summary in a clear, structured manner using markdown.`;
 
         case "openai":
         case "gpt":
+          // Use max_completion_tokens for newer models (gpt-4o, gpt-5, o1, o3)
+          const effectiveOpenAIModel = modelId || "gpt-4";
+          const isNewerOpenAIModel =
+            effectiveOpenAIModel.includes("gpt-5") ||
+            effectiveOpenAIModel.includes("gpt-4o") ||
+            effectiveOpenAIModel.startsWith("o1") ||
+            effectiveOpenAIModel.startsWith("o3");
+          const openAITokenParam = isNewerOpenAIModel
+            ? { max_completion_tokens: 50 }
+            : { max_tokens: 50 };
+
           response = await firstValueFrom(
             this.httpService.post(
               apiEndpoint || "https://api.openai.com/v1/chat/completions",
               {
-                model: modelId || "gpt-4",
+                model: effectiveOpenAIModel,
                 messages: testMessages,
-                max_tokens: 50,
+                ...openAITokenParam,
                 temperature: 0,
               },
               {
@@ -542,10 +553,23 @@ Format the summary in a clear, structured manner using markdown.`;
                 temperature: 0,
               };
 
-          // Build endpoint - use header auth instead of query param for better security
-          const geminiEndpoint =
-            apiEndpoint ||
-            `https://generativelanguage.googleapis.com/v1beta/models/${modelId || "gemini-pro"}:generateContent`;
+          // Build full Gemini endpoint URL
+          // Database stores base URL like: https://generativelanguage.googleapis.com/v1beta/models
+          // We need: https://generativelanguage.googleapis.com/v1beta/models/{modelId}:generateContent
+          const effectiveGeminiModel = modelId || "gemini-pro";
+          let geminiEndpoint: string;
+          if (apiEndpoint && apiEndpoint.includes(":generateContent")) {
+            // Already a full URL
+            geminiEndpoint = apiEndpoint;
+          } else {
+            // Construct full URL from base
+            const baseUrl =
+              apiEndpoint?.replace(/\/$/, "") ||
+              "https://generativelanguage.googleapis.com/v1beta/models";
+            geminiEndpoint = `${baseUrl}/${effectiveGeminiModel}:generateContent`;
+          }
+
+          this.logger.log(`Testing Gemini API: ${geminiEndpoint}`);
 
           response = await firstValueFrom(
             this.httpService.post(
@@ -705,15 +729,27 @@ Format the summary in a clear, structured manner using markdown.`;
             );
             return await this.callDallE3(apiKey, lastUserMsg?.content || "");
           }
+          // Use max_completion_tokens for newer models (gpt-4o, gpt-5, o1, o3, etc.)
+          // and max_tokens for older models (gpt-4-turbo, gpt-3.5-turbo)
+          const effectiveModelId = modelId || "gpt-4-turbo-preview";
+          const isNewModel =
+            effectiveModelId.includes("gpt-5") ||
+            effectiveModelId.includes("gpt-4o") ||
+            effectiveModelId.startsWith("o1") ||
+            effectiveModelId.startsWith("o3");
+          const tokenParam = isNewModel
+            ? { max_completion_tokens: maxTokens }
+            : { max_tokens: maxTokens };
+
           return await this.callApiWithKey(
             apiEndpoint || "https://api.openai.com/v1/chat/completions",
             {
-              model: modelId || "gpt-4-turbo-preview",
+              model: effectiveModelId,
               messages: fullMessages.map((m) => ({
                 role: m.role,
                 content: m.content,
               })),
-              max_tokens: maxTokens,
+              ...tokenParam,
               temperature,
             },
             { Authorization: `Bearer ${apiKey}` },

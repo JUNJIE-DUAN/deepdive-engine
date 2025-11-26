@@ -63,6 +63,36 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Adaptive scaling for different screen sizes */
+  font-size: 16px; /* Base for large screens */
+}
+
+/* 14-inch laptop (1366x768 to 1536x864) - scale down to ~90% */
+@media screen and (max-width: 1536px) {
+  html {
+    font-size: 14px; /* ~87.5% of 16px */
+  }
+}
+
+/* 13-inch and smaller laptops */
+@media screen and (max-width: 1366px) {
+  html {
+    font-size: 13px; /* ~81% of 16px */
+  }
+}
+
+/* Large screens (1920x1080+) */
+@media screen and (min-width: 1920px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* Ultra-wide and 4K monitors */
+@media screen and (min-width: 2560px) {
+  html {
+    font-size: 18px;
+  }
 }
 
 html,
@@ -81,7 +111,7 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
-  font-size: var(--text-base);
+  font-size: 1rem; /* Use rem for adaptive scaling */
   line-height: 1.6;
 }
 

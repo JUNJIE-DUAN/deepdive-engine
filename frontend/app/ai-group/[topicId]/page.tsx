@@ -47,68 +47,13 @@ function extractImagesFromMarkdown(content: string): {
   // Remove image markdown from text content
   textContent = content.replace(imageRegex, '').trim();
 
-  console.log(
-    '[Image Extract] Found',
-    images.length,
-    'images, text length:',
-    textContent.length
-  );
-
-  // Debug: Log image details
-  if (images.length > 0) {
-    images.forEach((img, idx) => {
-      console.log(
-        `[Image Extract] Image ${idx}: alt="${img.alt}", src length=${img.src?.length || 0}`
-      );
-      if (img.src) {
-        console.log(
-          `[Image Extract] Image ${idx} src preview:`,
-          img.src.substring(0, 100)
-        );
-      }
-    });
-  }
-
   return { images, textContent };
 }
 
 // Standalone Image Component - renders base64 images directly
 function Base64Image({ src, alt }: { src: string; alt: string }) {
-  // Log immediately on render (before hooks)
-  console.log(
-    '[Base64Image] Component mounting, src length:',
-    src?.length || 0
-  );
-
   const [imgError, setImgError] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
-
-  useEffect(() => {
-    console.log(
-      '[Base64Image] useEffect running, size:',
-      src.length,
-      'bytes (~',
-      Math.round(src.length / 1024),
-      'KB)'
-    );
-
-    // Validate base64 format
-    const match = src.match(/^data:([^;]+);base64,(.+)$/);
-    if (match) {
-      const [, mimeType, base64Data] = match;
-      console.log('[Base64Image] MIME type:', mimeType);
-      console.log('[Base64Image] Base64 length:', base64Data.length);
-
-      // Check if base64 is valid
-      try {
-        // Try to decode a small portion to validate
-        atob(base64Data.substring(0, 100));
-        console.log('[Base64Image] Base64 appears valid (prefix decoded OK)');
-      } catch (e) {
-        console.error('[Base64Image] Base64 decoding failed:', e);
-      }
-    }
-  }, [src]);
 
   if (imgError) {
     return (
@@ -142,15 +87,10 @@ function Base64Image({ src, alt }: { src: string; alt: string }) {
           maxHeight: '500px',
           objectFit: 'contain',
         }}
-        onLoad={() => {
-          console.log('[Base64Image] Image loaded successfully!');
-          setImgLoaded(true);
-        }}
-        onError={(e) => {
-          console.error('[Base64Image] Image failed to load');
-          console.error('[Base64Image] Event:', e);
-          setImgError(`Failed to decode (${Math.round(src.length / 1024)} KB)`);
-        }}
+        onLoad={() => setImgLoaded(true)}
+        onError={() =>
+          setImgError(`Failed to decode (${Math.round(src.length / 1024)} KB)`)
+        }
       />
       {imgLoaded && (
         <a
@@ -460,6 +400,117 @@ function MemberPanel({
   );
 }
 
+// Context Menu Component for messages
+function MessageContextMenu({
+  x,
+  y,
+  onClose,
+  onReply,
+  onCopy,
+  onReact,
+  messageContent,
+}: {
+  x: number;
+  y: number;
+  onClose: () => void;
+  onReply: () => void;
+  onCopy: () => void;
+  onReact: (emoji: string) => void;
+  messageContent: string;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  // Adjust position to stay within viewport
+  const adjustedX = Math.min(x, window.innerWidth - 180);
+  const adjustedY = Math.min(y, window.innerHeight - 200);
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 min-w-[160px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+      style={{ left: adjustedX, top: adjustedY }}
+    >
+      <button
+        onClick={() => {
+          onReply();
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+          />
+        </svg>
+        引用回复
+      </button>
+      <button
+        onClick={() => {
+          onCopy();
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+          />
+        </svg>
+        复制内容
+      </button>
+      <div className="my-1 border-t border-gray-100" />
+      <div className="px-3 py-1 text-xs text-gray-400">快速表情</div>
+      <div className="flex gap-1 px-2 py-1">
+        {['👍', '❤️', '😄', '🎉', '🤔', '👀'].map((emoji) => (
+          <button
+            key={emoji}
+            onClick={() => {
+              onReact(emoji);
+              onClose();
+            }}
+            className="rounded p-1.5 text-lg hover:bg-gray-100"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Message Bubble Component - Memoized for performance
 const MessageBubble = memo(function MessageBubble({
   message,
@@ -474,9 +525,12 @@ const MessageBubble = memo(function MessageBubble({
   onReact: (messageId: string, emoji: string) => void;
   currentUserId: string;
 }) {
-  const [showActions, setShowActions] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [needsCollapse, setNeedsCollapse] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const isAI = !!message.aiMemberId;
   const model = isAI
     ? AI_MODELS.find((m) => m.id === message.aiMember?.aiModel)
@@ -487,6 +541,17 @@ const MessageBubble = memo(function MessageBubble({
 
   // Auto-expand messages with images
   const [isExpanded, setIsExpanded] = useState(hasImage);
+
+  // Handle right-click context menu
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // Handle copy
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(message.content || '');
+  }, [message.content]);
 
   // Check if content exceeds 5 lines (~120px at ~24px line height)
   // But don't collapse messages with images
@@ -557,9 +622,20 @@ const MessageBubble = memo(function MessageBubble({
   return (
     <div
       className={`group flex gap-3 px-4 py-2 transition-colors hover:bg-gray-50 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onContextMenu={handleContextMenu}
     >
+      {/* Context Menu */}
+      {contextMenu && (
+        <MessageContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onReply={() => onReply(message)}
+          onCopy={handleCopy}
+          onReact={(emoji) => onReact(message.id, emoji)}
+          messageContent={message.content || ''}
+        />
+      )}
       {/* Avatar */}
       <div
         className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${
@@ -622,42 +698,14 @@ const MessageBubble = memo(function MessageBubble({
               const { images, textContent } = extractImagesFromMarkdown(
                 message.content || ''
               );
-              console.log('[MessageBubble] Rendering', images.length, 'images');
               return (
                 <>
-                  {/* Render extracted images first */}
+                  {/* Render extracted images */}
                   {images.length > 0 && (
                     <div className="mb-2 space-y-2">
-                      {images.map((img, idx) => {
-                        console.log(
-                          `[MessageBubble] Rendering image ${idx}, src length:`,
-                          img.src?.length
-                        );
-                        // Debug: Try rendering a simple img tag directly
-                        return (
-                          <div key={idx}>
-                            <Base64Image src={img.src} alt={img.alt} />
-                            {/* Fallback: Direct img tag for debugging */}
-                            <details className="mt-1">
-                              <summary className="cursor-pointer text-xs text-blue-600">
-                                Debug: Show raw image
-                              </summary>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={img.src}
-                                alt="Debug"
-                                style={{ maxWidth: '100%', maxHeight: '300px' }}
-                                onLoad={() =>
-                                  console.log('[Debug img] Loaded!')
-                                }
-                                onError={(e) =>
-                                  console.error('[Debug img] Failed:', e)
-                                }
-                              />
-                            </details>
-                          </div>
-                        );
-                      })}
+                      {images.map((img, idx) => (
+                        <Base64Image key={idx} src={img.src} alt={img.alt} />
+                      ))}
                     </div>
                   )}
                   {/* Then render text content */}
@@ -786,42 +834,10 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         )}
 
-        {/* Actions */}
-        {showActions && (
-          <div
-            className={`mt-1 flex gap-1 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-          >
-            <button
-              onClick={() => onReply(message)}
-              className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
-              title="Reply"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                />
-              </svg>
-            </button>
-            {['👍', '❤️', '😄', '🎉'].map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => onReact(message.id, emoji)}
-                className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-200"
-                title={`React with ${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Right-click hint (shown on hover) */}
+        <div className="mt-1 text-[10px] text-gray-300 opacity-0 transition-opacity group-hover:opacity-100">
+          右键点击查看更多操作
+        </div>
       </div>
     </div>
   );

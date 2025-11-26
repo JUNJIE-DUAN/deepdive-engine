@@ -1345,16 +1345,37 @@ Format the summary in a clear, structured manner using markdown.`;
     let textContent = "";
     const images: string[] = [];
 
-    for (const part of parts) {
+    this.logger.log(
+      `[Gemini] Processing ${parts.length} part(s) from response`,
+    );
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      this.logger.log(
+        `[Gemini] Part ${i}: hasText=${!!part.text}, hasInlineData=${!!part.inlineData}`,
+      );
+
       if (part.text) {
         textContent += part.text;
+        this.logger.log(`[Gemini] Part ${i} text length: ${part.text.length}`);
       }
       if (part.inlineData) {
         // Image data is returned as base64
         const mimeType = part.inlineData.mimeType || "image/png";
         const base64Data = part.inlineData.data;
-        const imageMarkdown = `![Generated Image](data:${mimeType};base64,${base64Data})`;
-        images.push(imageMarkdown);
+        this.logger.log(
+          `[Gemini] Part ${i} inlineData: mimeType=${mimeType}, dataLength=${base64Data?.length || 0}`,
+        );
+
+        if (base64Data && base64Data.length > 0) {
+          const imageMarkdown = `![Generated Image](data:${mimeType};base64,${base64Data})`;
+          images.push(imageMarkdown);
+          this.logger.log(
+            `[Gemini] Part ${i} image markdown created, length: ${imageMarkdown.length}`,
+          );
+        } else {
+          this.logger.warn(`[Gemini] Part ${i} has inlineData but no data!`);
+        }
       }
     }
 
@@ -1363,7 +1384,9 @@ Format the summary in a clear, structured manner using markdown.`;
     if (images.length > 0) {
       finalContent =
         images.join("\n\n") + (textContent ? "\n\n" + textContent : "");
-      this.logger.log(`[Gemini] Generated ${images.length} image(s)`);
+      this.logger.log(
+        `[Gemini] Generated ${images.length} image(s), final content length: ${finalContent.length}`,
+      );
     }
 
     if (!finalContent) {

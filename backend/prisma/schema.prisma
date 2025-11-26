@@ -1498,10 +1498,10 @@ model SystemSetting {
 
 model AIModel {
   id          String  @id @default(uuid())
-  name        String  @unique @db.VarChar(50) // 内部名称 (grok, gpt-4, claude, gemini)
+  name        String  @db.VarChar(50) // 内部名称 (grok, gpt-4, claude, gemini) - 不再唯一，允许同一provider多个模型
   displayName String  @map("display_name") @db.VarChar(100)
   provider    String  @db.VarChar(50) // xAI, OpenAI, Anthropic, Google
-  modelId     String  @map("model_id") @db.VarChar(200) // 实际模型ID
+  modelId     String  @unique @map("model_id") @db.VarChar(200) // 实际模型ID - 唯一约束
 
   // 显示设置
   icon  String @db.Text // emoji or icon URL path

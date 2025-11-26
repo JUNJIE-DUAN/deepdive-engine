@@ -302,7 +302,9 @@ export class AdminService {
 
   /**
    * 创建或更新AI模型 (upsert)
-   * 如果同名模型已存在，则更新；否则创建新模型
+   * 根据 modelId 判断：
+   * - 如果相同 modelId 已存在，则更新该模型
+   * - 如果 modelId 不同，则创建新模型（即使是同一个 provider/name）
    */
   async createAIModel(data: {
     name: string;
@@ -321,30 +323,30 @@ export class AdminService {
     const apiKey = data.apiKey?.trim() || null;
 
     this.logger.log(
-      `createAIModel called: name=${data.name}, apiKeyProvided=${!!apiKey}, apiKeyLength=${apiKey?.length || 0}`,
+      `createAIModel called: name=${data.name}, modelId=${data.modelId}, apiKeyProvided=${!!apiKey}, apiKeyLength=${apiKey?.length || 0}`,
     );
 
-    // 检查是否存在同名模型
-    const existing = await this.prisma.aIModel.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" } },
+    // 根据 modelId 检查是否存在相同的模型
+    const existingByModelId = await this.prisma.aIModel.findFirst({
+      where: { modelId: { equals: data.modelId, mode: "insensitive" } },
     });
 
-    if (existing) {
-      // 如果存在，则更新
+    if (existingByModelId) {
+      // 如果存在相同 modelId，则更新
       this.logger.log(
-        `AI Model ${data.name} already exists (id=${existing.id}), updating instead of creating`,
+        `AI Model with modelId=${data.modelId} already exists (id=${existingByModelId.id}), updating`,
       );
 
       // 准备更新数据 - 只有提供了有效的 apiKey 才更新
       const updateData: any = {
+        name: data.name,
         displayName: data.displayName,
         provider: data.provider,
-        modelId: data.modelId,
         icon: data.icon,
         color: data.color,
         apiEndpoint: data.apiEndpoint,
-        maxTokens: data.maxTokens ?? existing.maxTokens,
-        temperature: data.temperature ?? existing.temperature,
+        maxTokens: data.maxTokens ?? existingByModelId.maxTokens,
+        temperature: data.temperature ?? existingByModelId.temperature,
         description: data.description,
       };
 
@@ -352,21 +354,21 @@ export class AdminService {
       if (apiKey && !apiKey.includes("****")) {
         updateData.apiKey = apiKey;
         this.logger.log(
-          `Updating API key for ${data.name}: length=${apiKey.length}, prefix=${apiKey.substring(0, 8)}...`,
+          `Updating API key for modelId=${data.modelId}: length=${apiKey.length}, prefix=${apiKey.substring(0, 8)}...`,
         );
       } else {
         this.logger.log(
-          `Keeping existing API key for ${data.name} (new key not provided or is masked)`,
+          `Keeping existing API key for modelId=${data.modelId} (new key not provided or is masked)`,
         );
       }
 
       const updated = await this.prisma.aIModel.update({
-        where: { id: existing.id },
+        where: { id: existingByModelId.id },
         data: updateData,
       });
 
       this.logger.log(
-        `AI Model updated: ${updated.name} (${updated.displayName})`,
+        `AI Model updated: ${updated.name} (${updated.displayName}), modelId=${updated.modelId}`,
       );
 
       return {
@@ -377,7 +379,7 @@ export class AdminService {
       };
     }
 
-    // 不存在则创建新模型
+    // modelId 不存在，创建新模型
     const model = await this.prisma.aIModel.create({
       data: {
         name: data.name,
@@ -396,7 +398,9 @@ export class AdminService {
       },
     });
 
-    this.logger.log(`AI Model created: ${model.name} (${model.displayName})`);
+    this.logger.log(
+      `AI Model created: ${model.name} (${model.displayName}), modelId=${model.modelId}`,
+    );
 
     return {
       ...model,

@@ -8,9 +8,12 @@ import {
   Param,
   Request,
   Query,
+  UseGuards,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { NotesService } from "./notes.service";
 import { CreateNoteDto, UpdateNoteDto, AddHighlightDto } from "./dto";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
 /**
  * 笔记控制器
@@ -28,6 +31,7 @@ import { CreateNoteDto, UpdateNoteDto, AddHighlightDto } from "./dto";
  * - POST /api/v1/notes/:id/graph-nodes - 关联知识图谱节点
  */
 @Controller("notes")
+@UseGuards(JwtAuthGuard)
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
@@ -36,8 +40,10 @@ export class NotesController {
    */
   @Post()
   async createNote(@Request() req: any, @Body() dto: CreateNoteDto) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.notesService.createNote(userId, dto);
   }
 
@@ -50,8 +56,10 @@ export class NotesController {
     @Query("skip") skip?: string,
     @Query("take") take?: string,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     const skipNum = skip ? parseInt(skip, 10) : 0;
     const takeNum = take ? parseInt(take, 10) : 50;
     return this.notesService.getUserNotes(userId, skipNum, takeNum);
@@ -65,8 +73,7 @@ export class NotesController {
     @Param("resourceId") resourceId: string,
     @Request() req: any,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
     return this.notesService.getResourceNotes(resourceId, userId);
   }
 
@@ -75,8 +82,7 @@ export class NotesController {
    */
   @Get(":id")
   async getNote(@Param("id") id: string, @Request() req: any) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
     return this.notesService.getNote(id, userId);
   }
 
@@ -89,8 +95,10 @@ export class NotesController {
     @Request() req: any,
     @Body() dto: UpdateNoteDto,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.notesService.updateNote(id, userId, dto);
   }
 
@@ -99,8 +107,10 @@ export class NotesController {
    */
   @Delete(":id")
   async deleteNote(@Param("id") id: string, @Request() req: any) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.notesService.deleteNote(id, userId);
   }
 
@@ -113,8 +123,10 @@ export class NotesController {
     @Request() req: any,
     @Body() dto: AddHighlightDto,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.notesService.addHighlight(id, userId, dto);
   }
 
@@ -127,8 +139,10 @@ export class NotesController {
     @Param("highlightId") highlightId: string,
     @Request() req: any,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.notesService.removeHighlight(id, userId, highlightId);
   }
 
@@ -142,8 +156,10 @@ export class NotesController {
     @Body("text") text: string,
     @Body("pdfContext") pdfContext?: string,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.notesService.requestAIExplanation(id, userId, text, pdfContext);
   }
 
@@ -157,8 +173,10 @@ export class NotesController {
     @Body("nodeId") nodeId: string,
     @Body("nodeType") nodeType: string,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.notesService.linkGraphNode(id, userId, nodeId, nodeType);
   }
 }

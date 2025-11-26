@@ -7,9 +7,12 @@ import {
   Body,
   Param,
   Request,
+  UseGuards,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { CommentsService } from "./comments.service";
 import { CreateCommentDto, UpdateCommentDto } from "./dto";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
 /**
  * 评论控制器
@@ -31,14 +34,17 @@ export class CommentsController {
    * 创建评论
    */
   @Post()
+  @UseGuards(JwtAuthGuard)
   async createComment(@Request() req: any, @Body() dto: CreateCommentDto) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.commentsService.createComment(userId, dto);
   }
 
   /**
-   * 获取资源的评论（树形结构）
+   * 获取资源的评论（树形结构）- 公开接口
    */
   @Get("resource/:resourceId")
   async getResourceComments(@Param("resourceId") resourceId: string) {
@@ -46,7 +52,7 @@ export class CommentsController {
   }
 
   /**
-   * 获取单个评论
+   * 获取单个评论 - 公开接口
    */
   @Get(":id")
   async getComment(@Param("id") id: string) {
@@ -57,13 +63,16 @@ export class CommentsController {
    * 更新评论
    */
   @Patch(":id")
+  @UseGuards(JwtAuthGuard)
   async updateComment(
     @Param("id") id: string,
     @Request() req: any,
     @Body() dto: UpdateCommentDto,
   ) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.commentsService.updateComment(id, userId, dto);
   }
 
@@ -71,14 +80,17 @@ export class CommentsController {
    * 删除评论
    */
   @Delete(":id")
+  @UseGuards(JwtAuthGuard)
   async deleteComment(@Param("id") id: string, @Request() req: any) {
-    // TODO: 从JWT token获取userId
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.commentsService.deleteComment(id, userId);
   }
 
   /**
-   * 点赞评论
+   * 点赞评论 - 公开接口（可以考虑后续需要登录）
    */
   @Post(":id/upvote")
   async upvoteComment(@Param("id") id: string) {
@@ -86,7 +98,7 @@ export class CommentsController {
   }
 
   /**
-   * 获取评论统计
+   * 获取评论统计 - 公开接口
    */
   @Get("resource/:resourceId/stats")
   async getCommentStats(@Param("resourceId") resourceId: string) {

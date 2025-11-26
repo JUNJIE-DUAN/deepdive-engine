@@ -7,6 +7,8 @@ import {
   Post,
   Query,
   Request,
+  UseGuards,
+  UnauthorizedException,
 } from "@nestjs/common";
 import {
   CreateWorkspaceDto,
@@ -16,8 +18,10 @@ import {
 import { WorkspaceService } from "./workspace.service";
 import { WorkspaceTaskService } from "./workspace-task.service";
 import { ReportTemplateService } from "./report-template.service";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
 @Controller("workspaces")
+@UseGuards(JwtAuthGuard)
 export class WorkspaceController {
   constructor(
     private readonly workspaceService: WorkspaceService,
@@ -30,7 +34,10 @@ export class WorkspaceController {
    */
   @Post()
   async createWorkspace(@Request() req: any, @Body() dto: CreateWorkspaceDto) {
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.workspaceService.createWorkspace(userId, dto);
   }
 
@@ -47,7 +54,10 @@ export class WorkspaceController {
    */
   @Get(":id")
   async getWorkspace(@Param("id") id: string, @Request() req: any) {
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.workspaceService.getWorkspace(id, userId);
   }
 
@@ -60,7 +70,10 @@ export class WorkspaceController {
     @Request() req: any,
     @Body() dto: UpdateWorkspaceResourcesDto,
   ) {
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.workspaceService.updateWorkspaceResources(id, userId, dto);
   }
 
@@ -73,7 +86,10 @@ export class WorkspaceController {
     @Request() req: any,
     @Body() dto: CreateWorkspaceTaskDto,
   ) {
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.workspaceTaskService.createTask(userId, id, dto);
   }
 
@@ -86,7 +102,10 @@ export class WorkspaceController {
     @Param("taskId") taskId: string,
     @Request() req: any,
   ) {
-    const userId = req.user?.id || "557be1bd-62cb-4125-a028-5ba740b66aca";
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException("User not authenticated");
+    }
     return this.workspaceTaskService.getTask(userId, id, taskId);
   }
 }

@@ -223,14 +223,29 @@ export class AiGroupController {
     this.logger.log(`Broadcasting message ${message.id} to topic ${topicId}`);
     this.aiGroupGateway.emitToTopic(topicId, "message:new", message);
 
+    // DEBUG: Log received mentions from frontend
+    this.logger.log(
+      `[Mentions Debug] Received message with mentions: ${JSON.stringify(dto.mentions || [])}`,
+    );
+
     // 处理 mentions - 向被@的用户发送通知
     if (dto.mentions && dto.mentions.length > 0) {
+      this.logger.log(
+        `[Mentions Debug] Processing ${dto.mentions.length} mention(s)`,
+      );
+
       // 收集需要响应的 AI 成员 ID（去重）
       const aiMemberIdsToRespond = new Set<string>();
 
       for (const mention of dto.mentions) {
+        this.logger.log(
+          `[Mentions Debug] Processing mention: type=${mention.mentionType}, aiMemberId=${mention.aiMemberId}, userId=${mention.userId}`,
+        );
         if (mention.mentionType === MentionType.AI && mention.aiMemberId) {
           // @单个AI
+          this.logger.log(
+            `[Mentions Debug] Adding AI member to respond: ${mention.aiMemberId}`,
+          );
           aiMemberIdsToRespond.add(mention.aiMemberId);
         } else if (mention.mentionType === MentionType.ALL_AI) {
           // @All AIs：获取 topic 的所有 AI 成员

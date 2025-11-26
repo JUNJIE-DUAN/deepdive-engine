@@ -677,6 +677,17 @@ function MessageInput({
   const handleSend = () => {
     if (!content.trim()) return;
 
+    // DEBUG: Log the content and available AI members
+    console.log('[Mentions Debug] handleSend called with content:', content);
+    console.log(
+      '[Mentions Debug] Available AI members:',
+      topic.aiMembers?.map((a) => ({
+        id: a.id,
+        displayName: a.displayName,
+        aiModel: a.aiModel,
+      }))
+    );
+
     // Parse mentions from content
     // Support names with letters, numbers, hyphens, and underscores (e.g., "AI-Grok", "AI_Claude")
     const mentions: {
@@ -689,6 +700,12 @@ function MessageInput({
 
     while ((match = mentionRegex.exec(content)) !== null) {
       const name = match[1].toLowerCase();
+      console.log(
+        '[Mentions Debug] Found mention match:',
+        match[0],
+        '-> name:',
+        name
+      );
 
       if (name === 'everyone') {
         mentions.push({ mentionType: MentionType.ALL });
@@ -733,6 +750,15 @@ function MessageInput({
               a.displayName.toLowerCase().startsWith(name + ' ')
           );
 
+        console.log(
+          '[Mentions Debug] Matching result for',
+          name,
+          '-> user:',
+          user?.userId,
+          'ai:',
+          ai?.id
+        );
+
         if (user) {
           mentions.push({ userId: user.userId, mentionType: MentionType.USER });
         } else if (ai) {
@@ -741,6 +767,7 @@ function MessageInput({
       }
     }
 
+    console.log('[Mentions Debug] Final mentions array:', mentions);
     onSend(content.trim(), mentions);
     setContent('');
   };

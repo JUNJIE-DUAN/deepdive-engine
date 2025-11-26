@@ -12,6 +12,30 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 开始数据库初始化...");
 
+  // 创建默认用户（用于开发和测试）
+  const defaultUserId = "557be1bd-62cb-4125-a028-5ba740b66aca";
+  console.log("\n👤 创建默认用户...");
+
+  const existingUser = await prisma.user.findUnique({
+    where: { id: defaultUserId },
+  });
+
+  if (!existingUser) {
+    await prisma.user.create({
+      data: {
+        id: defaultUserId,
+        email: "demo@deepdive.ai",
+        username: "demo",
+        passwordHash: "$2b$10$placeholder.hash.for.demo.user.only",
+        role: "USER",
+        isVerified: true,
+      },
+    });
+    console.log("✅ 默认用户已创建 (demo@deepdive.ai)");
+  } else {
+    console.log("⏩ 默认用户已存在");
+  }
+
   // 数据源现在通过 SQL migration 自动加载（20251123_seed_predefined_data_sources）
   // 这是业界最佳实践：使用原始 SQL 而不是 ORM，避免序列化问题
   console.log(

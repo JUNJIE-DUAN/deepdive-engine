@@ -27,6 +27,8 @@ interface AuthenticatedSocket extends Socket {
     ],
     credentials: true,
   },
+  // 增加最大消息大小限制，支持大型图片数据 (默认1MB，增加到10MB)
+  maxHttpBufferSize: 10 * 1024 * 1024,
 })
 export class AiGroupGateway
   implements OnGatewayConnection, OnGatewayDisconnect

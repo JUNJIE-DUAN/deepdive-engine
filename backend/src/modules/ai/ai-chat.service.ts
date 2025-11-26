@@ -701,16 +701,24 @@ Format the summary in a clear, structured manner using markdown.`;
       switch (provider.toLowerCase()) {
         case "xai":
         case "grok":
+          // Enable live X/Twitter search for Grok
+          // Uses search_parameters.mode = "auto" to let Grok decide when to search
+          // Grok can search real-time X posts, news, and web content
           return await this.callApiWithKey(
             apiEndpoint || "https://api.x.ai/v1/chat/completions",
             {
-              model: modelId || "grok-beta",
+              model: modelId || "grok-3-latest",
               messages: fullMessages.map((m) => ({
                 role: m.role,
                 content: m.content,
               })),
               max_tokens: maxTokens,
               temperature,
+              // Enable live search from X/Twitter and web
+              search_parameters: {
+                mode: "auto", // "auto" = search when needed, "on" = always search
+                return_citations: true, // Return source citations
+              },
             },
             { Authorization: `Bearer ${apiKey}` },
             "grok",

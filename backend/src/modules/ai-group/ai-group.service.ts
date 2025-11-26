@@ -1341,8 +1341,17 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           aiModelConfig?.apiEndpoint ||
           this.getDefaultEndpoint(aiMember.aiModel);
 
+        // For reasoning models (GPT-5.x, o1, o3), need more tokens for reasoning + output
+        // Regular models: 1024 is fine
+        // Reasoning models: need 4096+ (reasoning_tokens + output_tokens)
+        const isReasoningModel =
+          modelId.includes("gpt-5") ||
+          modelId.startsWith("o1") ||
+          modelId.startsWith("o3");
+        const effectiveMaxTokens = isReasoningModel ? 4096 : 1024;
+
         this.logger.log(
-          `Calling AI API: provider=${provider}, modelId=${modelId}`,
+          `Calling AI API: provider=${provider}, modelId=${modelId}, maxTokens=${effectiveMaxTokens}`,
         );
 
         result = await this.aiChatService.generateChatCompletionWithKey({
@@ -1352,7 +1361,7 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           apiEndpoint,
           systemPrompt,
           messages: chatMessages,
-          maxTokens: 1024,
+          maxTokens: effectiveMaxTokens,
           temperature: aiModelConfig?.temperature || 0.7,
         });
       } else {

@@ -14,6 +14,10 @@ import * as api from '@/lib/api/ai-group';
 import { getAuthTokens } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
 
+// Performance: Maximum messages to keep in memory to prevent browser memory overflow
+// Older messages will be discarded when this limit is exceeded
+const MAX_MESSAGES_IN_MEMORY = 200;
+
 interface AiGroupState {
   // Topics
   topics: Topic[];
@@ -180,14 +184,27 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
     set({ isLoadingMessages: true });
     try {
       const response = await api.getMessages(topicId, { cursor, limit: 50 });
-      set((state) => ({
-        messages: cursor
+      set((state) => {
+        let newMessages = cursor
           ? [...response.messages, ...state.messages]
-          : response.messages,
-        hasMoreMessages: response.hasMore,
-        nextCursor: response.nextCursor,
-        isLoadingMessages: false,
-      }));
+          : response.messages;
+
+        // Performance: Limit messages in memory
+        if (newMessages.length > MAX_MESSAGES_IN_MEMORY) {
+          // Keep the most recent messages (at the end of the array)
+          newMessages = newMessages.slice(-MAX_MESSAGES_IN_MEMORY);
+          console.log(
+            `[Messages] Trimmed to ${MAX_MESSAGES_IN_MEMORY} most recent messages`
+          );
+        }
+
+        return {
+          messages: newMessages,
+          hasMoreMessages: response.hasMore,
+          nextCursor: response.nextCursor,
+          isLoadingMessages: false,
+        };
+      });
     } catch (error) {
       console.error('Failed to fetch messages:', error);
       set({ isLoadingMessages: false });
@@ -371,8 +388,19 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
           return state;
         }
         console.log('[WS] Adding new message to state:', message.id);
+
+        // Performance: Trim old messages if exceeding limit
+        let newMessages = [...state.messages, message];
+        if (newMessages.length > MAX_MESSAGES_IN_MEMORY) {
+          const trimCount = newMessages.length - MAX_MESSAGES_IN_MEMORY;
+          console.log(
+            `[WS] Trimming ${trimCount} old messages to stay within ${MAX_MESSAGES_IN_MEMORY} limit`
+          );
+          newMessages = newMessages.slice(trimCount);
+        }
+
         return {
-          messages: [...state.messages, message],
+          messages: newMessages,
         };
       });
     });

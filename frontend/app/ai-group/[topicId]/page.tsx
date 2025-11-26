@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, memo, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAiGroupStore } from '@/stores/aiGroupStore';
@@ -21,6 +21,11 @@ import SummaryDialog from '@/components/ai-group/SummaryDialog';
 import Sidebar from '@/components/layout/Sidebar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+// Performance constants
+const MAX_MESSAGES_IN_MEMORY = 200; // Maximum messages to keep in memory
+const VIRTUAL_ITEM_SIZE = 120; // Estimated height of each message in pixels
 
 // Member Panel
 function MemberPanel({
@@ -262,8 +267,8 @@ function MemberPanel({
   );
 }
 
-// Message Bubble Component
-function MessageBubble({
+// Message Bubble Component - Memoized for performance
+const MessageBubble = memo(function MessageBubble({
   message,
   isOwnMessage,
   onReply,
@@ -497,6 +502,66 @@ function MessageBubble({
           </div>
         )}
       </div>
+    </div>
+  );
+});
+
+// Virtualized Message List Component for performance
+// Only renders visible messages, dramatically improving performance with many messages
+function VirtualizedMessageList({
+  messages,
+  currentUserId,
+  containerRef,
+  onReply,
+  onReact,
+}: {
+  messages: TopicMessage[];
+  currentUserId: string;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onReply: (message: TopicMessage) => void;
+  onReact: (messageId: string, emoji: string) => void;
+}) {
+  const rowVirtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => VIRTUAL_ITEM_SIZE,
+    overscan: 5, // Render 5 extra items above/below viewport
+  });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0) {
+      rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+    }
+  }, [messages.length, rowVirtualizer]);
+
+  return (
+    <div
+      className="relative w-full py-4"
+      style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+    >
+      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+        const message = messages[virtualRow.index];
+        return (
+          <div
+            key={message.id}
+            data-index={virtualRow.index}
+            ref={rowVirtualizer.measureElement}
+            className="absolute left-0 top-0 w-full"
+            style={{
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
+          >
+            <MessageBubble
+              message={message}
+              isOwnMessage={message.senderId === currentUserId}
+              onReply={onReply}
+              onReact={onReact}
+              currentUserId={currentUserId}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1297,7 +1362,7 @@ export default function TopicPage() {
           </div>
         </div>
 
-        {/* Messages Area */}
+        {/* Messages Area - Virtualized for performance */}
         <div ref={messagesContainerRef} className="flex-1 overflow-auto">
           {/* Load More Button */}
           {hasMoreMessages && (
@@ -1312,7 +1377,7 @@ export default function TopicPage() {
             </div>
           )}
 
-          {/* Messages */}
+          {/* Messages - Virtualized */}
           {messages.length === 0 && !isLoadingMessages ? (
             <div className="flex h-full flex-col items-center justify-center text-gray-400">
               <svg
@@ -1332,19 +1397,13 @@ export default function TopicPage() {
               <p className="mt-1 text-sm">Start the conversation!</p>
             </div>
           ) : (
-            <div className="py-4">
-              {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isOwnMessage={message.senderId === user?.id}
-                  onReply={setReplyTo}
-                  onReact={handleReaction}
-                  currentUserId={user?.id || ''}
-                />
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+            <VirtualizedMessageList
+              messages={messages}
+              currentUserId={user?.id || ''}
+              containerRef={messagesContainerRef}
+              onReply={setReplyTo}
+              onReact={handleReaction}
+            />
           )}
 
           {/* Typing Indicators */}

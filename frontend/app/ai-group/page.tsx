@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAiGroupStore } from '@/stores/aiGroupStore';
-import { Topic, CreateTopicDto, AI_MODELS } from '@/types/ai-group';
+import {
+  Topic,
+  CreateTopicDto,
+  UpdateTopicDto,
+  AI_MODELS,
+} from '@/types/ai-group';
 import Sidebar from '@/components/layout/Sidebar';
 
 export default function AIGroupPage() {
@@ -20,6 +25,7 @@ export default function AIGroupPage() {
   } = useAiGroupStore();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const isAuthenticated = !!accessToken;
@@ -183,12 +189,8 @@ export default function AIGroupPage() {
                   topic={topic}
                   currentUserId={user?.id}
                   onClick={() => router.push(`/ai-group/${topic.id}`)}
-                  onEdit={async (topic) => {
-                    const newName = prompt('Enter new topic name:', topic.name);
-                    if (newName && newName !== topic.name) {
-                      await updateTopic(topic.id, { name: newName });
-                      await fetchTopics();
-                    }
+                  onEdit={(topic) => {
+                    setEditingTopic(topic);
                   }}
                   onDelete={async (topicId) => {
                     if (
@@ -238,6 +240,18 @@ export default function AIGroupPage() {
             const topic = await createTopic(dto);
             setShowCreateDialog(false);
             router.push(`/ai-group/${topic.id}`);
+          }}
+        />
+      )}
+
+      {editingTopic && (
+        <EditTopicDialog
+          topic={editingTopic}
+          onClose={() => setEditingTopic(null)}
+          onUpdate={async (topicId, dto) => {
+            await updateTopic(topicId, dto);
+            setEditingTopic(null);
+            await fetchTopics();
           }}
         />
       )}
@@ -353,6 +367,25 @@ function TopicCard({
           </p>
         )}
 
+        {/* Tags */}
+        {topic.metadata?.tags && topic.metadata.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {topic.metadata.tags.slice(0, 3).map((tag: string, idx: number) => (
+              <span
+                key={idx}
+                className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
+              >
+                {tag}
+              </span>
+            ))}
+            {topic.metadata.tags.length > 3 && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                +{topic.metadata.tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Stats */}
         <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
           <span className="flex items-center gap-1">
@@ -453,7 +486,21 @@ function CreateTopicDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedAI, setSelectedAI] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+
+  const handleAddTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -463,6 +510,7 @@ function CreateTopicDialog({
       await onCreate({
         name: name.trim(),
         description: description.trim() || undefined,
+        metadata: tags.length > 0 ? { tags } : undefined,
         aiMembers: selectedAI.map((aiId) => {
           const model = AI_MODELS.find((m) => m.id === aiId);
           return {
@@ -534,6 +582,66 @@ function CreateTopicDialog({
             />
           </div>
 
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Tags
+            </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+                placeholder="Add tags (press Enter)"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddTag}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Add
+              </button>
+            </div>
+            {tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="hover:text-blue-800"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* AI Members */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -585,6 +693,187 @@ function CreateTopicDialog({
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isCreating ? 'Creating...' : 'Create Topic'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Edit Topic Dialog
+function EditTopicDialog({
+  topic,
+  onClose,
+  onUpdate,
+}: {
+  topic: Topic;
+  onClose: () => void;
+  onUpdate: (topicId: string, dto: UpdateTopicDto) => Promise<void>;
+}) {
+  const [name, setName] = useState(topic.name);
+  const [description, setDescription] = useState(topic.description || '');
+  const [tags, setTags] = useState<string[]>(
+    (topic.metadata?.tags as string[]) || []
+  );
+  const [tagInput, setTagInput] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleAddTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleUpdate = async () => {
+    if (!name.trim()) return;
+
+    setIsUpdating(true);
+    try {
+      await onUpdate(topic.id, {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        metadata: { ...topic.metadata, tags },
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-900">Edit Topic</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-4 px-6 py-4">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Topic Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="mt-1 w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Tags
+            </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+                placeholder="Add tags (press Enter)"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddTag}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Add
+              </button>
+            </div>
+            {tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="hover:text-blue-800"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleUpdate}
+            disabled={!name.trim() || isUpdating}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isUpdating ? 'Updating...' : 'Update Topic'}
           </button>
         </div>
       </div>

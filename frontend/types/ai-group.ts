@@ -232,6 +232,10 @@ export interface CreateTopicDto {
     roleDescription?: string;
     systemPrompt?: string;
   }[];
+  metadata?: {
+    tags?: string[];
+    [key: string]: any;
+  };
 }
 
 export interface UpdateTopicDto {
@@ -240,6 +244,10 @@ export interface UpdateTopicDto {
   type?: TopicType;
   avatar?: string;
   settings?: Record<string, any>;
+  metadata?: {
+    tags?: string[];
+    [key: string]: any;
+  };
 }
 
 export interface AddMemberDto {

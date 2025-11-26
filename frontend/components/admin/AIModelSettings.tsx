@@ -68,7 +68,7 @@ const MODEL_ICONS: Record<string, string> = {
 const STANDARD_MODEL_CONFIGS = [
   {
     id: 'grok',
-    name: 'Grok',
+    name: 'Grok (xAI)',
     provider: 'xAI',
     defaultModelId: 'grok-3-latest',
     defaultEndpoint: 'https://api.x.ai/v1/chat/completions',
@@ -76,7 +76,7 @@ const STANDARD_MODEL_CONFIGS = [
   },
   {
     id: 'gpt-4',
-    name: 'GPT-4',
+    name: 'ChatGPT (OpenAI)',
     provider: 'OpenAI',
     defaultModelId: 'gpt-4-turbo',
     defaultEndpoint: 'https://api.openai.com/v1/chat/completions',
@@ -84,7 +84,7 @@ const STANDARD_MODEL_CONFIGS = [
   },
   {
     id: 'claude',
-    name: 'Claude',
+    name: 'Claude (Anthropic)',
     provider: 'Anthropic',
     defaultModelId: 'claude-sonnet-4-20250514',
     defaultEndpoint: 'https://api.anthropic.com/v1/messages',
@@ -92,7 +92,7 @@ const STANDARD_MODEL_CONFIGS = [
   },
   {
     id: 'gemini',
-    name: 'Gemini',
+    name: 'Gemini (Google)',
     provider: 'Google',
     defaultModelId: 'gemini-2.0-flash',
     defaultEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
@@ -623,7 +623,7 @@ export default function AIModelSettings() {
       )}
 
       {/* Models Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {models.map((model) => (
           <div
             key={model.id}

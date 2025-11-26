@@ -358,28 +358,28 @@ export interface WSReactionEvent {
 export const AI_MODELS = [
   {
     id: 'grok',
-    name: 'Grok',
+    name: 'Grok (xAI)',
     icon: '🤖',
     iconUrl: '/icons/ai/grok.svg',
     description: 'xAI Grok - 快速智能',
   },
   {
     id: 'gpt-4',
-    name: 'GPT-4',
+    name: 'ChatGPT (OpenAI)',
     icon: '🧠',
     iconUrl: '/icons/ai/openai.svg',
-    description: 'OpenAI GPT-4 - 深度思考',
+    description: 'OpenAI ChatGPT - 深度思考',
   },
   {
     id: 'claude',
-    name: 'Claude',
+    name: 'Claude (Anthropic)',
     icon: '🎭',
     iconUrl: '/icons/ai/claude.svg',
     description: 'Anthropic Claude - 对话专家',
   },
   {
     id: 'gemini',
-    name: 'Gemini',
+    name: 'Gemini (Google)',
     icon: '💎',
     iconUrl: '/icons/ai/gemini.svg',
     description: 'Google Gemini - 多模态',

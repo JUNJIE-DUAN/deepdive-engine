@@ -70,14 +70,14 @@ html {
 /* 14-inch laptop (1366x768 to 1536x864) - scale down to ~90% */
 @media screen and (max-width: 1536px) {
   html {
-    font-size: 14px; /* ~87.5% of 16px */
+    font-size: 14.5px; /* ~90% of 16px */
   }
 }
 
 /* 13-inch and smaller laptops */
 @media screen and (max-width: 1366px) {
   html {
-    font-size: 13px; /* ~81% of 16px */
+    font-size: 13.5px; /* ~85% of 16px */
   }
 }
 

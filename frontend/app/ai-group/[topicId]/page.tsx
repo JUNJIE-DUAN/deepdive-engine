@@ -673,6 +673,7 @@ function MessageInput({
         mentions.push({ mentionType: MentionType.ALL_AI });
       } else {
         // Find matching user or AI
+        // Support both exact match and prefix match (e.g., @AI matches "AI-Gemini")
         const user = topic.members.find(
           (m) =>
             (
@@ -682,9 +683,14 @@ function MessageInput({
               ''
             ).toLowerCase() === name
         );
-        const ai = topic.aiMembers.find(
-          (a) => a.displayName.toLowerCase() === name
-        );
+        // Try exact match first, then prefix match for AI members
+        const ai =
+          topic.aiMembers.find((a) => a.displayName.toLowerCase() === name) ||
+          topic.aiMembers.find(
+            (a) =>
+              a.displayName.toLowerCase().startsWith(name + '-') ||
+              a.displayName.toLowerCase().startsWith(name)
+          );
 
         if (user) {
           mentions.push({ userId: user.userId, mentionType: MentionType.USER });

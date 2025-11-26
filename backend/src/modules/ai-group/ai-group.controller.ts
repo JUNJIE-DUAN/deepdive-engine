@@ -284,21 +284,43 @@ export class AiGroupController {
     userId: string,
     aiMemberId: string,
   ) {
+    const AI_TIMEOUT_MS = 120000; // 2 minutes timeout
+
+    this.logger.log(
+      `[AI Response] Starting generation for topic=${topicId}, aiMemberId=${aiMemberId}`,
+    );
+
     try {
-      const aiMessage = await this.aiGroupService.generateAIResponse(
-        topicId,
-        userId,
-        aiMemberId,
-        [],
+      // Wrap the AI call with a timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error("AI response generation timed out")),
+          AI_TIMEOUT_MS,
+        );
+      });
+
+      const aiMessage = await Promise.race([
+        this.aiGroupService.generateAIResponse(topicId, userId, aiMemberId, []),
+        timeoutPromise,
+      ]);
+
+      this.logger.log(
+        `[AI Response] Success for topic=${topicId}, messageId=${aiMessage.id}`,
       );
 
       // 广播AI响应
-      this.aiGroupGateway.emitToTopic(topicId, "ai:response", aiMessage);
+      this.aiGroupGateway.emitToTopic(topicId, "ai:response", {
+        aiMemberId,
+        messageId: aiMessage.id,
+      });
       this.aiGroupGateway.emitToTopic(topicId, "message:new", aiMessage);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      this.logger.error(`AI response error: ${errorMessage}`);
+      this.logger.error(
+        `[AI Response] Error for topic=${topicId}, aiMemberId=${aiMemberId}: ${errorMessage}`,
+      );
+      // Always emit error to clear typing indicator
       this.aiGroupGateway.emitToTopic(topicId, "ai:error", {
         aiMemberId,
         error: errorMessage,

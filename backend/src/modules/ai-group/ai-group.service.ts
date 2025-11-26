@@ -324,6 +324,55 @@ export class AiGroupService {
     });
   }
 
+  async addMemberByEmail(
+    topicId: string,
+    userId: string,
+    email: string,
+    role?: TopicRole,
+  ) {
+    await this.checkTopicPermission(topicId, userId, [
+      TopicRole.OWNER,
+      TopicRole.ADMIN,
+    ]);
+
+    // 通过邮箱查找用户
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with email "${email}" not found`);
+    }
+
+    // 检查是否已是成员
+    const existing = await this.prisma.topicMember.findUnique({
+      where: {
+        topicId_userId: { topicId, userId: user.id },
+      },
+    });
+    if (existing) {
+      throw new BadRequestException("User is already a member");
+    }
+
+    return this.prisma.topicMember.create({
+      data: {
+        topicId,
+        userId: user.id,
+        role: role || TopicRole.MEMBER,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            fullName: true,
+            avatarUrl: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
   async addMembers(topicId: string, userId: string, dto: AddMembersDto) {
     await this.checkTopicPermission(topicId, userId, [
       TopicRole.OWNER,

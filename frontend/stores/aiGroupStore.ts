@@ -220,8 +220,16 @@ export const useAiGroupStore = create<AiGroupState>((set, get) => ({
 
   // ==================== Members ====================
 
-  addMember: async (topicId, userId, role) => {
-    await api.addMember(topicId, { userId, role: role as any });
+  addMember: async (topicId, userIdOrEmail, role) => {
+    // Check if input looks like an email
+    if (userIdOrEmail.includes('@')) {
+      await api.addMemberByEmail(topicId, userIdOrEmail, role as any);
+    } else {
+      await api.addMember(topicId, {
+        userId: userIdOrEmail,
+        role: role as any,
+      });
+    }
     await get().fetchTopic(topicId);
   },
 

@@ -27,6 +27,8 @@ export default function TopicSettingsDialog({
     addAIMember,
     updateAIMember,
     removeAIMember,
+    addMember,
+    removeMember,
     deleteTopic,
   } = useAiGroupStore();
 
@@ -93,7 +95,13 @@ export default function TopicSettingsDialog({
               onRemove={removeAIMember}
             />
           )}
-          {activeTab === 'members' && <MemberSettings topic={topic} />}
+          {activeTab === 'members' && (
+            <MemberSettings
+              topic={topic}
+              onAdd={addMember}
+              onRemove={removeMember}
+            />
+          )}
           {activeTab === 'danger' && (
             <DangerSettings
               topic={topic}
@@ -566,12 +574,30 @@ function EditAIDialog({
 }
 
 // Member Settings Tab
-function MemberSettings({ topic }: { topic: Topic }) {
+function MemberSettings({
+  topic,
+  onAdd,
+  onRemove,
+}: {
+  topic: Topic;
+  onAdd: (topicId: string, userId: string, role?: string) => Promise<void>;
+  onRemove: (topicId: string, memberId: string) => Promise<void>;
+}) {
+  const [showAddDialog, setShowAddDialog] = useState(false);
+
   return (
     <div className="space-y-4">
-      <h3 className="font-medium text-gray-900">
-        Members ({topic.memberCount})
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium text-gray-900">
+          Members ({topic.memberCount})
+        </h3>
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Add Member
+        </button>
+      </div>
 
       <div className="space-y-2">
         {topic.members.map((member) => (
@@ -604,19 +630,147 @@ function MemberSettings({ topic }: { topic: Topic }) {
                 )}
               </div>
             </div>
-            <span
-              className={`rounded px-2 py-1 text-xs font-medium ${
-                member.role === 'OWNER'
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : member.role === 'ADMIN'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              {member.role}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`rounded px-2 py-1 text-xs font-medium ${
+                  member.role === 'OWNER'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : member.role === 'ADMIN'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {member.role}
+              </span>
+              {member.role !== 'OWNER' && (
+                <button
+                  onClick={() => onRemove(topic.id, member.id)}
+                  className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  title="Remove member"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Add Member Dialog */}
+      {showAddDialog && (
+        <AddMemberDialog
+          topicId={topic.id}
+          existingMemberIds={topic.members.map((m) => m.user.id)}
+          onAdd={onAdd}
+          onClose={() => setShowAddDialog(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Add Member Dialog
+function AddMemberDialog({
+  topicId,
+  existingMemberIds,
+  onAdd,
+  onClose,
+}: {
+  topicId: string;
+  existingMemberIds: string[];
+  onAdd: (topicId: string, userId: string, role?: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
+  const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAdd = async () => {
+    if (!email.trim()) return;
+
+    setIsAdding(true);
+    setError(null);
+
+    try {
+      // Note: Backend should support adding by email
+      // For now, we'll pass the email as userId and let the backend resolve it
+      await onAdd(topicId, email.trim(), role);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to add member');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h3 className="mb-4 text-lg font-semibold text-gray-900">Add Member</h3>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="user@example.com"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Role
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'MEMBER' | 'ADMIN')}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="MEMBER">Member</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={!email.trim() || isAdding}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isAdding ? 'Adding...' : 'Add Member'}
+          </button>
+        </div>
       </div>
     </div>
   );

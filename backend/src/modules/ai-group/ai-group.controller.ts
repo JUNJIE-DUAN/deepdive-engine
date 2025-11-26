@@ -95,6 +95,20 @@ export class AiGroupController {
     return this.aiGroupService.addMember(topicId, req.user.id, dto);
   }
 
+  @Post(":topicId/members/invite")
+  async addMemberByEmail(
+    @Request() req: any,
+    @Param("topicId") topicId: string,
+    @Body() dto: { email: string; role?: string },
+  ) {
+    return this.aiGroupService.addMemberByEmail(
+      topicId,
+      req.user.id,
+      dto.email,
+      dto.role as any,
+    );
+  }
+
   @Post(":topicId/members/batch")
   async addMembers(
     @Request() req: any,

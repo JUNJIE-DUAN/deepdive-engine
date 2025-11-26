@@ -111,6 +111,17 @@ export async function addMember(
   });
 }
 
+export async function addMemberByEmail(
+  topicId: string,
+  email: string,
+  role?: TopicRole
+): Promise<TopicMember> {
+  return fetchWithAuth(`/api/v1/topics/${topicId}/members/invite`, {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
 export async function addMembers(
   topicId: string,
   userIds: string[],

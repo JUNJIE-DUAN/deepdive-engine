@@ -1,8 +1,15 @@
 # Multi-stage build for production
 FROM node:20-alpine AS builder
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install dependencies for native modules (canvas requires cairo, pango, etc.)
+RUN apk add --no-cache python3 make g++ \
+    pkgconfig \
+    cairo-dev \
+    pango-dev \
+    jpeg-dev \
+    giflib-dev \
+    librsvg-dev \
+    pixman-dev
 
 WORKDIR /app
 
@@ -30,8 +37,14 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
+# Install curl for healthcheck and runtime libs for canvas
+RUN apk add --no-cache curl \
+    cairo \
+    pango \
+    jpeg \
+    giflib \
+    librsvg \
+    pixman
 
 # Copy built application
 COPY --from=builder /app/dist ./dist

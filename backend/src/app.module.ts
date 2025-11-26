@@ -8,6 +8,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { MongoDBModule } from "./common/mongodb/mongodb.module";
+import { GraphModule } from "./common/graph/graph.module";
 import { Neo4jModule } from "./common/neo4j/neo4j.module";
 import { CrawlerModule } from "./modules/crawler/crawler.module";
 import { ResourcesModule } from "./modules/resources/resources.module";
@@ -60,6 +61,7 @@ import { AiGroupModule } from "./modules/ai-group/ai-group.module";
     // 数据库模块
     PrismaModule,
     MongoDBModule,
+    GraphModule,
     Neo4jModule,
 
     // 功能模块

@@ -7,7 +7,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from "@nestjs/common";
-import { RecommendationsService } from "./recommendations.service";
+import { RecommendationsService } from "./recommendations.service.postgres";
 
 /**
  * 推荐系统控制器

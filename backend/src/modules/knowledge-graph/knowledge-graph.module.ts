@@ -1,14 +1,14 @@
 import { Module } from "@nestjs/common";
-import { KnowledgeGraphService } from "./knowledge-graph.service";
+import { KnowledgeGraphService } from "./knowledge-graph.service.postgres";
 import { KnowledgeGraphController } from "./knowledge-graph.controller";
-import { Neo4jModule } from "../../common/neo4j/neo4j.module";
+import { GraphModule } from "../../common/graph/graph.module";
 import { PrismaModule } from "../../common/prisma/prisma.module";
 
 /**
- * 知识图谱模块
+ * 知识图谱模块（使用 PostgreSQL 实现）
  */
 @Module({
-  imports: [Neo4jModule, PrismaModule],
+  imports: [GraphModule, PrismaModule],
   controllers: [KnowledgeGraphController],
   providers: [KnowledgeGraphService],
   exports: [KnowledgeGraphService],

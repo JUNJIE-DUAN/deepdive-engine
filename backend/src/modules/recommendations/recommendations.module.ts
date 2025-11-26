@@ -1,14 +1,14 @@
 import { Module } from "@nestjs/common";
-import { RecommendationsService } from "./recommendations.service";
+import { RecommendationsService } from "./recommendations.service.postgres";
 import { RecommendationsController } from "./recommendations.controller";
 import { PrismaModule } from "../../common/prisma/prisma.module";
-import { Neo4jModule } from "../../common/neo4j/neo4j.module";
+import { GraphModule } from "../../common/graph/graph.module";
 
 /**
- * 推荐系统模块
+ * 推荐系统模块（使用 PostgreSQL 实现）
  */
 @Module({
-  imports: [PrismaModule, Neo4jModule],
+  imports: [PrismaModule, GraphModule],
   controllers: [RecommendationsController],
   providers: [RecommendationsService],
   exports: [RecommendationsService],

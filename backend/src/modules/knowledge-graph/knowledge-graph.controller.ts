@@ -8,7 +8,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from "@nestjs/common";
-import { KnowledgeGraphService } from "./knowledge-graph.service";
+import { KnowledgeGraphService } from "./knowledge-graph.service.postgres";
 
 /**
  * 知识图谱控制器

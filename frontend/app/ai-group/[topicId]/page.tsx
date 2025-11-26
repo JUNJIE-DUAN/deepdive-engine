@@ -54,6 +54,21 @@ function extractImagesFromMarkdown(content: string): {
     textContent.length
   );
 
+  // Debug: Log image details
+  if (images.length > 0) {
+    images.forEach((img, idx) => {
+      console.log(
+        `[Image Extract] Image ${idx}: alt="${img.alt}", src length=${img.src?.length || 0}`
+      );
+      if (img.src) {
+        console.log(
+          `[Image Extract] Image ${idx} src preview:`,
+          img.src.substring(0, 100)
+        );
+      }
+    });
+  }
+
   return { images, textContent };
 }
 
@@ -601,12 +616,23 @@ const MessageBubble = memo(function MessageBubble({
               const { images, textContent } = extractImagesFromMarkdown(
                 message.content || ''
               );
+              console.log('[MessageBubble] Rendering', images.length, 'images');
               return (
                 <>
                   {/* Render extracted images first */}
-                  {images.map((img, idx) => (
-                    <Base64Image key={idx} src={img.src} alt={img.alt} />
-                  ))}
+                  {images.length > 0 && (
+                    <div className="mb-2">
+                      {images.map((img, idx) => {
+                        console.log(
+                          `[MessageBubble] Rendering image ${idx}, src length:`,
+                          img.src?.length
+                        );
+                        return (
+                          <Base64Image key={idx} src={img.src} alt={img.alt} />
+                        );
+                      })}
+                    </div>
+                  )}
                   {/* Then render text content */}
                   {textContent && (
                     <div

@@ -384,6 +384,13 @@ export const AI_MODELS = [
     iconUrl: '/icons/ai/gemini.svg',
     description: 'Google Gemini - 多模态',
   },
+  {
+    id: 'gemini-image',
+    name: 'Gemini Image (Google)',
+    icon: '🎨',
+    iconUrl: '/icons/ai/gemini.svg',
+    description: 'Google Gemini - 图片生成',
+  },
 ] as const;
 
 export type AIModelId = (typeof AI_MODELS)[number]['id'];

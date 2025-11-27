@@ -1330,6 +1330,7 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           "gpt-4": "OPENAI_API_KEY",
           claude: "ANTHROPIC_API_KEY",
           gemini: "GOOGLE_AI_API_KEY",
+          "gemini-image": "GOOGLE_AI_API_KEY",
         };
         const envKeyName = envKeyMap[aiMember.aiModel.toLowerCase()];
         if (envKeyName && process.env[envKeyName]) {

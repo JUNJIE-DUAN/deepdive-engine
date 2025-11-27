@@ -2693,12 +2693,10 @@ function HomeContent() {
                         </div>
                       </div>
                       <div
-                        className="cursor-text select-text p-3"
+                        className="prose prose-sm max-w-none cursor-text select-text p-3"
                         onContextMenu={(e) => handleContextMenu(e, aiSummary)}
                       >
-                        <p className="text-sm leading-relaxed text-gray-700">
-                          {aiSummary}
-                        </p>
+                        <ReactMarkdown>{aiSummary}</ReactMarkdown>
                       </div>
                     </div>
                   )}

@@ -219,48 +219,42 @@ export default function WhitelistManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <RefreshCw className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-600">Loading whitelists...</p>
-        </div>
+      <div className="flex items-center justify-center p-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-8">
-      {error && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-200/50 bg-red-50/50 p-4 backdrop-blur-sm">
-          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
-          <div>
-            <h3 className="font-semibold text-red-900">Error</h3>
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        </div>
-      )}
-
+    <div className="p-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10">
-            <Check className="h-5 w-5 text-blue-600" />
-          </div>
-          <h2 className="text-base font-semibold text-gray-900">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">
             Domain Whitelists
           </h2>
+          <p className="text-sm text-gray-500">
+            Configure allowed domains for each resource type
+          </p>
         </div>
         <button
           onClick={() => fetchWhitelists()}
-          className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+          className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
         >
           <RefreshCw className="h-4 w-4" />
           Refresh
         </button>
       </div>
 
+      {/* Notifications */}
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {whitelists.length === 0 ? (
           <div className="col-span-full rounded-lg border border-dashed border-gray-300 p-8 text-center">
             <p className="text-gray-500">No whitelists configured</p>
@@ -272,45 +266,92 @@ export default function WhitelistManagement() {
               <div
                 key={whitelist.resourceType}
                 onClick={() => setSelectedWhitelist(whitelist)}
-                className={`group cursor-pointer rounded-xl border ${colors.border} ${colors.bg} p-5 transition-all hover:scale-[1.02] hover:shadow-lg`}
+                className={`cursor-pointer rounded-xl border-2 bg-white p-5 shadow-sm transition-all hover:shadow-md ${
+                  whitelist.isActive
+                    ? 'border-gray-200'
+                    : 'border-gray-200 opacity-60'
+                }`}
               >
-                {/* Icon and Status */}
+                {/* Header */}
                 <div className="mb-4 flex items-start justify-between">
-                  <div className={`rounded-xl ${colors.bg} p-3 ${colors.text}`}>
-                    {getIcon(whitelist.resourceType)}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${colors.bg} ${colors.text} shadow-sm`}
+                    >
+                      {getIcon(whitelist.resourceType)}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {whitelist.resourceType.replace(/_/g, ' ')}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {whitelist.allowedDomains.length} domains
+                      </p>
+                    </div>
                   </div>
-                  <div
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      whitelist.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-200 text-gray-600'
+
+                  {/* Status Toggle */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleWhitelist(
+                        whitelist.resourceType,
+                        whitelist.isActive
+                      );
+                    }}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      whitelist.isActive ? 'bg-green-500' : 'bg-gray-300'
                     }`}
                   >
-                    {whitelist.isActive ? 'Active' : 'Inactive'}
-                  </div>
+                    <div
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                        whitelist.isActive ? 'left-[22px]' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
                 </div>
-
-                {/* Title */}
-                <h3 className="mb-1 font-semibold text-gray-900">
-                  {whitelist.resourceType.replace(/_/g, ' ')}
-                </h3>
 
                 {/* Description */}
                 <p className="mb-4 line-clamp-2 text-sm text-gray-600">
-                  {whitelist.description || 'No description'}
+                  {whitelist.description ||
+                    'Configure allowed domains for this resource type'}
                 </p>
 
                 {/* Stats */}
-                <div className="flex items-center justify-between border-t border-gray-200/50 pt-3">
-                  <div className="text-xs text-gray-500">
-                    <span className="font-medium text-gray-700">
-                      {whitelist.allowedDomains.length}
-                    </span>{' '}
-                    domains
+                <div className="mb-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status:</span>
+                    <span
+                      className={`font-mono ${whitelist.isActive ? 'text-green-600' : 'text-gray-500'}`}
+                    >
+                      {whitelist.isActive ? '✓ Active' : '✗ Inactive'}
+                    </span>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {whitelist.totalValidated} validated
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Validated:</span>
+                    <span className="text-gray-700">
+                      {whitelist.totalValidated}
+                    </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Rejected:</span>
+                    <span className="text-gray-700">
+                      {whitelist.totalRejected}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedWhitelist(whitelist);
+                    }}
+                    className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                  >
+                    Configure
+                  </button>
                 </div>
               </div>
             );

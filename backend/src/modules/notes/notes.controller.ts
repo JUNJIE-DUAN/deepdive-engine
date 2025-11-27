@@ -14,6 +14,7 @@ import {
 import { NotesService } from "./notes.service";
 import { CreateNoteDto, UpdateNoteDto, AddHighlightDto } from "./dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../../common/guards/optional-jwt-auth.guard";
 
 /**
  * 笔记控制器
@@ -70,6 +71,7 @@ export class NotesController {
    * 获取资源的笔记
    */
   @Get("resource/:resourceId")
+  @UseGuards(OptionalJwtAuthGuard)
   async getResourceNotes(
     @Param("resourceId") resourceId: string,
     @Request() req: any,
@@ -82,6 +84,7 @@ export class NotesController {
    * 获取单个笔记
    */
   @Get(":id")
+  @UseGuards(OptionalJwtAuthGuard)
   async getNote(@Param("id") id: string, @Request() req: any) {
     const userId = req.user?.id;
     return this.notesService.getNote(id, userId);

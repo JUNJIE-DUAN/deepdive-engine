@@ -2586,7 +2586,7 @@ function HomeContent() {
                       className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium shadow-sm transition-all hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     >
                       {aiModels.map((model) => (
-                        <option key={model.id} value={model.id}>
+                        <option key={model.id} value={model.modelName}>
                           {model.name} ({model.provider})
                         </option>
                       ))}
@@ -2709,7 +2709,7 @@ function HomeContent() {
                       <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-red-600"></div>
                       <span className="text-sm text-gray-600">
                         {isStreaming
-                          ? `${aiModels.find((m) => m.id === aiModel)?.name || aiModel} is thinking...`
+                          ? `${aiModels.find((m) => m.modelName === aiModel)?.name || aiModel} is thinking...`
                           : 'AI processing...'}
                       </span>
                     </div>
@@ -2887,8 +2887,8 @@ function HomeContent() {
                             <div className="flex items-center gap-2">
                               <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-red-600"></div>
                               <p className="text-xs">
-                                {aiModels.find((m) => m.id === aiModel)?.name ||
-                                  aiModel}
+                                {aiModels.find((m) => m.modelName === aiModel)
+                                  ?.name || aiModel}
                                 正在思考...
                               </p>
                             </div>

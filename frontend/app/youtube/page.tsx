@@ -1211,7 +1211,7 @@ function YouTubeTLDWContent() {
                         className={`cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium shadow-sm transition-all hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 ${isStreaming ? 'cursor-not-allowed opacity-50' : ''}`}
                       >
                         {aiModels.map((model) => (
-                          <option key={model.id} value={model.id}>
+                          <option key={model.id} value={model.modelName}>
                             {model.name} ({model.provider})
                           </option>
                         ))}

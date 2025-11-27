@@ -55,6 +55,40 @@ export const WHITELISTED_DOMAINS = [
   "deepmind.google",
   "blogs.nvidia.com",
 
+  // 政府和政策 (Government & Policy)
+  "whitehouse.gov",
+  "www.whitehouse.gov",
+  "congress.gov",
+  "www.congress.gov",
+  "senate.gov",
+  "www.senate.gov",
+  "house.gov",
+  "www.house.gov",
+  "state.gov",
+  "www.state.gov",
+  "treasury.gov",
+  "www.treasury.gov",
+  "commerce.gov",
+  "www.commerce.gov",
+
+  // 智库和研究机构 (Think Tanks & Research)
+  "brookings.edu",
+  "www.brookings.edu",
+  "cfr.org",
+  "www.cfr.org",
+  "csis.org",
+  "www.csis.org",
+  "rand.org",
+  "www.rand.org",
+  "heritage.org",
+  "www.heritage.org",
+
+  // 大学政策研究 (University Policy Research)
+  "law.stanford.edu",
+  "cyber.harvard.edu",
+  "carnegieendowment.org",
+  "www.carnegieendowment.org",
+
   // 主流媒体 (Mainstream Media)
   "forbes.com",
   "www.forbes.com",

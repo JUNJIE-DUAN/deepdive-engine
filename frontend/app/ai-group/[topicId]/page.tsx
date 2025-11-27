@@ -970,14 +970,13 @@ function MessageInput({
     }),
     ...topic.aiMembers.map((ai) => {
       const model = AI_MODELS.find((m) => m.id === ai.aiModel);
-      // Strip parenthetical suffix like "(xAI)" from display name for @mention
-      // "AI-Grok (xAI)" -> "AI-Grok"
-      const baseName = ai.displayName.replace(/\s*\([^)]*\)\s*/g, '').trim();
+      // Keep full display name for @mention to distinguish AI members with similar names
+      // "AI-Gemini (Google)" and "AI-Gemini (Image)" need to be distinguishable
       return {
         type: 'ai',
         id: ai.id,
         name: ai.displayName,
-        mention: baseName.replace(/\s+/g, '-'), // Replace spaces with hyphens for @mention
+        mention: ai.displayName.replace(/\s+/g, '-'), // Replace spaces with hyphens for @mention
         icon: 'cpu', // SVG icon type for AI
         iconUrl: model?.iconUrl,
       };
@@ -1298,12 +1297,8 @@ function MessageInput({
         <div className="flex gap-1">
           {topic.aiMembers.slice(0, 2).map((ai) => {
             const model = AI_MODELS.find((m) => m.id === ai.aiModel);
-            // Strip parenthetical suffix and use hyphenated version for @mention
-            // "AI-Grok (xAI)" -> "AI-Grok"
-            const baseName = ai.displayName
-              .replace(/\s*\([^)]*\)\s*/g, '')
-              .trim();
-            const mentionName = baseName.replace(/\s+/g, '-');
+            // Keep full display name for @mention to distinguish AI members
+            const mentionName = ai.displayName.replace(/\s+/g, '-');
             return (
               <button
                 key={ai.id}

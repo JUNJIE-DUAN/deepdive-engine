@@ -41,6 +41,7 @@ const RESOURCE_TYPE_DISPLAY = {
   RSS: 'RSS订阅',
   REPORT: '行业报告',
   EVENT: '技术活动',
+  POLICY: '政策文件',
 };
 
 export function DataImportDialog({

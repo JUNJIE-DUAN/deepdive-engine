@@ -10,7 +10,8 @@ type ResourceType =
   | 'YOUTUBE_VIDEO'
   | 'REPORT'
   | 'EVENT'
-  | 'RSS';
+  | 'RSS'
+  | 'POLICY';
 
 interface ImportUrlDialogProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ const RESOURCE_TYPE_DISPLAY = {
   reports: { name: 'Industry Report', type: 'REPORT' as ResourceType },
   youtube: { name: 'YouTube Video', type: 'YOUTUBE_VIDEO' as ResourceType },
   news: { name: 'Tech News', type: 'NEWS' as ResourceType },
+  policy: { name: 'Policy Document', type: 'POLICY' as ResourceType },
 };
 
 export function ImportUrlDialog({
@@ -285,6 +287,19 @@ export function ImportUrlDialog({
                       </div>
                       <div className="rounded border border-gray-300 bg-white p-2 font-mono text-xs">
                         https://youtu.be/xxxxx
+                      </div>
+                    </>
+                  )}
+                  {resourceTypeInfo.type === 'POLICY' && (
+                    <>
+                      <div className="rounded border border-gray-300 bg-white p-2 font-mono text-xs">
+                        https://whitehouse.gov/presidential-actions/xxx
+                      </div>
+                      <div className="rounded border border-gray-300 bg-white p-2 font-mono text-xs">
+                        https://congress.gov/bill/xxx
+                      </div>
+                      <div className="rounded border border-gray-300 bg-white p-2 font-mono text-xs">
+                        https://brookings.edu/research/xxx
                       </div>
                     </>
                   )}

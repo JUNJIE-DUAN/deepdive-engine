@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { config } from '@/lib/config';
 import { getAuthHeader } from '@/lib/auth';
+import ReactMarkdown from 'react-markdown';
 
 interface Note {
   id: string;
@@ -203,11 +204,37 @@ export default function NotesList({
               </div>
             )}
 
-            {/* Content preview - plain text for compact display */}
-            <div className="mb-2 line-clamp-3 text-sm leading-relaxed text-gray-700">
-              {note.content.length > 150
-                ? note.content.substring(0, 150) + '...'
-                : note.content}
+            {/* Content preview - Markdown rendered */}
+            <div className="prose prose-sm mb-2 line-clamp-4 max-w-none text-sm leading-relaxed text-gray-700">
+              <ReactMarkdown
+                components={{
+                  // 简化标题显示
+                  h1: ({ children }) => (
+                    <span className="font-bold">{children}</span>
+                  ),
+                  h2: ({ children }) => (
+                    <span className="font-bold">{children}</span>
+                  ),
+                  h3: ({ children }) => (
+                    <span className="font-semibold">{children}</span>
+                  ),
+                  h4: ({ children }) => (
+                    <span className="font-semibold">{children}</span>
+                  ),
+                  // 列表项紧凑显示
+                  ul: ({ children }) => (
+                    <ul className="my-1 list-disc pl-4">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="my-1 list-decimal pl-4">{children}</ol>
+                  ),
+                  li: ({ children }) => <li className="my-0">{children}</li>,
+                  // 段落紧凑
+                  p: ({ children }) => <p className="my-1">{children}</p>,
+                }}
+              >
+                {note.content}
+              </ReactMarkdown>
             </div>
 
             {/* Footer: Tags + Date + Actions */}

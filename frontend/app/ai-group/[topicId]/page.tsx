@@ -1111,46 +1111,57 @@ function MessageInput({
           const hyphenatedName = displayName.replace(/\s+/g, '-');
           return displayName === name || hyphenatedName === name;
         });
-        // Try matching AI members:
-        // 1. Exact match on displayName (e.g., "ai-grok (xai)" matches "AI-Grok (xAI)")
-        // 2. Match on hyphenated displayName (spaces replaced with hyphens)
-        // 3. Match on base name (without parenthetical suffix like "(xAI)")
-        // 4. Prefix match
-        const ai =
-          aiMembers.find((a) => a.displayName.toLowerCase() === name) ||
-          aiMembers.find(
-            (a) =>
-              a.displayName.toLowerCase().replace(/\s+/g, '-') ===
-              name.replace(/\s+/g, '-')
-          ) ||
-          aiMembers.find((a) => {
-            // Strip parenthetical suffix: "AI-Grok (xAI)" -> "AI-Grok"
-            const baseName = a.displayName
-              .replace(/\s*\([^)]*\)\s*/g, '')
-              .trim()
-              .toLowerCase()
-              .replace(/\s+/g, '-');
-            // Also strip parenthetical from name for comparison
-            const nameBase = name
-              .replace(/\s*\([^)]*\)\s*/g, '')
-              .trim()
-              .replace(/\s+/g, '-');
-            return (
-              baseName === nameBase || baseName === name.replace(/\s+/g, '-')
-            );
-          }) ||
-          aiMembers.find(
-            (a) =>
-              a.displayName.toLowerCase().startsWith(name + '-') ||
-              a.displayName.toLowerCase().startsWith(name + ' ') ||
-              a.displayName
-                .toLowerCase()
-                .startsWith(name.replace(/\s+/g, '-') + '-') ||
-              a.displayName
-                .toLowerCase()
-                .startsWith(name.replace(/\s+/g, '-') + ' ')
+        // Try matching AI members with flexible matching:
+        // Normalize both sides: lowercase, replace spaces with hyphens, strip parenthetical suffix
+        const normalizeForMatch = (str: string) => {
+          return str
+            .toLowerCase()
+            .replace(/\s*\([^)]*\)\s*/g, '') // Remove (xAI), (Google), etc.
+            .trim()
+            .replace(/\s+/g, '-'); // Replace spaces with hyphens
+        };
+
+        const normalizedName = normalizeForMatch(name);
+        console.log('[Mentions Debug] Normalized input name:', normalizedName);
+
+        const ai = aiMembers.find((a) => {
+          const normalizedDisplayName = normalizeForMatch(a.displayName);
+          console.log(
+            `[Mentions Debug] Comparing "${normalizedName}" with "${normalizedDisplayName}" (original: "${a.displayName}")`
           );
 
+          // Exact match after normalization
+          if (normalizedDisplayName === normalizedName) {
+            return true;
+          }
+
+          // Prefix match (e.g., @AI-Grok matches "AI-Grok (xAI)")
+          if (normalizedDisplayName.startsWith(normalizedName)) {
+            return true;
+          }
+
+          // Also try matching with original name in case it includes the parenthetical
+          const nameWithHyphens = name.replace(/\s+/g, '-');
+          const displayNameWithHyphens = a.displayName
+            .toLowerCase()
+            .replace(/\s+/g, '-');
+          if (displayNameWithHyphens === nameWithHyphens) {
+            return true;
+          }
+
+          return false;
+        });
+
+        // Debug: log all AI member names for comparison
+        console.log(
+          '[Mentions Debug] AI members available:',
+          aiMembers.map((a) => ({
+            id: a.id,
+            displayName: a.displayName,
+            lowercase: a.displayName.toLowerCase(),
+            hyphenated: a.displayName.toLowerCase().replace(/\s+/g, '-'),
+          }))
+        );
         console.log(
           '[Mentions Debug] Matching result for',
           name,

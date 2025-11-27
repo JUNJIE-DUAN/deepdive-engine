@@ -14,11 +14,7 @@ import {
 } from '@/lib/api/workspace';
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import { useWorkspaceSync } from '@/lib/use-workspace-sync';
-
-const MODEL_OPTIONS = [
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'grok', label: 'Grok 2' },
-];
+import { useAIModels } from '@/hooks/useAIModels';
 
 const TERMINAL_STATUSES = new Set(['SUCCESS', 'FAILED']);
 
@@ -96,6 +92,9 @@ export default function WorkspacePage() {
 
   const workspaceId = workspace?.id ?? null;
 
+  // 动态获取 AI 模型列表
+  const { models: aiModels } = useAIModels();
+
   const [templates, setTemplates] = useState<WorkspaceTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
@@ -104,7 +103,15 @@ export default function WorkspacePage() {
   );
 
   const [question, setQuestion] = useState('');
-  const [model, setModel] = useState(MODEL_OPTIONS[0]?.value ?? 'gpt-4');
+  const [model, setModel] = useState(''); // 将在 aiModels 加载后设置默认值
+
+  // 设置默认 AI 模型
+  useEffect(() => {
+    if (aiModels.length > 0 && !model) {
+      const defaultModel = aiModels.find((m) => m.isDefault) || aiModels[0];
+      setModel(defaultModel.modelId);
+    }
+  }, [aiModels, model]);
   const [creatingTask, setCreatingTask] = useState(false);
   const [taskError, setTaskError] = useState<string | null>(null);
 
@@ -780,9 +787,9 @@ export default function WorkspacePage() {
                       onChange={(event) => setModel(event.target.value)}
                       className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
                     >
-                      {MODEL_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
+                      {aiModels.map((m) => (
+                        <option key={m.id} value={m.modelId}>
+                          {m.name} ({m.provider})
                         </option>
                       ))}
                     </select>

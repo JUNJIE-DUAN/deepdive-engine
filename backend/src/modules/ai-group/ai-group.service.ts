@@ -1265,13 +1265,15 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     });
 
     // Get AI model configuration from database
-    // aiMember.aiModel is the standard model ID: "grok", "claude", "gpt-4", "gemini"
-    // Database AIModel.name field uses the same standard IDs (enforced by admin UI)
-    this.logger.log(`Looking up AI model: "${aiMember.aiModel}"`);
+    // 重要：aiMember.aiModel 现在存储的是 modelId（唯一），而不是 name（非唯一）
+    // 这样可以精确匹配用户选择的具体模型，避免同一 provider 下多个模型混淆
+    // 兼容旧数据：如果 modelId 找不到，退回到用 name 查找
+    this.logger.log(`Looking up AI model by modelId: "${aiMember.aiModel}"`);
 
-    const aiModelConfig = await this.prisma.aIModel.findFirst({
+    // 优先用 modelId 精确匹配（新方式）
+    let aiModelConfig = await this.prisma.aIModel.findFirst({
       where: {
-        name: {
+        modelId: {
           equals: aiMember.aiModel,
           mode: "insensitive",
         },
@@ -1279,16 +1281,39 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
       },
     });
 
+    // 兼容旧数据：如果 modelId 找不到，退回到用 name 查找
+    if (!aiModelConfig) {
+      this.logger.log(
+        `modelId not found, falling back to name lookup: "${aiMember.aiModel}"`,
+      );
+      aiModelConfig = await this.prisma.aIModel.findFirst({
+        where: {
+          name: {
+            equals: aiMember.aiModel,
+            mode: "insensitive",
+          },
+          isEnabled: true,
+        },
+      });
+    }
+
     // 详细日志帮助调试
     // 列出所有可用的模型
     const allModels = await this.prisma.aIModel.findMany({
-      select: { id: true, name: true, isEnabled: true, apiKey: true },
+      select: {
+        id: true,
+        name: true,
+        modelId: true,
+        isEnabled: true,
+        apiKey: true,
+      },
     });
     this.logger.log(
       `All models in database: ${JSON.stringify(
         allModels.map((m) => ({
           id: m.id,
           name: m.name,
+          modelId: m.modelId,
           enabled: m.isEnabled,
           hasKey: !!m.apiKey,
           keyLength: m.apiKey?.length || 0,
@@ -1298,11 +1323,11 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
 
     if (!aiModelConfig) {
       this.logger.error(
-        `AI model "${aiMember.aiModel}" not found or disabled!`,
+        `AI model "${aiMember.aiModel}" not found by modelId or name!`,
       );
     } else {
       this.logger.log(
-        `AI model lookup: "${aiMember.aiModel}" -> found "${aiModelConfig.name}", hasApiKey=${!!aiModelConfig.apiKey}, keyLength=${aiModelConfig.apiKey?.length || 0}`,
+        `AI model lookup: "${aiMember.aiModel}" -> found name="${aiModelConfig.name}", modelId="${aiModelConfig.modelId}", hasApiKey=${!!aiModelConfig.apiKey}, keyLength=${aiModelConfig.apiKey?.length || 0}`,
       );
     }
 
@@ -1325,14 +1350,31 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
         apiKeySource = "database";
       } else {
         // Try to get API key from environment variables
-        const envKeyMap: Record<string, string> = {
-          grok: "XAI_API_KEY",
-          "gpt-4": "OPENAI_API_KEY",
-          claude: "ANTHROPIC_API_KEY",
-          gemini: "GOOGLE_AI_API_KEY",
-          "gemini-image": "GOOGLE_AI_API_KEY",
-        };
-        const envKeyName = envKeyMap[aiMember.aiModel.toLowerCase()];
+        // 由于 aiMember.aiModel 现在存储的是 modelId（如 "gemini-2.0-flash"），
+        // 需要从 modelId 或 provider 推断出对应的环境变量
+        const provider = aiModelConfig?.provider?.toLowerCase() || "";
+        const modelIdLower = aiMember.aiModel.toLowerCase();
+
+        // 根据 provider 或 modelId 前缀匹配环境变量
+        let envKeyName: string | null = null;
+        if (provider === "xai" || modelIdLower.includes("grok")) {
+          envKeyName = "XAI_API_KEY";
+        } else if (
+          provider === "openai" ||
+          modelIdLower.includes("gpt") ||
+          modelIdLower.startsWith("o1") ||
+          modelIdLower.startsWith("o3")
+        ) {
+          envKeyName = "OPENAI_API_KEY";
+        } else if (
+          provider === "anthropic" ||
+          modelIdLower.includes("claude")
+        ) {
+          envKeyName = "ANTHROPIC_API_KEY";
+        } else if (provider === "google" || modelIdLower.includes("gemini")) {
+          envKeyName = "GOOGLE_AI_API_KEY";
+        }
+
         if (envKeyName && process.env[envKeyName]) {
           apiKey = process.env[envKeyName] as string;
           apiKeySource = `env:${envKeyName}`;
@@ -1620,28 +1662,60 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
   // ==================== AI Model Defaults ====================
 
   /**
-   * Get default model ID for a given AI model name
+   * Get default model ID for a given AI model identifier
+   * 支持传入 modelId（如 "gemini-2.0-flash"）或 name（如 "gemini"）
    */
-  private getDefaultModelId(modelName: string): string {
+  private getDefaultModelId(modelIdentifier: string): string {
+    const lower = modelIdentifier.toLowerCase();
+
+    // 如果已经是具体的 modelId，直接返回
+    if (
+      lower.includes("-") &&
+      (lower.includes("grok") ||
+        lower.includes("gpt") ||
+        lower.includes("claude") ||
+        lower.includes("gemini") ||
+        lower.startsWith("o1") ||
+        lower.startsWith("o3"))
+    ) {
+      return modelIdentifier;
+    }
+
+    // 否则从 name 映射到默认 modelId
     const defaults: Record<string, string> = {
       grok: "grok-3-latest",
       "gpt-4": "gpt-4-turbo",
       claude: "claude-sonnet-4-20250514",
       gemini: "gemini-2.0-flash",
     };
-    return defaults[modelName.toLowerCase()] || modelName;
+    return defaults[lower] || modelIdentifier;
   }
 
   /**
-   * Get default API endpoint for a given AI model name
+   * Get default API endpoint for a given AI model identifier
+   * 支持传入 modelId（如 "gemini-2.0-flash"）或 name（如 "gemini"）
    */
-  private getDefaultEndpoint(modelName: string): string {
-    const defaults: Record<string, string> = {
-      grok: "https://api.x.ai/v1/chat/completions",
-      "gpt-4": "https://api.openai.com/v1/chat/completions",
-      claude: "https://api.anthropic.com/v1/messages",
-      gemini: "https://generativelanguage.googleapis.com/v1beta/models",
-    };
-    return defaults[modelName.toLowerCase()] || "";
+  private getDefaultEndpoint(modelIdentifier: string): string {
+    const lower = modelIdentifier.toLowerCase();
+
+    // 根据 modelId 或 name 推断 endpoint
+    if (lower.includes("grok")) {
+      return "https://api.x.ai/v1/chat/completions";
+    }
+    if (
+      lower.includes("gpt") ||
+      lower.startsWith("o1") ||
+      lower.startsWith("o3")
+    ) {
+      return "https://api.openai.com/v1/chat/completions";
+    }
+    if (lower.includes("claude")) {
+      return "https://api.anthropic.com/v1/messages";
+    }
+    if (lower.includes("gemini")) {
+      return "https://generativelanguage.googleapis.com/v1beta/models";
+    }
+
+    return "";
   }
 }

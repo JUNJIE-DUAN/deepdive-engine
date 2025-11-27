@@ -198,7 +198,9 @@ function AISettings({
   const [editingAI, setEditingAI] = useState<TopicAIMember | null>(null);
   const { models } = useAIModels();
 
+  // 查找模型：优先用 modelId 匹配（新方式），兼容 modelName 匹配（旧数据）
   const findModel = (aiModel: string) =>
+    models.find((m) => m.modelId === aiModel) ||
     models.find((m) => m.modelName === aiModel);
 
   return (
@@ -331,14 +333,16 @@ function AddAIDialog({
   const handleAdd = async () => {
     if (!selectedModel || !displayName.trim()) return;
 
-    // 找到选中的模型，获取 modelName 用于 aiModel 字段
+    // 找到选中的模型，获取 modelId 用于 aiModel 字段
+    // 重要：使用 modelId（唯一）而不是 modelName（非唯一）
+    // 这样后端可以精确匹配到用户选择的具体模型
     const selectedModelData = models.find((m) => m.id === selectedModel);
     if (!selectedModelData) return;
 
     setIsAdding(true);
     try {
       await onAdd(topicId, {
-        aiModel: selectedModelData.modelName, // 使用 modelName 而不是 id
+        aiModel: selectedModelData.modelId, // 使用 modelId（唯一）而不是 modelName（可能重复）
         displayName: displayName.trim(),
         roleDescription: roleDescription.trim() || undefined,
         systemPrompt: systemPrompt.trim() || undefined,
@@ -502,7 +506,10 @@ function EditAIDialog({
     }
   };
 
-  const model = models.find((m) => m.modelName === ai.aiModel);
+  // 查找模型：优先用 modelId 匹配（新方式），兼容 modelName 匹配（旧数据）
+  const model =
+    models.find((m) => m.modelId === ai.aiModel) ||
+    models.find((m) => m.modelName === ai.aiModel);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const {
       message,
       resources = [],
-      model = 'grok',
+      model = '', // 将从后端获取默认模型
       stream = true,
       generateDocument = false,
       isDocumentGeneration = false,
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     if (agentMode === 'enhanced' && resources.length > 0) {
       try {
         // Step 1: CoordinatorAgent分析意图
-        const coordinator = new CoordinatorAgent('grok');
+        const coordinator = new CoordinatorAgent(model || undefined);
         const isPPT = /ppt|powerpoint|演示|幻灯片/i.test(message);
         const isUpdate = /更新|修改|补充|重新生成/i.test(message);
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
         // Step 2: ResourceAnalysisAgent深度分析资源（如果需要）
         if (agentPlan.needsResourceAnalysis) {
-          const analyzer = new ResourceAnalysisAgent('grok');
+          const analyzer = new ResourceAnalysisAgent(model || undefined);
 
           // 转换资源格式 (简化版本用于分析)
           const convertedResources = resources.map((r) => ({

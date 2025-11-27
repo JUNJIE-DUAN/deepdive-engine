@@ -11,9 +11,9 @@ import {
   TopicAIMember,
   MessageContentType,
   MentionType,
-  AI_MODELS,
   TopicRole,
 } from '@/types/ai-group';
+import { useAIModels, AIModel } from '@/hooks/useAIModels';
 import Link from 'next/link';
 import TopicSettingsDialog from '@/components/ai-group/TopicSettingsDialog';
 import ResourcesPanel from '@/components/ai-group/ResourcesPanel';
@@ -144,6 +144,7 @@ function MemberPanel({
   onAIClick,
   onInviteMember,
   isOwnerOrAdmin,
+  findModel,
 }: {
   topic: Topic;
   onlineUsers: Set<string>;
@@ -153,6 +154,7 @@ function MemberPanel({
   onAIClick: (ai: TopicAIMember) => void;
   onInviteMember: () => void;
   isOwnerOrAdmin: boolean;
+  findModel: (aiModel: string) => AIModel | undefined;
 }) {
   return (
     <div className="flex w-64 flex-col border-r border-gray-200 bg-white">
@@ -314,7 +316,7 @@ function MemberPanel({
             </h3>
             <div className="space-y-1">
               {topic.aiMembers.map((ai) => {
-                const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+                const model = findModel(ai.aiModel);
                 const isTyping = typingAIs.has(ai.id);
 
                 return (
@@ -518,12 +520,14 @@ const MessageBubble = memo(function MessageBubble({
   onReply,
   onReact,
   currentUserId,
+  findModel,
 }: {
   message: TopicMessage;
   isOwnMessage: boolean;
   onReply: (message: TopicMessage) => void;
   onReact: (messageId: string, emoji: string) => void;
   currentUserId: string;
+  findModel: (aiModel: string) => AIModel | undefined;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [needsCollapse, setNeedsCollapse] = useState(false);
@@ -532,9 +536,7 @@ const MessageBubble = memo(function MessageBubble({
     y: number;
   } | null>(null);
   const isAI = !!message.aiMemberId;
-  const model = isAI
-    ? AI_MODELS.find((m) => m.id === message.aiMember?.aiModel)
-    : null;
+  const model = isAI ? findModel(message.aiMember?.aiModel || '') : null;
 
   // Check if message contains an image (markdown image syntax)
   const hasImage = message.content?.includes('![');
@@ -850,12 +852,14 @@ function SimpleMessageList({
   onReply,
   onReact,
   messagesEndRef,
+  findModel,
 }: {
   messages: TopicMessage[];
   currentUserId: string;
   onReply: (message: TopicMessage) => void;
   onReact: (messageId: string, emoji: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  findModel: (aiModel: string) => AIModel | undefined;
 }) {
   return (
     <div className="flex flex-col gap-1 px-4 py-4">
@@ -867,6 +871,7 @@ function SimpleMessageList({
           onReply={onReply}
           onReact={onReact}
           currentUserId={currentUserId}
+          findModel={findModel}
         />
       ))}
       <div ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
@@ -918,6 +923,7 @@ function MessageInput({
   onClearReply,
   onSend,
   onTyping,
+  findModel,
 }: {
   topic: Topic;
   replyTo: TopicMessage | null;
@@ -931,6 +937,7 @@ function MessageInput({
     }[]
   ) => void;
   onTyping: () => void;
+  findModel: (aiModel: string) => AIModel | undefined;
 }) {
   const [content, setContent] = useState('');
   const [showMentionMenu, setShowMentionMenu] = useState(false);
@@ -969,7 +976,7 @@ function MessageInput({
       };
     }),
     ...topic.aiMembers.map((ai) => {
-      const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+      const model = findModel(ai.aiModel);
       // Keep full display name for @mention to distinguish AI members with similar names
       // "AI-Gemini (Google)" and "AI-Gemini (Image)" need to be distinguishable
       return {
@@ -1344,7 +1351,7 @@ function MessageInput({
         {/* Quick AI Mention Buttons */}
         <div className="flex gap-1">
           {topic.aiMembers.slice(0, 2).map((ai) => {
-            const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+            const model = findModel(ai.aiModel);
             // Keep full display name for @mention to distinguish AI members
             const mentionName = ai.displayName.replace(/\s+/g, '-');
             return (
@@ -1411,6 +1418,7 @@ export default function TopicPage() {
   const router = useRouter();
   const topicId = params.topicId as string;
   const { user, accessToken, isLoading: authLoading } = useAuth();
+  const { models: aiModels } = useAIModels();
 
   const isAuthenticated = !!accessToken;
 
@@ -1435,6 +1443,15 @@ export default function TopicPage() {
     clearMessages,
     generateAIResponse,
   } = useAiGroupStore();
+
+  // 查找模型：优先用 modelId 匹配（新方式），兼容旧数据
+  const findModel = useCallback(
+    (aiModel: string) =>
+      aiModels.find((m) => m.modelId === aiModel) ||
+      aiModels.find((m) => m.modelName === aiModel) ||
+      aiModels.find((m) => m.id === aiModel),
+    [aiModels]
+  );
 
   const [replyTo, setReplyTo] = useState<TopicMessage | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -1674,6 +1691,7 @@ export default function TopicPage() {
         }}
         onInviteMember={() => setShowInviteDialog(true)}
         isOwnerOrAdmin={isOwnerOrAdmin}
+        findModel={findModel}
       />
 
       {/* Main Chat Area */}
@@ -1820,6 +1838,7 @@ export default function TopicPage() {
               onReply={setReplyTo}
               onReact={handleReaction}
               messagesEndRef={messagesEndRef}
+              findModel={findModel}
             />
           )}
 
@@ -1856,6 +1875,7 @@ export default function TopicPage() {
           onClearReply={() => setReplyTo(null)}
           onSend={handleSendMessage}
           onTyping={() => sendTyping(topicId)}
+          findModel={findModel}
         />
       </main>
 

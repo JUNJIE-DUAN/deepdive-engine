@@ -4,12 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAiGroupStore } from '@/stores/aiGroupStore';
-import {
-  Topic,
-  CreateTopicDto,
-  UpdateTopicDto,
-  AI_MODELS,
-} from '@/types/ai-group';
+import { Topic, CreateTopicDto, UpdateTopicDto } from '@/types/ai-group';
+import { useAIModels, AIModel } from '@/hooks/useAIModels';
 import Sidebar from '@/components/layout/Sidebar';
 
 export default function AIGroupPage() {
@@ -23,12 +19,19 @@ export default function AIGroupPage() {
     deleteTopic,
     updateTopic,
   } = useAiGroupStore();
+  const { models: aiModels } = useAIModels();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const isAuthenticated = !!accessToken;
+
+  // 查找模型：优先用 modelId 匹配（新方式），兼容旧数据
+  const findModel = (aiModel: string) =>
+    aiModels.find((m) => m.modelId === aiModel) ||
+    aiModels.find((m) => m.modelName === aiModel) ||
+    aiModels.find((m) => m.id === aiModel);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -202,6 +205,7 @@ export default function AIGroupPage() {
                       await fetchTopics();
                     }
                   }}
+                  findModel={findModel}
                 />
               ))}
 
@@ -235,6 +239,7 @@ export default function AIGroupPage() {
       {/* Create Topic Dialog */}
       {showCreateDialog && (
         <CreateTopicDialog
+          aiModels={aiModels}
           onClose={() => setShowCreateDialog(false)}
           onCreate={async (dto) => {
             const topic = await createTopic(dto);
@@ -266,12 +271,14 @@ function TopicCard({
   onClick,
   onEdit,
   onDelete,
+  findModel,
 }: {
   topic: Topic;
   currentUserId?: string;
   onClick: () => void;
   onEdit: (topic: Topic) => void;
   onDelete: (topicId: string) => void;
+  findModel: (aiModel: string) => AIModel | undefined;
 }) {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -474,7 +481,7 @@ function TopicCard({
               <div className="mx-2 h-4 w-px bg-gray-200" />
               <div className="flex -space-x-2">
                 {topic.aiMembers.slice(0, 2).map((ai) => {
-                  const model = AI_MODELS.find((m) => m.id === ai.aiModel);
+                  const model = findModel(ai.aiModel);
                   return (
                     <div
                       key={ai.id}
@@ -516,9 +523,11 @@ function TopicCard({
 
 // Create Topic Dialog
 function CreateTopicDialog({
+  aiModels,
   onClose,
   onCreate,
 }: {
+  aiModels: AIModel[];
   onClose: () => void;
   onCreate: (dto: CreateTopicDto) => Promise<void>;
 }) {
@@ -551,9 +560,10 @@ function CreateTopicDialog({
         description: description.trim() || undefined,
         metadata: tags.length > 0 ? { tags } : undefined,
         aiMembers: selectedAI.map((aiId) => {
-          const model = AI_MODELS.find((m) => m.id === aiId);
+          // aiId 是 model.id（数据库唯一 ID），需要找到对应的 modelId
+          const model = aiModels.find((m) => m.id === aiId);
           return {
-            aiModel: aiId,
+            aiModel: model?.modelId || aiId, // 使用 modelId（唯一）而不是旧的 id
             displayName: `AI-${model?.name || aiId}`,
           };
         }),
@@ -687,7 +697,7 @@ function CreateTopicDialog({
               Add AI Assistants
             </label>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {AI_MODELS.map((model) => (
+              {aiModels.map((model) => (
                 <button
                   key={model.id}
                   onClick={() => {
@@ -703,7 +713,15 @@ function CreateTopicDialog({
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="text-2xl">{model.icon}</span>
+                  {model.iconUrl ? (
+                    <img
+                      src={model.iconUrl}
+                      alt={model.name}
+                      className="h-6 w-6"
+                    />
+                  ) : (
+                    <span className="text-2xl">{model.icon}</span>
+                  )}
                   <div>
                     <div className="text-sm font-medium text-gray-900">
                       {model.name}

@@ -1,12 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Topic,
-  TopicSummary,
-  AI_MODELS,
-  GenerateSummaryDto,
-} from '@/types/ai-group';
+import { Topic, TopicSummary, GenerateSummaryDto } from '@/types/ai-group';
+import { useAIModels } from '@/hooks/useAIModels';
 import * as api from '@/lib/api/ai-group';
 
 interface SummaryDialogProps {
@@ -21,6 +17,13 @@ export default function SummaryDialog({ topic, onClose }: SummaryDialogProps) {
   const [selectedSummary, setSelectedSummary] = useState<TopicSummary | null>(
     null
   );
+  const { models: aiModels } = useAIModels();
+
+  // 查找模型：优先用 modelId 匹配，兼容旧数据
+  const findModel = (aiModel: string) =>
+    aiModels.find((m) => m.modelId === aiModel) ||
+    aiModels.find((m) => m.modelName === aiModel) ||
+    aiModels.find((m) => m.id === aiModel);
 
   useEffect(() => {
     loadSummaries();
@@ -183,9 +186,8 @@ export default function SummaryDialog({ topic, onClose }: SummaryDialogProps) {
                     {selectedSummary.generatedBy && (
                       <p className="text-xs text-gray-400">
                         AI Model:{' '}
-                        {AI_MODELS.find(
-                          (m) => m.id === selectedSummary.generatedBy
-                        )?.name || selectedSummary.generatedBy}
+                        {findModel(selectedSummary.generatedBy)?.name ||
+                          selectedSummary.generatedBy}
                       </p>
                     )}
                   </div>
@@ -240,6 +242,7 @@ export default function SummaryDialog({ topic, onClose }: SummaryDialogProps) {
         {showGenerateDialog && (
           <GenerateSummaryDialog
             topicId={topic.id}
+            aiModels={aiModels}
             onGenerate={async (summary) => {
               setSummaries((prev) => [summary, ...prev]);
               setSelectedSummary(summary);
@@ -256,15 +259,19 @@ export default function SummaryDialog({ topic, onClose }: SummaryDialogProps) {
 // Generate Summary Dialog
 function GenerateSummaryDialog({
   topicId,
+  aiModels,
   onGenerate,
   onClose,
 }: {
   topicId: string;
+  aiModels: ReturnType<typeof useAIModels>['models'];
   onGenerate: (summary: TopicSummary) => void;
   onClose: () => void;
 }) {
+  // 默认选择第一个模型的 modelId
+  const defaultModelId = aiModels[0]?.modelId || 'grok-3-latest';
   const [title, setTitle] = useState('');
-  const [selectedModel, setSelectedModel] = useState('grok');
+  const [selectedModel, setSelectedModel] = useState(defaultModelId);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -313,17 +320,25 @@ function GenerateSummaryDialog({
               AI Model
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {AI_MODELS.map((model) => (
+              {aiModels.map((model) => (
                 <button
                   key={model.id}
-                  onClick={() => setSelectedModel(model.id)}
+                  onClick={() => setSelectedModel(model.modelId)}
                   className={`flex items-center gap-2 rounded-lg border-2 p-3 text-left transition-colors ${
-                    selectedModel === model.id
+                    selectedModel === model.modelId
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="text-xl">{model.icon}</span>
+                  {model.iconUrl ? (
+                    <img
+                      src={model.iconUrl}
+                      alt={model.name}
+                      className="h-5 w-5"
+                    />
+                  ) : (
+                    <span className="text-xl">{model.icon}</span>
+                  )}
                   <span className="text-sm font-medium">{model.name}</span>
                 </button>
               ))}

@@ -87,7 +87,7 @@ function YouTubeTLDWContent() {
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [aiModel, setAiModel] = useState('grok');
+  const [aiModel, setAiModel] = useState(''); // 将在 aiModels 加载后设置默认值
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Right panel collapse state
@@ -135,6 +135,15 @@ function YouTubeTLDWContent() {
     null
   );
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // 设置默认 AI 模型（使用管理员配置的默认模型）
+  useEffect(() => {
+    if (aiModels.length > 0 && !aiModel) {
+      // 优先使用标记为默认的模型，否则使用第一个
+      const defaultModel = aiModels.find((m) => m.isDefault) || aiModels[0];
+      setAiModel(defaultModel.modelId);
+    }
+  }, [aiModels, aiModel]);
 
   // Initialize YouTube Player
   useEffect(() => {
@@ -651,7 +660,7 @@ function YouTubeTLDWContent() {
           body: JSON.stringify({
             text: currentSegment.text,
             targetLanguage: 'zh-CN',
-            model: 'grok', // OpenAI quota exhausted, use Grok
+            model: aiModel, // 使用用户选择的 AI 模型
           }),
         });
 
@@ -1211,7 +1220,7 @@ function YouTubeTLDWContent() {
                         className={`cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium shadow-sm transition-all hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 ${isStreaming ? 'cursor-not-allowed opacity-50' : ''}`}
                       >
                         {aiModels.map((model) => (
-                          <option key={model.id} value={model.modelName}>
+                          <option key={model.id} value={model.modelId}>
                             {model.name} ({model.provider})
                           </option>
                         ))}

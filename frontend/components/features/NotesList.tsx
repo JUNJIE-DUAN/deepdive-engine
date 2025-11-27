@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { config } from '@/lib/config';
 import { getAuthHeader } from '@/lib/auth';
-import ReactMarkdown from 'react-markdown';
 
 interface Note {
   id: string;
@@ -188,89 +187,72 @@ export default function NotesList({
         </div>
       )}
 
-      {/* Notes List */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Notes List - Single column for sidebar */}
+      <div className="space-y-3">
         {filteredNotes.map((note) => (
           <div
             key={note.id}
-            className="cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:shadow-lg"
+            className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md"
             onClick={() => onNoteClick?.(note)}
           >
-            <div className="p-4">
-              {/* Resource info header */}
-              {!resourceId && note.resource && (
-                <div className="mb-3 flex items-center gap-2 border-b border-gray-100 pb-3">
-                  <span className="text-xs font-semibold uppercase text-gray-500">
-                    From: {note.resource.type}
-                  </span>
-                  <span className="truncate text-xs font-medium text-gray-700 hover:text-blue-600">
-                    {note.resource.title}
-                  </span>
-                </div>
-              )}
+            {/* Resource info header */}
+            {!resourceId && note.resource && (
+              <div className="mb-2 truncate text-xs text-gray-500">
+                <span className="font-medium">{note.resource.type}:</span>{' '}
+                {note.resource.title}
+              </div>
+            )}
 
-              {/* Content preview */}
-              <div className="prose prose-sm mb-3 line-clamp-3 max-w-none text-sm leading-relaxed text-gray-700">
-                <ReactMarkdown>{note.content}</ReactMarkdown>
+            {/* Content preview - plain text for compact display */}
+            <div className="mb-2 line-clamp-3 text-sm leading-relaxed text-gray-700">
+              {note.content.length > 150
+                ? note.content.substring(0, 150) + '...'
+                : note.content}
+            </div>
+
+            {/* Footer: Tags + Date + Actions */}
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                {/* Tags */}
+                {note.tags && note.tags.length > 0 && (
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700">
+                    {note.tags[0]}
+                    {note.tags.length > 1 && ` +${note.tags.length - 1}`}
+                  </span>
+                )}
+                {/* Date */}
+                <span className="text-gray-400">
+                  {new Date(note.createdAt).toLocaleDateString('zh-CN', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
               </div>
 
-              {/* Tags */}
-              {note.tags && note.tags.length > 0 && (
-                <div className="mb-3 flex flex-wrap items-center gap-1">
-                  {note.tags.slice(0, 2).map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {note.tags.length > 2 && (
-                    <span className="text-xs text-gray-500">
-                      +{note.tags.length - 2} more
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Metadata footer */}
-              <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-xs text-gray-500">
-                <div className="flex items-center gap-2">
-                  <span>
-                    {new Date(note.createdAt).toLocaleDateString('en-US')}
-                  </span>
-                  {note.isPublic && (
-                    <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800">
-                      Public
-                    </span>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1">
-                  {onEditNote && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditNote(note);
-                      }}
-                      className="text-xs font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  {onDeleteNote && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(note.id);
-                      }}
-                      className="text-xs font-medium text-red-600 hover:text-red-800"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                {onEditNote && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditNote(note);
+                    }}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    编辑
+                  </button>
+                )}
+                {onDeleteNote && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(note.id);
+                    }}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    删除
+                  </button>
+                )}
               </div>
             </div>
           </div>

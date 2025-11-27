@@ -1067,17 +1067,22 @@ function MessageInput({
     );
 
     // Parse mentions from content
-    // Support names with letters, numbers, hyphens, and underscores (e.g., "AI-Grok", "AI_Claude")
+    // Support names with letters, numbers, hyphens, underscores, spaces, and parentheses
+    // e.g., "AI-Grok", "AI_Claude", "AI-Grok (xAI)", "AI-Gemini (Google)"
     const mentions: {
       userId?: string;
       aiMemberId?: string;
       mentionType: MentionType;
     }[] = [];
-    const mentionRegex = /@([\w-]+)/g;
+    // Match @name patterns including optional parenthetical suffix
+    // Examples: @AI-Grok, @AI-Grok-(xAI), @AI-Gemini-(Google), @John-Doe
+    const mentionRegex = /@([\w-]+(?:-\([^)]+\))?)/g;
     let match;
 
     while ((match = mentionRegex.exec(content)) !== null) {
-      const name = match[1].toLowerCase();
+      // Remove the hyphen before parentheses for display matching
+      // @AI-Grok-(xAI) -> "ai-grok (xai)" for matching against "AI-Grok (xAI)"
+      const name = match[1].toLowerCase().replace(/-\(/, ' (');
       console.log(
         '[Mentions Debug] Found mention match:',
         match[0],
@@ -1107,14 +1112,16 @@ function MessageInput({
           return displayName === name || hyphenatedName === name;
         });
         // Try matching AI members:
-        // 1. Exact match on displayName
-        // 2. Match on hyphenated displayName
+        // 1. Exact match on displayName (e.g., "ai-grok (xai)" matches "AI-Grok (xAI)")
+        // 2. Match on hyphenated displayName (spaces replaced with hyphens)
         // 3. Match on base name (without parenthetical suffix like "(xAI)")
         // 4. Prefix match
         const ai =
           aiMembers.find((a) => a.displayName.toLowerCase() === name) ||
           aiMembers.find(
-            (a) => a.displayName.toLowerCase().replace(/\s+/g, '-') === name
+            (a) =>
+              a.displayName.toLowerCase().replace(/\s+/g, '-') ===
+              name.replace(/\s+/g, '-')
           ) ||
           aiMembers.find((a) => {
             // Strip parenthetical suffix: "AI-Grok (xAI)" -> "AI-Grok"
@@ -1123,12 +1130,25 @@ function MessageInput({
               .trim()
               .toLowerCase()
               .replace(/\s+/g, '-');
-            return baseName === name;
+            // Also strip parenthetical from name for comparison
+            const nameBase = name
+              .replace(/\s*\([^)]*\)\s*/g, '')
+              .trim()
+              .replace(/\s+/g, '-');
+            return (
+              baseName === nameBase || baseName === name.replace(/\s+/g, '-')
+            );
           }) ||
           aiMembers.find(
             (a) =>
               a.displayName.toLowerCase().startsWith(name + '-') ||
-              a.displayName.toLowerCase().startsWith(name + ' ')
+              a.displayName.toLowerCase().startsWith(name + ' ') ||
+              a.displayName
+                .toLowerCase()
+                .startsWith(name.replace(/\s+/g, '-') + '-') ||
+              a.displayName
+                .toLowerCase()
+                .startsWith(name.replace(/\s+/g, '-') + ' ')
           );
 
         console.log(

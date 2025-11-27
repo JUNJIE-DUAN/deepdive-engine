@@ -1169,6 +1169,23 @@ function MessageInput({
           });
         }
 
+        // Fourth pass: suffix/contains match (for cases like @Image matching "AI-Gemini Image")
+        if (!ai) {
+          ai = aiMembers.find((a) => {
+            const normalizedDisplayName = normalizeForMatch(a.displayName);
+            // Check if displayName ends with the input (e.g., "ai-gemini-image" ends with "image")
+            return normalizedDisplayName.endsWith(normalizedName);
+          });
+        }
+
+        // Fifth pass: contains match (last resort)
+        if (!ai) {
+          ai = aiMembers.find((a) => {
+            const normalizedDisplayName = normalizeForMatch(a.displayName);
+            return normalizedDisplayName.includes(normalizedName);
+          });
+        }
+
         console.log(
           '[Mentions Debug] Final match for',
           normalizedName,

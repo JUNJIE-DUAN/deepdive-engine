@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { config } from '@/lib/config';
+import { getAuthHeader } from '@/lib/auth';
 import ReactMarkdown from 'react-markdown';
 
 interface Note {
@@ -54,7 +55,9 @@ export default function NotesList({
         ? `${config.apiBaseUrl}/api/v1/notes/resource/${resourceId}`
         : `${config.apiBaseUrl}/api/v1/notes`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: getAuthHeader(),
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -78,6 +81,7 @@ export default function NotesList({
         `${config.apiBaseUrl}/api/v1/notes/${noteId}`,
         {
           method: 'DELETE',
+          headers: getAuthHeader(),
         }
       );
 

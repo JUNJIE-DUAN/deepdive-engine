@@ -1202,6 +1202,8 @@ Format the summary in a clear, structured manner using markdown.`;
 
     // Check if the configured model is Imagen (dedicated image generation)
     const isImagenModel = modelId.toLowerCase().includes("imagen");
+    // Check if this is an "image" model that should use Imagen for better quality
+    const isImageModel = modelId.toLowerCase().includes("image");
 
     // If using Imagen model for image generation, use dedicated Imagen API
     if (isImageRequest && isImagenModel) {
@@ -1211,6 +1213,33 @@ Format the summary in a clear, structured manner using markdown.`;
         modelId,
         lastUserMessage?.content || "",
       );
+    }
+
+    // For image generation with "image" models (like gemini-3-pro-image-preview),
+    // use Imagen 3 for better quality instead of gemini-2.0-flash-exp
+    if (isImageRequest && isImageModel) {
+      this.logger.log(
+        `Image model ${modelId} detected, using Imagen 3 for better quality`,
+      );
+      try {
+        const imagenResult = await this.callImagenApi(
+          apiKey,
+          "imagen-3.0-generate-001",
+          lastUserMessage?.content || "",
+        );
+        // If Imagen succeeded, return the result
+        if (
+          imagenResult.content &&
+          !imagenResult.content.includes("图像生成失败")
+        ) {
+          return imagenResult;
+        }
+      } catch (imagenError) {
+        this.logger.warn(
+          `Imagen 3 failed, falling back to Gemini: ${imagenError}`,
+        );
+      }
+      // Fall through to Gemini if Imagen fails
     }
 
     // For text or non-Imagen image requests, use Gemini API

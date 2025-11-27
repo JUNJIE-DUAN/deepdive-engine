@@ -240,6 +240,12 @@ function HomeContent() {
       label: '字幕文件',
     },
     news: { accept: 'image/*', maxSize: 10 * 1024 * 1024, label: '图片' },
+    policy: {
+      accept:
+        '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      maxSize: 50 * 1024 * 1024,
+      label: '政策文件 (PDF/Word)',
+    },
   };
 
   // Search suggestions states
@@ -587,7 +593,7 @@ function HomeContent() {
 
       // Map tab to resource type
       const typeMap: Record<
-        'papers' | 'blogs' | 'reports' | 'youtube' | 'news',
+        'papers' | 'blogs' | 'reports' | 'youtube' | 'news' | 'policy',
         string
       > = {
         papers: 'PAPER',
@@ -595,11 +601,18 @@ function HomeContent() {
         reports: 'REPORT',
         youtube: 'YOUTUBE_VIDEO',
         news: 'NEWS',
+        policy: 'POLICY',
       };
       params.append(
         'type',
         typeMap[
-          activeTab as 'papers' | 'blogs' | 'reports' | 'youtube' | 'news'
+          activeTab as
+            | 'papers'
+            | 'blogs'
+            | 'reports'
+            | 'youtube'
+            | 'news'
+            | 'policy'
         ]
       );
 
@@ -699,6 +712,7 @@ function HomeContent() {
         reports: 'REPORT',
         youtube: 'YOUTUBE_VIDEO',
         news: 'NEWS',
+        policy: 'POLICY',
       };
 
       const resourceType = typeMap[activeTab];

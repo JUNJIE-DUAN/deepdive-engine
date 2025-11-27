@@ -1112,7 +1112,7 @@ function MessageInput({
           return displayName === name || hyphenatedName === name;
         });
         // Try matching AI members with flexible matching:
-        // Normalize both sides: lowercase, replace spaces with hyphens, strip parenthetical suffix
+        // Priority: exact match > prefix match (to avoid ai-gemini matching ai-gemini-image)
         const normalizeForMatch = (str: string) => {
           return str
             .toLowerCase()
@@ -1124,33 +1124,45 @@ function MessageInput({
         const normalizedName = normalizeForMatch(name);
         console.log('[Mentions Debug] Normalized input name:', normalizedName);
 
-        const ai = aiMembers.find((a) => {
+        // First pass: exact match only (highest priority)
+        let ai = aiMembers.find((a) => {
           const normalizedDisplayName = normalizeForMatch(a.displayName);
-          console.log(
-            `[Mentions Debug] Comparing "${normalizedName}" with "${normalizedDisplayName}" (original: "${a.displayName}")`
-          );
-
-          // Exact match after normalization
-          if (normalizedDisplayName === normalizedName) {
-            return true;
-          }
-
-          // Prefix match (e.g., @AI-Grok matches "AI-Grok (xAI)")
-          if (normalizedDisplayName.startsWith(normalizedName)) {
-            return true;
-          }
-
-          // Also try matching with original name in case it includes the parenthetical
-          const nameWithHyphens = name.replace(/\s+/g, '-');
-          const displayNameWithHyphens = a.displayName
-            .toLowerCase()
-            .replace(/\s+/g, '-');
-          if (displayNameWithHyphens === nameWithHyphens) {
-            return true;
-          }
-
-          return false;
+          return normalizedDisplayName === normalizedName;
         });
+
+        // Second pass: exact match with hyphenated original name
+        if (!ai) {
+          const nameWithHyphens = name.replace(/\s+/g, '-').toLowerCase();
+          ai = aiMembers.find((a) => {
+            const displayNameWithHyphens = a.displayName
+              .toLowerCase()
+              .replace(/\s+/g, '-');
+            return displayNameWithHyphens === nameWithHyphens;
+          });
+        }
+
+        // Third pass: prefix match (only if no exact match found)
+        // This allows @AI-Grok to match "AI-Grok (xAI)" but won't incorrectly
+        // match "AI-Gemini Image" when user types @AI-Gemini
+        if (!ai) {
+          // Sort by name length (shorter first) to prefer exact-ish matches
+          const sortedAiMembers = [...aiMembers].sort(
+            (a, b) =>
+              normalizeForMatch(a.displayName).length -
+              normalizeForMatch(b.displayName).length
+          );
+          ai = sortedAiMembers.find((a) => {
+            const normalizedDisplayName = normalizeForMatch(a.displayName);
+            return normalizedDisplayName.startsWith(normalizedName);
+          });
+        }
+
+        console.log(
+          '[Mentions Debug] Final match for',
+          normalizedName,
+          '->',
+          ai?.displayName || 'none'
+        );
 
         // Debug: log all AI member names for comparison
         console.log(

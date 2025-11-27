@@ -31,8 +31,10 @@ function extractImagesFromMarkdown(content: string): {
   textContent: string;
 } {
   // Match markdown image syntax with data URIs: ![alt](data:image/...;base64,...)
-  // Use a more permissive regex that captures until the closing parenthesis
-  const imageRegex = /!\[([^\]]*)\]\((data:image\/[^)]+)\)/g;
+  // Support multiline (image may span lines) and very long base64 strings
+  // Also handle cases where there might be newlines between ] and (
+  const imageRegex =
+    /!\[([^\]]*)\]\s*\(\s*(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)\s*\)/g;
   const images: Array<{ alt: string; src: string }> = [];
   let textContent = content;
 
@@ -46,6 +48,26 @@ function extractImagesFromMarkdown(content: string): {
 
   // Remove image markdown from text content
   textContent = content.replace(imageRegex, '').trim();
+
+  // Also try to extract standalone base64 image data that might not be in proper markdown format
+  // This handles cases where the format is broken across lines
+  if (images.length === 0 && content.includes('data:image/')) {
+    const standaloneBase64Regex =
+      /(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)/g;
+    let standaloneMatch;
+    while ((standaloneMatch = standaloneBase64Regex.exec(content)) !== null) {
+      images.push({
+        alt: 'Generated Image',
+        src: standaloneMatch[1],
+      });
+    }
+    // Remove the base64 data and any surrounding markdown syntax from text content
+    textContent = content
+      .replace(standaloneBase64Regex, '')
+      .replace(/!\[[^\]]*\]\s*\(\s*\)/g, '') // Remove empty image tags
+      .replace(/!\[[^\]]*\]/g, '') // Remove orphan image alt tags
+      .trim();
+  }
 
   return { images, textContent };
 }

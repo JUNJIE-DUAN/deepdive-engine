@@ -243,7 +243,7 @@ JSON output:`;
       });
 
       // Try to parse JSON for methodology and insights
-      let finalContent = result.content;
+      let finalContent: string | any[] = result.content;
       if (action === "methodology" || action === "insights") {
         finalContent = this.extractJsonArray(result.content);
       }
@@ -443,9 +443,9 @@ JSON output:`;
   }
 
   /**
-   * Helper: Extract JSON array from AI response
+   * Helper: Extract JSON array from AI response and parse it
    */
-  private extractJsonArray(content: string): string {
+  private extractJsonArray(content: string): any[] {
     try {
       let jsonContent = content.trim();
 
@@ -462,13 +462,16 @@ JSON output:`;
 
       if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
         jsonContent = jsonContent.slice(startIdx, endIdx + 1);
-        // Validate JSON
-        JSON.parse(jsonContent);
-        return jsonContent;
+        // Parse and return JSON array
+        const parsed = JSON.parse(jsonContent);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
       }
     } catch (e) {
       this.logger.warn(`Failed to extract JSON: ${e}`);
     }
-    return content;
+    // Return empty array on failure
+    return [];
   }
 }

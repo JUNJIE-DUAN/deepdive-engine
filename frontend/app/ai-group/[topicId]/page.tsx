@@ -1076,13 +1076,18 @@ function MessageInput({
     }[] = [];
     // Match @name patterns including optional parenthetical suffix
     // Examples: @AI-Grok, @AI-Grok-(xAI), @AI-Gemini-(Google), @John-Doe
-    const mentionRegex = /@([\w-]+(?:-\([^)]+\))?)/g;
+    // Regex: [\w-]+ matches base name, (?:\([^)]+\))? matches optional (provider)
+    // Note: NO hyphen before parentheses in the optional group - the hyphen is part of [\w-]+
+    const mentionRegex = /@([\w-]+(?:\([^)]+\))?)/g;
     let match;
 
     while ((match = mentionRegex.exec(content)) !== null) {
-      // Remove the hyphen before parentheses for display matching
+      // Normalize: remove hyphen before parentheses for display matching
       // @AI-Grok-(xAI) -> "ai-grok (xai)" for matching against "AI-Grok (xAI)"
-      const name = match[1].toLowerCase().replace(/-\(/, ' (');
+      const name = match[1]
+        .toLowerCase()
+        .replace(/-\(/, ' (')
+        .replace(/\($/, '');
       console.log(
         '[Mentions Debug] Found mention match:',
         match[0],

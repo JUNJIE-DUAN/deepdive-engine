@@ -36,9 +36,10 @@ export class AiService {
     });
 
     return models.map((model) => ({
-      id: model.name, // 使用 name 作为前端的 id（兼容现有代码）
-      dbId: model.id, // 数据库实际 ID
+      id: model.id, // 使用数据库唯一 ID 作为前端 id（避免重复）
+      dbId: model.id, // 数据库实际 ID（保持兼容）
       name: model.displayName,
+      modelName: model.name, // 模型标识名（如 gemini, gemini-image）
       provider: model.provider,
       modelId: model.modelId,
       icon: model.icon,

@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { config } from '@/lib/config';
 
 export interface AIModel {
-  id: string; // 模型名称（如 grok, claude, gemini）
-  dbId: string; // 数据库 ID
+  id: string; // 数据库唯一 ID（用于前端选中状态）
+  dbId: string; // 数据库 ID（保持兼容）
   name: string; // 显示名称
+  modelName: string; // 模型标识名（如 gemini, gemini-image，用于 AI member 的 aiModel 字段）
   provider: string; // 提供商
   modelId: string; // 实际模型 ID
   icon: string; // emoji 或图标路径
@@ -81,9 +82,10 @@ export function clearAIModelsCache() {
 function getDefaultModels(): AIModel[] {
   return [
     {
-      id: 'grok',
+      id: 'default-grok',
       dbId: '',
       name: 'Grok (xAI)',
+      modelName: 'grok',
       provider: 'xAI',
       modelId: 'grok-3-latest',
       icon: '🤖',
@@ -93,9 +95,10 @@ function getDefaultModels(): AIModel[] {
       isDefault: true,
     },
     {
-      id: 'gpt-4',
+      id: 'default-gpt-4',
       dbId: '',
       name: 'ChatGPT (OpenAI)',
+      modelName: 'gpt-4',
       provider: 'OpenAI',
       modelId: 'gpt-4-turbo',
       icon: '🧠',
@@ -105,9 +108,10 @@ function getDefaultModels(): AIModel[] {
       isDefault: false,
     },
     {
-      id: 'claude',
+      id: 'default-claude',
       dbId: '',
       name: 'Claude (Anthropic)',
+      modelName: 'claude',
       provider: 'Anthropic',
       modelId: 'claude-sonnet-4-20250514',
       icon: '🎭',
@@ -117,9 +121,10 @@ function getDefaultModels(): AIModel[] {
       isDefault: false,
     },
     {
-      id: 'gemini',
+      id: 'default-gemini',
       dbId: '',
       name: 'Gemini (Google)',
+      modelName: 'gemini',
       provider: 'Google',
       modelId: 'gemini-2.0-flash',
       icon: '💎',

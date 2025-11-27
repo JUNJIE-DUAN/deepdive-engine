@@ -198,7 +198,8 @@ function AISettings({
   const [editingAI, setEditingAI] = useState<TopicAIMember | null>(null);
   const { models } = useAIModels();
 
-  const findModel = (aiModel: string) => models.find((m) => m.id === aiModel);
+  const findModel = (aiModel: string) =>
+    models.find((m) => m.modelName === aiModel);
 
   return (
     <div className="space-y-4">
@@ -330,10 +331,14 @@ function AddAIDialog({
   const handleAdd = async () => {
     if (!selectedModel || !displayName.trim()) return;
 
+    // 找到选中的模型，获取 modelName 用于 aiModel 字段
+    const selectedModelData = models.find((m) => m.id === selectedModel);
+    if (!selectedModelData) return;
+
     setIsAdding(true);
     try {
       await onAdd(topicId, {
-        aiModel: selectedModel,
+        aiModel: selectedModelData.modelName, // 使用 modelName 而不是 id
         displayName: displayName.trim(),
         roleDescription: roleDescription.trim() || undefined,
         systemPrompt: systemPrompt.trim() || undefined,
@@ -497,7 +502,7 @@ function EditAIDialog({
     }
   };
 
-  const model = models.find((m) => m.id === ai.aiModel);
+  const model = models.find((m) => m.modelName === ai.aiModel);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

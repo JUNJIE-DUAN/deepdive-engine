@@ -1172,7 +1172,9 @@ function YouTubeTLDWContent() {
                               <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-600">
                                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div>
                                 <span className="text-sm">
-                                  AI is thinking...
+                                  {aiModels.find((m) => m.modelId === aiModel)
+                                    ?.name || 'AI'}{' '}
+                                  正在分析...
                                 </span>
                               </div>
                             </div>

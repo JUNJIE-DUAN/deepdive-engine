@@ -991,7 +991,9 @@ export default function WorkspacePage() {
                       : 'bg-gray-900 text-white hover:bg-gray-700'
                   )}
                 >
-                  {reportState === 'loading' ? '生成中...' : '生成并保存报告'}
+                  {reportState === 'loading'
+                    ? `${aiModels.find((m) => m.modelId === model)?.name || '模型'} 生成中...`
+                    : '生成并保存报告'}
                 </button>
 
                 <p className="text-xs text-gray-500">

@@ -1352,6 +1352,11 @@ ${messagesForSummary
     userId: string,
     aiMemberId: string,
     _contextMessageIds: string[],
+    debateRole?: {
+      role: "red" | "blue";
+      opponent: { id: string; displayName: string };
+      topic: string;
+    } | null,
   ) {
     await this.checkTopicMembership(topicId, userId);
 
@@ -1493,77 +1498,22 @@ ${messagesForSummary
       ? `\n\n## Earlier Discussion Context\n${contextSummary}`
       : "";
 
-    // ==================== 辩论模式检测 ====================
-    // 检测用户消息是否触发辩论模式（@两个AI + 辩论关键词）
+    // ==================== 辩论模式处理 ====================
+    // 优先使用从 Controller 传入的辩论角色信息（全局协调）
     let debatePrompt = "";
-    const debateKeywords = [
-      "辩论",
-      "辩一下",
-      "辩一辩",
-      "思辨",
-      "红蓝",
-      "正方反方",
-      "debate",
-      "argue",
-    ];
-    const lastUserMsg = contextMessages.find((m) => m.senderId);
-    if (lastUserMsg) {
-      const msgContent = lastUserMsg.content.toLowerCase();
-      const isDebateRequest = debateKeywords.some((kw) =>
-        msgContent.includes(kw.toLowerCase()),
+
+    if (debateRole) {
+      // Controller 已经分配了辩论角色
+      const isRedTeam = debateRole.role === "red";
+      const opponentName = debateRole.opponent.displayName;
+      const debateTopic = debateRole.topic;
+
+      this.logger.log(
+        `[Debate Mode] Using Controller-assigned role: AI=${aiMember.displayName}, role=${isRedTeam ? "红方" : "蓝方"}, opponent=${opponentName}, topic=${debateTopic}`,
       );
 
-      if (isDebateRequest) {
-        // 获取消息中@的所有AI
-        const allAIsInTopic = await this.prisma.topicAIMember.findMany({
-          where: { topicId },
-          select: { id: true, displayName: true },
-        });
-
-        // 按消息中@mention的顺序收集AI（而不是数据库顺序）
-        const mentionedAIIds: string[] = [];
-        const msgContent = lastUserMsg.content;
-
-        // 创建一个数组存储每个AI在消息中的位置
-        const aiPositions: Array<{ id: string; position: number }> = [];
-        for (const ai of allAIsInTopic) {
-          const mentionPattern = new RegExp(
-            `@${this.escapeRegExp(ai.displayName)}`,
-            "i",
-          );
-          const match = msgContent.match(mentionPattern);
-          if (match && match.index !== undefined) {
-            aiPositions.push({ id: ai.id, position: match.index });
-          }
-        }
-
-        // 按在消息中出现的位置排序，确保第一个@的AI是红方
-        aiPositions.sort((a, b) => a.position - b.position);
-        for (const ap of aiPositions) {
-          mentionedAIIds.push(ap.id);
-        }
-
-        // 如果@了两个或以上AI，进入辩论模式
-        if (mentionedAIIds.length >= 2) {
-          const myIndex = mentionedAIIds.indexOf(aiMemberId);
-          const isRedTeam = myIndex === 0; // 第一个@的是红方
-          const opponentId = isRedTeam ? mentionedAIIds[1] : mentionedAIIds[0];
-          const opponent = allAIsInTopic.find((ai) => ai.id === opponentId);
-          const opponentName = opponent?.displayName || "对方";
-
-          // 提取辩论主题（去掉@mentions后的内容）
-          let debateTopic = lastUserMsg.content
-            .replace(/@[\w\-()（）\s]+/g, "")
-            .replace(/辩论|辩一下|辩一辩|思辨|红蓝|正方反方|debate|argue/gi, "")
-            .replace(/[：:]/g, "")
-            .trim();
-
-          this.logger.log(
-            `[Debate Mode] Detected! AI=${aiMember.displayName}, role=${isRedTeam ? "红方" : "蓝方"}, opponent=${opponentName}, topic=${debateTopic}`,
-          );
-
-          if (isRedTeam) {
-            debatePrompt = `
+      if (isRedTeam) {
+        debatePrompt = `
 ## 🔴 辩论模式已激活 - 你是【红方/正方】
 
 **辩论主题**：${debateTopic || "（请根据上下文确定主题）"}
@@ -1588,8 +1538,8 @@ ${messagesForSummary
 
 @${opponentName} 请回应
 `;
-          } else {
-            debatePrompt = `
+      } else {
+        debatePrompt = `
 ## 🔵 辩论模式已激活 - 你是【蓝方/反方】
 
 **辩论主题**：${debateTopic || "（请根据上下文确定主题）"}
@@ -1614,10 +1564,9 @@ ${messagesForSummary
 
 @${opponentName} 请继续
 `;
-          }
-        }
       }
     }
+    // 注意：原来的辩论检测逻辑已移至 Controller 层，这里只使用 Controller 传入的角色信息
 
     // AI-AI协作：如果启用，告诉AI可以@其他AI
     let aiCollaborationPrompt = "";
@@ -1641,21 +1590,25 @@ ${messagesForSummary
               `- @${ai.displayName}${ai.roleDescription ? ` (${ai.roleDescription})` : ""}`,
           )
           .join("\n");
-        aiCollaborationPrompt = `\n\n## AI Collaboration (IMPORTANT)
-You can DIRECTLY trigger other AI assistants to respond by mentioning them with @.
-When you write "@AI-Name" in your response, the system will AUTOMATICALLY send your message to that AI and they WILL respond.
-This is NOT just text - it's a real function call that triggers the other AI.
+        aiCollaborationPrompt = `\n\n## AI 协作功能（重要）
 
-Available AI assistants you can call:
+你可以通过 @AI名称 来触发其他 AI 助手响应。当你在回复中写 "@AI-Name" 时，系统会**自动调用该 AI 的 API**，他们**会真实地生成响应**。
+
+**这不是文本装饰，是真实的函数调用！**
+
+可以调用的 AI 助手：
 ${aiList}
 
-HOW TO USE:
-- Write "@AI-Name" anywhere in your response to trigger that AI
-- The mentioned AI will see your message and respond
-- You can ask them questions, request their expertise, or debate with them
+**使用方法：**
+- 在回复中任意位置写 "@AI-Name" 即可触发
+- 被@的 AI 会看到你的消息并生成回复
+- 你可以向他们提问、请求专业意见、或进行辩论
 
-Example: "Let me ask @AI-Gemini (Image) to create a visualization for this data."
-The system will then automatically trigger AI-Gemini to respond with an image.`;
+**示例：**
+"关于这个技术方案，@AI-Claude 你有什么看法？"
+→ 系统会自动触发 AI-Claude 生成响应
+
+**注意：** 最大递归深度为 3 轮，避免无限循环。`;
       }
     }
 
@@ -1913,8 +1866,15 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
         `[AI Response Debug] Content preview: ${aiResponse?.substring(0, 200)}...`,
       );
     } catch (error) {
-      this.logger.error(`Failed to generate AI response: ${error}`);
-      aiResponse = `I apologize, but I'm having trouble generating a response at the moment. Please try again later.`;
+      const errorMsg = error instanceof Error ? error.message : "未知错误";
+      this.logger.error(`Failed to generate AI response: ${errorMsg}`);
+      aiResponse = `**AI 响应生成失败**
+
+我是 ${aiMember.displayName}，生成回复时遇到错误：
+
+**错误信息**：${errorMsg}
+
+请稍后重试，或联系管理员检查 API 配置。`;
     }
 
     // 创建AI消息

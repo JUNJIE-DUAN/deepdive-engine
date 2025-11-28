@@ -302,18 +302,26 @@ export class AiChatService {
     fullMessages.push(...messages);
 
     // Route to appropriate provider based on model
-    switch (model) {
-      case "grok":
-        return this.callGrokAPI(fullMessages, maxTokens, temperature);
-      case "gpt-4":
-        return this.callOpenAIAPI(fullMessages, maxTokens, temperature);
-      case "claude":
-        return this.callClaudeAPI(fullMessages, maxTokens, temperature);
-      case "gemini":
-        return this.callGeminiAPI(fullMessages, maxTokens, temperature);
-      default:
-        // Default to Grok
-        return this.callGrokAPI(fullMessages, maxTokens, temperature);
+    // Support both short names (grok, gpt-4, claude, gemini) and full model IDs
+    const modelLower = model.toLowerCase();
+
+    if (modelLower === "grok" || modelLower.includes("grok")) {
+      return this.callGrokAPI(fullMessages, maxTokens, temperature);
+    } else if (
+      modelLower === "gpt-4" ||
+      modelLower.includes("gpt") ||
+      modelLower.startsWith("o1") ||
+      modelLower.startsWith("o3")
+    ) {
+      return this.callOpenAIAPI(fullMessages, maxTokens, temperature);
+    } else if (modelLower === "claude" || modelLower.includes("claude")) {
+      return this.callClaudeAPI(fullMessages, maxTokens, temperature);
+    } else if (modelLower === "gemini" || modelLower.includes("gemini")) {
+      return this.callGeminiAPI(fullMessages, maxTokens, temperature);
+    } else {
+      // Unknown model - return mock response with correct model name
+      this.logger.warn(`Unknown model "${model}", returning mock response`);
+      return this.getMockResponse(model, messages);
     }
   }
 
@@ -361,8 +369,12 @@ Format the summary in a clear, structured manner using markdown.`;
       process.env.XAI_API_URL || "https://api.x.ai/v1/chat/completions";
 
     if (!apiKey) {
-      this.logger.warn("XAI_API_KEY not configured, returning mock response");
-      return this.getMockResponse("grok", messages);
+      this.logger.warn("XAI_API_KEY not configured");
+      return {
+        content: `**API Key 未配置**\n\n我是 Grok，但无法生成回复，因为 XAI_API_KEY 环境变量未设置。\n\n请在管理后台配置 API Key 或设置环境变量。`,
+        model: "grok",
+        tokensUsed: 0,
+      };
     }
 
     try {
@@ -394,8 +406,13 @@ Format the summary in a clear, structured manner using markdown.`;
         tokensUsed: data.usage?.total_tokens || 0,
       };
     } catch (error) {
-      this.logger.error(`Grok API error: ${error}`);
-      return this.getMockResponse("grok", messages);
+      const errorMsg = error instanceof Error ? error.message : "未知错误";
+      this.logger.error(`Grok API error: ${errorMsg}`);
+      return {
+        content: `**Grok API 调用失败**\n\n错误信息：${errorMsg}\n\n请稍后重试或检查 API 配置。`,
+        model: "grok",
+        tokensUsed: 0,
+      };
     }
   }
 
@@ -411,10 +428,12 @@ Format the summary in a clear, structured manner using markdown.`;
     const apiUrl = "https://api.openai.com/v1/chat/completions";
 
     if (!apiKey) {
-      this.logger.warn(
-        "OPENAI_API_KEY not configured, returning mock response",
-      );
-      return this.getMockResponse("gpt-4", messages);
+      this.logger.warn("OPENAI_API_KEY not configured");
+      return {
+        content: `**API Key 未配置**\n\n我是 GPT-4，但无法生成回复，因为 OPENAI_API_KEY 环境变量未设置。\n\n请在管理后台配置 API Key 或设置环境变量。`,
+        model: "gpt-4",
+        tokensUsed: 0,
+      };
     }
 
     try {
@@ -446,8 +465,13 @@ Format the summary in a clear, structured manner using markdown.`;
         tokensUsed: data.usage?.total_tokens || 0,
       };
     } catch (error) {
-      this.logger.error(`OpenAI API error: ${error}`);
-      return this.getMockResponse("gpt-4", messages);
+      const errorMsg = error instanceof Error ? error.message : "未知错误";
+      this.logger.error(`OpenAI API error: ${errorMsg}`);
+      return {
+        content: `**GPT-4 API 调用失败**\n\n错误信息：${errorMsg}\n\n请稍后重试或检查 API 配置。`,
+        model: "gpt-4",
+        tokensUsed: 0,
+      };
     }
   }
 
@@ -463,10 +487,12 @@ Format the summary in a clear, structured manner using markdown.`;
     const apiUrl = "https://api.anthropic.com/v1/messages";
 
     if (!apiKey) {
-      this.logger.warn(
-        "ANTHROPIC_API_KEY not configured, returning mock response",
-      );
-      return this.getMockResponse("claude", messages);
+      this.logger.warn("ANTHROPIC_API_KEY not configured");
+      return {
+        content: `**API Key 未配置**\n\n我是 Claude，但无法生成回复，因为 ANTHROPIC_API_KEY 环境变量未设置。\n\n请在管理后台配置 API Key 或设置环境变量。`,
+        model: "claude",
+        tokensUsed: 0,
+      };
     }
 
     try {
@@ -505,8 +531,13 @@ Format the summary in a clear, structured manner using markdown.`;
           (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
       };
     } catch (error) {
-      this.logger.error(`Claude API error: ${error}`);
-      return this.getMockResponse("claude", messages);
+      const errorMsg = error instanceof Error ? error.message : "未知错误";
+      this.logger.error(`Claude API error: ${errorMsg}`);
+      return {
+        content: `**Claude API 调用失败**\n\n错误信息：${errorMsg}\n\n请稍后重试或检查 API 配置。`,
+        model: "claude",
+        tokensUsed: 0,
+      };
     }
   }
 
@@ -522,10 +553,12 @@ Format the summary in a clear, structured manner using markdown.`;
     const apiKey = process.env.GOOGLE_AI_API_KEY;
 
     if (!apiKey) {
-      this.logger.warn(
-        "GOOGLE_AI_API_KEY not configured, returning mock response",
-      );
-      return this.getMockResponse("gemini", messages);
+      this.logger.warn("GOOGLE_AI_API_KEY not configured");
+      return {
+        content: `**API Key 未配置**\n\n我是 Gemini，但无法生成回复，因为 GOOGLE_AI_API_KEY 环境变量未设置。\n\n请在管理后台配置 API Key 或设置环境变量。`,
+        model: "gemini",
+        tokensUsed: 0,
+      };
     }
 
     // Use Gemini 2.0 Flash (latest model with better performance)
@@ -599,14 +632,19 @@ Format the summary in a clear, structured manner using markdown.`;
       };
     } catch (error: any) {
       // Log detailed error information
+      let errorMsg = "未知错误";
       if (error.response) {
-        this.logger.error(
-          `Gemini API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
-        );
+        errorMsg = `${error.response.status} - ${JSON.stringify(error.response.data?.error?.message || error.response.data)}`;
+        this.logger.error(`Gemini API error: ${errorMsg}`);
       } else {
-        this.logger.error(`Gemini API error: ${error.message}`);
+        errorMsg = error.message || "网络错误";
+        this.logger.error(`Gemini API error: ${errorMsg}`);
       }
-      return this.getMockResponse("gemini", messages);
+      return {
+        content: `**Gemini API 调用失败**\n\n错误信息：${errorMsg}\n\n请稍后重试或检查 API 配置。`,
+        model: "gemini",
+        tokensUsed: 0,
+      };
     }
   }
 
@@ -936,8 +974,26 @@ Format the summary in a clear, structured manner using markdown.`;
     );
 
     if (!apiKey) {
-      this.logger.warn(`No API key provided for ${provider}, returning mock`);
-      return this.getMockResponse(modelId, messages);
+      this.logger.warn(
+        `No API key provided for ${provider}, returning error response`,
+      );
+      // Return clear error message instead of mock response
+      const aiName = displayName || this.formatModelDisplayName(modelId);
+      const envVarName = this.getEnvVarNameForProvider(provider);
+      return {
+        content: `**API Key 未配置**
+
+我是 ${aiName}，但无法生成回复，因为 "${modelId}" 的 API Key 未配置。
+
+**解决方法：**
+1. 进入管理后台 → AI 模型管理
+2. 找到 "${modelId}" 并添加 API Key
+3. 或设置环境变量：${envVarName}
+
+*请配置 API Key 后重试。*`,
+        model: modelId,
+        tokensUsed: 0,
+      };
     }
 
     this.logger.log(
@@ -1930,9 +1986,13 @@ Generate an image that fulfills the current request while maintaining consistenc
   private getMockResponse(
     model: string,
     messages: ChatMessage[],
+    displayName?: string,
   ): ChatCompletionResult {
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
     const userContent = lastUserMessage?.content || "";
+
+    // Use displayName if provided, otherwise format model nicely
+    const aiName = displayName || this.formatModelDisplayName(model);
 
     // Generate contextual mock response
     let content: string;
@@ -1961,19 +2021,18 @@ Generate an image that fulfills the current request while maintaining consistenc
 - Timeline for completion needs to be confirmed
 - Resource allocation may need adjustment
 
-*This is a mock summary generated for testing purposes.*`;
+*This is a mock summary generated for testing purposes. Configure API key in Admin panel for real AI responses.*`;
     } else {
-      content = `Thank you for your message! I'm ${model.toUpperCase()}, and I'm here to help with the discussion.
+      content = `⚠️ **API Key Not Configured**
 
-Based on what you've shared, here are my thoughts:
+I'm ${aiName}, but I cannot generate a real response because no API key is configured for this model.
 
-1. **Understanding**: I've reviewed the context of your question
-2. **Analysis**: The topic you've raised has several interesting aspects
-3. **Suggestion**: I recommend considering multiple perspectives
+**To fix this:**
+1. Go to Admin Panel → AI Models
+2. Find the model "${model}" and add your API key
+3. Or set the appropriate environment variable (e.g., GOOGLE_AI_API_KEY for Gemini models)
 
-Feel free to ask if you'd like me to elaborate on any of these points!
-
-*Note: This is a mock response generated for development/testing purposes. Configure the appropriate API key for real responses.*`;
+*This is a mock response. Please configure the API key to enable real AI responses.*`;
     }
 
     return {
@@ -1981,6 +2040,52 @@ Feel free to ask if you'd like me to elaborate on any of these points!
       model,
       tokensUsed: Math.floor(content.length / 4), // Rough estimate
     };
+  }
+
+  /**
+   * Format a model ID into a user-friendly display name
+   */
+  private formatModelDisplayName(model: string): string {
+    const modelLower = model.toLowerCase();
+
+    // Map common model IDs to friendly names
+    if (modelLower.includes("gemini")) {
+      if (modelLower.includes("flash")) return "Gemini Flash";
+      if (modelLower.includes("pro")) return "Gemini Pro";
+      if (modelLower.includes("imagen")) return "Gemini Imagen";
+      return "Gemini";
+    }
+    if (modelLower.includes("grok")) return "Grok";
+    if (modelLower.includes("gpt-4")) return "GPT-4";
+    if (modelLower.includes("gpt-5")) return "GPT-5";
+    if (modelLower.startsWith("o1")) return "OpenAI o1";
+    if (modelLower.startsWith("o3")) return "OpenAI o3";
+    if (modelLower.includes("claude")) {
+      if (modelLower.includes("opus")) return "Claude Opus";
+      if (modelLower.includes("sonnet")) return "Claude Sonnet";
+      if (modelLower.includes("haiku")) return "Claude Haiku";
+      return "Claude";
+    }
+    if (modelLower.includes("dall-e")) return "DALL-E";
+
+    // Default: return the model ID as-is
+    return model;
+  }
+
+  /**
+   * Get the environment variable name for a provider's API key
+   */
+  private getEnvVarNameForProvider(provider: string): string {
+    const providerLower = provider.toLowerCase();
+    if (providerLower === "xai" || providerLower === "grok")
+      return "XAI_API_KEY";
+    if (providerLower === "openai" || providerLower === "gpt")
+      return "OPENAI_API_KEY";
+    if (providerLower === "anthropic" || providerLower === "claude")
+      return "ANTHROPIC_API_KEY";
+    if (providerLower === "google" || providerLower === "gemini")
+      return "GOOGLE_AI_API_KEY";
+    return `${provider.toUpperCase()}_API_KEY`;
   }
 
   /**

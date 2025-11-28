@@ -1342,13 +1342,24 @@ Generate an image that fulfills the current request while maintaining consistenc
       return await this.callImagenApi(apiKey, modelId, imagePrompt);
     }
 
-    // IMPORTANT: Use the CONFIGURED model directly - no fallbacks
-    // User has explicitly chosen their model, we respect their choice
-    // If the model doesn't work, return an error instead of silently switching
-    const effectiveModelId = modelId;
-    this.logger.log(
-      `[Gemini] Using configured model: ${effectiveModelId}, isImageRequest: ${isImageRequest}`,
-    );
+    // Check if this is a dedicated image model
+    const isImageOnlyModel =
+      modelId.toLowerCase().includes("image") ||
+      modelId.toLowerCase().includes("imagen");
+
+    // For image-only models, fall back to a general text model when not requesting images
+    // These models don't support regular text conversations
+    let effectiveModelId = modelId;
+    if (isImageOnlyModel && !isImageRequest) {
+      effectiveModelId = "gemini-2.0-flash-exp"; // Fall back to a capable text model
+      this.logger.log(
+        `[Gemini] Image-only model ${modelId} used for non-image request, falling back to ${effectiveModelId}`,
+      );
+    } else {
+      this.logger.log(
+        `[Gemini] Using configured model: ${effectiveModelId}, isImageRequest: ${isImageRequest}`,
+      );
+    }
 
     // Build the correct Gemini API URL
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${effectiveModelId}:generateContent?key=${apiKey}`;

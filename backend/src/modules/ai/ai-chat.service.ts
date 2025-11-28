@@ -990,7 +990,35 @@ Format the summary in a clear, structured manner using markdown.`;
             this.logger.log(
               "Image generation request detected, using DALL-E 3",
             );
-            return await this.callDallE3(apiKey, lastUserMsg?.content || "");
+            // Build context-aware prompt for DALL-E 3
+            const buildDallEPrompt = (): string => {
+              const recentMessages = fullMessages.slice(-10);
+              const contextParts: string[] = [];
+
+              for (const msg of recentMessages) {
+                if (msg.role === "assistant" && msg.name) {
+                  const truncatedContent = msg.content.substring(0, 2000);
+                  contextParts.push(
+                    `[${msg.name}'s analysis]: ${truncatedContent}`,
+                  );
+                }
+              }
+
+              const userRequest = lastUserMsg?.content || "";
+
+              if (contextParts.length > 0) {
+                const context = contextParts.join("\n\n");
+                return `Based on the following context:\n\n${context}\n\nUser's request: ${userRequest}\n\nCreate a high-quality infographic or visualization that accurately represents the data and information described above. Use clear labels, professional design, and ensure all text is legible.`;
+              }
+
+              return userRequest;
+            };
+
+            const dallePrompt = buildDallEPrompt();
+            this.logger.log(
+              `[DALL-E 3] Context-aware prompt length: ${dallePrompt.length}`,
+            );
+            return await this.callDallE3(apiKey, dallePrompt);
           }
           // Use max_completion_tokens for newer models (gpt-4o, gpt-5, o1, o3, etc.)
           // and max_tokens for older models (gpt-4-turbo, gpt-3.5-turbo)
@@ -1277,16 +1305,15 @@ Format the summary in a clear, structured manner using markdown.`;
     }
 
     // For text or non-Imagen image requests, use Gemini API
-    // IMPORTANT: For image generation, ALWAYS use gemini-2.0-flash-exp as it's the only
-    // model that supports native image generation with responseModalities: ["TEXT", "IMAGE"]
-    // Other models like "gemini-3-pro-image-preview" are "thinking" models that require
-    // special thought_signature format and don't support direct image generation.
+    // Use Gemini 2.5 Flash Image (Nano Banana) for best native image generation
+    // This model has state-of-the-art image generation with better text rendering
     let effectiveModelId: string;
     if (isImageRequest) {
-      // For image generation, always use the model that supports it
-      effectiveModelId = "gemini-2.0-flash-exp";
+      // For image generation, use Gemini 2.5 Flash Image (Nano Banana)
+      // This is the best model for image generation with legible text
+      effectiveModelId = "gemini-2.5-flash-preview-05-20";
       this.logger.log(
-        `Image generation requested - using ${effectiveModelId} (configured: ${modelId})`,
+        `Image generation requested - using ${effectiveModelId} (Nano Banana) for best quality (configured: ${modelId})`,
       );
     } else {
       // For text, use configured model or fallback
@@ -1704,6 +1731,7 @@ Format the summary in a clear, structured manner using markdown.`;
 
     try {
       // Correct request format for Imagen API via Gemini
+      // Use higher resolution for better quality images
       const response = await firstValueFrom(
         this.httpService.post(
           url,
@@ -1715,6 +1743,10 @@ Format the summary in a clear, structured manner using markdown.`;
             ],
             parameters: {
               sampleCount: 1,
+              aspectRatio: "16:9", // Better for infographics
+              outputOptions: {
+                mimeType: "image/png",
+              },
             },
           },
           {

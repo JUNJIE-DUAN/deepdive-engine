@@ -127,6 +127,7 @@ function YouTubeTLDWContent() {
   }
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
 
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -1314,22 +1315,45 @@ function YouTubeTLDWContent() {
                     </div>
                   ) : (
                     <div className="space-y-3 overflow-y-auto">
-                      {savedNotes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
-                        >
-                          <h4 className="mb-1 text-sm font-medium text-gray-900">
-                            {note.title}
-                          </h4>
-                          <div className="prose-sm prose line-clamp-3 max-w-none text-xs text-gray-600">
-                            <ReactMarkdown>{note.content}</ReactMarkdown>
+                      {savedNotes.map((note) => {
+                        const isExpanded = expandedNoteId === note.id;
+                        return (
+                          <div
+                            key={note.id}
+                            className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all hover:border-red-300 hover:shadow-md"
+                            onClick={() =>
+                              setExpandedNoteId(isExpanded ? null : note.id)
+                            }
+                          >
+                            <div className="mb-1 flex items-center justify-between">
+                              <h4 className="text-sm font-medium text-gray-900">
+                                {note.title}
+                              </h4>
+                              <svg
+                                className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </div>
+                            <div
+                              className={`prose-sm prose max-w-none text-xs text-gray-600 ${isExpanded ? '' : 'line-clamp-3'}`}
+                            >
+                              <ReactMarkdown>{note.content}</ReactMarkdown>
+                            </div>
+                            <div className="mt-2 text-[10px] text-gray-400">
+                              {new Date(note.createdAt).toLocaleString()}
+                            </div>
                           </div>
-                          <div className="mt-2 text-[10px] text-gray-400">
-                            {new Date(note.createdAt).toLocaleString()}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

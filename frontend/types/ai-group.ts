@@ -36,6 +36,22 @@ export enum AttachmentType {
   RESOURCE = 'RESOURCE',
 }
 
+// AI Capability types - matches backend Prisma enum
+export enum AICapability {
+  TEXT_GENERATION = 'TEXT_GENERATION',
+  CODE_GENERATION = 'CODE_GENERATION',
+  CODE_REVIEW = 'CODE_REVIEW',
+  IMAGE_GENERATION = 'IMAGE_GENERATION',
+  IMAGE_ANALYSIS = 'IMAGE_ANALYSIS',
+  WEB_SEARCH = 'WEB_SEARCH',
+  URL_FETCH = 'URL_FETCH',
+  DOCUMENT_ANALYSIS = 'DOCUMENT_ANALYSIS',
+  REASONING = 'REASONING',
+  MATH = 'MATH',
+  TRANSLATION = 'TRANSLATION',
+  SUMMARIZATION = 'SUMMARIZATION',
+}
+
 export enum TopicResourceType {
   LINK = 'LINK',
   FILE = 'FILE',
@@ -101,6 +117,10 @@ export interface TopicAIMember {
   contextWindow: number;
   responseStyle: string | null;
   autoRespond: boolean;
+  // New capability fields
+  capabilities?: AICapability[];
+  canMentionOtherAI?: boolean;
+  collaborationStyle?: string | null;
   addedById: string;
   createdAt: string;
   updatedAt: string;

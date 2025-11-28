@@ -12,7 +12,75 @@ import {
   MessageContentType,
   MentionType,
   TopicRole,
+  AICapability,
 } from '@/types/ai-group';
+
+// Helper to get short capability labels and colors
+const CAPABILITY_CONFIG: Record<
+  AICapability,
+  { label: string; color: string; icon: string }
+> = {
+  [AICapability.TEXT_GENERATION]: {
+    label: '文本',
+    color: 'bg-blue-100 text-blue-700',
+    icon: '📝',
+  },
+  [AICapability.CODE_GENERATION]: {
+    label: '代码',
+    color: 'bg-purple-100 text-purple-700',
+    icon: '💻',
+  },
+  [AICapability.CODE_REVIEW]: {
+    label: '审查',
+    color: 'bg-indigo-100 text-indigo-700',
+    icon: '🔍',
+  },
+  [AICapability.IMAGE_GENERATION]: {
+    label: '图像',
+    color: 'bg-pink-100 text-pink-700',
+    icon: '🎨',
+  },
+  [AICapability.IMAGE_ANALYSIS]: {
+    label: '识图',
+    color: 'bg-rose-100 text-rose-700',
+    icon: '👁️',
+  },
+  [AICapability.WEB_SEARCH]: {
+    label: '搜索',
+    color: 'bg-green-100 text-green-700',
+    icon: '🔎',
+  },
+  [AICapability.URL_FETCH]: {
+    label: '抓取',
+    color: 'bg-teal-100 text-teal-700',
+    icon: '🌐',
+  },
+  [AICapability.DOCUMENT_ANALYSIS]: {
+    label: '文档',
+    color: 'bg-amber-100 text-amber-700',
+    icon: '📄',
+  },
+  [AICapability.REASONING]: {
+    label: '推理',
+    color: 'bg-orange-100 text-orange-700',
+    icon: '🧠',
+  },
+  [AICapability.MATH]: {
+    label: '数学',
+    color: 'bg-cyan-100 text-cyan-700',
+    icon: '🔢',
+  },
+  [AICapability.TRANSLATION]: {
+    label: '翻译',
+    color: 'bg-lime-100 text-lime-700',
+    icon: '🌍',
+  },
+  [AICapability.SUMMARIZATION]: {
+    label: '摘要',
+    color: 'bg-yellow-100 text-yellow-700',
+    icon: '📋',
+  },
+};
 import { useAIModels, AIModel } from '@/hooks/useAIModels';
 import Link from 'next/link';
 import TopicSettingsDialog from '@/components/ai-group/TopicSettingsDialog';
@@ -380,17 +448,49 @@ function MemberPanel({
                           {ai.roleDescription}
                         </p>
                       )}
+                      {/* Capability tags */}
+                      {ai.capabilities && ai.capabilities.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-0.5">
+                          {ai.capabilities.slice(0, 3).map((cap) => {
+                            const config = CAPABILITY_CONFIG[cap];
+                            return config ? (
+                              <span
+                                key={cap}
+                                className={`rounded px-1 text-[9px] font-medium ${config.color}`}
+                                title={cap}
+                              >
+                                {config.label}
+                              </span>
+                            ) : null;
+                          })}
+                          {ai.capabilities.length > 3 && (
+                            <span className="rounded bg-gray-100 px-1 text-[9px] font-medium text-gray-500">
+                              +{ai.capabilities.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {isTyping && (
                         <span className="text-xs italic text-green-500">
                           thinking...
                         </span>
                       )}
                     </div>
-                    {ai.autoRespond && (
-                      <span className="rounded bg-green-100 px-1 text-[10px] font-medium text-green-700">
-                        Auto
-                      </span>
-                    )}
+                    <div className="flex flex-col items-end gap-0.5">
+                      {ai.autoRespond && (
+                        <span className="rounded bg-green-100 px-1 text-[10px] font-medium text-green-700">
+                          Auto
+                        </span>
+                      )}
+                      {ai.canMentionOtherAI && (
+                        <span
+                          className="rounded bg-cyan-100 px-1 text-[10px] font-medium text-cyan-700"
+                          title="Can collaborate with other AIs"
+                        >
+                          协作
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}

@@ -337,21 +337,52 @@ export default function ReaderView({
               )}
             </header>
 
-            {/* 文章正文 - 使用 prose 样式 */}
+            {/* 文章正文 - 使用 prose 样式，支持纯文本和 HTML */}
             <div
               className="prose prose-lg prose-headings:font-bold
-                prose-headings:text-gray-900 prose-p:text-gray-700
-                prose-p:leading-relaxed prose-a:text-blue-600
+                prose-headings:text-gray-900 prose-headings:mt-8 prose-headings:mb-4 prose-p:text-gray-700
+                prose-p:leading-[1.8] prose-p:mb-6 prose-a:text-blue-600
                 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900
                 prose-strong:font-semibold prose-code:bg-gray-100
-                prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-900
-                prose-pre:text-gray-100 prose-img:rounded-lg
-                prose-img:shadow-md prose-blockquote:border-l-4
-                prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic prose-ul:list-disc
-                prose-ol:list-decimal prose-li:text-gray-700
-                max-w-none"
-              dangerouslySetInnerHTML={{ __html: article.content }}
-            />
+                prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-gray-900
+                prose-pre:text-gray-100 prose-pre:rounded-lg prose-pre:p-4 prose-img:rounded-lg
+                prose-img:shadow-md prose-img:my-8 prose-blockquote:border-l-4
+                prose-blockquote:border-blue-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:bg-blue-50 prose-blockquote:py-4 prose-blockquote:pr-4 prose-blockquote:rounded-r-lg prose-blockquote:my-6 prose-ul:list-disc
+                prose-ul:pl-6 prose-ul:my-4 prose-ol:list-decimal
+                prose-ol:pl-6 prose-ol:my-4 prose-li:text-gray-700
+                prose-li:my-2 prose-li:leading-[1.7] prose-hr:my-8
+                prose-hr:border-gray-200 max-w-none
+                [&>*:first-child]:mt-0"
+            >
+              {/* 检查内容是否包含HTML标签，如果是纯文本则转换为段落 */}
+              {article.content.includes('<p>') ||
+              article.content.includes('<div>') ||
+              article.content.includes('<h') ? (
+                <div dangerouslySetInnerHTML={{ __html: article.content }} />
+              ) : (
+                // 纯文本内容：按换行符分割成段落
+                <div>
+                  {article.content
+                    .split(/\n\n+/)
+                    .filter((para) => para.trim())
+                    .map((paragraph, index) => (
+                      <p
+                        key={index}
+                        className="mb-6 leading-[1.8] text-gray-700"
+                      >
+                        {paragraph.split('\n').map((line, lineIndex) => (
+                          <span key={lineIndex}>
+                            {line}
+                            {lineIndex < paragraph.split('\n').length - 1 && (
+                              <br />
+                            )}
+                          </span>
+                        ))}
+                      </p>
+                    ))}
+                </div>
+              )}
+            </div>
           </article>
         )}
       </div>

@@ -1263,7 +1263,6 @@ Format the summary in a clear, structured manner using markdown.`;
 
     // Build context-aware prompt for image generation
     // CRITICAL: Include previous AI responses so image generation has proper context
-    // IMPORTANT: Use English for all text in the image to avoid garbled characters
     const buildImagePrompt = (): string => {
       // Get the last few messages for context (both user and assistant messages)
       const recentMessages = messages.slice(-10); // Last 10 messages for context
@@ -1280,24 +1279,26 @@ Format the summary in a clear, structured manner using markdown.`;
         }
       }
 
-      // Get the user's current request
-      const userRequest = lastUserMessage?.content || "";
+      // Get the user's current request - remove @mentions to get clean prompt
+      let userRequest = lastUserMessage?.content || "";
+      // Remove @mentions (e.g., "@AI-Gemini-(Image) ") from the beginning
+      userRequest = userRequest.replace(/^@[\w\-()]+\s*/g, "").trim();
+
+      this.logger.log(
+        `[buildImagePrompt] Original: "${lastUserMessage?.content}", Cleaned: "${userRequest}"`,
+      );
 
       // If there's context from other AIs, include it
       if (contextParts.length > 0) {
         const context = contextParts.join("\n\n");
-        // IMPORTANT: Explicitly instruct to use English text to avoid garbled Chinese characters
-        return `Based on the following context from the discussion:\n\n${context}\n\nUser's request: ${userRequest}\n\nIMPORTANT INSTRUCTIONS FOR IMAGE GENERATION:
-1. Create a professional infographic or data visualization
-2. ALL TEXT IN THE IMAGE MUST BE IN ENGLISH - do not use Chinese or other non-Latin characters as they will appear garbled
-3. If the context contains Chinese data/names, translate them to English equivalents
-4. Use clean, modern design with clear labels and legends
-5. Ensure all text is legible and properly rendered
-6. Use appropriate charts (bar, line, pie) to visualize numerical data`;
+        // For context-aware prompts, pass the user's request directly
+        // Don't add excessive instructions that might confuse the model
+        return `${userRequest}\n\nContext from discussion:\n${context}`;
       }
 
-      // For simple requests, add English instruction
-      return `${userRequest}\n\nIMPORTANT: All text in the image must be in English. Use clean, professional design.`;
+      // For simple requests, just pass the user's request directly
+      // The model should understand the user's intent
+      return userRequest;
     };
 
     // If using Imagen model for image generation, use dedicated Imagen API
@@ -1770,6 +1771,10 @@ Format the summary in a clear, structured manner using markdown.`;
     this.logger.log(`[Imagen] Calling API: ${url}`);
     this.logger.log(
       `[Imagen] Model: ${imagenModel}, Prompt length: ${prompt.length}`,
+    );
+    // Log the actual prompt being sent (first 500 chars for debugging)
+    this.logger.log(
+      `[Imagen] Prompt content: "${prompt.substring(0, 500)}${prompt.length > 500 ? "..." : ""}"`,
     );
 
     try {

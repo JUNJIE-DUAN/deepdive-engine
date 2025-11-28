@@ -249,9 +249,14 @@ export class AiGroupController {
             `[Mentions Debug] Adding AI member to respond: ${mention.aiMemberId}`,
           );
           aiMemberIdsToRespond.add(mention.aiMemberId);
-        } else if (mention.mentionType === MentionType.ALL_AI) {
-          // @All AIs：获取 topic 的所有 AI 成员
-          this.logger.log(`@All AIs triggered in topic ${topicId}`);
+        } else if (
+          mention.mentionType === MentionType.ALL_AI ||
+          mention.mentionType === MentionType.ALL
+        ) {
+          // @All AIs 或 @Everyone：获取 topic 的所有 AI 成员
+          this.logger.log(
+            `@${mention.mentionType === MentionType.ALL ? "Everyone" : "All AIs"} triggered in topic ${topicId}`,
+          );
           const topic = await this.aiGroupService.getTopicById(
             topicId,
             req.user.id,

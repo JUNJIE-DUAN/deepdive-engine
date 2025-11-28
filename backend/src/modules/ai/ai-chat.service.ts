@@ -1233,12 +1233,22 @@ Format the summary in a clear, structured manner using markdown.`;
     // Check if user is requesting image generation
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
     const userContent = lastUserMessage?.content?.toLowerCase() || "";
-    const isImageRequest = this.isImageGenerationRequest(userContent);
+    const isImageRequestByContent = this.isImageGenerationRequest(userContent);
 
     // Check if the configured model is Imagen (dedicated image generation)
     const isImagenModel = modelId.toLowerCase().includes("imagen");
     // Check if this is an "image" model that should use Imagen for better quality
     const isImageModel = modelId.toLowerCase().includes("image");
+
+    // IMPORTANT: For image-specific models (like "AI-Gemini (Image)"),
+    // ALWAYS generate images regardless of user message content
+    // This ensures image models always produce images as expected
+    const isImageRequest =
+      isImageRequestByContent || isImageModel || isImagenModel;
+
+    this.logger.log(
+      `[Gemini] Image detection: modelId=${modelId}, isImageModel=${isImageModel}, isImagenModel=${isImagenModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
+    );
 
     // Build context-aware prompt for image generation
     // CRITICAL: Include previous AI responses so image generation has proper context

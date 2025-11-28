@@ -1379,17 +1379,8 @@ Generate an image that fulfills the current request while maintaining consistenc
         .replace(/!\[.*?\]\(data:image\/[^)]+\)/g, "") // Remove base64 images
         .trim();
 
-      // Enhance prompt with instructions for professional business graphics
-      // Gemini image models struggle with Chinese characters in images
-      const enhancedPrompt = `${cleanPrompt}
-
-IMAGE GENERATION RULES:
-1. ALL text in the image MUST be in English - translate any Chinese/Japanese text to English
-2. Professional minimalist business style with clean background
-3. Clear, legible fonts - all text must be crisp and readable
-4. If creating charts/graphs: use accurate data, proper axes, legends, and labels
-5. Clean logical layout with good spacing and alignment`;
-
+      // DO NOT add extra instructions - Gemini will render them as part of the image
+      // Just pass the user's request directly, translated to English if needed
       this.logger.log(
         `[Gemini 3 Image] Using single-turn format, prompt: "${cleanPrompt.substring(0, 100)}..."`,
       );
@@ -1397,7 +1388,7 @@ IMAGE GENERATION RULES:
       contents = [
         {
           role: "user",
-          parts: [{ text: enhancedPrompt }],
+          parts: [{ text: cleanPrompt }],
         },
       ];
     } else {

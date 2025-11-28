@@ -1379,6 +1379,17 @@ Generate an image that fulfills the current request while maintaining consistenc
         .replace(/!\[.*?\]\(data:image\/[^)]+\)/g, "") // Remove base64 images
         .trim();
 
+      // Enhance prompt with instructions to avoid garbled text
+      // Gemini image models struggle with Chinese characters in images
+      const enhancedPrompt = `${cleanPrompt}
+
+IMPORTANT IMAGE GENERATION RULES:
+1. ALL text in the image MUST be in English only - never use Chinese, Japanese, or other non-Latin characters as they will appear garbled
+2. If the request mentions Chinese companies/concepts, translate them to English (e.g., 腾讯=Tencent, 阿里巴巴=Alibaba)
+3. Use clean, professional infographic or chart design
+4. Make sure all labels, titles, and data are clearly readable
+5. Use accurate, realistic data when creating charts or visualizations`;
+
       this.logger.log(
         `[Gemini 3 Image] Using single-turn format, prompt: "${cleanPrompt.substring(0, 100)}..."`,
       );
@@ -1386,7 +1397,7 @@ Generate an image that fulfills the current request while maintaining consistenc
       contents = [
         {
           role: "user",
-          parts: [{ text: cleanPrompt }],
+          parts: [{ text: enhancedPrompt }],
         },
       ];
     } else {

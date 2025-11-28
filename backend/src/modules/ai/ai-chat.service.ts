@@ -1356,29 +1356,62 @@ Generate an image that fulfills the current request while maintaining consistenc
     const systemMessage = messages.find((m) => m.role === "system");
     const otherMessages = messages.filter((m) => m.role !== "system");
 
-    // Convert messages to Gemini format
-    // IMPORTANT: Clean up base64 images from message content to avoid sending huge payloads
-    // and to help Gemini understand the context better
-    const contents = otherMessages.map((m) => {
-      let cleanContent = m.content;
+    // For Gemini 3 image models, use simplified single-turn format
+    // These models have special requirements and don't support multi-turn with model responses
+    const isGemini3ImageModel =
+      effectiveModelId.includes("gemini-3") &&
+      effectiveModelId.includes("image");
 
-      // Replace base64 image data with description placeholder
-      // This helps Gemini understand that an image was previously generated
-      if (cleanContent.includes("![Generated Image](data:image")) {
-        cleanContent = cleanContent.replace(
-          /!\[Generated Image\]\(data:image\/[^)]+\)/g,
-          "[An image was generated based on the previous request]",
-        );
-        this.logger.log(
-          `[Gemini] Cleaned base64 image from message, role: ${m.role}`,
-        );
-      }
+    let contents: any[];
 
-      return {
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: cleanContent }],
-      };
-    });
+    if (isGemini3ImageModel && isImageRequest) {
+      // IMPORTANT: Gemini 3 image models require single-turn format
+      // They don't accept model responses in the conversation history
+      // Use only the latest user message for image generation
+      const lastUserMessage = otherMessages
+        .filter((m) => m.role === "user")
+        .pop();
+
+      // Clean up the user message - remove @mentions and base64 images
+      let cleanPrompt = lastUserMessage?.content || "Generate an image";
+      cleanPrompt = cleanPrompt
+        .replace(/^@[\w\-()]+\s*/g, "") // Remove @mentions
+        .replace(/!\[.*?\]\(data:image\/[^)]+\)/g, "") // Remove base64 images
+        .trim();
+
+      this.logger.log(
+        `[Gemini 3 Image] Using single-turn format, prompt: "${cleanPrompt.substring(0, 100)}..."`,
+      );
+
+      contents = [
+        {
+          role: "user",
+          parts: [{ text: cleanPrompt }],
+        },
+      ];
+    } else {
+      // Standard multi-turn format for other models
+      // IMPORTANT: Clean up base64 images from message content to avoid sending huge payloads
+      contents = otherMessages.map((m) => {
+        let cleanContent = m.content;
+
+        // Replace base64 image data with description placeholder
+        if (cleanContent.includes("![Generated Image](data:image")) {
+          cleanContent = cleanContent.replace(
+            /!\[Generated Image\]\(data:image\/[^)]+\)/g,
+            "[An image was generated based on the previous request]",
+          );
+          this.logger.log(
+            `[Gemini] Cleaned base64 image from message, role: ${m.role}`,
+          );
+        }
+
+        return {
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: cleanContent }],
+        };
+      });
+    }
 
     const requestBody: any = {
       contents,
@@ -1392,7 +1425,7 @@ Generate an image that fulfills the current request while maintaining consistenc
     if (isImageRequest) {
       requestBody.generationConfig.responseModalities = ["TEXT", "IMAGE"];
       this.logger.log(
-        `[Gemini] Image generation enabled, model: ${effectiveModelId}`,
+        `[Gemini] Image generation enabled, model: ${effectiveModelId}, isGemini3=${isGemini3ImageModel}`,
       );
     } else {
       // Enable Google Search Grounding for text-only responses

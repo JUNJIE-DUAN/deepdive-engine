@@ -64,6 +64,278 @@ export class AiController {
   }
 
   /**
+   * 诊断 AI 模型配置（公共 API，用于调试）
+   * GET /api/v1/ai/diagnose
+   */
+  @Get("diagnose")
+  async diagnoseModels() {
+    this.logger.log("Diagnosing AI model configuration");
+
+    // Get all models from database
+    const allModels = await this.prisma.aIModel.findMany({
+      select: {
+        id: true,
+        name: true,
+        modelId: true,
+        provider: true,
+        isEnabled: true,
+        isDefault: true,
+        apiKey: true,
+        apiEndpoint: true,
+      },
+    });
+
+    // Check environment variables
+    const envVars = {
+      GOOGLE_AI_API_KEY: !!process.env.GOOGLE_AI_API_KEY,
+      OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+      ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+      DEEPSEEK_API_KEY: !!process.env.DEEPSEEK_API_KEY,
+    };
+
+    // Build diagnosis report
+    const modelsReport = allModels.map((m) => ({
+      id: m.id,
+      name: m.name,
+      modelId: m.modelId,
+      provider: m.provider,
+      isEnabled: m.isEnabled,
+      isDefault: m.isDefault,
+      hasApiKey: !!m.apiKey,
+      apiKeyLength: m.apiKey?.length || 0,
+      apiKeyPrefix: m.apiKey ? m.apiKey.substring(0, 10) + "..." : null,
+      hasApiEndpoint: !!m.apiEndpoint,
+    }));
+
+    return {
+      timestamp: new Date().toISOString(),
+      totalModels: allModels.length,
+      enabledModels: allModels.filter((m) => m.isEnabled).length,
+      modelsWithApiKey: allModels.filter((m) => !!m.apiKey).length,
+      environmentVariables: envVars,
+      models: modelsReport,
+      recommendation:
+        modelsReport.filter((m) => m.isEnabled && m.hasApiKey).length === 0
+          ? "No enabled models have API keys configured. Please add API keys to your models in the admin panel."
+          : "Configuration looks OK. Check if the modelId matches exactly.",
+    };
+  }
+
+  /**
+   * 测试 Gemini 模型图片生成能力（公共 API）
+   * GET /api/v1/ai/test-gemini-image
+   */
+  @Get("test-gemini-image")
+  async testGeminiImageGeneration() {
+    this.logger.log("Testing Gemini image generation models");
+
+    // Get all Google/Gemini models
+    const geminiModels = await this.prisma.aIModel.findMany({
+      where: {
+        OR: [
+          { provider: { contains: "google", mode: "insensitive" } },
+          { provider: { contains: "gemini", mode: "insensitive" } },
+          { modelId: { contains: "gemini", mode: "insensitive" } },
+        ],
+      },
+    });
+
+    if (geminiModels.length === 0) {
+      return {
+        error: "No Gemini models found in database",
+        suggestion:
+          "Add a Gemini model in the admin panel with provider=google",
+      };
+    }
+
+    const results: any[] = [];
+
+    for (const model of geminiModels) {
+      const apiKey = model.apiKey || process.env.GOOGLE_AI_API_KEY;
+
+      if (!apiKey) {
+        results.push({
+          modelId: model.modelId,
+          name: model.name,
+          status: "NO_API_KEY",
+          error: "No API key configured for this model",
+        });
+        continue;
+      }
+
+      try {
+        // Test with image generation request
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.modelId}:generateContent?key=${apiKey}`;
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: "Generate a simple red circle image" }],
+              },
+            ],
+            generationConfig: {
+              responseModalities: ["TEXT", "IMAGE"],
+              maxOutputTokens: 256,
+            },
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          results.push({
+            modelId: model.modelId,
+            name: model.name,
+            status: "API_ERROR",
+            error: data.error?.message || `HTTP ${response.status}`,
+            supportsImage: false,
+          });
+          continue;
+        }
+
+        // Check if response contains image
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const hasImage = parts.some((p: any) =>
+          p.inlineData?.mimeType?.startsWith("image/"),
+        );
+        const hasText = parts.some((p: any) => p.text);
+
+        results.push({
+          modelId: model.modelId,
+          name: model.name,
+          status: "SUCCESS",
+          supportsImage: hasImage,
+          responseType: hasImage ? "image" : hasText ? "text-only" : "empty",
+          textPreview: hasText
+            ? parts.find((p: any) => p.text)?.text?.substring(0, 100)
+            : null,
+        });
+      } catch (error: any) {
+        results.push({
+          modelId: model.modelId,
+          name: model.name,
+          status: "FETCH_ERROR",
+          error: error.message,
+          supportsImage: false,
+        });
+      }
+    }
+
+    const imageModels = results.filter((r) => r.supportsImage);
+
+    return {
+      timestamp: new Date().toISOString(),
+      totalTested: results.length,
+      modelsWithImageSupport: imageModels.length,
+      results,
+      recommendation:
+        imageModels.length > 0
+          ? `Use one of these models for image generation: ${imageModels.map((r) => r.modelId).join(", ")}`
+          : "No models support image generation. Try using gemini-2.0-flash-exp or imagen-3 models.",
+    };
+  }
+
+  /**
+   * 列出 Google AI 可用模型（公共 API）
+   * GET /api/v1/ai/list-google-models
+   */
+  @Get("list-google-models")
+  async listGoogleModels() {
+    this.logger.log("Listing available Google AI models");
+
+    // Try to get API key from database or environment
+    const googleModel = await this.prisma.aIModel.findFirst({
+      where: {
+        OR: [
+          { provider: { contains: "google", mode: "insensitive" } },
+          { provider: { contains: "gemini", mode: "insensitive" } },
+        ],
+        apiKey: { not: null },
+      },
+    });
+
+    const apiKey = googleModel?.apiKey || process.env.GOOGLE_AI_API_KEY;
+
+    if (!apiKey) {
+      return {
+        error: "No Google AI API key found",
+        suggestion:
+          "Configure GOOGLE_AI_API_KEY environment variable or add a Google model with API key in admin panel",
+      };
+    }
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        return {
+          error: error.error?.message || `HTTP ${response.status}`,
+          apiKeyPrefix: apiKey.substring(0, 10) + "...",
+        };
+      }
+
+      const data = await response.json();
+      const models = data.models || [];
+
+      // Filter and categorize models
+      const imageModels = models.filter(
+        (m: any) =>
+          m.name?.includes("imagen") ||
+          m.supportedGenerationMethods?.includes("generateImage"),
+      );
+
+      const geminiModels = models.filter((m: any) =>
+        m.name?.includes("gemini"),
+      );
+
+      const modelsWithImageGen = models.filter((m: any) =>
+        m.supportedGenerationMethods?.includes("generateContent"),
+      );
+
+      return {
+        timestamp: new Date().toISOString(),
+        totalModels: models.length,
+        apiKeyPrefix: apiKey.substring(0, 10) + "...",
+        imageModels: imageModels.map((m: any) => ({
+          name: m.name,
+          displayName: m.displayName,
+          methods: m.supportedGenerationMethods,
+        })),
+        geminiModels: geminiModels.map((m: any) => ({
+          name: m.name?.replace("models/", ""),
+          displayName: m.displayName,
+          methods: m.supportedGenerationMethods,
+        })),
+        modelsWithImageGeneration: modelsWithImageGen
+          .filter(
+            (m: any) =>
+              m.name?.includes("2.0") ||
+              m.name?.includes("2.5") ||
+              m.name?.includes("imagen"),
+          )
+          .map((m: any) => ({
+            name: m.name?.replace("models/", ""),
+            displayName: m.displayName,
+          })),
+        recommendation:
+          "For image generation, use gemini-2.0-flash-exp or imagen-3.0-generate-001",
+      };
+    } catch (error: any) {
+      return {
+        error: error.message,
+        apiKeyPrefix: apiKey.substring(0, 10) + "...",
+      };
+    }
+  }
+
+  /**
    * 简单聊天接口（支持流式响应）
    * POST /api/v1/ai/simple-chat
    */

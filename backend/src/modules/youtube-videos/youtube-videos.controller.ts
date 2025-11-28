@@ -12,16 +12,17 @@ import {
 import { YoutubeVideosService } from "./youtube-videos.service";
 import { SaveVideoDto } from "./dto/save-video.dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../../common/guards/optional-jwt-auth.guard";
 
 /**
  * YouTube视频管理控制器
  */
 @Controller("youtube-videos")
-@UseGuards(JwtAuthGuard)
 export class YoutubeVideosController {
   constructor(private readonly youtubeVideosService: YoutubeVideosService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   async saveVideo(@Request() req: any, @Body() saveVideoDto: SaveVideoDto) {
     const userId = req.user?.id;
     if (!userId) {
@@ -31,15 +32,18 @@ export class YoutubeVideosController {
   }
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   async getUserVideos(@Request() req: any) {
     const userId = req.user?.id;
+    // Return empty array for unauthenticated users
     if (!userId) {
-      throw new UnauthorizedException("User not authenticated");
+      return [];
     }
     return this.youtubeVideosService.getUserVideos(userId);
   }
 
   @Get(":id")
+  @UseGuards(JwtAuthGuard)
   async getVideoById(@Param("id") id: string, @Request() req: any) {
     const userId = req.user?.id;
     if (!userId) {
@@ -49,6 +53,7 @@ export class YoutubeVideosController {
   }
 
   @Delete(":id")
+  @UseGuards(JwtAuthGuard)
   async deleteVideo(@Param("id") id: string, @Request() req: any) {
     const userId = req.user?.id;
     if (!userId) {

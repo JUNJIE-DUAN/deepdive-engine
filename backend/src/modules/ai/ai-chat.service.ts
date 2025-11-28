@@ -1321,15 +1321,15 @@ Format the summary in a clear, structured manner using markdown.`;
     }
 
     // For text or non-Imagen image requests, use Gemini API
-    // Use Gemini 2.5 Flash Image (Nano Banana) for best native image generation
-    // This model has state-of-the-art image generation with better text rendering
+    // IMPORTANT: Only gemini-2.0-flash-exp supports responseModalities: ["TEXT", "IMAGE"]
+    // Other models like gemini-2.5-flash-preview do NOT support native image generation
     let effectiveModelId: string;
     if (isImageRequest) {
-      // For image generation, use Gemini 2.5 Flash Image (Nano Banana)
-      // This is the best model for image generation with legible text
-      effectiveModelId = "gemini-2.5-flash-preview-05-20";
+      // For image generation, MUST use gemini-2.0-flash-exp as it's the ONLY model
+      // that supports responseModalities: ["TEXT", "IMAGE"] for native image generation
+      effectiveModelId = "gemini-2.0-flash-exp";
       this.logger.log(
-        `Image generation requested - using ${effectiveModelId} (Nano Banana) for best quality (configured: ${modelId})`,
+        `Image generation requested - using ${effectiveModelId} (only model supporting native image gen) (configured: ${modelId})`,
       );
     } else {
       // For text, use configured model or fallback

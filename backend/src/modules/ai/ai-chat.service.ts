@@ -1321,76 +1321,20 @@ Generate an image that fulfills the current request while maintaining consistenc
       return userRequest;
     };
 
-    // If using Imagen model for image generation, use dedicated Imagen API
+    // Use Imagen API only if explicitly configured as Imagen model
     if (isImageRequest && isImagenModel) {
       this.logger.log(`Using Imagen model for image generation: ${modelId}`);
       const imagePrompt = buildImagePrompt();
-      this.logger.log(
-        `[Imagen] Context-aware prompt length: ${imagePrompt.length}`,
-      );
       return await this.callImagenApi(apiKey, modelId, imagePrompt);
     }
 
-    // For image generation with "image" models (like gemini-3-pro-image-preview),
-    // use Imagen 4 for better quality instead of gemini-2.0-flash-exp
-    if (isImageRequest && isImageModel) {
-      this.logger.log(
-        `Image model ${modelId} detected, using Imagen 4 for better quality`,
-      );
-      const imagePrompt = buildImagePrompt();
-      this.logger.log(
-        `[Imagen] Context-aware prompt length: ${imagePrompt.length}`,
-      );
-      try {
-        const imagenResult = await this.callImagenApi(
-          apiKey,
-          "imagen-4.0-generate-001",
-          imagePrompt,
-        );
-        // If Imagen succeeded, return the result
-        if (
-          imagenResult.content &&
-          !imagenResult.content.includes("图像生成失败")
-        ) {
-          return imagenResult;
-        }
-      } catch (imagenError) {
-        this.logger.warn(
-          `Imagen 4 failed, falling back to Gemini: ${imagenError}`,
-        );
-      }
-      // Fall through to Gemini if Imagen fails
-    }
-
-    // For text or non-Imagen image requests, use Gemini API
-    // IMPORTANT: Only gemini-2.0-flash-exp supports responseModalities: ["TEXT", "IMAGE"]
-    // Other models like gemini-2.5-flash-preview do NOT support native image generation
-    let effectiveModelId: string;
-    if (isImageRequest) {
-      // For image generation, MUST use gemini-2.0-flash-exp as it's the ONLY model
-      // that supports responseModalities: ["TEXT", "IMAGE"] for native image generation
-      effectiveModelId = "gemini-2.0-flash-exp";
-      this.logger.log(
-        `Image generation requested - using ${effectiveModelId} (only model supporting native image gen) (configured: ${modelId})`,
-      );
-    } else {
-      // For text, use configured model or fallback
-      // But avoid "preview" or experimental models that might have special requirements
-      const isExperimentalModel =
-        modelId.includes("preview") ||
-        modelId.includes("thinking") ||
-        modelId.includes("gemini-3");
-      if (isExperimentalModel) {
-        effectiveModelId = "gemini-2.0-flash";
-        this.logger.warn(
-          `Model ${modelId} may have special requirements, falling back to ${effectiveModelId}`,
-        );
-      } else {
-        effectiveModelId = modelId.includes("gemini")
-          ? modelId
-          : "gemini-2.0-flash";
-      }
-    }
+    // IMPORTANT: Use the CONFIGURED model directly - no fallbacks
+    // User has explicitly chosen their model, we respect their choice
+    // If the model doesn't work, return an error instead of silently switching
+    const effectiveModelId = modelId;
+    this.logger.log(
+      `[Gemini] Using configured model: ${effectiveModelId}, isImageRequest: ${isImageRequest}`,
+    );
 
     // Build the correct Gemini API URL
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${effectiveModelId}:generateContent?key=${apiKey}`;
@@ -1404,10 +1348,28 @@ Generate an image that fulfills the current request while maintaining consistenc
     const otherMessages = messages.filter((m) => m.role !== "system");
 
     // Convert messages to Gemini format
-    const contents = otherMessages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    // IMPORTANT: Clean up base64 images from message content to avoid sending huge payloads
+    // and to help Gemini understand the context better
+    const contents = otherMessages.map((m) => {
+      let cleanContent = m.content;
+
+      // Replace base64 image data with description placeholder
+      // This helps Gemini understand that an image was previously generated
+      if (cleanContent.includes("![Generated Image](data:image")) {
+        cleanContent = cleanContent.replace(
+          /!\[Generated Image\]\(data:image\/[^)]+\)/g,
+          "[An image was generated based on the previous request]",
+        );
+        this.logger.log(
+          `[Gemini] Cleaned base64 image from message, role: ${m.role}`,
+        );
+      }
+
+      return {
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: cleanContent }],
+      };
+    });
 
     const requestBody: any = {
       contents,
@@ -1420,8 +1382,9 @@ Generate an image that fulfills the current request while maintaining consistenc
     // Enable image generation if requested
     if (isImageRequest) {
       requestBody.generationConfig.responseModalities = ["TEXT", "IMAGE"];
-      this.logger.log("Image generation enabled for this request");
-      // Note: systemInstruction is not supported with image generation in gemini-2.0-flash-exp
+      this.logger.log(
+        `[Gemini] Image generation enabled, model: ${effectiveModelId}`,
+      );
     } else {
       // Enable Google Search Grounding for text-only responses
       requestBody.tools = [

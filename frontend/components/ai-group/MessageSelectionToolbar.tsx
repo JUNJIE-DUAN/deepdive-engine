@@ -1,0 +1,383 @@
+'use client';
+
+import { useState } from 'react';
+import { TopicMessage, Topic } from '@/types/ai-group';
+import { config } from '@/lib/config';
+import { getAuthHeader } from '@/lib/auth';
+
+interface MessageSelectionToolbarProps {
+  selectedMessages: Set<string>;
+  messages: TopicMessage[];
+  topics: Topic[];
+  currentTopicId: string;
+  onClearSelection: () => void;
+  onForwardSuccess: () => void;
+}
+
+type ForwardTargetType = 'TOPIC' | 'USER' | 'EXTERNAL';
+type MergeMode = 'SEPARATE' | 'MERGED' | 'SUMMARY';
+
+export default function MessageSelectionToolbar({
+  selectedMessages,
+  messages,
+  topics,
+  currentTopicId,
+  onClearSelection,
+  onForwardSuccess,
+}: MessageSelectionToolbarProps) {
+  const [showForwardDialog, setShowForwardDialog] = useState(false);
+  const [forwardTargetType, setForwardTargetType] =
+    useState<ForwardTargetType>('TOPIC');
+  const [targetTopicId, setTargetTopicId] = useState<string>('');
+  const [mergeMode, setMergeMode] = useState<MergeMode>('SEPARATE');
+  const [forwardNote, setForwardNote] = useState('');
+  const [isForwarding, setIsForwarding] = useState(false);
+
+  const selectedCount = selectedMessages.size;
+  const selectedMsgs = messages.filter((m) => selectedMessages.has(m.id));
+
+  // Filter out current topic from forward targets
+  const availableTopics = topics.filter((t) => t.id !== currentTopicId);
+
+  const handleCopyToClipboard = async () => {
+    const content = selectedMsgs
+      .map((m) => {
+        const sender =
+          m.sender?.fullName ||
+          m.sender?.username ||
+          m.aiMember?.displayName ||
+          'Unknown';
+        return `${sender}: ${m.content}`;
+      })
+      .join('\n\n---\n\n');
+
+    await navigator.clipboard.writeText(content);
+    alert('Messages copied to clipboard');
+  };
+
+  const handleForward = async () => {
+    if (forwardTargetType === 'TOPIC' && !targetTopicId) {
+      alert('Please select a target topic');
+      return;
+    }
+
+    setIsForwarding(true);
+    try {
+      const response = await fetch(
+        `${config.apiBaseUrl}/api/v1/topics/${currentTopicId}/messages/forward`,
+        {
+          method: 'POST',
+          headers: {
+            ...getAuthHeader(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messageIds: Array.from(selectedMessages),
+            targetType: forwardTargetType,
+            targetTopicId:
+              forwardTargetType === 'TOPIC' ? targetTopicId : undefined,
+            mergeMode,
+            forwardNote: forwardNote || undefined,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        setShowForwardDialog(false);
+        onClearSelection();
+        onForwardSuccess();
+      } else {
+        const error = await response.json();
+        alert(`Forward failed: ${error.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Forward error:', err);
+      alert('Forward failed');
+    } finally {
+      setIsForwarding(false);
+    }
+  };
+
+  const handleBookmark = async () => {
+    // For now, bookmark each message individually
+    try {
+      for (const messageId of selectedMessages) {
+        await fetch(
+          `${config.apiBaseUrl}/api/v1/topics/${currentTopicId}/messages/${messageId}/bookmark`,
+          {
+            method: 'POST',
+            headers: {
+              ...getAuthHeader(),
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+          }
+        );
+      }
+      alert(`${selectedCount} messages bookmarked`);
+      onClearSelection();
+    } catch (err) {
+      console.error('Bookmark error:', err);
+      alert('Bookmark failed');
+    }
+  };
+
+  if (selectedCount === 0) return null;
+
+  return (
+    <>
+      {/* Floating Toolbar */}
+      <div className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 transform">
+        <div className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 shadow-lg">
+          <span className="text-sm text-white">{selectedCount} selected</span>
+
+          <div className="mx-2 h-4 w-px bg-gray-600" />
+
+          {/* Copy Button */}
+          <button
+            onClick={handleCopyToClipboard}
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+            title="Copy to clipboard"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+              />
+            </svg>
+            Copy
+          </button>
+
+          {/* Forward Button */}
+          <button
+            onClick={() => setShowForwardDialog(true)}
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+            title="Forward messages"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+              />
+            </svg>
+            Forward
+          </button>
+
+          {/* Bookmark Button */}
+          <button
+            onClick={handleBookmark}
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+            title="Bookmark messages"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+              />
+            </svg>
+            Bookmark
+          </button>
+
+          <div className="mx-2 h-4 w-px bg-gray-600" />
+
+          {/* Cancel Button */}
+          <button
+            onClick={onClearSelection}
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      {/* Forward Dialog */}
+      {showForwardDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold">
+              Forward {selectedCount} Message{selectedCount > 1 ? 's' : ''}
+            </h3>
+
+            {/* Target Type */}
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Forward to
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setForwardTargetType('TOPIC')}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
+                    forwardTargetType === 'TOPIC'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Topic
+                </button>
+                <button
+                  onClick={() => setForwardTargetType('EXTERNAL')}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
+                    forwardTargetType === 'EXTERNAL'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Export
+                </button>
+              </div>
+            </div>
+
+            {/* Target Topic Select */}
+            {forwardTargetType === 'TOPIC' && (
+              <div className="mb-4">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Select Topic
+                </label>
+                <select
+                  value={targetTopicId}
+                  onChange={(e) => setTargetTopicId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Select a topic...</option>
+                  {availableTopics.map((topic) => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Merge Mode */}
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Forward Mode
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="mergeMode"
+                    value="SEPARATE"
+                    checked={mergeMode === 'SEPARATE'}
+                    onChange={() => setMergeMode('SEPARATE')}
+                    className="text-blue-600"
+                  />
+                  <span className="text-sm">Separate (keep original)</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="mergeMode"
+                    value="MERGED"
+                    checked={mergeMode === 'MERGED'}
+                    onChange={() => setMergeMode('MERGED')}
+                    className="text-blue-600"
+                  />
+                  <span className="text-sm">Merged (combine into one)</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="mergeMode"
+                    value="SUMMARY"
+                    checked={mergeMode === 'SUMMARY'}
+                    onChange={() => setMergeMode('SUMMARY')}
+                    className="text-blue-600"
+                  />
+                  <span className="text-sm">Summary (AI generated)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Forward Note */}
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Note (optional)
+              </label>
+              <textarea
+                value={forwardNote}
+                onChange={(e) => setForwardNote(e.target.value)}
+                placeholder="Add a note..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                rows={2}
+              />
+            </div>
+
+            {/* Preview */}
+            <div className="mb-4 max-h-32 overflow-y-auto rounded-lg bg-gray-50 p-3">
+              <p className="mb-1 text-xs font-medium text-gray-500">Preview:</p>
+              {selectedMsgs.slice(0, 3).map((m) => (
+                <p key={m.id} className="truncate text-xs text-gray-600">
+                  {m.sender?.fullName ||
+                    m.sender?.username ||
+                    m.aiMember?.displayName}
+                  : {m.content.substring(0, 50)}...
+                </p>
+              ))}
+              {selectedMsgs.length > 3 && (
+                <p className="text-xs text-gray-400">
+                  +{selectedMsgs.length - 3} more...
+                </p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowForwardDialog(false)}
+                className="rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleForward}
+                disabled={
+                  isForwarding ||
+                  (forwardTargetType === 'TOPIC' && !targetTopicId)
+                }
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isForwarding ? 'Forwarding...' : 'Forward'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

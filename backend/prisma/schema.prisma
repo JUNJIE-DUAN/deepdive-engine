@@ -1213,6 +1213,36 @@ enum MentionType {
   ALL_AI
 }
 
+// AI能力类型枚举
+enum AICapability {
+  TEXT_GENERATION      // 文本生成
+  CODE_GENERATION      // 代码生成
+  CODE_REVIEW          // 代码审查
+  IMAGE_GENERATION     // 图片生成
+  IMAGE_ANALYSIS       // 图片分析
+  WEB_SEARCH           // 网络搜索
+  URL_FETCH            // URL抓取
+  DOCUMENT_ANALYSIS    // 文档分析
+  REASONING            // 深度推理
+  MATH                 // 数学计算
+  TRANSLATION          // 翻译
+  SUMMARIZATION        // 摘要生成
+}
+
+// 消息转发目标类型
+enum ForwardTargetType {
+  TOPIC              // 转发到其他Topic
+  USER               // 私信转发给用户
+  EXTERNAL           // 导出为文件
+}
+
+// 消息合并模式
+enum MergeMode {
+  SEPARATE           // 保持原样，分别发送
+  MERGED             // 合并为一条消息
+  SUMMARY            // AI生成摘要后转发
+}
+
 enum AttachmentType {
   FILE
   IMAGE
@@ -1294,6 +1324,11 @@ model TopicAIMember {
   contextWindow Int     @default(20) @map("context_window") // 上下文消息数
   responseStyle String? @map("response_style") @db.VarChar(50) // concise, detailed, academic
   autoRespond   Boolean @default(false) @map("auto_respond") // 是否自动参与
+
+  // AI能力配置（新增）
+  capabilities       AICapability[] // AI能力列表
+  canMentionOtherAI  Boolean @default(false) @map("can_mention_other_ai") // 是否可以@其他AI
+  collaborationStyle String? @map("collaboration_style") @db.VarChar(50) // independent, collaborative, supportive
 
   addedById String @map("added_by_id")
   addedBy   User   @relation("TopicAIAdder", fields: [addedById], references: [id])
@@ -1475,6 +1510,57 @@ model TopicSummary {
 
   @@index([topicId, createdAt(sort: Desc)])
   @@map("topic_summaries")
+}
+
+// 消息转发记录
+model TopicMessageForward {
+  id String @id @default(uuid())
+
+  // 原始消息（支持多选）
+  originalMessageIds String[] @map("original_message_ids") // 原始消息ID数组
+  sourceTopicId      String   @map("source_topic_id") // 来源Topic
+
+  // 转发目标
+  targetType    ForwardTargetType @map("target_type")
+  targetTopicId String?           @map("target_topic_id") // 目标Topic（如果是TOPIC类型）
+  targetUserId  String?           @map("target_user_id") // 目标用户（如果是USER类型）
+
+  // 转发配置
+  mergeMode   MergeMode @default(SEPARATE) @map("merge_mode")
+  forwardNote String?   @map("forward_note") @db.Text // 转发备注
+
+  // 转发后生成的消息
+  forwardedMessageId String? @map("forwarded_message_id") // 转发后创建的消息ID
+
+  // 转发者
+  forwardedById String   @map("forwarded_by_id")
+  forwardedAt   DateTime @default(now()) @map("forwarded_at")
+
+  @@index([sourceTopicId])
+  @@index([targetTopicId])
+  @@index([forwardedById])
+  @@index([forwardedAt(sort: Desc)])
+  @@map("topic_message_forwards")
+}
+
+// 消息收藏
+model TopicMessageBookmark {
+  id String @id @default(uuid())
+
+  messageId String @map("message_id")
+  userId    String @map("user_id")
+
+  // 收藏分类
+  category String? @db.VarChar(100) // 自定义分类
+  note     String? @db.Text // 收藏备注
+  tags     Json?   @default("[]") // 标签
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@index([category])
+  @@map("topic_message_bookmarks")
 }
 
 // ============ 系统设置 ============

@@ -23,6 +23,8 @@ import {
   SendMessageDto,
   AddResourceDto,
   GenerateSummaryDto,
+  ForwardMessagesDto,
+  BookmarkMessageDto,
 } from "./dto";
 import { AiChatService, ChatMessage } from "../ai/ai-chat.service";
 import { SearchService } from "../ai/search.service";
@@ -1093,6 +1095,138 @@ ${messagesForSummary
 
   // ==================== AI Response ====================
 
+  /**
+   * 智能上下文管理器 - 对消息进行重要性评分和筛选
+   * 确保AI能理解关键对话脉络，而不只是简单取最近N条
+   */
+  private async buildSmartContext(
+    topicId: string,
+    aiMemberId: string,
+    maxMessages: number = 15,
+  ): Promise<{
+    messages: Array<{
+      id: string;
+      content: string;
+      senderId: string | null;
+      aiMemberId: string | null;
+      sender: { username: string | null; fullName: string | null } | null;
+      aiMember: { displayName: string } | null;
+      createdAt: Date;
+      score: number;
+    }>;
+    summary: string | null;
+  }> {
+    // 1. 获取最近50条消息用于评分（比最终输出多，用于智能筛选）
+    const recentMessages = await this.prisma.topicMessage.findMany({
+      where: { topicId, deletedAt: null },
+      include: {
+        sender: { select: { username: true, fullName: true } },
+        aiMember: { select: { displayName: true } },
+        mentions: {
+          select: { aiMemberId: true, userId: true, mentionType: true },
+        },
+        replyTo: { select: { id: true, senderId: true, aiMemberId: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    if (recentMessages.length === 0) {
+      return { messages: [], summary: null };
+    }
+
+    // 2. 为每条消息计算重要性分数
+    const scoredMessages = recentMessages.map((msg, index) => {
+      let score = 0;
+
+      // 时间递减分数（最新消息+5分，逐渐递减）
+      score += Math.max(0, 5 - index * 0.1);
+
+      // @当前AI的消息 +10分
+      const mentionsThisAI = msg.mentions.some(
+        (m) => m.aiMemberId === aiMemberId,
+      );
+      if (mentionsThisAI) score += 10;
+
+      // 被回复的消息 +8分
+      const isRepliedTo = recentMessages.some(
+        (other) => other.replyTo?.id === msg.id,
+      );
+      if (isRepliedTo) score += 8;
+
+      // 包含@提及的消息 +3分
+      if (msg.mentions.length > 0) score += 3;
+
+      // 用户消息比AI消息稍重要 +2分
+      if (msg.senderId) score += 2;
+
+      // 包含问号的消息（可能是问题） +2分
+      if (msg.content.includes("?") || msg.content.includes("？")) score += 2;
+
+      // 包含URL的消息 +2分
+      if (msg.content.includes("http://") || msg.content.includes("https://")) {
+        score += 2;
+      }
+
+      // 消息长度适中（100-500字）+1分
+      const len = msg.content.length;
+      if (len >= 100 && len <= 500) score += 1;
+
+      // 当前AI自己发的消息 +3分（保持对话连贯）
+      if (msg.aiMemberId === aiMemberId) score += 3;
+
+      return {
+        ...msg,
+        score,
+      };
+    });
+
+    // 3. 按分数排序，取top N，然后按时间重新排序
+    const topMessages = scoredMessages
+      .sort((a, b) => b.score - a.score)
+      .slice(0, maxMessages)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    // 4. 如果消息被截断太多，生成早期消息的摘要
+    let summary: string | null = null;
+    const droppedCount = recentMessages.length - topMessages.length;
+    if (droppedCount > 10) {
+      // 获取被丢弃的早期消息的简要摘要
+      const droppedMessages = scoredMessages
+        .filter((m) => !topMessages.find((t) => t.id === m.id))
+        .slice(0, 10);
+
+      if (droppedMessages.length > 0) {
+        const participants = [
+          ...new Set(
+            droppedMessages.map(
+              (m) =>
+                m.sender?.fullName ||
+                m.sender?.username ||
+                m.aiMember?.displayName ||
+                "Unknown",
+            ),
+          ),
+        ];
+        summary = `[Earlier discussion (${droppedCount} messages) involved: ${participants.join(", ")}]`;
+      }
+    }
+
+    return {
+      messages: topMessages.map((m) => ({
+        id: m.id,
+        content: m.content,
+        senderId: m.senderId,
+        aiMemberId: m.aiMemberId,
+        sender: m.sender,
+        aiMember: m.aiMember,
+        createdAt: m.createdAt,
+        score: m.score,
+      })),
+      summary,
+    };
+  }
+
   async generateAIResponse(
     topicId: string,
     userId: string,
@@ -1109,22 +1243,16 @@ ${messagesForSummary
       throw new NotFoundException("AI member not found");
     }
 
-    // 获取上下文消息
-    // CRITICAL FIX: Enforce maximum context window to prevent overflow
-    // Even if aiMember.contextWindow is larger, limit to 15 messages for safety
+    // 使用智能上下文管理器获取消息
     const MAX_CONTEXT_MESSAGES = 15;
-    const contextMessages = await this.prisma.topicMessage.findMany({
-      where: {
-        topicId,
-        deletedAt: null,
-      },
-      include: {
-        sender: { select: { username: true, fullName: true } },
-        aiMember: { select: { displayName: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: Math.min(aiMember.contextWindow || 20, MAX_CONTEXT_MESSAGES),
-    });
+    const smartContext = await this.buildSmartContext(
+      topicId,
+      aiMemberId,
+      Math.min(aiMember.contextWindow || 20, MAX_CONTEXT_MESSAGES),
+    );
+
+    const contextMessages = smartContext.messages;
+    const contextSummary = smartContext.summary;
 
     // 构建Prompt
     const topic = await this.prisma.topic.findUnique({
@@ -1228,12 +1356,17 @@ ${messagesForSummary
       }
     }
 
+    // 构建上下文摘要部分
+    const contextSummarySection = contextSummary
+      ? `\n\n## Earlier Discussion Context\n${contextSummary}`
+      : "";
+
     const systemPrompt =
       aiMember.systemPrompt ||
       `You are ${aiMember.displayName}, an AI assistant participating in a group discussion.
 ${aiMember.roleDescription ? `Your role: ${aiMember.roleDescription}` : ""}
 You are in a discussion group called "${topic?.name}".
-${topic?.description ? `Group description: ${topic.description}` : ""}${resourceContext}${urlContext}${searchContext}
+${topic?.description ? `Group description: ${topic.description}` : ""}${contextSummarySection}${resourceContext}${urlContext}${searchContext}
 
 Respond naturally and helpfully to the discussion. When relevant, reference the shared materials, fetched web content, and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
 
@@ -1754,5 +1887,237 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     }
 
     return "";
+  }
+
+  // ==================== Message Forward & Bookmark ====================
+
+  /**
+   * 转发消息到其他Topic或用户
+   */
+  async forwardMessages(
+    topicId: string,
+    userId: string,
+    dto: ForwardMessagesDto,
+  ) {
+    await this.checkTopicMembership(topicId, userId);
+
+    // 验证所有消息都存在于当前Topic
+    const messages = await this.prisma.topicMessage.findMany({
+      where: {
+        id: { in: dto.messageIds },
+        topicId,
+        deletedAt: null,
+      },
+      include: {
+        sender: { select: { username: true, fullName: true } },
+        aiMember: { select: { displayName: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (messages.length !== dto.messageIds.length) {
+      throw new BadRequestException("Some messages not found or deleted");
+    }
+
+    // 验证目标Topic（如果转发到Topic）
+    if (dto.targetType === "TOPIC" && dto.targetTopicId) {
+      await this.checkTopicMembership(dto.targetTopicId, userId);
+    }
+
+    // 根据合并模式处理消息
+    let forwardedContent: string;
+    const mergeMode = dto.mergeMode || "SEPARATE";
+
+    if (mergeMode === "MERGED") {
+      // 合并所有消息为一条
+      forwardedContent = messages
+        .map((m) => {
+          const sender =
+            m.sender?.fullName ||
+            m.sender?.username ||
+            m.aiMember?.displayName ||
+            "Unknown";
+          return `**${sender}**: ${m.content}`;
+        })
+        .join("\n\n---\n\n");
+
+      if (dto.forwardNote) {
+        forwardedContent = `📤 *转发备注: ${dto.forwardNote}*\n\n---\n\n${forwardedContent}`;
+      }
+    } else if (mergeMode === "SUMMARY") {
+      // AI生成摘要（简化版，实际可调用AI服务）
+      const contentPreview = messages
+        .slice(0, 5)
+        .map((m) => m.content.substring(0, 100))
+        .join(" | ");
+      forwardedContent = `📋 **转发摘要** (${messages.length}条消息)\n\n${contentPreview}...\n\n${dto.forwardNote ? `备注: ${dto.forwardNote}` : ""}`;
+    } else {
+      // SEPARATE - 但我们创建一个转发记录，实际消息分别发送
+      forwardedContent = messages[0].content;
+    }
+
+    // 创建转发记录
+    const forwardRecord = await this.prisma.topicMessageForward.create({
+      data: {
+        originalMessageIds: dto.messageIds,
+        sourceTopicId: topicId,
+        targetType: dto.targetType,
+        targetTopicId: dto.targetTopicId,
+        targetUserId: dto.targetUserId,
+        mergeMode: mergeMode as any,
+        forwardNote: dto.forwardNote,
+        forwardedById: userId,
+      },
+    });
+
+    // 如果是转发到Topic，创建新消息
+    if (dto.targetType === "TOPIC" && dto.targetTopicId) {
+      if (mergeMode === "SEPARATE") {
+        // 分别发送每条消息
+        for (const msg of messages) {
+          const sender =
+            msg.sender?.fullName ||
+            msg.sender?.username ||
+            msg.aiMember?.displayName ||
+            "Unknown";
+          await this.prisma.topicMessage.create({
+            data: {
+              topicId: dto.targetTopicId,
+              senderId: userId,
+              content: `📤 *转发自 ${sender}*:\n\n${msg.content}`,
+              contentType: MessageContentType.TEXT,
+            },
+          });
+        }
+      } else {
+        // 发送合并后的消息
+        const newMessage = await this.prisma.topicMessage.create({
+          data: {
+            topicId: dto.targetTopicId,
+            senderId: userId,
+            content: forwardedContent,
+            contentType: MessageContentType.TEXT,
+          },
+        });
+
+        // 更新转发记录
+        await this.prisma.topicMessageForward.update({
+          where: { id: forwardRecord.id },
+          data: { forwardedMessageId: newMessage.id },
+        });
+      }
+
+      // 更新目标Topic的updatedAt
+      await this.prisma.topic.update({
+        where: { id: dto.targetTopicId },
+        data: { updatedAt: new Date() },
+      });
+    }
+
+    return {
+      success: true,
+      forwardId: forwardRecord.id,
+      messageCount: messages.length,
+      targetType: dto.targetType,
+      mergeMode,
+    };
+  }
+
+  /**
+   * 收藏消息
+   */
+  async bookmarkMessage(
+    topicId: string,
+    userId: string,
+    messageId: string,
+    dto: BookmarkMessageDto,
+  ) {
+    await this.checkTopicMembership(topicId, userId);
+
+    // 验证消息存在
+    const message = await this.prisma.topicMessage.findFirst({
+      where: { id: messageId, topicId, deletedAt: null },
+    });
+
+    if (!message) {
+      throw new NotFoundException("Message not found");
+    }
+
+    // 创建或更新收藏
+    return this.prisma.topicMessageBookmark.upsert({
+      where: {
+        messageId_userId: { messageId, userId },
+      },
+      update: {
+        category: dto.category,
+        note: dto.note,
+        tags: dto.tags || [],
+      },
+      create: {
+        messageId,
+        userId,
+        category: dto.category,
+        note: dto.note,
+        tags: dto.tags || [],
+      },
+    });
+  }
+
+  /**
+   * 取消收藏
+   */
+  async unbookmarkMessage(topicId: string, userId: string, messageId: string) {
+    await this.checkTopicMembership(topicId, userId);
+
+    return this.prisma.topicMessageBookmark.deleteMany({
+      where: { messageId, userId },
+    });
+  }
+
+  /**
+   * 获取用户的收藏消息
+   */
+  async getBookmarks(userId: string, options?: { category?: string }) {
+    const where: Prisma.TopicMessageBookmarkWhereInput = { userId };
+
+    if (options?.category) {
+      where.category = options.category;
+    }
+
+    const bookmarks = await this.prisma.topicMessageBookmark.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    // 获取关联的消息详情
+    const messageIds = bookmarks.map((b) => b.messageId);
+    const messages = await this.prisma.topicMessage.findMany({
+      where: { id: { in: messageIds } },
+      include: {
+        sender: { select: { id: true, username: true, fullName: true } },
+        aiMember: { select: { id: true, displayName: true } },
+        topic: { select: { id: true, name: true } },
+      },
+    });
+
+    const messageMap = new Map(messages.map((m) => [m.id, m]));
+
+    return bookmarks.map((b) => ({
+      ...b,
+      message: messageMap.get(b.messageId),
+    }));
+  }
+
+  /**
+   * 获取收藏分类列表
+   */
+  async getBookmarkCategories(userId: string) {
+    const bookmarks = await this.prisma.topicMessageBookmark.findMany({
+      where: { userId, category: { not: null } },
+      select: { category: true },
+      distinct: ["category"],
+    });
+
+    return bookmarks.map((b) => b.category).filter(Boolean);
   }
 }

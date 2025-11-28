@@ -25,6 +25,8 @@ import {
   SendMessageDto,
   AddResourceDto,
   GenerateSummaryDto,
+  ForwardMessagesDto,
+  BookmarkMessageDto,
 } from "./dto";
 import { TopicType, MentionType } from "@prisma/client";
 
@@ -462,6 +464,80 @@ export class AiGroupController {
     @Param("summaryId") summaryId: string,
   ) {
     return this.aiGroupService.deleteSummary(topicId, req.user.id, summaryId);
+  }
+
+  // ==================== Message Forward & Bookmark ====================
+
+  @Post(":topicId/messages/forward")
+  async forwardMessages(
+    @Request() req: any,
+    @Param("topicId") topicId: string,
+    @Body() dto: ForwardMessagesDto,
+  ) {
+    const result = await this.aiGroupService.forwardMessages(
+      topicId,
+      req.user.id,
+      dto,
+    );
+
+    // 如果转发到其他Topic，通知目标Topic的成员
+    if (dto.targetType === "TOPIC" && dto.targetTopicId) {
+      this.aiGroupGateway.emitToTopic(dto.targetTopicId, "messages:forwarded", {
+        fromTopicId: topicId,
+        messageCount: result.messageCount,
+        forwardedById: req.user.id,
+      });
+    }
+
+    return result;
+  }
+
+  @Post(":topicId/messages/:messageId/bookmark")
+  async bookmarkMessage(
+    @Request() req: any,
+    @Param("topicId") topicId: string,
+    @Param("messageId") messageId: string,
+    @Body() dto: BookmarkMessageDto,
+  ) {
+    return this.aiGroupService.bookmarkMessage(
+      topicId,
+      req.user.id,
+      messageId,
+      dto,
+    );
+  }
+
+  @Delete(":topicId/messages/:messageId/bookmark")
+  async unbookmarkMessage(
+    @Request() req: any,
+    @Param("topicId") topicId: string,
+    @Param("messageId") messageId: string,
+  ) {
+    return this.aiGroupService.unbookmarkMessage(
+      topicId,
+      req.user.id,
+      messageId,
+    );
+  }
+}
+
+// Bookmarks controller (user level)
+@Controller("bookmarks")
+@UseGuards(JwtAuthGuard)
+export class BookmarksController {
+  constructor(private readonly aiGroupService: AiGroupService) {}
+
+  @Get()
+  async getBookmarks(
+    @Request() req: any,
+    @Query("category") category?: string,
+  ) {
+    return this.aiGroupService.getBookmarks(req.user.id, { category });
+  }
+
+  @Get("categories")
+  async getBookmarkCategories(@Request() req: any) {
+    return this.aiGroupService.getBookmarkCategories(req.user.id);
   }
 }
 

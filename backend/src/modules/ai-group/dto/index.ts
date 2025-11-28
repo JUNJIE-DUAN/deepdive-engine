@@ -18,3 +18,6 @@ export * from "./add-resource.dto";
 
 // Summary DTOs
 export * from "./generate-summary.dto";
+
+// Forward & Bookmark DTOs
+export * from "./forward-messages.dto";

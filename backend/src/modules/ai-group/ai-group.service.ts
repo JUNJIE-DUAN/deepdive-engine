@@ -1361,12 +1361,45 @@ ${messagesForSummary
       ? `\n\n## Earlier Discussion Context\n${contextSummary}`
       : "";
 
+    // AI-AI协作：如果启用，告诉AI可以@其他AI
+    let aiCollaborationPrompt = "";
+    if (aiMember.canMentionOtherAI) {
+      // 获取Topic中的其他AI成员
+      const otherAIs = await this.prisma.topicAIMember.findMany({
+        where: {
+          topicId,
+          id: { not: aiMemberId },
+        },
+        select: {
+          displayName: true,
+          roleDescription: true,
+        },
+      });
+
+      if (otherAIs.length > 0) {
+        const aiList = otherAIs
+          .map(
+            (ai) =>
+              `- @${ai.displayName}${ai.roleDescription ? ` (${ai.roleDescription})` : ""}`,
+          )
+          .join("\n");
+        aiCollaborationPrompt = `\n\n## AI Collaboration
+You can collaborate with other AI assistants in this group by mentioning them with @.
+When you need a different perspective, specialized knowledge, or want to delegate a task, you can @mention another AI.
+Available AI assistants:
+${aiList}
+
+Example: "I think @AI-Claude might have better insights on this topic." or "Let me ask @AI-Gemini-Image to generate an illustration."
+Only @mention other AIs when it genuinely adds value to the discussion.`;
+      }
+    }
+
     const systemPrompt =
       aiMember.systemPrompt ||
       `You are ${aiMember.displayName}, an AI assistant participating in a group discussion.
 ${aiMember.roleDescription ? `Your role: ${aiMember.roleDescription}` : ""}
 You are in a discussion group called "${topic?.name}".
-${topic?.description ? `Group description: ${topic.description}` : ""}${contextSummarySection}${resourceContext}${urlContext}${searchContext}
+${topic?.description ? `Group description: ${topic.description}` : ""}${contextSummarySection}${resourceContext}${urlContext}${searchContext}${aiCollaborationPrompt}
 
 Respond naturally and helpfully to the discussion. When relevant, reference the shared materials, fetched web content, and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
 
@@ -2119,5 +2152,68 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     });
 
     return bookmarks.map((b) => b.category).filter(Boolean);
+  }
+
+  // ==================== AI-AI Collaboration ====================
+
+  /**
+   * 从消息内容中解析@提及的AI成员
+   * @param topicId Topic ID
+   * @param content 消息内容
+   * @param excludeAiMemberId 排除的AI成员ID（通常是发送者自己）
+   * @returns 被提及的AI成员列表
+   */
+  async parseAIMentionsFromContent(
+    topicId: string,
+    content: string,
+    excludeAiMemberId?: string,
+  ): Promise<Array<{ id: string; displayName: string }>> {
+    // 获取Topic中的所有AI成员
+    const aiMembers = await this.prisma.topicAIMember.findMany({
+      where: {
+        topicId,
+        ...(excludeAiMemberId ? { id: { not: excludeAiMemberId } } : {}),
+      },
+      select: {
+        id: true,
+        displayName: true,
+        autoRespond: true,
+      },
+    });
+
+    if (aiMembers.length === 0) {
+      return [];
+    }
+
+    const mentionedAIs: Array<{ id: string; displayName: string }> = [];
+
+    // 检查消息内容中是否包含@AI名称
+    for (const ai of aiMembers) {
+      // 检查各种@格式：@AI-Name, @AIName, @"AI Name"
+      const patterns = [
+        new RegExp(`@${this.escapeRegExp(ai.displayName)}(?![\\w-])`, "i"),
+        new RegExp(`@"${this.escapeRegExp(ai.displayName)}"`, "i"),
+        new RegExp(`@'${this.escapeRegExp(ai.displayName)}'`, "i"),
+      ];
+
+      for (const pattern of patterns) {
+        if (pattern.test(content)) {
+          // 只有当AI设置了autoRespond时才自动响应
+          if (ai.autoRespond) {
+            mentionedAIs.push({ id: ai.id, displayName: ai.displayName });
+          }
+          break;
+        }
+      }
+    }
+
+    return mentionedAIs;
+  }
+
+  /**
+   * 转义正则表达式特殊字符
+   */
+  private escapeRegExp(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 }

@@ -916,6 +916,7 @@ Format the summary in a clear, structured manner using markdown.`;
     maxTokens?: number;
     temperature?: number;
     displayName?: string; // AI member display name (e.g., "AI-Gemini (Image)")
+    capabilities?: string[]; // AI capabilities (e.g., ["IMAGE_GENERATION", "TEXT_GENERATION"])
   }): Promise<ChatCompletionResult> {
     const {
       provider,
@@ -927,6 +928,7 @@ Format the summary in a clear, structured manner using markdown.`;
       maxTokens = 2048,
       temperature = 0.7,
       displayName,
+      capabilities: _capabilities = [], // Reserved for future use
     } = options;
 
     this.logger.log(

@@ -305,11 +305,13 @@ export class AiGroupController {
     topicId: string,
     userId: string,
     aiMemberId: string,
+    depth: number = 0, // 防止无限递归
   ) {
     const AI_TIMEOUT_MS = 120000; // 2 minutes timeout
+    const MAX_AI_CHAIN_DEPTH = 3; // 最大AI链式调用深度
 
     this.logger.log(
-      `[AI Response] Starting generation for topic=${topicId}, aiMemberId=${aiMemberId}`,
+      `[AI Response] Starting generation for topic=${topicId}, aiMemberId=${aiMemberId}, depth=${depth}`,
     );
 
     try {
@@ -342,6 +344,46 @@ export class AiGroupController {
         messageId: aiMessage.id,
       });
       this.aiGroupGateway.emitToTopic(topicId, "message:new", aiMessage);
+
+      // AI-AI协作：检测AI回复中是否@了其他AI，如果是，触发它们的回复
+      if (depth < MAX_AI_CHAIN_DEPTH && aiMessage.content) {
+        const mentionedAIs =
+          await this.aiGroupService.parseAIMentionsFromContent(
+            topicId,
+            aiMessage.content,
+            aiMemberId, // 排除自己
+          );
+
+        if (mentionedAIs.length > 0) {
+          this.logger.log(
+            `[AI-AI Collaboration] AI ${aiMemberId} mentioned ${mentionedAIs.length} other AIs: ${mentionedAIs.map((ai) => ai.displayName).join(", ")}`,
+          );
+
+          // 延迟触发被@的AI回复，避免同时请求过多
+          for (let i = 0; i < mentionedAIs.length; i++) {
+            const mentionedAI = mentionedAIs[i];
+            // 给每个AI加一点延迟
+            setTimeout(
+              () => {
+                this.logger.log(
+                  `[AI-AI Collaboration] Triggering response from ${mentionedAI.displayName}`,
+                );
+                this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
+                  topicId,
+                  aiMemberId: mentionedAI.id,
+                });
+                this.generateAIResponseInBackground(
+                  topicId,
+                  userId,
+                  mentionedAI.id,
+                  depth + 1,
+                );
+              },
+              (i + 1) * 1000,
+            ); // 每个AI间隔1秒
+          }
+        }
+      }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

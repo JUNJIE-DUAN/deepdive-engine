@@ -44,4 +44,13 @@ export class AddAIMemberDto {
   @IsOptional()
   @IsBoolean()
   autoRespond?: boolean; // 是否自动参与
+
+  @IsOptional()
+  @IsBoolean()
+  canMentionOtherAI?: boolean; // 是否可以@其他AI
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  collaborationStyle?: string; // AI协作风格
 }

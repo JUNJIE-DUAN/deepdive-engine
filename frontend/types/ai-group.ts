@@ -285,6 +285,9 @@ export interface AddAIMemberDto {
   contextWindow?: number;
   responseStyle?: string;
   autoRespond?: boolean;
+  capabilities?: AICapability[];
+  canMentionOtherAI?: boolean;
+  collaborationStyle?: string;
 }
 
 export interface UpdateAIMemberDto {
@@ -295,6 +298,9 @@ export interface UpdateAIMemberDto {
   contextWindow?: number;
   responseStyle?: string;
   autoRespond?: boolean;
+  capabilities?: AICapability[];
+  canMentionOtherAI?: boolean;
+  collaborationStyle?: string;
 }
 
 export interface SendMessageDto {

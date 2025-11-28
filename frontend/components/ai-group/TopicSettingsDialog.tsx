@@ -486,6 +486,9 @@ function EditAIDialog({
   );
   const [systemPrompt, setSystemPrompt] = useState(ai.systemPrompt || '');
   const [autoRespond, setAutoRespond] = useState(ai.autoRespond);
+  const [canMentionOtherAI, setCanMentionOtherAI] = useState(
+    ai.canMentionOtherAI ?? false
+  );
   const [isSaving, setIsSaving] = useState(false);
   const { models } = useAIModels();
 
@@ -499,6 +502,7 @@ function EditAIDialog({
         roleDescription: roleDescription.trim() || undefined,
         systemPrompt: systemPrompt.trim() || undefined,
         autoRespond,
+        canMentionOtherAI,
       });
       onClose();
     } finally {
@@ -574,6 +578,26 @@ function EditAIDialog({
               Auto-respond to @mentions
             </span>
           </label>
+
+          {/* AI-AI Collaboration Toggle */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <label className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium text-gray-700">
+                  AI-AI Collaboration
+                </span>
+                <p className="text-xs text-gray-500">
+                  Allow this AI to @mention and collaborate with other AIs
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={canMentionOtherAI}
+                onChange={(e) => setCanMentionOtherAI(e.target.checked)}
+                className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </label>
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">

@@ -41,4 +41,13 @@ export class UpdateAIMemberDto {
   @IsOptional()
   @IsBoolean()
   autoRespond?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  canMentionOtherAI?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  collaborationStyle?: string;
 }

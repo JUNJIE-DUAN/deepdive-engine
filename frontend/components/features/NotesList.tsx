@@ -41,6 +41,7 @@ export default function NotesList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     loadNotes();
@@ -190,100 +191,118 @@ export default function NotesList({
 
       {/* Notes List - Single column for sidebar */}
       <div className="space-y-3">
-        {filteredNotes.map((note) => (
-          <div
-            key={note.id}
-            className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md"
-            onClick={() => onNoteClick?.(note)}
-          >
-            {/* Resource info header */}
-            {!resourceId && note.resource && (
-              <div className="mb-2 truncate text-xs text-gray-500">
-                <span className="font-medium">{note.resource.type}:</span>{' '}
-                {note.resource.title}
-              </div>
-            )}
+        {filteredNotes.map((note) => {
+          const isExpanded = expandedNoteId === note.id;
+          return (
+            <div
+              key={note.id}
+              className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md"
+              onClick={() => setExpandedNoteId(isExpanded ? null : note.id)}
+            >
+              {/* Resource info header */}
+              {!resourceId && note.resource && (
+                <div className="mb-2 truncate text-xs text-gray-500">
+                  <span className="font-medium">{note.resource.type}:</span>{' '}
+                  {note.resource.title}
+                </div>
+              )}
 
-            {/* Content preview - Markdown rendered */}
-            <div className="prose prose-sm mb-2 line-clamp-4 max-w-none text-sm leading-relaxed text-gray-700">
-              <ReactMarkdown
-                components={{
-                  // 简化标题显示
-                  h1: ({ children }) => (
-                    <span className="font-bold">{children}</span>
-                  ),
-                  h2: ({ children }) => (
-                    <span className="font-bold">{children}</span>
-                  ),
-                  h3: ({ children }) => (
-                    <span className="font-semibold">{children}</span>
-                  ),
-                  h4: ({ children }) => (
-                    <span className="font-semibold">{children}</span>
-                  ),
-                  // 列表项紧凑显示
-                  ul: ({ children }) => (
-                    <ul className="my-1 list-disc pl-4">{children}</ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol className="my-1 list-decimal pl-4">{children}</ol>
-                  ),
-                  li: ({ children }) => <li className="my-0">{children}</li>,
-                  // 段落紧凑
-                  p: ({ children }) => <p className="my-1">{children}</p>,
-                }}
+              {/* Content preview - Markdown rendered */}
+              <div
+                className={`prose prose-sm mb-2 max-w-none text-sm leading-relaxed text-gray-700 ${isExpanded ? '' : 'line-clamp-4'}`}
               >
-                {note.content}
-              </ReactMarkdown>
-            </div>
+                <ReactMarkdown
+                  components={{
+                    // 简化标题显示
+                    h1: ({ children }) => (
+                      <span className="font-bold">{children}</span>
+                    ),
+                    h2: ({ children }) => (
+                      <span className="font-bold">{children}</span>
+                    ),
+                    h3: ({ children }) => (
+                      <span className="font-semibold">{children}</span>
+                    ),
+                    h4: ({ children }) => (
+                      <span className="font-semibold">{children}</span>
+                    ),
+                    // 列表项紧凑显示
+                    ul: ({ children }) => (
+                      <ul className="my-1 list-disc pl-4">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="my-1 list-decimal pl-4">{children}</ol>
+                    ),
+                    li: ({ children }) => <li className="my-0">{children}</li>,
+                    // 段落紧凑
+                    p: ({ children }) => <p className="my-1">{children}</p>,
+                  }}
+                >
+                  {note.content}
+                </ReactMarkdown>
+              </div>
 
-            {/* Footer: Tags + Date + Actions */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                {/* Tags */}
-                {note.tags && note.tags.length > 0 && (
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700">
-                    {note.tags[0]}
-                    {note.tags.length > 1 && ` +${note.tags.length - 1}`}
+              {/* Footer: Tags + Date + Actions + Expand indicator */}
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  {/* Tags */}
+                  {note.tags && note.tags.length > 0 && (
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700">
+                      {note.tags[0]}
+                      {note.tags.length > 1 && ` +${note.tags.length - 1}`}
+                    </span>
+                  )}
+                  {/* Date */}
+                  <span className="text-gray-400">
+                    {new Date(note.createdAt).toLocaleDateString('zh-CN', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </span>
-                )}
-                {/* Date */}
-                <span className="text-gray-400">
-                  {new Date(note.createdAt).toLocaleDateString('zh-CN', {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
-              </div>
+                </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                {onEditNote && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditNote(note);
-                    }}
-                    className="text-blue-600 hover:text-blue-800"
+                {/* Actions + Expand indicator */}
+                <div className="flex items-center gap-2">
+                  {onEditNote && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditNote(note);
+                      }}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      编辑
+                    </button>
+                  )}
+                  {onDeleteNote && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(note.id);
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      删除
+                    </button>
+                  )}
+                  <svg
+                    className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    编辑
-                  </button>
-                )}
-                {onDeleteNote && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(note.id);
-                    }}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    删除
-                  </button>
-                )}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

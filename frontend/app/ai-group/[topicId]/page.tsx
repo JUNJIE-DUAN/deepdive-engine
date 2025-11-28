@@ -179,7 +179,7 @@ function MemberPanel({
   findModel: (aiModel: string) => AIModel | undefined;
 }) {
   return (
-    <div className="flex w-64 flex-col border-r border-gray-200 bg-white">
+    <div className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
       {/* Topic Header */}
       <div className="border-b border-gray-200 p-4">
         <div className="flex items-center gap-3">
@@ -673,7 +673,7 @@ const MessageBubble = memo(function MessageBubble({
 
       {/* Content */}
       <div
-        className={`max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}
+        className={`max-w-[70%] overflow-hidden ${isOwnMessage ? 'items-end' : 'items-start'}`}
       >
         {/* Header */}
         <div
@@ -1719,9 +1719,11 @@ export default function TopicPage() {
 
   if (!currentTopic) {
     return (
-      <div className="flex h-screen">
-        <Sidebar />
-        <div className="flex flex-1 items-center justify-center">
+      <div className="flex h-screen overflow-hidden">
+        <div className="h-full flex-shrink-0">
+          <Sidebar className="h-full" />
+        </div>
+        <div className="flex min-w-0 flex-1 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
         </div>
       </div>
@@ -1729,31 +1731,35 @@ export default function TopicPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Global Sidebar */}
-      <Sidebar />
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      {/* Global Sidebar - flex-shrink-0 ensures it never shrinks */}
+      <div className="h-full flex-shrink-0">
+        <Sidebar className="h-full" />
+      </div>
 
-      {/* Member Panel */}
-      <MemberPanel
-        topic={currentTopic}
-        onlineUsers={onlineUsers}
-        typingUsers={typingUsers}
-        typingAIs={typingAIs}
-        onMemberClick={(member) => {
-          // Could show member profile or initiate DM
-          console.log('Member clicked:', member);
-        }}
-        onAIClick={(ai) => {
-          // Could show AI config or quick mention
-          console.log('AI clicked:', ai);
-        }}
-        onInviteMember={() => setShowInviteDialog(true)}
-        isOwnerOrAdmin={isOwnerOrAdmin}
-        findModel={findModel}
-      />
+      {/* Member Panel - flex-shrink-0 ensures it never shrinks */}
+      <div className="h-full flex-shrink-0">
+        <MemberPanel
+          topic={currentTopic}
+          onlineUsers={onlineUsers}
+          typingUsers={typingUsers}
+          typingAIs={typingAIs}
+          onMemberClick={(member) => {
+            // Could show member profile or initiate DM
+            console.log('Member clicked:', member);
+          }}
+          onAIClick={(ai) => {
+            // Could show AI config or quick mention
+            console.log('AI clicked:', ai);
+          }}
+          onInviteMember={() => setShowInviteDialog(true)}
+          isOwnerOrAdmin={isOwnerOrAdmin}
+          findModel={findModel}
+        />
+      </div>
 
-      {/* Main Chat Area */}
-      <main className="flex flex-1 flex-col">
+      {/* Main Chat Area - min-w-0 prevents flex item from overflowing */}
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Chat Header */}
         <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
           <div className="flex items-center gap-3">
@@ -1856,7 +1862,10 @@ export default function TopicPage() {
         </div>
 
         {/* Messages Area - Virtualized for performance */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-auto">
+        <div
+          ref={messagesContainerRef}
+          className="min-h-0 flex-1 overflow-auto"
+        >
           {/* Load More Button */}
           {hasMoreMessages && (
             <div className="py-4 text-center">

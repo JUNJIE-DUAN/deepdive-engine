@@ -915,6 +915,7 @@ Format the summary in a clear, structured manner using markdown.`;
     messages: ChatMessage[];
     maxTokens?: number;
     temperature?: number;
+    displayName?: string; // AI member display name (e.g., "AI-Gemini (Image)")
   }): Promise<ChatCompletionResult> {
     const {
       provider,
@@ -925,6 +926,7 @@ Format the summary in a clear, structured manner using markdown.`;
       messages,
       maxTokens = 2048,
       temperature = 0.7,
+      displayName,
     } = options;
 
     this.logger.log(
@@ -986,9 +988,12 @@ Format the summary in a clear, structured manner using markdown.`;
             .filter((m) => m.role === "user")
             .pop();
           const userText = lastUserMsg?.content?.toLowerCase() || "";
-          if (this.isImageGenerationRequest(userText)) {
+          // Check if displayName contains "image" (e.g., "AI-ChatGPT (Image)")
+          const isOpenAIImageModel =
+            displayName?.toLowerCase().includes("image") || false;
+          if (this.isImageGenerationRequest(userText) || isOpenAIImageModel) {
             this.logger.log(
-              "Image generation request detected, using DALL-E 3",
+              `Image generation request detected (byContent=${this.isImageGenerationRequest(userText)}, byDisplayName=${isOpenAIImageModel}), using DALL-E 3`,
             );
             // Build context-aware prompt for DALL-E 3
             // Use English text to avoid garbled characters
@@ -1077,6 +1082,7 @@ Format the summary in a clear, structured manner using markdown.`;
             fullMessages,
             maxTokens,
             temperature,
+            displayName,
           );
 
         default:
@@ -1229,6 +1235,7 @@ Format the summary in a clear, structured manner using markdown.`;
     messages: ChatMessage[],
     maxTokens: number,
     temperature: number,
+    displayName?: string, // AI member display name (e.g., "AI-Gemini (Image)")
   ): Promise<ChatCompletionResult> {
     // Check if user is requesting image generation
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
@@ -1238,16 +1245,20 @@ Format the summary in a clear, structured manner using markdown.`;
     // Check if the configured model is Imagen (dedicated image generation)
     const isImagenModel = modelId.toLowerCase().includes("imagen");
     // Check if this is an "image" model that should use Imagen for better quality
-    const isImageModel = modelId.toLowerCase().includes("image");
+    const isImageModelById = modelId.toLowerCase().includes("image");
+    // IMPORTANT: Also check displayName - AI members like "AI-Gemini (Image)" have "Image" in their display name
+    const isImageModelByDisplayName =
+      displayName?.toLowerCase().includes("image") || false;
 
     // IMPORTANT: For image-specific models (like "AI-Gemini (Image)"),
     // ALWAYS generate images regardless of user message content
     // This ensures image models always produce images as expected
+    const isImageModel = isImageModelById || isImageModelByDisplayName;
     const isImageRequest =
       isImageRequestByContent || isImageModel || isImagenModel;
 
     this.logger.log(
-      `[Gemini] Image detection: modelId=${modelId}, isImageModel=${isImageModel}, isImagenModel=${isImagenModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
+      `[Gemini] Image detection: modelId=${modelId}, displayName=${displayName}, isImageModelById=${isImageModelById}, isImageModelByDisplayName=${isImageModelByDisplayName}, isImagenModel=${isImagenModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
     );
 
     // Build context-aware prompt for image generation

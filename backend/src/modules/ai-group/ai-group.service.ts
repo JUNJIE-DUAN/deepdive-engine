@@ -1416,6 +1416,7 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           messages: chatMessages,
           maxTokens: effectiveMaxTokens,
           temperature: aiModelConfig?.temperature || 0.7,
+          displayName: aiMember.displayName, // Pass display name for image model detection
         });
       } else {
         // No API key available - will return mock response

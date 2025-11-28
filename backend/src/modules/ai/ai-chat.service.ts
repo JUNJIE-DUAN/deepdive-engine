@@ -1224,7 +1224,7 @@ Format the summary in a clear, structured manner using markdown.`;
       try {
         const imagenResult = await this.callImagenApi(
           apiKey,
-          "imagen-3.0-generate-001",
+          "imagen-4.0-generate-001",
           lastUserMessage?.content || "",
         );
         // If Imagen succeeded, return the result
@@ -1445,7 +1445,7 @@ Format the summary in a clear, structured manner using markdown.`;
       try {
         const imagenResult = await this.callImagenApi(
           apiKey,
-          "imagen-3.0-generate-001",
+          "imagen-4.0-generate-001",
           userPrompt,
         );
 
@@ -1629,33 +1629,38 @@ Format the summary in a clear, structured manner using markdown.`;
     modelId: string,
     prompt: string,
   ): Promise<ChatCompletionResult> {
-    // Determine the correct Imagen model name
-    // Common Imagen models: imagen-3.0-generate-001, imagen-3.0-fast-generate-001
-    const imagenModel = modelId.includes("imagen")
+    // Use Imagen 4.0 as it's the latest available model via Gemini API
+    // Available models: imagen-4.0-generate-001, imagen-4.0-ultra-generate-001, imagen-4.0-fast-generate-001
+    const imagenModel = modelId.includes("imagen-4")
       ? modelId
-      : "imagen-3.0-generate-001";
+      : "imagen-4.0-generate-001";
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${imagenModel}:generateImages?key=${apiKey}`;
+    // Correct endpoint format: :predict with x-goog-api-key header
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${imagenModel}:predict`;
 
-    this.logger.log(`[Imagen] Calling API: ${url.replace(apiKey, "***")}`);
+    this.logger.log(`[Imagen] Calling API: ${url}`);
     this.logger.log(
       `[Imagen] Model: ${imagenModel}, Prompt length: ${prompt.length}`,
     );
 
     try {
+      // Correct request format for Imagen API via Gemini
       const response = await firstValueFrom(
         this.httpService.post(
           url,
           {
-            prompt: prompt,
-            config: {
-              numberOfImages: 1,
-              aspectRatio: "1:1",
-              outputMimeType: "image/png",
+            instances: [
+              {
+                prompt: prompt,
+              },
+            ],
+            parameters: {
+              sampleCount: 1,
             },
           },
           {
             headers: {
+              "x-goog-api-key": apiKey,
               "Content-Type": "application/json",
             },
             timeout: 120000, // 2 minutes for image generation
@@ -1665,45 +1670,72 @@ Format the summary in a clear, structured manner using markdown.`;
 
       const data = response.data;
       this.logger.log(
-        `[Imagen] Response received, has images: ${!!data.generatedImages}`,
+        `[Imagen] Response received, keys: ${Object.keys(data).join(", ")}`,
       );
 
+      // Response format can vary - handle both formats:
+      // 1. SDK format: { generatedImages: [{ image: { imageBytes: "..." } }] }
+      // 2. REST format: { predictions: [{ bytesBase64Encoded: "..." }] }
+      let images: string[] = [];
+
+      // Try SDK format first (generatedImages)
       if (data.generatedImages && data.generatedImages.length > 0) {
-        const images = data.generatedImages
+        images = data.generatedImages
           .map((img: any, index: number) => {
-            if (img.image?.imageBytes) {
-              return `![Generated Image ${index + 1}](data:image/png;base64,${img.image.imageBytes})`;
+            const imageBytes = img.image?.imageBytes || img.imageBytes;
+            if (imageBytes) {
+              const cleanBase64 = imageBytes.replace(/\s/g, "");
+              return `![Generated Image ${index + 1}](data:image/png;base64,${cleanBase64})`;
             }
             return null;
           })
           .filter(Boolean);
-
-        if (images.length > 0) {
-          this.logger.log(
-            `[Imagen] Successfully generated ${images.length} image(s)`,
-          );
-          return {
-            content: images.join("\n\n"),
-            model: imagenModel,
-            tokensUsed: 0,
-          };
-        }
       }
 
-      // If no images, log the response structure
+      // Try REST format (predictions)
+      if (
+        images.length === 0 &&
+        data.predictions &&
+        data.predictions.length > 0
+      ) {
+        images = data.predictions
+          .map((pred: any, index: number) => {
+            const imageBytes =
+              pred.bytesBase64Encoded || pred.image?.imageBytes;
+            if (imageBytes) {
+              const cleanBase64 = imageBytes.replace(/\s/g, "");
+              return `![Generated Image ${index + 1}](data:image/png;base64,${cleanBase64})`;
+            }
+            return null;
+          })
+          .filter(Boolean);
+      }
+
+      if (images.length > 0) {
+        this.logger.log(
+          `[Imagen] Successfully generated ${images.length} image(s)`,
+        );
+        return {
+          content: images.join("\n\n"),
+          model: imagenModel,
+          tokensUsed: 0,
+        };
+      }
+
+      // If no images, log the response structure for debugging
       this.logger.warn(
-        `[Imagen] No images in response: ${JSON.stringify(data).substring(0, 500)}`,
+        `[Imagen] No images found in response: ${JSON.stringify(data).substring(0, 1000)}`,
       );
-      throw new Error("No images generated");
+      throw new Error("No images generated - check response format");
     } catch (error: any) {
       const errorMsg = error.response?.data?.error?.message || error.message;
       this.logger.error(`[Imagen] API error: ${errorMsg}`);
       this.logger.error(
-        `[Imagen] Full error: ${JSON.stringify(error.response?.data || {}).substring(0, 500)}`,
+        `[Imagen] Full error: ${JSON.stringify(error.response?.data || {}).substring(0, 1000)}`,
       );
 
       return {
-        content: `抱歉，Imagen 图像生成失败: ${errorMsg}\n\n请确认:\n1. Google API Key 具有 Imagen API 访问权限\n2. 模型 ID 正确 (如 imagen-3.0-generate-001)\n3. Imagen API 已在 Google Cloud 项目中启用`,
+        content: `抱歉，Imagen 图像生成失败: ${errorMsg}\n\n请确认:\n1. Google API Key 具有 Imagen API 访问权限\n2. 模型 imagen-4.0-generate-001 已可用\n3. Imagen API 已在 Google Cloud 项目中启用`,
         model: imagenModel,
         tokensUsed: 0,
       };

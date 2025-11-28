@@ -1266,9 +1266,17 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
 
     // Get AI model configuration from database
     // 重要：aiMember.aiModel 现在存储的是 modelId（唯一），而不是 name（非唯一）
-    // 这样可以精确匹配用户选择的具体模型，避免同一 provider 下多个模型混淆
-    // 兼容旧数据：如果 modelId 找不到，退回到用 name 查找
-    this.logger.log(`Looking up AI model by modelId: "${aiMember.aiModel}"`);
+    this.logger.log(
+      `[AI Model Lookup] aiMember.aiModel = "${aiMember.aiModel}", displayName = "${aiMember.displayName}"`,
+    );
+
+    // 先列出所有模型，方便调试
+    const allModelsDebug = await this.prisma.aIModel.findMany({
+      select: { modelId: true, name: true, isEnabled: true, apiKey: true },
+    });
+    this.logger.log(
+      `[AI Model Lookup] All models in DB: ${JSON.stringify(allModelsDebug.map((m) => ({ modelId: m.modelId, name: m.name, enabled: m.isEnabled, hasKey: !!m.apiKey })))}`,
+    );
 
     // 优先用 modelId 精确匹配（新方式）
     let aiModelConfig = await this.prisma.aIModel.findFirst({
@@ -1281,10 +1289,14 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
       },
     });
 
+    this.logger.log(
+      `[AI Model Lookup] By modelId "${aiMember.aiModel}": ${aiModelConfig ? `found (hasApiKey=${!!aiModelConfig.apiKey})` : "NOT FOUND"}`,
+    );
+
     // 兼容旧数据：如果 modelId 找不到，退回到用 name 查找
     if (!aiModelConfig) {
       this.logger.log(
-        `modelId not found, falling back to name lookup: "${aiMember.aiModel}"`,
+        `[AI Model Lookup] Falling back to name lookup: "${aiMember.aiModel}"`,
       );
       aiModelConfig = await this.prisma.aIModel.findFirst({
         where: {
@@ -1295,6 +1307,9 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           isEnabled: true,
         },
       });
+      this.logger.log(
+        `[AI Model Lookup] By name: ${aiModelConfig ? `found (hasApiKey=${!!aiModelConfig.apiKey})` : "NOT FOUND"}`,
+      );
     }
 
     // 详细日志帮助调试

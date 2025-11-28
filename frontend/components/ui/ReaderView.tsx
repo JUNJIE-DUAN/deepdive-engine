@@ -340,46 +340,124 @@ export default function ReaderView({
             {/* 文章正文 - 使用 prose 样式，支持纯文本和 HTML */}
             <div
               className="prose prose-lg prose-headings:font-bold
-                prose-headings:text-gray-900 prose-headings:mt-8 prose-headings:mb-4 prose-p:text-gray-700
-                prose-p:leading-[1.8] prose-p:mb-6 prose-a:text-blue-600
-                prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900
-                prose-strong:font-semibold prose-code:bg-gray-100
-                prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-gray-900
-                prose-pre:text-gray-100 prose-pre:rounded-lg prose-pre:p-4 prose-img:rounded-lg
-                prose-img:shadow-md prose-img:my-8 prose-blockquote:border-l-4
-                prose-blockquote:border-blue-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:bg-blue-50 prose-blockquote:py-4 prose-blockquote:pr-4 prose-blockquote:rounded-r-lg prose-blockquote:my-6 prose-ul:list-disc
-                prose-ul:pl-6 prose-ul:my-4 prose-ol:list-decimal
-                prose-ol:pl-6 prose-ol:my-4 prose-li:text-gray-700
-                prose-li:my-2 prose-li:leading-[1.7] prose-hr:my-8
-                prose-hr:border-gray-200 max-w-none
-                [&>*:first-child]:mt-0"
+                prose-headings:text-gray-900 prose-headings:mt-10 prose-headings:mb-4
+                prose-h1:text-2xl prose-h1:border-b prose-h1:border-gray-200 prose-h1:pb-3
+                prose-h2:text-xl prose-h2:text-gray-800
+                prose-h3:text-lg prose-h3:text-gray-800
+                prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:mb-5 prose-p:text-[17px]
+                prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+                prose-strong:text-gray-900 prose-strong:font-bold
+                prose-em:text-gray-800 prose-em:italic
+                prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:text-red-600
+                prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-lg prose-pre:p-4
+                prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8 prose-img:mx-auto
+                prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:bg-gradient-to-r prose-blockquote:from-blue-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-4 prose-blockquote:rounded-r-lg prose-blockquote:my-8 prose-blockquote:text-gray-700
+                prose-ul:list-disc prose-ul:pl-6 prose-ul:my-5 prose-ul:space-y-2
+                prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-5 prose-ol:space-y-2
+                prose-li:text-gray-700 prose-li:leading-[1.8] prose-li:text-[17px]
+                prose-hr:my-10 prose-hr:border-gray-200
+                prose-table:border-collapse prose-table:w-full prose-th:bg-gray-100 prose-th:p-3 prose-th:text-left prose-td:p-3 prose-td:border prose-td:border-gray-200
+                max-w-none [&>*:first-child]:mt-0"
             >
-              {/* 检查内容是否包含HTML标签，如果是纯文本则转换为段落 */}
+              {/* 检查内容是否包含HTML标签，如果是纯文本则智能转换 */}
               {article.content.includes('<p>') ||
               article.content.includes('<div>') ||
               article.content.includes('<h') ? (
                 <div dangerouslySetInnerHTML={{ __html: article.content }} />
               ) : (
-                // 纯文本内容：按换行符分割成段落
+                // 纯文本内容：智能识别格式并转换
                 <div>
                   {article.content
                     .split(/\n\n+/)
                     .filter((para) => para.trim())
-                    .map((paragraph, index) => (
-                      <p
-                        key={index}
-                        className="mb-6 leading-[1.8] text-gray-700"
-                      >
-                        {paragraph.split('\n').map((line, lineIndex) => (
-                          <span key={lineIndex}>
-                            {line}
-                            {lineIndex < paragraph.split('\n').length - 1 && (
-                              <br />
-                            )}
-                          </span>
-                        ))}
-                      </p>
-                    ))}
+                    .map((paragraph, index) => {
+                      const trimmed = paragraph.trim();
+
+                      // 检测标题模式 (以数字+点开头，如 "1. Title" 或 "Section 1:")
+                      const isNumberedHeading =
+                        /^(\d+\.|\w+\s+\d+[:.])/.test(trimmed) &&
+                        trimmed.length < 100;
+                      const isSectionHeading =
+                        /^(Section|Chapter|Part|Sec\.|[A-Z][a-z]*:)/.test(
+                          trimmed
+                        ) && trimmed.length < 120;
+                      const isShortTitle =
+                        trimmed.length < 80 &&
+                        !trimmed.includes('.') &&
+                        /^[A-Z]/.test(trimmed);
+
+                      // 检测列表项
+                      const listItems = trimmed
+                        .split('\n')
+                        .filter((line) =>
+                          /^(\s*[-•*]\s+|\s*\d+[.)]\s+|\s*\([a-z]\)\s+|\s*\([ivx]+\)\s+)/i.test(
+                            line
+                          )
+                        );
+                      const isListBlock = listItems.length > 1;
+
+                      if (isNumberedHeading || isSectionHeading) {
+                        return (
+                          <h2
+                            key={index}
+                            className="mb-4 mt-10 border-l-4 border-blue-500 pl-4 text-xl font-bold text-gray-900"
+                          >
+                            {trimmed}
+                          </h2>
+                        );
+                      }
+
+                      if (isShortTitle && index > 0) {
+                        return (
+                          <h3
+                            key={index}
+                            className="mb-3 mt-8 text-lg font-semibold text-gray-800"
+                          >
+                            {trimmed}
+                          </h3>
+                        );
+                      }
+
+                      if (isListBlock) {
+                        return (
+                          <ul key={index} className="my-5 space-y-2 pl-6">
+                            {trimmed.split('\n').map((item, i) => {
+                              const cleanItem = item
+                                .replace(
+                                  /^(\s*[-•*]\s+|\s*\d+[.)]\s+|\s*\([a-z]\)\s+|\s*\([ivx]+\)\s+)/i,
+                                  ''
+                                )
+                                .trim();
+                              return cleanItem ? (
+                                <li
+                                  key={i}
+                                  className="leading-[1.8] text-gray-700"
+                                >
+                                  {cleanItem}
+                                </li>
+                              ) : null;
+                            })}
+                          </ul>
+                        );
+                      }
+
+                      // 普通段落
+                      return (
+                        <p
+                          key={index}
+                          className="mb-5 text-[17px] leading-[1.9] text-gray-700"
+                        >
+                          {paragraph.split('\n').map((line, lineIndex) => (
+                            <span key={lineIndex}>
+                              {line}
+                              {lineIndex < paragraph.split('\n').length - 1 && (
+                                <br />
+                              )}
+                            </span>
+                          ))}
+                        </p>
+                      );
+                    })}
                 </div>
               )}
             </div>

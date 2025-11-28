@@ -401,7 +401,13 @@ function YouTubeTLDWContent() {
       );
       if (response.ok) {
         const data = await response.json();
-        setSavedNotes(data.items || data || []);
+        // Ensure savedNotes is always an array
+        const notes = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+            ? data.items
+            : [];
+        setSavedNotes(notes);
       }
     } catch (error) {
       console.error('Failed to load notes:', error);

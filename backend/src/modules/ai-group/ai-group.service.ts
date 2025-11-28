@@ -1520,15 +1520,27 @@ ${messagesForSummary
           select: { id: true, displayName: true },
         });
 
+        // 按消息中@mention的顺序收集AI（而不是数据库顺序）
         const mentionedAIIds: string[] = [];
+        const msgContent = lastUserMsg.content;
+
+        // 创建一个数组存储每个AI在消息中的位置
+        const aiPositions: Array<{ id: string; position: number }> = [];
         for (const ai of allAIsInTopic) {
           const mentionPattern = new RegExp(
             `@${this.escapeRegExp(ai.displayName)}`,
             "i",
           );
-          if (mentionPattern.test(lastUserMsg.content)) {
-            mentionedAIIds.push(ai.id);
+          const match = msgContent.match(mentionPattern);
+          if (match && match.index !== undefined) {
+            aiPositions.push({ id: ai.id, position: match.index });
           }
+        }
+
+        // 按在消息中出现的位置排序，确保第一个@的AI是红方
+        aiPositions.sort((a, b) => a.position - b.position);
+        for (const ap of aiPositions) {
+          mentionedAIIds.push(ap.id);
         }
 
         // 如果@了两个或以上AI，进入辩论模式

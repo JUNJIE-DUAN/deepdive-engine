@@ -227,7 +227,7 @@ function parseMarkdownToInsights(markdown: string): AIInsight[] {
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, accessToken } = useAuth();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -645,9 +645,13 @@ function HomeContent() {
 
       // Handle YouTube tab separately - fetch from both sources
       if (activeTab === 'youtube') {
-        // Fetch from youtube-videos table
+        // Fetch from youtube-videos table (user's saved videos)
         const youtubeVideosUrl = `${config.apiUrl}/youtube-videos`;
-        const youtubeRes = await fetch(youtubeVideosUrl);
+        const youtubeRes = await fetch(youtubeVideosUrl, {
+          headers: accessToken
+            ? { Authorization: `Bearer ${accessToken}` }
+            : {},
+        });
         const youtubeData = await youtubeRes.json();
         const youtubeVideos = (
           Array.isArray(youtubeData) ? youtubeData : youtubeData.data || []

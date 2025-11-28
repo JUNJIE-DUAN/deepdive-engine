@@ -190,6 +190,30 @@ export class AiGroupController {
     return this.aiGroupService.removeAIMember(topicId, req.user.id, aiMemberId);
   }
 
+  /**
+   * 红蓝思辨快捷创建 API
+   * 一键设置两个 AI 成员进行辩论
+   */
+  @Post(":topicId/ai-members/debate")
+  async setupDebate(
+    @Request() req: any,
+    @Param("topicId") topicId: string,
+    @Body()
+    dto: {
+      redAiModel: string; // 红方使用的模型，如 "grok-3"
+      blueAiModel: string; // 蓝方使用的模型，如 "gpt-5.1"
+      topic?: string; // 辩论主题（可选，用于自定义 prompt）
+    },
+  ) {
+    return this.aiGroupService.setupDebateAIs(
+      topicId,
+      req.user.id,
+      dto.redAiModel,
+      dto.blueAiModel,
+      dto.topic,
+    );
+  }
+
   // ==================== Messages ====================
 
   @Get(":topicId/messages")

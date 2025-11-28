@@ -568,6 +568,126 @@ export class AiGroupService {
     });
   }
 
+  /**
+   * 红蓝思辨快捷设置
+   * 一键创建两个 AI 成员进行辩论
+   */
+  async setupDebateAIs(
+    topicId: string,
+    userId: string,
+    redAiModel: string,
+    blueAiModel: string,
+    debateTopic?: string,
+  ) {
+    await this.checkTopicPermission(topicId, userId, [
+      TopicRole.OWNER,
+      TopicRole.ADMIN,
+    ]);
+
+    const topicDescription = debateTopic
+      ? `\n当前辩论主题：${debateTopic}`
+      : "";
+
+    // 红方 prompt
+    const redPrompt = `你是【红方】辩手，负责正方立场。
+
+## 辩论规则
+1. 积极提出观点和论据，主动进攻
+2. **必须使用具体数据、研究报告、权威来源作为佐证**
+3. 引用时注明来源（如：根据XX研究、XX报告显示...）
+4. 每次发言后必须 @蓝方 等待对方回应
+5. 保持理性，专注论点而非人身攻击
+6. 第3轮后进行总结陈词${topicDescription}
+
+## 论证要求
+- 使用你的知识库中的真实数据和案例
+- 引用可查证的研究、报告、统计数据
+- 提供具体的例子和数字支撑论点
+- 如有可能，提供相关链接或来源
+
+## 发言格式
+**我方观点**：[核心论点]
+**数据佐证**：[具体数据、研究、案例，注明来源]
+**逻辑推理**：[论证过程]
+**向对方提问**：[针对性问题]
+
+@蓝方 请回应`;
+
+    // 蓝方 prompt
+    const bluePrompt = `你是【蓝方】辩手，负责反方立场。
+
+## 辩论规则
+1. 质疑对方观点，寻找逻辑漏洞和数据问题
+2. **必须使用具体数据、研究报告、权威来源反驳**
+3. 引用时注明来源（如：根据XX研究、XX报告显示...）
+4. 每次发言后必须 @红方 继续辩论
+5. 保持理性，专注论点而非人身攻击
+6. 第3轮后进行总结陈词${topicDescription}
+
+## 论证要求
+- 检验对方数据的准确性和来源可靠性
+- 提出相反的数据和研究作为反驳
+- 使用你的知识库中的真实信息
+- 如有可能，提供相关链接或来源
+
+## 发言格式
+**对方观点分析**：[分析对方论点的问题]
+**反驳证据**：[具体数据、研究、案例，注明来源]
+**逻辑漏洞**：[指出对方论证的问题]
+**质疑点**：[向对方提出的问题]
+
+@红方 请继续`;
+
+    // 创建红方 AI
+    const redAI = await this.prisma.topicAIMember.create({
+      data: {
+        topicId,
+        addedById: userId,
+        aiModel: redAiModel,
+        displayName: "红方",
+        roleDescription: "正方辩手，主动进攻",
+        systemPrompt: redPrompt,
+        canMentionOtherAI: true,
+        collaborationStyle: "debate",
+        contextWindow: 20,
+      },
+    });
+
+    // 创建蓝方 AI
+    const blueAI = await this.prisma.topicAIMember.create({
+      data: {
+        topicId,
+        addedById: userId,
+        aiModel: blueAiModel,
+        displayName: "蓝方",
+        roleDescription: "反方辩手，质疑反驳",
+        systemPrompt: bluePrompt,
+        canMentionOtherAI: true,
+        collaborationStyle: "debate",
+        contextWindow: 20,
+      },
+    });
+
+    this.logger.log(
+      `[Debate Setup] Created debate AIs for topic ${topicId}: red=${redAI.id}, blue=${blueAI.id}`,
+    );
+
+    return {
+      message: "红蓝思辨 AI 设置成功",
+      redAI: {
+        id: redAI.id,
+        displayName: redAI.displayName,
+        aiModel: redAI.aiModel,
+      },
+      blueAI: {
+        id: blueAI.id,
+        displayName: blueAI.displayName,
+        aiModel: blueAI.aiModel,
+      },
+      usage: "发送 '@红方 [你的辩题]' 开始辩论",
+    };
+  }
+
   // ==================== Messages ====================
 
   async getMessages(
@@ -1395,14 +1515,21 @@ ${messagesForSummary
               `- @${ai.displayName}${ai.roleDescription ? ` (${ai.roleDescription})` : ""}`,
           )
           .join("\n");
-        aiCollaborationPrompt = `\n\n## AI Collaboration
-You can collaborate with other AI assistants in this group by mentioning them with @.
-When you need a different perspective, specialized knowledge, or want to delegate a task, you can @mention another AI.
-Available AI assistants:
+        aiCollaborationPrompt = `\n\n## AI Collaboration (IMPORTANT)
+You can DIRECTLY trigger other AI assistants to respond by mentioning them with @.
+When you write "@AI-Name" in your response, the system will AUTOMATICALLY send your message to that AI and they WILL respond.
+This is NOT just text - it's a real function call that triggers the other AI.
+
+Available AI assistants you can call:
 ${aiList}
 
-Example: "I think @AI-Claude might have better insights on this topic." or "Let me ask @AI-Gemini-Image to generate an illustration."
-Only @mention other AIs when it genuinely adds value to the discussion.`;
+HOW TO USE:
+- Write "@AI-Name" anywhere in your response to trigger that AI
+- The mentioned AI will see your message and respond
+- You can ask them questions, request their expertise, or debate with them
+
+Example: "Let me ask @AI-Gemini (Image) to create a visualization for this data."
+The system will then automatically trigger AI-Gemini to respond with an image.`;
       }
     }
 
@@ -2202,19 +2329,21 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
 
     // 检查消息内容中是否包含@AI名称
     for (const ai of aiMembers) {
-      // 检查各种@格式：@AI-Name, @AIName, @"AI Name"
+      // 检查各种@格式：@AI-Name, @AIName, @"AI Name", @AI-Name(xxx)
       const patterns = [
-        new RegExp(`@${this.escapeRegExp(ai.displayName)}(?![\\w-])`, "i"),
+        new RegExp(`@${this.escapeRegExp(ai.displayName)}(?![\\w])`, "i"),
         new RegExp(`@"${this.escapeRegExp(ai.displayName)}"`, "i"),
         new RegExp(`@'${this.escapeRegExp(ai.displayName)}'`, "i"),
       ];
 
       for (const pattern of patterns) {
         if (pattern.test(content)) {
-          // 只有当AI设置了autoRespond时才自动响应
-          if (ai.autoRespond) {
-            mentionedAIs.push({ id: ai.id, displayName: ai.displayName });
-          }
+          // AI-AI 协作：当一个 AI @另一个 AI 时，总是触发响应
+          // 不再依赖 autoRespond 设置
+          mentionedAIs.push({ id: ai.id, displayName: ai.displayName });
+          this.logger.log(
+            `[AI-AI] Detected mention of ${ai.displayName} in content`,
+          );
           break;
         }
       }

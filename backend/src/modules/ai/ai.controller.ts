@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Res,
+  Param,
   BadRequestException,
   HttpException,
   Logger,
@@ -333,6 +334,85 @@ export class AiController {
         apiKeyPrefix: apiKey.substring(0, 10) + "...",
       };
     }
+  }
+
+  /**
+   * 检查 Topic 的 AI 成员配置（公共 API，用于调试）
+   * GET /api/v1/ai/check-topic-ai/:topicId
+   */
+  @Get("check-topic-ai/:topicId")
+  async checkTopicAI(@Param("topicId") topicId: string) {
+    this.logger.log(`Checking AI members for topic ${topicId}`);
+
+    const topic = await this.prisma.topic.findUnique({
+      where: { id: topicId },
+      include: {
+        aiMembers: true,
+      },
+    });
+
+    if (!topic) {
+      return { error: "Topic not found" };
+    }
+
+    // Check each AI member's model lookup
+    const results: any[] = [];
+    for (const ai of topic.aiMembers) {
+      // Try to find by modelId
+      const byModelId = await this.prisma.aIModel.findFirst({
+        where: {
+          modelId: { equals: ai.aiModel, mode: "insensitive" },
+          isEnabled: true,
+        },
+      });
+
+      // Try to find by name
+      const byName = await this.prisma.aIModel.findFirst({
+        where: {
+          name: { equals: ai.aiModel, mode: "insensitive" },
+          isEnabled: true,
+        },
+      });
+
+      results.push({
+        aiMemberId: ai.id,
+        displayName: ai.displayName,
+        storedAiModel: ai.aiModel,
+        foundByModelId: byModelId
+          ? {
+              id: byModelId.id,
+              name: byModelId.name,
+              modelId: byModelId.modelId,
+              hasApiKey: !!byModelId.apiKey,
+            }
+          : null,
+        foundByName: byName
+          ? {
+              id: byName.id,
+              name: byName.name,
+              modelId: byName.modelId,
+              hasApiKey: !!byName.apiKey,
+            }
+          : null,
+        willWork: !!(byModelId?.apiKey || byName?.apiKey),
+        problem:
+          !byModelId && !byName
+            ? "Model not found in database"
+            : !(byModelId?.apiKey || byName?.apiKey)
+              ? "Model found but no API key"
+              : null,
+      });
+    }
+
+    return {
+      topicId,
+      topicName: topic.name,
+      aiMemberCount: topic.aiMembers.length,
+      results,
+      recommendation: results.some((r) => !r.willWork)
+        ? "Some AI members won't work. Re-add them from the settings to use the correct modelId."
+        : "All AI members configured correctly.",
+    };
   }
 
   /**

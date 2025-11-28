@@ -1493,6 +1493,120 @@ ${messagesForSummary
       ? `\n\n## Earlier Discussion Context\n${contextSummary}`
       : "";
 
+    // ==================== 辩论模式检测 ====================
+    // 检测用户消息是否触发辩论模式（@两个AI + 辩论关键词）
+    let debatePrompt = "";
+    const debateKeywords = [
+      "辩论",
+      "辩一下",
+      "辩一辩",
+      "思辨",
+      "红蓝",
+      "正方反方",
+      "debate",
+      "argue",
+    ];
+    const lastUserMsg = contextMessages.find((m) => m.senderId);
+    if (lastUserMsg) {
+      const msgContent = lastUserMsg.content.toLowerCase();
+      const isDebateRequest = debateKeywords.some((kw) =>
+        msgContent.includes(kw.toLowerCase()),
+      );
+
+      if (isDebateRequest) {
+        // 获取消息中@的所有AI
+        const allAIsInTopic = await this.prisma.topicAIMember.findMany({
+          where: { topicId },
+          select: { id: true, displayName: true },
+        });
+
+        const mentionedAIIds: string[] = [];
+        for (const ai of allAIsInTopic) {
+          const mentionPattern = new RegExp(
+            `@${this.escapeRegExp(ai.displayName)}`,
+            "i",
+          );
+          if (mentionPattern.test(lastUserMsg.content)) {
+            mentionedAIIds.push(ai.id);
+          }
+        }
+
+        // 如果@了两个或以上AI，进入辩论模式
+        if (mentionedAIIds.length >= 2) {
+          const myIndex = mentionedAIIds.indexOf(aiMemberId);
+          const isRedTeam = myIndex === 0; // 第一个@的是红方
+          const opponentId = isRedTeam ? mentionedAIIds[1] : mentionedAIIds[0];
+          const opponent = allAIsInTopic.find((ai) => ai.id === opponentId);
+          const opponentName = opponent?.displayName || "对方";
+
+          // 提取辩论主题（去掉@mentions后的内容）
+          let debateTopic = lastUserMsg.content
+            .replace(/@[\w\-()（）\s]+/g, "")
+            .replace(/辩论|辩一下|辩一辩|思辨|红蓝|正方反方|debate|argue/gi, "")
+            .replace(/[：:]/g, "")
+            .trim();
+
+          this.logger.log(
+            `[Debate Mode] Detected! AI=${aiMember.displayName}, role=${isRedTeam ? "红方" : "蓝方"}, opponent=${opponentName}, topic=${debateTopic}`,
+          );
+
+          if (isRedTeam) {
+            debatePrompt = `
+## 🔴 辩论模式已激活 - 你是【红方/正方】
+
+**辩论主题**：${debateTopic || "（请根据上下文确定主题）"}
+**你的对手**：@${opponentName}
+
+### 你的角色
+- 你是正方，需要**支持**该主题的立场
+- 积极提出观点，主动进攻
+- 使用数据、研究、案例作为佐证
+- 每次发言后必须 @${opponentName} 让对方回应
+
+### 论证要求
+- 引用具体数据和来源（如：根据XX研究...）
+- 提供可验证的案例和证据
+- 逻辑清晰，论点明确
+
+### 发言格式
+**我方立场**：[明确表态支持/反对]
+**核心论点**：[你的主要观点]
+**数据佐证**：[具体数据、研究，注明来源]
+**向对方提问**：[针对性问题]
+
+@${opponentName} 请回应
+`;
+          } else {
+            debatePrompt = `
+## 🔵 辩论模式已激活 - 你是【蓝方/反方】
+
+**辩论主题**：${debateTopic || "（请根据上下文确定主题）"}
+**你的对手**：@${opponentName}
+
+### 你的角色
+- 你是反方，需要**反对/质疑**红方的立场
+- 寻找对方论证的漏洞和问题
+- 使用数据、研究、案例进行反驳
+- 每次发言后必须 @${opponentName} 继续辩论
+
+### 论证要求
+- 检验对方数据的准确性
+- 提出反面证据和案例
+- 指出逻辑漏洞
+
+### 发言格式
+**对方观点问题**：[分析对方论点的漏洞]
+**我方反驳**：[你的反驳观点]
+**反面证据**：[具体数据、研究，注明来源]
+**质疑点**：[向对方提出的问题]
+
+@${opponentName} 请继续
+`;
+          }
+        }
+      }
+    }
+
     // AI-AI协作：如果启用，告诉AI可以@其他AI
     let aiCollaborationPrompt = "";
     if (aiMember.canMentionOtherAI) {
@@ -1533,9 +1647,13 @@ The system will then automatically trigger AI-Gemini to respond with an image.`;
       }
     }
 
-    const systemPrompt =
-      aiMember.systemPrompt ||
-      `You are ${aiMember.displayName}, an AI assistant participating in a group discussion.
+    // 如果有辩论模式，辩论prompt优先级最高
+    const systemPrompt = debatePrompt
+      ? `You are ${aiMember.displayName}.
+${debatePrompt}
+${contextSummarySection}${resourceContext}${urlContext}${searchContext}`
+      : aiMember.systemPrompt ||
+        `You are ${aiMember.displayName}, an AI assistant participating in a group discussion.
 ${aiMember.roleDescription ? `Your role: ${aiMember.roleDescription}` : ""}
 You are in a discussion group called "${topic?.name}".
 ${topic?.description ? `Group description: ${topic.description}` : ""}${contextSummarySection}${resourceContext}${urlContext}${searchContext}${aiCollaborationPrompt}

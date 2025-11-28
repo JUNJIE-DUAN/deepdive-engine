@@ -1205,27 +1205,61 @@ Format the summary in a clear, structured manner using markdown.`;
     // Check if this is an "image" model that should use Imagen for better quality
     const isImageModel = modelId.toLowerCase().includes("image");
 
+    // Build context-aware prompt for image generation
+    // CRITICAL: Include previous AI responses so image generation has proper context
+    const buildImagePrompt = (): string => {
+      // Get the last few messages for context (both user and assistant messages)
+      const recentMessages = messages.slice(-10); // Last 10 messages for context
+
+      // Build a context string that includes AI outputs
+      const contextParts: string[] = [];
+
+      for (const msg of recentMessages) {
+        if (msg.role === "assistant" && msg.name) {
+          // This is an AI's previous response - include it as context
+          // Truncate to avoid overly long prompts
+          const truncatedContent = msg.content.substring(0, 2000);
+          contextParts.push(`[${msg.name}'s analysis]: ${truncatedContent}`);
+        }
+      }
+
+      // Get the user's current request
+      const userRequest = lastUserMessage?.content || "";
+
+      // If there's context from other AIs, include it
+      if (contextParts.length > 0) {
+        const context = contextParts.join("\n\n");
+        return `Based on the following context from the discussion:\n\n${context}\n\nUser's request: ${userRequest}\n\nGenerate an image that accurately represents the data and information described above.`;
+      }
+
+      return userRequest;
+    };
+
     // If using Imagen model for image generation, use dedicated Imagen API
     if (isImageRequest && isImagenModel) {
       this.logger.log(`Using Imagen model for image generation: ${modelId}`);
-      return await this.callImagenApi(
-        apiKey,
-        modelId,
-        lastUserMessage?.content || "",
+      const imagePrompt = buildImagePrompt();
+      this.logger.log(
+        `[Imagen] Context-aware prompt length: ${imagePrompt.length}`,
       );
+      return await this.callImagenApi(apiKey, modelId, imagePrompt);
     }
 
     // For image generation with "image" models (like gemini-3-pro-image-preview),
-    // use Imagen 3 for better quality instead of gemini-2.0-flash-exp
+    // use Imagen 4 for better quality instead of gemini-2.0-flash-exp
     if (isImageRequest && isImageModel) {
       this.logger.log(
-        `Image model ${modelId} detected, using Imagen 3 for better quality`,
+        `Image model ${modelId} detected, using Imagen 4 for better quality`,
+      );
+      const imagePrompt = buildImagePrompt();
+      this.logger.log(
+        `[Imagen] Context-aware prompt length: ${imagePrompt.length}`,
       );
       try {
         const imagenResult = await this.callImagenApi(
           apiKey,
           "imagen-4.0-generate-001",
-          lastUserMessage?.content || "",
+          imagePrompt,
         );
         // If Imagen succeeded, return the result
         if (
@@ -1236,7 +1270,7 @@ Format the summary in a clear, structured manner using markdown.`;
         }
       } catch (imagenError) {
         this.logger.warn(
-          `Imagen 3 failed, falling back to Gemini: ${imagenError}`,
+          `Imagen 4 failed, falling back to Gemini: ${imagenError}`,
         );
       }
       // Fall through to Gemini if Imagen fails
@@ -1437,16 +1471,41 @@ Format the summary in a clear, structured manner using markdown.`;
         `[Gemini] Image generation requested but no images returned, falling back to Imagen API`,
       );
 
-      // Get the original user prompt for Imagen
-      const lastUserMessage = messages.filter((m) => m.role === "user").pop();
-      const userPrompt = lastUserMessage?.content || "";
+      // Build context-aware prompt for Imagen fallback
+      // Include previous AI responses so image generation has proper context
+      const buildFallbackImagePrompt = (): string => {
+        const recentMessages = messages.slice(-10);
+        const contextParts: string[] = [];
+
+        for (const msg of recentMessages) {
+          if (msg.role === "assistant" && msg.name) {
+            const truncatedContent = msg.content.substring(0, 2000);
+            contextParts.push(`[${msg.name}'s analysis]: ${truncatedContent}`);
+          }
+        }
+
+        const lastUserMsg = messages.filter((m) => m.role === "user").pop();
+        const userRequest = lastUserMsg?.content || "";
+
+        if (contextParts.length > 0) {
+          const context = contextParts.join("\n\n");
+          return `Based on the following context from the discussion:\n\n${context}\n\nUser's request: ${userRequest}\n\nGenerate an image that accurately represents the data and information described above.`;
+        }
+
+        return userRequest;
+      };
+
+      const imagePrompt = buildFallbackImagePrompt();
+      this.logger.log(
+        `[Imagen Fallback] Context-aware prompt length: ${imagePrompt.length}`,
+      );
 
       // Try Imagen API as fallback
       try {
         const imagenResult = await this.callImagenApi(
           apiKey,
           "imagen-4.0-generate-001",
-          userPrompt,
+          imagePrompt,
         );
 
         // If Imagen succeeded, combine with Gemini's text response

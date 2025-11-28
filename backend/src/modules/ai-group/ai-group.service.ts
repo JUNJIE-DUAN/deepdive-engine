@@ -1237,6 +1237,18 @@ ${messagesForSummary
 
     const aiMember = await this.prisma.topicAIMember.findFirst({
       where: { id: aiMemberId, topicId },
+      select: {
+        id: true,
+        aiModel: true,
+        displayName: true,
+        avatar: true,
+        roleDescription: true,
+        systemPrompt: true,
+        contextWindow: true,
+        capabilities: true, // Include AI capabilities for image generation decision
+        canMentionOtherAI: true,
+        collaborationStyle: true,
+      },
     });
 
     if (!aiMember) {
@@ -1618,7 +1630,8 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           messages: chatMessages,
           maxTokens: effectiveMaxTokens,
           temperature: aiModelConfig?.temperature || 0.7,
-          displayName: aiMember.displayName, // Pass display name for image model detection
+          displayName: aiMember.displayName,
+          capabilities: aiMember.capabilities || [], // Pass AI capabilities for image generation decision
         });
       } else {
         // No API key available - will return mock response

@@ -928,7 +928,7 @@ Format the summary in a clear, structured manner using markdown.`;
       maxTokens = 2048,
       temperature = 0.7,
       displayName,
-      capabilities: _capabilities = [], // Reserved for future use
+      capabilities = [], // AI capabilities for image generation decision
     } = options;
 
     this.logger.log(
@@ -990,12 +990,16 @@ Format the summary in a clear, structured manner using markdown.`;
             .filter((m) => m.role === "user")
             .pop();
           const userText = lastUserMsg?.content?.toLowerCase() || "";
-          // Check if displayName contains "image" (e.g., "AI-ChatGPT (Image)")
-          const isOpenAIImageModel =
-            displayName?.toLowerCase().includes("image") || false;
-          if (this.isImageGenerationRequest(userText) || isOpenAIImageModel) {
+          // Check if this AI has image generation capability
+          const hasImageCapability = capabilities.includes("IMAGE_GENERATION");
+          // Only generate images if:
+          // 1. User explicitly requested an image (via keywords), AND
+          // 2. AI has IMAGE_GENERATION capability
+          // NOTE: Having IMAGE_GENERATION capability alone is NOT enough - user must request it
+          const isImageRequest = this.isImageGenerationRequest(userText);
+          if (isImageRequest && hasImageCapability) {
             this.logger.log(
-              `Image generation request detected (byContent=${this.isImageGenerationRequest(userText)}, byDisplayName=${isOpenAIImageModel}), using DALL-E 3`,
+              `Image generation request detected (byContent=${isImageRequest}, hasCapability=${hasImageCapability}), using DALL-E 3`,
             );
             // Build context-aware prompt for DALL-E 3
             // Use English text to avoid garbled characters
@@ -1085,6 +1089,7 @@ Format the summary in a clear, structured manner using markdown.`;
             maxTokens,
             temperature,
             displayName,
+            capabilities,
           );
 
         default:
@@ -1247,29 +1252,27 @@ Format the summary in a clear, structured manner using markdown.`;
     maxTokens: number,
     temperature: number,
     displayName?: string, // AI member display name (e.g., "AI-Gemini (Image)")
+    capabilities: string[] = [], // AI capabilities
   ): Promise<ChatCompletionResult> {
     // Check if user is requesting image generation
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
     const userContent = lastUserMessage?.content?.toLowerCase() || "";
     const isImageRequestByContent = this.isImageGenerationRequest(userContent);
 
-    // Check if the configured model is Imagen (dedicated image generation)
-    const isImagenModel = modelId.toLowerCase().includes("imagen");
-    // Check if this is an "image" model that should use Imagen for better quality
-    const isImageModelById = modelId.toLowerCase().includes("image");
-    // IMPORTANT: Also check displayName - AI members like "AI-Gemini (Image)" have "Image" in their display name
-    const isImageModelByDisplayName =
-      displayName?.toLowerCase().includes("image") || false;
+    // Check if this AI has IMAGE_GENERATION capability
+    const hasImageCapability = capabilities.includes("IMAGE_GENERATION");
 
-    // IMPORTANT: For image-specific models (like "AI-Gemini (Image)"),
-    // ALWAYS generate images regardless of user message content
-    // This ensures image models always produce images as expected
-    const isImageModel = isImageModelById || isImageModelByDisplayName;
-    const isImageRequest =
-      isImageRequestByContent || isImageModel || isImagenModel;
+    // Check if the configured model is Imagen (dedicated image generation model)
+    const isImagenModel = modelId.toLowerCase().includes("imagen");
+
+    // Only generate images if:
+    // 1. User explicitly requested an image (via keywords), AND
+    // 2. AI has IMAGE_GENERATION capability
+    // NOTE: Having IMAGE_GENERATION capability alone is NOT enough - user must request it
+    const isImageRequest = isImageRequestByContent && hasImageCapability;
 
     this.logger.log(
-      `[Gemini] Image detection: modelId=${modelId}, displayName=${displayName}, isImageModelById=${isImageModelById}, isImageModelByDisplayName=${isImageModelByDisplayName}, isImagenModel=${isImagenModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
+      `[Gemini] Image detection: modelId=${modelId}, displayName=${displayName}, hasImageCapability=${hasImageCapability}, isImagenModel=${isImagenModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
     );
 
     // Build context-aware prompt for image generation

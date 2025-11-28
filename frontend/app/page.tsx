@@ -14,7 +14,100 @@ import ReaderView from '@/components/ui/ReaderView';
 import NotesList from '@/components/features/NotesList';
 import CommentsList from '@/components/features/CommentsList';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import ReportWorkspace from '@/components/features/ReportWorkspace';
+
+// Extract base64 images from markdown content
+function extractImagesFromMarkdown(content: string): {
+  images: Array<{ alt: string; src: string }>;
+  textContent: string;
+} {
+  const imageRegex =
+    /!\[([^\]]*)\]\s*\(\s*(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)\s*\)/g;
+  const images: Array<{ alt: string; src: string }> = [];
+  let textContent = content;
+
+  let match;
+  while ((match = imageRegex.exec(content)) !== null) {
+    images.push({
+      alt: match[1] || 'Generated Image',
+      src: match[2],
+    });
+  }
+
+  textContent = content.replace(imageRegex, '').trim();
+
+  // Also try standalone base64 data
+  if (images.length === 0 && content.includes('data:image/')) {
+    const standaloneBase64Regex =
+      /(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)/g;
+    let standaloneMatch;
+    while ((standaloneMatch = standaloneBase64Regex.exec(content)) !== null) {
+      images.push({
+        alt: 'Generated Image',
+        src: standaloneMatch[1],
+      });
+    }
+    textContent = content
+      .replace(standaloneBase64Regex, '')
+      .replace(/!\[[^\]]*\]\s*\(\s*\)/g, '')
+      .replace(/!\[[^\]]*\]/g, '')
+      .trim();
+  }
+
+  return { images, textContent };
+}
+
+// Base64 Image Component
+function Base64Image({ src, alt }: { src: string; alt: string }) {
+  const [imgError, setImgError] = useState<string | null>(null);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  if (imgError) {
+    return (
+      <div className="my-3 rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+        <span className="block text-red-600">Image failed to load</span>
+        <span className="mt-1 block text-xs text-gray-500">{imgError}</span>
+        <a
+          href={src}
+          download={`generated-image-${Date.now()}.png`}
+          className="mt-2 inline-block text-sm text-blue-600 hover:underline"
+        >
+          Download Image
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="my-3">
+      {!imgLoaded && (
+        <div className="flex h-48 items-center justify-center rounded-lg bg-gray-100">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        className={`max-w-full rounded-lg shadow-md ${imgLoaded ? 'block' : 'hidden'}`}
+        onLoad={() => setImgLoaded(true)}
+        onError={() => {
+          const sizeKB = Math.round(src.length / 1024);
+          setImgError(`Failed to decode (${sizeKB} KB)`);
+        }}
+      />
+      {imgLoaded && (
+        <a
+          href={src}
+          download={`generated-image-${Date.now()}.png`}
+          className="mt-2 inline-block text-sm text-blue-600 hover:underline"
+        >
+          Download Image
+        </a>
+      )}
+    </div>
+  );
+}
 import { useReportWorkspace } from '@/lib/use-report-workspace';
 import FilterPanel from '@/components/features/FilterPanel';
 import { ImportUrlDialog } from '@/components/ImportUrlDialog';
@@ -2718,7 +2811,26 @@ function HomeContent() {
                         className="prose prose-sm max-w-none cursor-text select-text p-3"
                         onContextMenu={(e) => handleContextMenu(e, aiSummary)}
                       >
-                        <ReactMarkdown>{aiSummary}</ReactMarkdown>
+                        {(() => {
+                          const { images, textContent } =
+                            extractImagesFromMarkdown(aiSummary);
+                          return (
+                            <>
+                              {/* Render extracted images first */}
+                              {images.map((img, idx) => (
+                                <Base64Image
+                                  key={idx}
+                                  src={img.src}
+                                  alt={img.alt}
+                                />
+                              ))}
+                              {/* Render text content with markdown */}
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {textContent}
+                              </ReactMarkdown>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
@@ -2885,7 +2997,24 @@ function HomeContent() {
                             }
                           >
                             <div className="prose-xs prose max-w-none text-xs leading-relaxed [&>*]:my-1 [&>ol]:my-1 [&>p]:my-1 [&>ul]:my-1">
-                              <ReactMarkdown>{msg.content}</ReactMarkdown>
+                              {(() => {
+                                const { images, textContent } =
+                                  extractImagesFromMarkdown(msg.content);
+                                return (
+                                  <>
+                                    {images.map((img, idx) => (
+                                      <Base64Image
+                                        key={idx}
+                                        src={img.src}
+                                        alt={img.alt}
+                                      />
+                                    ))}
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                      {textContent}
+                                    </ReactMarkdown>
+                                  </>
+                                );
+                              })()}
                             </div>
                             <div
                               className={`mt-1 text-[10px] ${

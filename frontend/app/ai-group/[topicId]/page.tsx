@@ -18,6 +18,7 @@ import Link from 'next/link';
 import TopicSettingsDialog from '@/components/ai-group/TopicSettingsDialog';
 import ResourcesPanel from '@/components/ai-group/ResourcesPanel';
 import SummaryDialog from '@/components/ai-group/SummaryDialog';
+import MessageSelectionToolbar from '@/components/ai-group/MessageSelectionToolbar';
 import Sidebar from '@/components/layout/Sidebar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -432,6 +433,7 @@ function MessageContextMenu({
   onReply,
   onCopy,
   onReact,
+  onSelect,
   messageContent,
 }: {
   x: number;
@@ -440,6 +442,7 @@ function MessageContextMenu({
   onReply: () => void;
   onCopy: () => void;
   onReact: (emoji: string) => void;
+  onSelect: () => void;
   messageContent: string;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -515,6 +518,28 @@ function MessageContextMenu({
         </svg>
         复制内容
       </button>
+      <button
+        onClick={() => {
+          onSelect();
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+          />
+        </svg>
+        多选消息
+      </button>
       <div className="my-1 border-t border-gray-100" />
       <div className="px-3 py-1 text-xs text-gray-400">快速表情</div>
       <div className="flex gap-1 px-2 py-1">
@@ -543,6 +568,9 @@ const MessageBubble = memo(function MessageBubble({
   onReact,
   currentUserId,
   findModel,
+  isSelectionMode,
+  isSelected,
+  onToggleSelect,
 }: {
   message: TopicMessage;
   isOwnMessage: boolean;
@@ -550,6 +578,9 @@ const MessageBubble = memo(function MessageBubble({
   onReact: (messageId: string, emoji: string) => void;
   currentUserId: string;
   findModel: (aiModel: string) => AIModel | undefined;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (messageId: string) => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [needsCollapse, setNeedsCollapse] = useState(false);
@@ -643,10 +674,18 @@ const MessageBubble = memo(function MessageBubble({
     {} as Record<string, { emoji: string; count: number; hasOwn: boolean }>
   );
 
+  // Handle click for selection mode
+  const handleClick = useCallback(() => {
+    if (isSelectionMode && onToggleSelect) {
+      onToggleSelect(message.id);
+    }
+  }, [isSelectionMode, onToggleSelect, message.id]);
+
   return (
     <div
-      className={`group flex gap-3 px-4 py-2 transition-colors hover:bg-gray-50 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
+      className={`group flex gap-3 px-4 py-2 transition-colors hover:bg-gray-50 ${isOwnMessage ? 'flex-row-reverse' : ''} ${isSelected ? 'bg-blue-50' : ''} ${isSelectionMode ? 'cursor-pointer' : ''}`}
       onContextMenu={handleContextMenu}
+      onClick={handleClick}
     >
       {/* Context Menu */}
       {contextMenu && (
@@ -657,9 +696,40 @@ const MessageBubble = memo(function MessageBubble({
           onReply={() => onReply(message)}
           onCopy={handleCopy}
           onReact={(emoji) => onReact(message.id, emoji)}
+          onSelect={() => onToggleSelect?.(message.id)}
           messageContent={message.content || ''}
         />
       )}
+
+      {/* Selection Checkbox */}
+      {isSelectionMode && (
+        <div className="flex flex-shrink-0 items-center">
+          <div
+            className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+              isSelected
+                ? 'border-blue-500 bg-blue-500'
+                : 'border-gray-300 bg-white hover:border-blue-400'
+            }`}
+          >
+            {isSelected && (
+              <svg
+                className="h-3 w-3 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Avatar */}
       <div
         className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${
@@ -875,6 +945,8 @@ function SimpleMessageList({
   onReact,
   messagesEndRef,
   findModel,
+  selectedMessages,
+  onToggleSelect,
 }: {
   messages: TopicMessage[];
   currentUserId: string;
@@ -882,7 +954,11 @@ function SimpleMessageList({
   onReact: (messageId: string, emoji: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   findModel: (aiModel: string) => AIModel | undefined;
+  selectedMessages: Set<string>;
+  onToggleSelect: (messageId: string) => void;
 }) {
+  const isSelectionMode = selectedMessages.size > 0;
+
   return (
     <div className="flex flex-col gap-1 px-4 py-4">
       {messages.map((message) => (
@@ -894,6 +970,9 @@ function SimpleMessageList({
           onReact={onReact}
           currentUserId={currentUserId}
           findModel={findModel}
+          isSelectionMode={isSelectionMode}
+          isSelected={selectedMessages.has(message.id)}
+          onToggleSelect={onToggleSelect}
         />
       ))}
       <div ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
@@ -1481,6 +1560,7 @@ export default function TopicPage() {
   const isAuthenticated = !!accessToken;
 
   const {
+    topics,
     currentTopic,
     messages,
     isLoadingMessages,
@@ -1488,6 +1568,7 @@ export default function TopicPage() {
     onlineUsers,
     typingUsers,
     typingAIs,
+    fetchTopics,
     fetchTopic,
     fetchMessages,
     sendMessage,
@@ -1501,6 +1582,29 @@ export default function TopicPage() {
     clearMessages,
     generateAIResponse,
   } = useAiGroupStore();
+
+  // Message selection state
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Toggle message selection
+  const handleToggleSelect = useCallback((messageId: string) => {
+    setSelectedMessages((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Clear all selections
+  const handleClearSelection = useCallback(() => {
+    setSelectedMessages(new Set());
+  }, []);
 
   // 查找模型：优先用 modelId 匹配（新方式），兼容旧数据
   const findModel = useCallback(
@@ -1523,12 +1627,14 @@ export default function TopicPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef(0);
 
-  // Load topic and messages
+  // Load topic, messages, and topics list (for forward feature)
   useEffect(() => {
     if (!authLoading && isAuthenticated && topicId) {
       fetchTopic(topicId);
       clearMessages();
       fetchMessages(topicId);
+      // Fetch topics list for forward dialog
+      fetchTopics();
     }
   }, [
     authLoading,
@@ -1537,6 +1643,7 @@ export default function TopicPage() {
     fetchTopic,
     fetchMessages,
     clearMessages,
+    fetchTopics,
   ]);
 
   // Connect to WebSocket
@@ -1906,6 +2013,8 @@ export default function TopicPage() {
               onReact={handleReaction}
               messagesEndRef={messagesEndRef}
               findModel={findModel}
+              selectedMessages={selectedMessages}
+              onToggleSelect={handleToggleSelect}
             />
           )}
 
@@ -1945,6 +2054,19 @@ export default function TopicPage() {
           findModel={findModel}
         />
       </main>
+
+      {/* Message Selection Toolbar */}
+      <MessageSelectionToolbar
+        selectedMessages={selectedMessages}
+        messages={messages}
+        topics={topics}
+        currentTopicId={topicId}
+        onClearSelection={handleClearSelection}
+        onForwardSuccess={() => {
+          // Refresh messages after forward
+          fetchMessages(topicId);
+        }}
+      />
 
       {/* Dialogs */}
       {showSettings && (

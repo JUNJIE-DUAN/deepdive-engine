@@ -57,6 +57,7 @@ export class NotesController {
     @Request() req: any,
     @Query("skip") skip?: string,
     @Query("take") take?: string,
+    @Query("source") source?: string,
   ) {
     const userId = req.user?.id;
     if (!userId) {
@@ -64,7 +65,7 @@ export class NotesController {
     }
     const skipNum = skip ? parseInt(skip, 10) : 0;
     const takeNum = take ? parseInt(take, 10) : 50;
-    return this.notesService.getUserNotes(userId, skipNum, takeNum);
+    return this.notesService.getUserNotes(userId, skipNum, takeNum, source);
   }
 
   /**

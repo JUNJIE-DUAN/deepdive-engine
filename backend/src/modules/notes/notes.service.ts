@@ -79,10 +79,15 @@ export class NotesService {
   /**
    * 获取用户的所有笔记
    */
-  async getUserNotes(userId: string, skip = 0, take = 50) {
+  async getUserNotes(userId: string, skip = 0, take = 50, source?: string) {
+    const where: any = { userId };
+    if (source) {
+      where.source = source;
+    }
+
     const [notes, total] = await Promise.all([
       this.prisma.note.findMany({
-        where: { userId },
+        where,
         include: {
           resource: {
             select: {
@@ -100,7 +105,7 @@ export class NotesService {
         take,
       }),
       this.prisma.note.count({
-        where: { userId },
+        where,
       }),
     ]);
 

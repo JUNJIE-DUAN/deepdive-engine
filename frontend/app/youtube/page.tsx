@@ -402,11 +402,14 @@ function YouTubeTLDWContent() {
       if (response.ok) {
         const data = await response.json();
         // Ensure savedNotes is always an array
+        // Backend returns { notes, total, skip, take }
         const notes = Array.isArray(data)
           ? data
-          : Array.isArray(data?.items)
-            ? data.items
-            : [];
+          : Array.isArray(data?.notes)
+            ? data.notes
+            : Array.isArray(data?.items)
+              ? data.items
+              : [];
         setSavedNotes(notes);
       }
     } catch (error) {

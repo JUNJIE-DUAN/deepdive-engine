@@ -991,6 +991,7 @@ Format the summary in a clear, structured manner using markdown.`;
               "Image generation request detected, using DALL-E 3",
             );
             // Build context-aware prompt for DALL-E 3
+            // Use English text to avoid garbled characters
             const buildDallEPrompt = (): string => {
               const recentMessages = fullMessages.slice(-10);
               const contextParts: string[] = [];
@@ -1008,10 +1009,16 @@ Format the summary in a clear, structured manner using markdown.`;
 
               if (contextParts.length > 0) {
                 const context = contextParts.join("\n\n");
-                return `Based on the following context:\n\n${context}\n\nUser's request: ${userRequest}\n\nCreate a high-quality infographic or visualization that accurately represents the data and information described above. Use clear labels, professional design, and ensure all text is legible.`;
+                return `Based on the following context:\n\n${context}\n\nUser's request: ${userRequest}\n\nIMPORTANT INSTRUCTIONS FOR IMAGE GENERATION:
+1. Create a professional infographic or data visualization
+2. ALL TEXT IN THE IMAGE MUST BE IN ENGLISH - do not use Chinese or other non-Latin characters as they may appear garbled
+3. If the context contains Chinese data/names, translate them to English equivalents
+4. Use clean, modern design with clear labels, legends, and proper typography
+5. Ensure all text is legible and properly rendered
+6. Use appropriate charts (bar, line, pie) to visualize numerical data`;
               }
 
-              return userRequest;
+              return `${userRequest}\n\nIMPORTANT: All text in the image must be in English. Use clean, professional design.`;
             };
 
             const dallePrompt = buildDallEPrompt();
@@ -1235,6 +1242,7 @@ Format the summary in a clear, structured manner using markdown.`;
 
     // Build context-aware prompt for image generation
     // CRITICAL: Include previous AI responses so image generation has proper context
+    // IMPORTANT: Use English for all text in the image to avoid garbled characters
     const buildImagePrompt = (): string => {
       // Get the last few messages for context (both user and assistant messages)
       const recentMessages = messages.slice(-10); // Last 10 messages for context
@@ -1257,10 +1265,18 @@ Format the summary in a clear, structured manner using markdown.`;
       // If there's context from other AIs, include it
       if (contextParts.length > 0) {
         const context = contextParts.join("\n\n");
-        return `Based on the following context from the discussion:\n\n${context}\n\nUser's request: ${userRequest}\n\nGenerate an image that accurately represents the data and information described above.`;
+        // IMPORTANT: Explicitly instruct to use English text to avoid garbled Chinese characters
+        return `Based on the following context from the discussion:\n\n${context}\n\nUser's request: ${userRequest}\n\nIMPORTANT INSTRUCTIONS FOR IMAGE GENERATION:
+1. Create a professional infographic or data visualization
+2. ALL TEXT IN THE IMAGE MUST BE IN ENGLISH - do not use Chinese or other non-Latin characters as they will appear garbled
+3. If the context contains Chinese data/names, translate them to English equivalents
+4. Use clean, modern design with clear labels and legends
+5. Ensure all text is legible and properly rendered
+6. Use appropriate charts (bar, line, pie) to visualize numerical data`;
       }
 
-      return userRequest;
+      // For simple requests, add English instruction
+      return `${userRequest}\n\nIMPORTANT: All text in the image must be in English. Use clean, professional design.`;
     };
 
     // If using Imagen model for image generation, use dedicated Imagen API
@@ -1500,6 +1516,7 @@ Format the summary in a clear, structured manner using markdown.`;
 
       // Build context-aware prompt for Imagen fallback
       // Include previous AI responses so image generation has proper context
+      // Use English text to avoid garbled characters
       const buildFallbackImagePrompt = (): string => {
         const recentMessages = messages.slice(-10);
         const contextParts: string[] = [];
@@ -1516,10 +1533,15 @@ Format the summary in a clear, structured manner using markdown.`;
 
         if (contextParts.length > 0) {
           const context = contextParts.join("\n\n");
-          return `Based on the following context from the discussion:\n\n${context}\n\nUser's request: ${userRequest}\n\nGenerate an image that accurately represents the data and information described above.`;
+          return `Based on the following context from the discussion:\n\n${context}\n\nUser's request: ${userRequest}\n\nIMPORTANT INSTRUCTIONS:
+1. Create a professional infographic or data visualization
+2. ALL TEXT IN THE IMAGE MUST BE IN ENGLISH - do not use Chinese or other non-Latin characters
+3. If the context contains Chinese data/names, translate them to English
+4. Use clean, modern design with clear labels and legends
+5. Ensure all text is legible and properly rendered`;
         }
 
-        return userRequest;
+        return `${userRequest}\n\nIMPORTANT: All text in the image must be in English.`;
       };
 
       const imagePrompt = buildFallbackImagePrompt();

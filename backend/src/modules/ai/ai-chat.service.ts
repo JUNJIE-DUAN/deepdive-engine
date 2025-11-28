@@ -1115,7 +1115,16 @@ Format the summary in a clear, structured manner using markdown.`;
       this.logger.error(
         `API call failed for ${provider}: ${JSON.stringify(errorDetails)}`,
       );
-      return this.getMockResponse(modelId, messages);
+      // IMPORTANT: Return error message instead of mock response
+      // This helps users understand what went wrong
+      const errorMessage =
+        (error as any).response?.data?.error?.message ||
+        (error instanceof Error ? error.message : "Unknown API error");
+      return {
+        content: `API Error: ${errorMessage}\n\nProvider: ${provider}\nModel: ${modelId}\n\nPlease check your API key and model configuration.`,
+        model: modelId,
+        tokensUsed: 0,
+      };
     }
   }
 

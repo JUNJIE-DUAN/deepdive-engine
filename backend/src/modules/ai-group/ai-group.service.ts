@@ -1279,6 +1279,7 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     );
 
     // 优先用 modelId 精确匹配（新方式）
+    // CRITICAL: Must explicitly select apiKey, otherwise it may be excluded
     let aiModelConfig = await this.prisma.aIModel.findFirst({
       where: {
         modelId: {
@@ -1287,10 +1288,20 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
         },
         isEnabled: true,
       },
+      select: {
+        id: true,
+        name: true,
+        modelId: true,
+        provider: true,
+        apiKey: true,
+        apiEndpoint: true,
+        temperature: true,
+        isEnabled: true,
+      },
     });
 
     this.logger.log(
-      `[AI Model Lookup] By modelId "${aiMember.aiModel}": ${aiModelConfig ? `found (hasApiKey=${!!aiModelConfig.apiKey})` : "NOT FOUND"}`,
+      `[AI Model Lookup] By modelId "${aiMember.aiModel}": ${aiModelConfig ? `found (id=${aiModelConfig.id}, hasApiKey=${!!aiModelConfig.apiKey}, apiKeyLen=${aiModelConfig.apiKey?.length || 0})` : "NOT FOUND"}`,
     );
 
     // 兼容旧数据：如果 modelId 找不到，退回到用 name 查找
@@ -1306,9 +1317,19 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           },
           isEnabled: true,
         },
+        select: {
+          id: true,
+          name: true,
+          modelId: true,
+          provider: true,
+          apiKey: true,
+          apiEndpoint: true,
+          temperature: true,
+          isEnabled: true,
+        },
       });
       this.logger.log(
-        `[AI Model Lookup] By name: ${aiModelConfig ? `found (hasApiKey=${!!aiModelConfig.apiKey})` : "NOT FOUND"}`,
+        `[AI Model Lookup] By name: ${aiModelConfig ? `found (id=${aiModelConfig.id}, hasApiKey=${!!aiModelConfig.apiKey}, apiKeyLen=${aiModelConfig.apiKey?.length || 0})` : "NOT FOUND"}`,
       );
     }
 

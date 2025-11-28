@@ -1379,16 +1379,18 @@ Generate an image that fulfills the current request while maintaining consistenc
         .replace(/!\[.*?\]\(data:image\/[^)]+\)/g, "") // Remove base64 images
         .trim();
 
-      // Enhance prompt with instructions to avoid garbled text
+      // Enhance prompt with instructions for professional business graphics
       // Gemini image models struggle with Chinese characters in images
       const enhancedPrompt = `${cleanPrompt}
 
-IMPORTANT IMAGE GENERATION RULES:
-1. ALL text in the image MUST be in English only - never use Chinese, Japanese, or other non-Latin characters as they will appear garbled
-2. If the request mentions Chinese companies/concepts, translate them to English (e.g., 腾讯=Tencent, 阿里巴巴=Alibaba)
-3. Use clean, professional infographic or chart design
-4. Make sure all labels, titles, and data are clearly readable
-5. Use accurate, realistic data when creating charts or visualizations`;
+CRITICAL IMAGE GENERATION REQUIREMENTS:
+1. LANGUAGE: ALL text MUST be in English only - Chinese/Japanese characters will appear garbled. Translate any Chinese names (腾讯=Tencent, 阿里巴巴=Alibaba, 微软=Microsoft, 英伟达=NVIDIA, etc.)
+2. STYLE: Professional minimalist business style - clean white/light background, subtle colors, corporate aesthetic
+3. TYPOGRAPHY: Clear, legible sans-serif fonts (like Arial, Helvetica). All labels must be crisp and readable
+4. DATA: Use ACCURATE, REALISTIC market data. For tech companies, use actual market cap ranges (Apple ~$3T, Microsoft ~$3T, NVIDIA ~$2T, etc.)
+5. LAYOUT: Clean logical structure with clear hierarchy. Use proper spacing and alignment
+6. CHARTS: Professional bar charts, line graphs, or pie charts with proper axes, legends, and data labels
+7. COLORS: Muted professional palette - blues, grays, subtle accent colors. Avoid bright neon colors`;
 
       this.logger.log(
         `[Gemini 3 Image] Using single-turn format, prompt: "${cleanPrompt.substring(0, 100)}..."`,

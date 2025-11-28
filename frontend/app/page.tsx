@@ -1398,7 +1398,18 @@ function HomeContent() {
     setAiLoading(true);
 
     try {
-      const content = `Title: ${selectedResource.title}\n\nAbstract: ${selectedResource.abstract || selectedResource.aiSummary || ''}`;
+      // Use article text content if available (from Reader Mode), otherwise fall back to abstract
+      const mainContent =
+        articleTextContent ||
+        selectedResource.abstract ||
+        selectedResource.aiSummary ||
+        '';
+      // Limit content length to avoid token limits (max ~8000 chars for context)
+      const truncatedContent =
+        mainContent.length > 8000
+          ? mainContent.substring(0, 8000) + '\n\n[Content truncated...]'
+          : mainContent;
+      const content = `Title: ${selectedResource.title}\n\nContent:\n${truncatedContent}`;
 
       const res = await fetch('/api/ai-service/ai/quick-action', {
         method: 'POST',

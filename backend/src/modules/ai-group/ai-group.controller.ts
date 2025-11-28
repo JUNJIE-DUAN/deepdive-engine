@@ -329,12 +329,16 @@ export class AiGroupController {
       const debateInfo = this.detectDebateMode(dto.content, aiMembersToRespond);
 
       if (debateInfo.isDebate && debateInfo.redAI && debateInfo.blueAI) {
-        // 辩论模式：按红蓝方顺序触发
+        // 辩论模式：红方先发言，通过@触发蓝方回应
+        // 关键改进：不再同时触发两个AI，而是让红方先发言，然后通过AI-AI协作机制自动触发蓝方
         this.logger.log(
           `[Debate Mode] Detected! Red: ${debateInfo.redAI.displayName}, Blue: ${debateInfo.blueAI.displayName}, Topic: ${debateInfo.topic}`,
         );
+        this.logger.log(
+          `[Debate Mode] Only triggering RED first. Blue will be triggered by RED's @mention.`,
+        );
 
-        // 先触发红方
+        // 只触发红方，蓝方会通过红方回复中的@mention自动触发
         this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
           topicId,
           aiMemberId: debateInfo.redAI.id,
@@ -347,24 +351,9 @@ export class AiGroupController {
           { role: "red", opponent: debateInfo.blueAI, topic: debateInfo.topic },
         );
 
-        // 延迟触发蓝方（等红方先回复）
-        setTimeout(() => {
-          this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
-            topicId,
-            aiMemberId: debateInfo.blueAI!.id,
-          });
-          this.generateAIResponseInBackground(
-            topicId,
-            req.user.id,
-            debateInfo.blueAI!.id,
-            0,
-            {
-              role: "blue",
-              opponent: debateInfo.redAI!,
-              topic: debateInfo.topic,
-            },
-          );
-        }, 2000);
+        // 注意：不再在这里触发蓝方！
+        // 蓝方会通过 generateAIResponseInBackground 中的 AI-AI 协作机制
+        // 在红方回复后自动触发（因为红方会@蓝方）
 
         // 其他 AI 作为观察者（如果有）
         for (const ai of aiMembersToRespond) {
@@ -519,7 +508,7 @@ export class AiGroupController {
 
         if (mentionedAIs.length > 0) {
           this.logger.log(
-            `[AI-AI Collaboration] AI ${aiMemberId} mentioned: ${mentionedAIs.map((ai) => ai.displayName).join(", ")}`,
+            `[AI-AI Collaboration] AI ${aiMemberId} (${aiMessage.aiMember?.displayName}) mentioned: ${mentionedAIs.map((ai) => ai.displayName).join(", ")}`,
           );
 
           // 检查是否超过辩论轮次限制
@@ -535,27 +524,42 @@ export class AiGroupController {
           for (let i = 0; i < mentionedAIs.length; i++) {
             const mentionedAI = mentionedAIs[i];
 
-            // 如果是辩论模式，传递相反的角色给对手
-            let nextDebateRole = null;
-            if (debateRole && mentionedAI.id === debateRole.opponent.id) {
-              // 对手回应，角色互换
-              nextDebateRole = {
-                role:
-                  debateRole.role === "red"
-                    ? "blue"
-                    : ("red" as "red" | "blue"),
-                opponent: {
-                  id: aiMemberId,
-                  displayName: aiMessage.aiMember?.displayName || "",
-                },
-                topic: debateRole.topic,
-              };
+            // 辩论模式下的角色传递逻辑（核心修复）
+            let nextDebateRole: {
+              role: "red" | "blue";
+              opponent: { id: string; displayName: string };
+              topic: string;
+            } | null = null;
+
+            if (debateRole) {
+              // 当前AI有辩论角色，需要传递给被@的AI
+              const currentAIName = aiMessage.aiMember?.displayName || "";
+
+              if (mentionedAI.id === debateRole.opponent.id) {
+                // 被@的是对手，传递相反角色
+                nextDebateRole = {
+                  role: debateRole.role === "red" ? "blue" : "red",
+                  opponent: {
+                    id: aiMemberId,
+                    displayName: currentAIName,
+                  },
+                  topic: debateRole.topic,
+                };
+                this.logger.log(
+                  `[Debate] Passing role to opponent: ${mentionedAI.displayName} will be ${nextDebateRole.role}, opponent=${currentAIName}, topic=${debateRole.topic}`,
+                );
+              } else {
+                // 被@的不是对手（可能是第三方AI），作为观察者，不传递辩论角色
+                this.logger.log(
+                  `[Debate] ${mentionedAI.displayName} is not the opponent, treating as observer`,
+                );
+              }
             }
 
             setTimeout(
               () => {
                 this.logger.log(
-                  `[AI-AI Collaboration] Triggering ${mentionedAI.displayName}`,
+                  `[AI-AI Collaboration] Triggering ${mentionedAI.displayName} with debateRole=${nextDebateRole?.role || "none"}`,
                 );
                 this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
                   topicId,
@@ -569,7 +573,7 @@ export class AiGroupController {
                   nextDebateRole,
                 );
               },
-              (i + 1) * 1500,
+              (i + 1) * 2000, // 增加延迟到2秒，确保前一条消息已保存
             );
           }
         }

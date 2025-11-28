@@ -1262,42 +1262,62 @@ Format the summary in a clear, structured manner using markdown.`;
     );
 
     // Build context-aware prompt for image generation
-    // CRITICAL: Include previous AI responses so image generation has proper context
+    // CRITICAL: Include ALL relevant context - user requests AND AI responses
+    // Since Imagen cannot see previous images, we must describe them in text
     const buildImagePrompt = (): string => {
       // Get the last few messages for context (both user and assistant messages)
       const recentMessages = messages.slice(-10); // Last 10 messages for context
 
-      // Build a context string that includes AI outputs
-      const contextParts: string[] = [];
+      // Build conversation history to understand what the user wants
+      const conversationParts: string[] = [];
 
       for (const msg of recentMessages) {
-        if (msg.role === "assistant" && msg.name) {
-          // This is an AI's previous response - include it as context
-          // Truncate to avoid overly long prompts
-          const truncatedContent = msg.content.substring(0, 2000);
-          contextParts.push(`[${msg.name}'s analysis]: ${truncatedContent}`);
+        // Clean the content - remove @mentions and image markdown
+        let cleanContent = msg.content
+          .replace(/^@[\w\-()]+\s*/g, "") // Remove @mentions
+          .replace(
+            /!\[.*?\]\(data:image\/[^)]+\)/g,
+            "[Previously generated image]",
+          ) // Replace base64 images with placeholder
+          .trim();
+
+        if (!cleanContent || cleanContent === "[Previously generated image]") {
+          continue; // Skip empty messages or image-only messages
+        }
+
+        if (msg.role === "user") {
+          conversationParts.push(`User request: ${cleanContent}`);
+        } else if (msg.role === "assistant" && msg.name) {
+          // Only include text responses, not just image placeholders
+          if (cleanContent.length > 10) {
+            conversationParts.push(
+              `${msg.name} responded: ${cleanContent.substring(0, 500)}`,
+            );
+          }
         }
       }
 
       // Get the user's current request - remove @mentions to get clean prompt
       let userRequest = lastUserMessage?.content || "";
-      // Remove @mentions (e.g., "@AI-Gemini-(Image) ") from the beginning
       userRequest = userRequest.replace(/^@[\w\-()]+\s*/g, "").trim();
 
       this.logger.log(
         `[buildImagePrompt] Original: "${lastUserMessage?.content}", Cleaned: "${userRequest}"`,
       );
 
-      // If there's context from other AIs, include it
-      if (contextParts.length > 0) {
-        const context = contextParts.join("\n\n");
-        // For context-aware prompts, pass the user's request directly
-        // Don't add excessive instructions that might confuse the model
-        return `${userRequest}\n\nContext from discussion:\n${context}`;
+      // Build the final prompt with full context
+      if (conversationParts.length > 1) {
+        // There's conversation history - include it for context
+        const history = conversationParts.slice(0, -1).join("\n"); // Exclude current request
+        return `Based on this conversation history:
+${history}
+
+Current request: ${userRequest}
+
+Generate an image that fulfills the current request while maintaining consistency with the previous context.`;
       }
 
-      // For simple requests, just pass the user's request directly
-      // The model should understand the user's intent
+      // For simple requests without history, just pass the user's request directly
       return userRequest;
     };
 

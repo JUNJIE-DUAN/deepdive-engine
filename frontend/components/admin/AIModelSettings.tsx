@@ -106,6 +106,7 @@ function getModelIconUrl(modelName: string): string | null {
 }
 
 // Model ID Selector with fetch capability
+// Shows all available models in a grid layout (no dropdown, no scrollbar)
 function ModelIdSelector({
   value,
   onChange,
@@ -122,7 +123,7 @@ function ModelIdSelector({
   >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
 
   const fetchModels = async () => {
     if (!apiKey) {
@@ -147,7 +148,7 @@ function ModelIdSelector({
       const data = await response.json();
       if (data.success && data.models) {
         setAvailableModels(data.models);
-        setShowDropdown(true);
+        setHasFetched(true);
       } else {
         setError(data.error || '获取模型列表失败');
       }
@@ -164,37 +165,13 @@ function ModelIdSelector({
         Model ID <span className="text-red-500">*</span>
       </label>
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="gpt-4-turbo"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-          {showDropdown && availableModels.length > 0 && (
-            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-              {availableModels.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  onClick={() => {
-                    onChange(model.id);
-                    setShowDropdown(false);
-                  }}
-                  className="block w-full px-3 py-2 text-left text-sm hover:bg-blue-50"
-                >
-                  <div className="font-mono font-medium">{model.id}</div>
-                  {model.description && (
-                    <div className="text-xs text-gray-500">
-                      {model.description}
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="gpt-4-turbo"
+          className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
         <button
           type="button"
           onClick={fetchModels}
@@ -237,9 +214,38 @@ function ModelIdSelector({
         </button>
       </div>
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-      <p className="mt-1 text-xs text-gray-500">
-        输入 API Key 后点击"获取"按钮可获取可用模型列表
-      </p>
+
+      {/* Show all models in a grid - no dropdown, no scrollbar */}
+      {hasFetched && availableModels.length > 0 && (
+        <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <p className="mb-2 text-xs font-medium text-gray-600">
+            可用模型 ({availableModels.length}) - 点击选择:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {availableModels.map((model) => (
+              <button
+                key={model.id}
+                type="button"
+                onClick={() => onChange(model.id)}
+                className={`rounded-md border px-2 py-1 font-mono text-xs transition-colors ${
+                  value === model.id
+                    ? 'border-blue-500 bg-blue-100 text-blue-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                }`}
+                title={model.description || model.name}
+              >
+                {model.id}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!hasFetched && (
+        <p className="mt-1 text-xs text-gray-500">
+          输入 API Key 后点击"获取"按钮可获取可用模型列表
+        </p>
+      )}
     </div>
   );
 }

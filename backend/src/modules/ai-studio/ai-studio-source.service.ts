@@ -375,6 +375,36 @@ export class AiStudioSourceService {
       );
     }
 
+    // Blogs search - from local DB with BLOG category
+    if (sourcesToSearch.includes("blogs")) {
+      searchPromises.push(
+        this.searchLocalByCategory(query, "BLOG", 10).catch((e) => {
+          errors.push(`blogs: ${e.message}`);
+          return [];
+        }),
+      );
+    }
+
+    // Reports search - from local DB with REPORT category
+    if (sourcesToSearch.includes("reports")) {
+      searchPromises.push(
+        this.searchLocalByCategory(query, "REPORT", 10).catch((e) => {
+          errors.push(`reports: ${e.message}`);
+          return [];
+        }),
+      );
+    }
+
+    // Policy search - from local DB with POLICY category
+    if (sourcesToSearch.includes("policy")) {
+      searchPromises.push(
+        this.searchLocalByCategory(query, "POLICY", 10).catch((e) => {
+          errors.push(`policy: ${e.message}`);
+          return [];
+        }),
+      );
+    }
+
     // Wait for all searches to complete
     const allResults = await Promise.all(searchPromises);
     allResults.forEach((r) => results.push(...r));
@@ -547,6 +577,48 @@ export class AiStudioSourceService {
       source: "web",
       sourceType: "web",
       score: r.score,
+    }));
+  }
+
+  /**
+   * Search local database by specific category (BLOG, REPORT, POLICY, etc.)
+   */
+  private async searchLocalByCategory(
+    query: string,
+    category: string,
+    limit: number,
+  ): Promise<any[]> {
+    const results = await this.prisma.resource.findMany({
+      where: {
+        type: category as any,
+        OR: [
+          { title: { contains: query, mode: "insensitive" } },
+          { abstract: { contains: query, mode: "insensitive" } },
+          { content: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        abstract: true,
+        type: true,
+        sourceUrl: true,
+        authors: true,
+        publishedAt: true,
+        qualityScore: true,
+      },
+    });
+
+    this.logger.log(
+      `Local ${category} search returned ${results.length} results`,
+    );
+
+    return results.map((r) => ({
+      ...r,
+      source: category.toLowerCase(),
+      sourceType: r.type.toLowerCase(),
     }));
   }
 

@@ -635,22 +635,15 @@ function SourcesPanel({
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-500">Search in:</span>
               {[
-                {
-                  id: 'local',
-                  label: 'Local DB',
-                  icon: Database,
-                  color: 'purple',
-                },
-                { id: 'web', label: 'Web', icon: Globe, color: 'blue' },
-                { id: 'arxiv', label: 'arXiv', icon: FileText, color: 'red' },
-                { id: 'github', label: 'GitHub', icon: Github, color: 'gray' },
-                { id: 'news', label: 'News', icon: Newspaper, color: 'orange' },
-                {
-                  id: 'scholar',
-                  label: 'Scholar',
-                  icon: BookOpen,
-                  color: 'green',
-                },
+                { id: 'local', label: 'Local DB', icon: Database },
+                { id: 'web', label: 'Web', icon: Globe },
+                { id: 'arxiv', label: 'arXiv', icon: FileText },
+                { id: 'github', label: 'GitHub', icon: Github },
+                { id: 'news', label: 'News', icon: Newspaper },
+                { id: 'scholar', label: 'Scholar', icon: BookOpen },
+                { id: 'blogs', label: 'Blogs', icon: FileText },
+                { id: 'reports', label: 'Reports', icon: FileText },
+                { id: 'policy', label: 'Policy', icon: FileText },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}

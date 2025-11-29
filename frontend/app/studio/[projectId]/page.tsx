@@ -254,20 +254,37 @@ async function generateOutput(
   return data.output;
 }
 
-async function searchSources(
+async function searchSourcesApi(
   query: string,
-  mode: 'quick' | 'deep' = 'quick'
+  mode: 'quick' | 'deep' = 'quick',
+  sources: string[] = ['local', 'web', 'arxiv', 'github']
 ): Promise<any> {
   const res = await fetch(`${API_BASE}/api/v1/ai-studio/search`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ query, mode, includeInternet: true }),
+    body: JSON.stringify({ query, mode, sources, includeInternet: true }),
   });
   if (!res.ok) throw new Error('Search failed');
   return res.json();
 }
 
 // ==================== Sources Panel ====================
+interface SearchStats {
+  totalResults: number;
+  durationMs: number;
+  searchRounds?: number;
+  queriesExecuted?: string[];
+  errors?: string[];
+}
+
+interface SearchResponse {
+  results: any[];
+  query: string;
+  mode: 'quick' | 'deep';
+  sourcesSearched: string[];
+  stats: SearchStats;
+}
+
 function SourcesPanel({
   sources,
   selectedIds,
@@ -289,7 +306,14 @@ function SourcesPanel({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'quick' | 'deep'>('quick');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchStats, setSearchStats] = useState<SearchStats | null>(null);
   const [searching, setSearching] = useState(false);
+  const [searchSources, setSearchSources] = useState<string[]>([
+    'local',
+    'web',
+    'arxiv',
+    'github',
+  ]);
 
   const getSourceIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -319,12 +343,27 @@ function SourcesPanel({
     }
   };
 
+  const toggleSearchSource = (source: string) => {
+    setSearchSources((prev) =>
+      prev.includes(source)
+        ? prev.filter((s) => s !== source)
+        : [...prev, source]
+    );
+  };
+
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim() || searchSources.length === 0) return;
     setSearching(true);
+    setSearchStats(null);
+    setSearchResults([]);
     try {
-      const result = await searchSources(searchQuery, searchMode);
+      const result: SearchResponse = await searchSourcesApi(
+        searchQuery,
+        searchMode,
+        searchSources
+      );
       setSearchResults(result.results || []);
+      setSearchStats(result.stats);
     } catch (err) {
       console.error('Search failed:', err);
     } finally {
@@ -505,29 +544,60 @@ function SourcesPanel({
             </div>
 
             {/* Search Mode */}
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                onClick={() => setSearchMode('quick')}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
-                  searchMode === 'quick'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Zap className="h-4 w-4" />
-                Quick Search
-              </button>
-              <button
-                onClick={() => setSearchMode('deep')}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
-                  searchMode === 'deep'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Microscope className="h-4 w-4" />
-                Deep Research
-              </button>
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSearchMode('quick')}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+                    searchMode === 'quick'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Zap className="h-4 w-4" />
+                  Quick Search
+                </button>
+                <button
+                  onClick={() => setSearchMode('deep')}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+                    searchMode === 'deep'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Microscope className="h-4 w-4" />
+                  Deep Research
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                {searchMode === 'quick'
+                  ? 'Fast parallel search across sources'
+                  : 'Multi-round iterative search with AI refinement'}
+              </p>
+            </div>
+
+            {/* Source Toggles */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500">Search in:</span>
+              {[
+                { id: 'local', label: 'Local DB', icon: Database },
+                { id: 'web', label: 'Web', icon: Globe },
+                { id: 'arxiv', label: 'arXiv', icon: FileText },
+                { id: 'github', label: 'GitHub', icon: Github },
+              ].map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => toggleSearchSource(id)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    searchSources.includes(id)
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* Search Input */}
@@ -539,13 +609,15 @@ function SourcesPanel({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Search arXiv, GitHub, news..."
+                  placeholder={`Search ${searchSources.join(', ')}...`}
                   className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 />
               </div>
               <button
                 onClick={handleSearch}
-                disabled={searching || !searchQuery.trim()}
+                disabled={
+                  searching || !searchQuery.trim() || searchSources.length === 0
+                }
                 className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
               >
                 {searching ? (
@@ -553,20 +625,68 @@ function SourcesPanel({
                 ) : (
                   <Search className="h-4 w-4" />
                 )}
-                Search
+                {searchMode === 'deep' ? 'Deep Search' : 'Search'}
               </button>
             </div>
 
+            {/* Search Stats */}
+            {searchStats && (
+              <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2">
+                <div className="flex items-center justify-between text-xs text-gray-600">
+                  <span>
+                    Found <strong>{searchStats.totalResults}</strong> results in{' '}
+                    <strong>
+                      {(searchStats.durationMs / 1000).toFixed(1)}s
+                    </strong>
+                  </span>
+                  {searchStats.searchRounds && (
+                    <span className="text-purple-600">
+                      {searchStats.searchRounds} search rounds
+                    </span>
+                  )}
+                </div>
+                {searchStats.queriesExecuted &&
+                  searchStats.queriesExecuted.length > 1 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {searchStats.queriesExecuted.slice(0, 5).map((q, i) => (
+                        <span
+                          key={i}
+                          className="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600"
+                        >
+                          {q.length > 30 ? `${q.slice(0, 30)}...` : q}
+                        </span>
+                      ))}
+                      {searchStats.queriesExecuted.length > 5 && (
+                        <span className="text-xs text-gray-400">
+                          +{searchStats.queriesExecuted.length - 5} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+              </div>
+            )}
+
             {/* Search Results */}
-            <div className="mt-4 max-h-80 overflow-y-auto">
+            <div className="mt-4 max-h-72 overflow-y-auto">
               {searchResults.length > 0 ? (
                 <div className="space-y-2">
-                  {searchResults.map((result) => (
+                  {searchResults.map((result, idx) => (
                     <div
-                      key={result.id}
+                      key={result.id || `result-${idx}`}
                       className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 hover:border-gray-300"
                     >
-                      <div className="flex-1">
+                      <div className="mt-0.5 flex-shrink-0">
+                        {result.source === 'arxiv' ? (
+                          <FileText className="h-4 w-4 text-blue-500" />
+                        ) : result.source === 'github' ? (
+                          <Github className="h-4 w-4 text-gray-700" />
+                        ) : result.source === 'web' ? (
+                          <Globe className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Database className="h-4 w-4 text-purple-500" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
                         <h4 className="line-clamp-1 font-medium text-gray-900">
                           {result.title}
                         </h4>
@@ -574,12 +694,26 @@ function SourcesPanel({
                           {result.abstract}
                         </p>
                         <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
-                          <span>{result.sourceType}</span>
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5">
+                            {result.source || result.sourceType}
+                          </span>
+                          {result.authors && result.authors.length > 0 && (
+                            <span className="max-w-[150px] truncate">
+                              {result.authors.slice(0, 2).join(', ')}
+                              {result.authors.length > 2 && ' et al.'}
+                            </span>
+                          )}
                           {result.publishedAt && (
                             <span>
                               {new Date(
                                 result.publishedAt
                               ).toLocaleDateString()}
+                            </span>
+                          )}
+                          {result.metadata?.stars && (
+                            <span className="flex items-center gap-0.5">
+                              <Sparkles className="h-3 w-3" />
+                              {result.metadata.stars.toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -589,11 +723,13 @@ function SourcesPanel({
                           onClick={() => {
                             onAddSource({
                               title: result.title,
-                              sourceType: result.sourceType || result.type,
+                              sourceType: result.sourceType || result.source,
                               sourceUrl: result.sourceUrl,
                               abstract: result.abstract,
+                              authors: result.authors,
                               publishedAt: result.publishedAt,
                               resourceId: result.id,
+                              metadata: result.metadata,
                             });
                           }}
                           className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700"
@@ -601,22 +737,40 @@ function SourcesPanel({
                           <Plus className="h-3 w-3" />
                           Add
                         </button>
-                        <button className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-                          <Eye className="h-3 w-3" />
-                          View
-                        </button>
+                        {result.sourceUrl && (
+                          <a
+                            href={result.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : searching ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                  <p className="mt-3 text-sm text-gray-500">
+                    {searchMode === 'deep'
+                      ? 'Running deep research across multiple rounds...'
+                      : 'Searching across sources...'}
+                  </p>
                 </div>
               ) : (
-                <div className="py-8 text-center text-sm text-gray-500">
-                  Search for papers, projects, and articles to add to your
-                  research
+                <div className="py-12 text-center">
+                  <Search className="mx-auto h-10 w-10 text-gray-300" />
+                  <p className="mt-3 text-sm text-gray-500">
+                    Search for papers, code, and articles to add to your
+                    research
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Try: "LLM inference optimization", "transformer attention"
+                  </p>
                 </div>
               )}
             </div>

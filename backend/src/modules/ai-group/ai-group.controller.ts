@@ -411,10 +411,12 @@ export class AiGroupController {
       "辩一辩",
       "辩题",
       "思辨",
-      "红蓝对抗",
+      "红蓝",
       "正方反方",
-      "PK一下",
-      "pk一下",
+      "讨论一下",
+      "讨论下",
+      "PK",
+      "pk",
       "debate",
       "对决",
     ];
@@ -432,7 +434,7 @@ export class AiGroupController {
     let debateTopic = content
       .replace(/@[\w\-()（）\s\u4e00-\u9fa5]+/g, "") // 移除@mentions（包括中文）
       .replace(
-        /辩论|辩一下|辩一辩|辩题|思辨|红蓝对抗|正方反方|PK一下|pk一下|debate|对决/gi,
+        /辩论|辩一下|辩一辩|辩题|思辨|红蓝|正方反方|讨论一下|讨论下|PK|pk|debate|对决/gi,
         "",
       )
       .replace(/[：:请]/g, "")

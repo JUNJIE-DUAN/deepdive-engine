@@ -1692,8 +1692,15 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
 
     // 【业界最佳实践】使用 ContextRouter 智能路由上下文
     // 参考：LangChain Intent Detection, AutoGen Session Isolation
-    const lastUserMsg = contextMessages.find((m) => m.senderId);
+    // CRITICAL FIX: contextMessages is sorted by time ASC (oldest first)
+    // We need the LAST user message (most recent), not the first!
+    const userMessages = contextMessages.filter((m) => m.senderId);
+    const lastUserMsg = userMessages[userMessages.length - 1];
     const userMessageContent = lastUserMsg?.content || "";
+
+    this.logger.log(
+      `[ContextRouter] Last user message: "${userMessageContent.substring(0, 100)}..."`,
+    );
 
     // 检测用户意图
     const routeResult = await this.contextRouter.routeContext(

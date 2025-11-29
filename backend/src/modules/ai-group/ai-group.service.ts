@@ -2020,6 +2020,19 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           `Calling AI API: provider=${provider}, modelId=${modelId}, maxTokens=${effectiveMaxTokens}`,
         );
 
+        // Infer capabilities from displayName if not explicitly set
+        // This ensures AI members with "(Image)" in their name can generate images
+        let effectiveCapabilities = aiMember.capabilities || [];
+        if (
+          aiMember.displayName.toLowerCase().includes("image") &&
+          !effectiveCapabilities.includes("IMAGE_GENERATION")
+        ) {
+          effectiveCapabilities = [...effectiveCapabilities, "IMAGE_GENERATION"];
+          this.logger.log(
+            `[AI Capabilities] Inferred IMAGE_GENERATION for ${aiMember.displayName}`,
+          );
+        }
+
         result = await this.aiChatService.generateChatCompletionWithKey({
           provider,
           modelId,
@@ -2030,7 +2043,7 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           maxTokens: effectiveMaxTokens,
           temperature: aiModelConfig?.temperature || 0.7,
           displayName: aiMember.displayName,
-          capabilities: aiMember.capabilities || [], // Pass AI capabilities for image generation decision
+          capabilities: effectiveCapabilities,
         });
       } else {
         // No API key available - will return mock response

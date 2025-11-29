@@ -1411,6 +1411,21 @@ Generate an image that fulfills the current request while maintaining consistenc
       this.logger.log(
         `[Gemini] Image-only model ${modelId} used for non-image request, falling back to ${effectiveModelId}`,
       );
+    } else if (isImageRequest && !isImageOnlyModel && !isImagenModel) {
+      // If image generation is requested but model is not an image model,
+      // use gemini-2.0-flash-exp which supports native image generation
+      // Note: Some models like gemini-1.5-pro do NOT support image generation
+      const imageCapableModel = "gemini-2.0-flash-exp";
+      if (!modelId.includes("2.0")) {
+        this.logger.log(
+          `[Gemini] Image request with non-image-capable model ${modelId}, switching to ${imageCapableModel}`,
+        );
+        effectiveModelId = imageCapableModel;
+      } else {
+        this.logger.log(
+          `[Gemini] Image request with model: ${effectiveModelId} (supports native image generation)`,
+        );
+      }
     } else {
       this.logger.log(
         `[Gemini] Using configured model: ${effectiveModelId}, isImageRequest: ${isImageRequest}`,
@@ -1700,12 +1715,42 @@ Generate an image that fulfills the current request while maintaining consistenc
         this.logger.error(`[Imagen Fallback] Failed: ${imagenError}`);
       }
 
-      // If Imagen also failed, return Gemini's text response with explanation
+      // If Imagen also failed, check if we have OpenAI API key for DALL-E 3 fallback
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        this.logger.log(
+          `[DALL-E 3 Fallback] Imagen failed, trying DALL-E 3 with OpenAI API key`,
+        );
+        try {
+          const dallePrompt = buildFallbackImagePrompt();
+          const dalleResult = await this.callDallE3(openaiKey, dallePrompt);
+          if (
+            dalleResult.content &&
+            !dalleResult.content.includes("图像生成失败")
+          ) {
+            this.logger.log(`[DALL-E 3 Fallback] Successfully generated image`);
+            if (textContent && textContent.length > 50) {
+              return {
+                content: dalleResult.content + "\n\n" + textContent,
+                model: "gemini+dalle3",
+                tokensUsed:
+                  (data.usageMetadata?.promptTokenCount || 0) +
+                  (data.usageMetadata?.candidatesTokenCount || 0),
+              };
+            }
+            return dalleResult;
+          }
+        } catch (dalleError) {
+          this.logger.error(`[DALL-E 3 Fallback] Failed: ${dalleError}`);
+        }
+      }
+
+      // If all image generation attempts failed, return Gemini's text response with explanation
       if (textContent) {
         return {
           content:
             textContent +
-            "\n\n*注意：AI 生成了描述但未能生成实际图片。您可以尝试使用 DALL-E 3 (OpenAI) 模型来生成图片。*",
+            "\n\n---\n\n**⚠️ 图片生成失败**\n\nAI 生成了上面的描述内容，但未能生成实际图片。\n\n**可能的解决方案：**\n1. 确保 Google API Key 启用了图片生成功能\n2. 检查 Imagen API 是否已在 Google Cloud 控制台启用\n3. 尝试使用配置了 OPENAI_API_KEY 的 AI 成员（支持 DALL-E 3）",
           model: "gemini",
           tokensUsed:
             (data.usageMetadata?.promptTokenCount || 0) +

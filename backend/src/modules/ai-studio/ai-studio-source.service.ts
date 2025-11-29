@@ -612,32 +612,271 @@ export class AiStudioSourceService {
   }
 
   /**
-   * Rank results by relevance to query
+   * Comprehensive ranking algorithm for multi-source results
+   * Based on industry best practices (Google, Perplexity, NotebookLM)
+   *
+   * Factors with weights:
+   * - Relevance (35%): Query term matching in title/content
+   * - Quality (25%): Source authority, domain reputation
+   * - Freshness (20%): Prefer recent content
+   * - Diversity (10%): Bonus for unique sources
+   * - Depth (10%): Content length and detail
    */
   private rankByRelevance(results: any[], query: string): any[] {
-    const queryTerms = query.toLowerCase().split(/\s+/);
+    const queryTerms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 2);
+    const seenDomains = new Set<string>();
 
     return results
       .map((result) => {
-        const text =
-          `${result.title || ""} ${result.abstract || ""}`.toLowerCase();
-        let relevanceScore = 0;
+        // 1. Relevance Score (35% weight)
+        const relevanceScore = this.calculateRelevance(result, queryTerms);
 
-        // Score based on term matches
-        for (const term of queryTerms) {
-          if (text.includes(term)) relevanceScore += 10;
-          if (result.title?.toLowerCase().includes(term)) relevanceScore += 20;
-        }
+        // 2. Quality Score (25% weight)
+        const qualityScore = this.calculateQuality(result);
 
-        // Bonus for academic papers
-        if (result.source === "arxiv") relevanceScore += 5;
+        // 3. Freshness Score (20% weight)
+        const freshnessScore = this.calculateFreshness(result);
 
-        // Bonus for existing score
-        if (result.score) relevanceScore += result.score * 10;
+        // 4. Diversity Score (10% weight)
+        const domain = this.extractDomain(result.sourceUrl);
+        const diversityScore = seenDomains.has(domain) ? 30 : 100;
+        seenDomains.add(domain);
 
-        return { ...result, relevanceScore };
+        // 5. Depth Score (10% weight)
+        const depthScore = this.calculateDepth(result);
+
+        // Calculate weighted final score
+        const finalScore =
+          relevanceScore * 0.35 +
+          qualityScore * 0.25 +
+          freshnessScore * 0.2 +
+          diversityScore * 0.1 +
+          depthScore * 0.1;
+
+        return {
+          ...result,
+          relevanceScore: finalScore,
+          _debug: {
+            relevance: relevanceScore,
+            quality: qualityScore,
+            freshness: freshnessScore,
+            diversity: diversityScore,
+            depth: depthScore,
+          },
+        };
       })
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
+  }
+
+  /**
+   * Calculate relevance score based on query matching
+   */
+  private calculateRelevance(result: any, queryTerms: string[]): number {
+    let score = 0;
+    const titleLower = (result.title || "").toLowerCase();
+    const abstractLower = (result.abstract || "").toLowerCase();
+    const text = `${titleLower} ${abstractLower}`;
+
+    // Start with existing score if available
+    if (result.score) {
+      score = result.score * 40;
+    }
+
+    for (const term of queryTerms) {
+      // Title match (high weight)
+      if (titleLower.includes(term)) {
+        score += 15;
+        // Exact word match bonus
+        if (new RegExp(`\\b${term}\\b`).test(titleLower)) {
+          score += 10;
+        }
+      }
+
+      // Abstract/content match
+      if (abstractLower.includes(term)) {
+        score += 8;
+      }
+    }
+
+    // All terms in title bonus
+    if (queryTerms.every((term) => titleLower.includes(term))) {
+      score += 20;
+    }
+
+    // All terms anywhere bonus
+    if (queryTerms.every((term) => text.includes(term))) {
+      score += 10;
+    }
+
+    return Math.min(score, 100);
+  }
+
+  /**
+   * Calculate quality score based on source type and authority
+   */
+  private calculateQuality(result: any): number {
+    let score = 50; // Base score
+
+    // Source type bonuses
+    const sourceType = result.source || result.sourceType;
+    switch (sourceType) {
+      case "arxiv":
+      case "paper":
+        score += 35; // Academic papers are high quality
+        break;
+      case "github":
+        score += 25; // Technical repos
+        if (result.metadata?.stars > 1000) score += 15;
+        if (result.metadata?.stars > 10000) score += 10;
+        break;
+      case "local":
+        score += 20; // Already curated in DB
+        if (result.qualityScore) score += result.qualityScore * 20;
+        break;
+      case "web":
+      case "news":
+        score += 10;
+        break;
+    }
+
+    // Domain authority check
+    const domain = this.extractDomain(result.sourceUrl);
+    if (this.isHighAuthorityDomain(domain)) {
+      score += 25;
+    } else if (this.isMediumAuthorityDomain(domain)) {
+      score += 10;
+    }
+
+    // Citation count bonus (for papers)
+    if (result.citationCount) {
+      if (result.citationCount > 100) score += 20;
+      else if (result.citationCount > 50) score += 15;
+      else if (result.citationCount > 10) score += 10;
+    }
+
+    return Math.min(score, 100);
+  }
+
+  /**
+   * Calculate freshness score (prefer recent content)
+   */
+  private calculateFreshness(result: any): number {
+    const publishedAt = result.publishedAt || result.publishedDate;
+    if (!publishedAt) {
+      return 50; // Unknown date gets neutral score
+    }
+
+    try {
+      const pubDate = new Date(publishedAt);
+      const now = new Date();
+      const daysDiff =
+        (now.getTime() - pubDate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysDiff <= 7) return 100; // Last week
+      if (daysDiff <= 30) return 90; // Last month
+      if (daysDiff <= 90) return 75; // Last quarter
+      if (daysDiff <= 180) return 60; // Last 6 months
+      if (daysDiff <= 365) return 45; // Last year
+      if (daysDiff <= 730) return 30; // Last 2 years
+      return 20; // Older content
+    } catch {
+      return 50;
+    }
+  }
+
+  /**
+   * Calculate content depth score
+   */
+  private calculateDepth(result: any): number {
+    const content = result.abstract || result.content || "";
+    const contentLength = content.length;
+
+    if (contentLength >= 1000) return 100;
+    if (contentLength >= 500) return 80;
+    if (contentLength >= 300) return 60;
+    if (contentLength >= 100) return 40;
+    return 20;
+  }
+
+  /**
+   * Extract domain from URL
+   */
+  private extractDomain(url: string | null | undefined): string {
+    if (!url) return "unknown";
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname.replace(/^www\./, "");
+    } catch {
+      return "unknown";
+    }
+  }
+
+  /**
+   * Check if domain is high authority
+   */
+  private isHighAuthorityDomain(domain: string): boolean {
+    const highAuthority = [
+      // Academic & Research
+      "arxiv.org",
+      "nature.com",
+      "science.org",
+      "ieee.org",
+      "acm.org",
+      "researchgate.net",
+      "pubmed.ncbi.nlm.nih.gov",
+      "springer.com",
+      "wiley.com",
+      "elsevier.com",
+      // Analysis & Reports
+      "mckinsey.com",
+      "bcg.com",
+      "bain.com",
+      "hbr.org",
+      "gartner.com",
+      "forrester.com",
+      "statista.com",
+      "idc.com",
+      "cb-insights.com",
+      // Major News (Global)
+      "reuters.com",
+      "bloomberg.com",
+      "ft.com",
+      "wsj.com",
+      "nytimes.com",
+      "theguardian.com",
+      "bbc.com",
+      "economist.com",
+      // Tech
+      "techcrunch.com",
+      "wired.com",
+      "arstechnica.com",
+      "theverge.com",
+      "venturebeat.com",
+      // Official
+      "github.com",
+      "stackoverflow.com",
+    ];
+    return highAuthority.some((d) => domain.includes(d));
+  }
+
+  /**
+   * Check if domain is medium authority
+   */
+  private isMediumAuthorityDomain(domain: string): boolean {
+    const mediumAuthority = [
+      "wikipedia.org",
+      "medium.com",
+      "dev.to",
+      "forbes.com",
+      "zdnet.com",
+      "cnet.com",
+      "linkedin.com",
+      "reddit.com",
+    ];
+    return mediumAuthority.some((d) => domain.includes(d));
   }
 
   /**
@@ -667,7 +906,7 @@ export class AiStudioSourceService {
     const parser = new xml2js.Parser({ explicitArray: false });
     const result = await parser.parseStringPromise(response.data);
 
-    if (!result.feed || !result.feed.entry) {
+    if (!result.feed?.entry) {
       return [];
     }
 

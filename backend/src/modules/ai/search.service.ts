@@ -8,6 +8,9 @@ export interface SearchResult {
   url: string;
   content: string;
   score?: number;
+  publishedDate?: string;
+  domain?: string;
+  rawScore?: number;
 }
 
 export interface SearchResponse {
@@ -147,7 +150,7 @@ export class SearchService {
   }
 
   /**
-   * Search using Tavily API
+   * Search using Tavily API with advanced options
    * https://tavily.com/
    */
   private async searchWithTavily(
@@ -157,16 +160,21 @@ export class SearchService {
   ): Promise<SearchResponse> {
     this.logger.log(`Searching with Tavily: "${query}"`);
 
+    // Request more results for better ranking/filtering
+    const requestedResults = Math.min(maxResults * 2, 20);
+
     const response = await firstValueFrom(
       this.httpService.post(
         "https://api.tavily.com/search",
         {
           api_key: apiKey,
           query,
-          max_results: maxResults,
-          search_depth: "basic",
+          max_results: requestedResults,
+          search_depth: "advanced", // Use advanced for better quality
           include_answer: false,
           include_raw_content: false,
+          include_domains: [], // Allow all domains for diversity
+          exclude_domains: [], // No exclusions
         },
         {
           headers: { "Content-Type": "application/json" },
@@ -175,17 +183,300 @@ export class SearchService {
       ),
     );
 
-    const results: SearchResult[] = (response.data.results || []).map(
+    const rawResults: SearchResult[] = (response.data.results || []).map(
       (r: any) => ({
         title: r.title,
         url: r.url,
         content: r.content,
-        score: r.score,
+        rawScore: r.score,
+        domain: this.extractDomain(r.url),
+        publishedDate: r.published_date,
       }),
     );
 
-    this.logger.log(`Tavily returned ${results.length} results`);
-    return { success: true, results };
+    // Apply comprehensive ranking algorithm
+    const rankedResults = this.rankSearchResults(rawResults, query, maxResults);
+
+    this.logger.log(
+      `Tavily returned ${rawResults.length} results, ranked to ${rankedResults.length}`,
+    );
+    return { success: true, results: rankedResults };
+  }
+
+  /**
+   * Extract domain from URL
+   */
+  private extractDomain(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  }
+
+  /**
+   * Comprehensive ranking algorithm based on industry best practices
+   * Factors: Relevance, Freshness, Quality, Diversity
+   */
+  private rankSearchResults(
+    results: SearchResult[],
+    query: string,
+    maxResults: number,
+  ): SearchResult[] {
+    const queryTerms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 2);
+
+    // Score each result
+    const scoredResults = results.map((result) => {
+      let finalScore = 0;
+
+      // 1. Relevance Score (40% weight) - Based on Tavily score + keyword matching
+      const relevanceScore = this.calculateRelevanceScore(result, queryTerms);
+      finalScore += relevanceScore * 0.4;
+
+      // 2. Quality Score (30% weight) - Domain authority, content length
+      const qualityScore = this.calculateQualityScore(result);
+      finalScore += qualityScore * 0.3;
+
+      // 3. Freshness Score (20% weight) - Recent content preferred
+      const freshnessScore = this.calculateFreshnessScore(result);
+      finalScore += freshnessScore * 0.2;
+
+      // 4. Content Depth Score (10% weight) - Longer, more detailed content
+      const depthScore = this.calculateDepthScore(result);
+      finalScore += depthScore * 0.1;
+
+      return {
+        ...result,
+        score: finalScore,
+      };
+    });
+
+    // Sort by score descending
+    scoredResults.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    // Apply diversity filter - ensure variety across domains
+    const diverseResults = this.applyDiversityFilter(scoredResults, maxResults);
+
+    return diverseResults;
+  }
+
+  /**
+   * Calculate relevance score based on query matching
+   */
+  private calculateRelevanceScore(
+    result: SearchResult,
+    queryTerms: string[],
+  ): number {
+    let score = 0;
+
+    // Start with Tavily's raw score if available
+    if (result.rawScore) {
+      score = result.rawScore * 50; // Tavily scores are typically 0-1
+    }
+
+    const titleLower = (result.title || "").toLowerCase();
+    const contentLower = (result.content || "").toLowerCase();
+
+    for (const term of queryTerms) {
+      // Title match (high weight)
+      if (titleLower.includes(term)) {
+        score += 20;
+        // Exact word match bonus
+        if (new RegExp(`\\b${term}\\b`).test(titleLower)) {
+          score += 10;
+        }
+      }
+
+      // Content match
+      if (contentLower.includes(term)) {
+        score += 10;
+      }
+    }
+
+    // All terms match bonus
+    if (queryTerms.every((term) => titleLower.includes(term))) {
+      score += 25;
+    }
+
+    return Math.min(score, 100);
+  }
+
+  /**
+   * Calculate quality score based on domain authority
+   */
+  private calculateQualityScore(result: SearchResult): number {
+    let score = 50; // Base score
+    const domain = result.domain || "";
+
+    // High-authority domains (research, major news, official sources)
+    const highAuthorityDomains = [
+      // Academic & Research
+      "arxiv.org",
+      "nature.com",
+      "science.org",
+      "ieee.org",
+      "acm.org",
+      "researchgate.net",
+      "scholar.google.com",
+      "pubmed.ncbi.nlm.nih.gov",
+      "journals.plos.org",
+      "springer.com",
+      "wiley.com",
+      "elsevier.com",
+      // Tech & Industry
+      "techcrunch.com",
+      "wired.com",
+      "arstechnica.com",
+      "theverge.com",
+      "venturebeat.com",
+      "zdnet.com",
+      "cnet.com",
+      "engadget.com",
+      // Major News (Global)
+      "reuters.com",
+      "bloomberg.com",
+      "ft.com",
+      "wsj.com",
+      "nytimes.com",
+      "theguardian.com",
+      "bbc.com",
+      "economist.com",
+      "forbes.com",
+      // Analysis & Reports
+      "mckinsey.com",
+      "bcg.com",
+      "hbr.org",
+      "gartner.com",
+      "forrester.com",
+      "statista.com",
+      "idc.com",
+      "cb-insights.com",
+      // Official
+      "github.com",
+      "stackoverflow.com",
+      "medium.com",
+      "dev.to",
+    ];
+
+    // Medium authority domains
+    const mediumAuthorityDomains = [
+      "wikipedia.org",
+      "linkedin.com",
+      "twitter.com",
+      "reddit.com",
+      "quora.com",
+      "hackernews.com",
+      "slashdot.org",
+    ];
+
+    // Low quality domains to deprioritize
+    const lowQualityPatterns = [
+      "pinterest",
+      "facebook.com/",
+      "instagram.com",
+      "tiktok.com",
+      "yelp.com",
+      "tripadvisor",
+    ];
+
+    if (highAuthorityDomains.some((d) => domain.includes(d))) {
+      score += 40;
+    } else if (mediumAuthorityDomains.some((d) => domain.includes(d))) {
+      score += 20;
+    }
+
+    // Penalize low-quality sources
+    if (lowQualityPatterns.some((p) => domain.includes(p))) {
+      score -= 30;
+    }
+
+    // Bonus for .edu, .gov, .org domains
+    if (domain.endsWith(".edu") || domain.endsWith(".gov")) {
+      score += 25;
+    } else if (domain.endsWith(".org")) {
+      score += 10;
+    }
+
+    return Math.max(0, Math.min(score, 100));
+  }
+
+  /**
+   * Calculate freshness score (prefer recent content)
+   */
+  private calculateFreshnessScore(result: SearchResult): number {
+    if (!result.publishedDate) {
+      return 50; // Unknown date gets neutral score
+    }
+
+    try {
+      const pubDate = new Date(result.publishedDate);
+      const now = new Date();
+      const daysDiff =
+        (now.getTime() - pubDate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysDiff <= 7) return 100; // Last week
+      if (daysDiff <= 30) return 85; // Last month
+      if (daysDiff <= 90) return 70; // Last quarter
+      if (daysDiff <= 180) return 55; // Last 6 months
+      if (daysDiff <= 365) return 40; // Last year
+      return 25; // Older content
+    } catch {
+      return 50;
+    }
+  }
+
+  /**
+   * Calculate content depth score
+   */
+  private calculateDepthScore(result: SearchResult): number {
+    const contentLength = (result.content || "").length;
+
+    if (contentLength >= 400) return 100;
+    if (contentLength >= 300) return 80;
+    if (contentLength >= 200) return 60;
+    if (contentLength >= 100) return 40;
+    return 20;
+  }
+
+  /**
+   * Apply diversity filter to ensure variety across domains
+   * Limits results from same domain while maintaining top results
+   */
+  private applyDiversityFilter(
+    results: SearchResult[],
+    maxResults: number,
+  ): SearchResult[] {
+    const domainCounts = new Map<string, number>();
+    const maxPerDomain = 2; // Maximum results from same domain
+    const diverseResults: SearchResult[] = [];
+
+    for (const result of results) {
+      if (diverseResults.length >= maxResults) break;
+
+      const domain = result.domain || "unknown";
+      const currentCount = domainCounts.get(domain) || 0;
+
+      if (currentCount < maxPerDomain) {
+        diverseResults.push(result);
+        domainCounts.set(domain, currentCount + 1);
+      }
+    }
+
+    // If we don't have enough results, add more (allow duplicates)
+    if (diverseResults.length < maxResults) {
+      for (const result of results) {
+        if (diverseResults.length >= maxResults) break;
+        if (!diverseResults.includes(result)) {
+          diverseResults.push(result);
+        }
+      }
+    }
+
+    return diverseResults;
   }
 
   /**

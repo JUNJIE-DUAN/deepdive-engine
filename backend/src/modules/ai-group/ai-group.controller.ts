@@ -585,6 +585,7 @@ export class AiGroupController {
   /**
    * 【新架构】在后台运行辩论
    * 使用独立的DebateService，完全隔离于Topic消息历史
+   * 每条消息实时发送到前端
    */
   private async runDebateInBackground(
     topicId: string,
@@ -611,26 +612,103 @@ export class AiGroupController {
 
       this.logger.log(`[Debate] Session created: ${session.id}`);
 
+      const redAgent = session.agents.find((a) => a.role === "RED");
+      const blueAgent = session.agents.find((a) => a.role === "BLUE");
+
+      if (!redAgent || !blueAgent) {
+        throw new Error("Missing red or blue agent");
+      }
+
       // 通知前端辩论开始
       this.aiGroupGateway.emitToTopic(topicId, "debate:started", {
         sessionId: session.id,
         topic: debateTopic,
-        redAgent: session.agents.find((a) => a.role === "RED"),
-        blueAgent: session.agents.find((a) => a.role === "BLUE"),
+        redAgent,
+        blueAgent,
       });
 
-      // 运行辩论
-      await this.debateService.runDebate(session.id);
+      const maxRounds = 3;
+      let lastRedMessage = "";
+      let lastBlueMessage = "";
 
-      // 将辩论消息同步到Topic（让用户在聊天界面看到）
-      await this.debateService.syncDebateToTopic(session.id, topicId, userId);
+      // 手动控制辩论流程，每条消息实时发送
+      for (let round = 1; round <= maxRounds; round++) {
+        this.logger.log(`[Debate] === Round ${round} ===`);
+
+        // 红方发言
+        this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
+          aiMemberId: redAgent.aiMemberId,
+          isTyping: true,
+        });
+
+        const redResponse = await this.debateService.executeDebateRound(
+          session.id,
+          redAgent.id,
+          round === 1 ? undefined : lastBlueMessage,
+        );
+        lastRedMessage = redResponse.content;
+
+        // 创建TopicMessage并实时发送
+        const redTopicMessage = await this.aiGroupService.createAIMessage(
+          topicId,
+          redAgent.aiMemberId,
+          redResponse.content,
+          redAgent.aiModel,
+          redResponse.tokensUsed,
+        );
+
+        this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
+          aiMemberId: redAgent.aiMemberId,
+          isTyping: false,
+        });
+        this.aiGroupGateway.emitToTopic(
+          topicId,
+          "message:new",
+          redTopicMessage,
+        );
+
+        // 蓝方回应
+        this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
+          aiMemberId: blueAgent.aiMemberId,
+          isTyping: true,
+        });
+
+        const blueResponse = await this.debateService.executeDebateRound(
+          session.id,
+          blueAgent.id,
+          lastRedMessage,
+        );
+        lastBlueMessage = blueResponse.content;
+
+        // 创建TopicMessage并实时发送
+        const blueTopicMessage = await this.aiGroupService.createAIMessage(
+          topicId,
+          blueAgent.aiMemberId,
+          blueResponse.content,
+          blueAgent.aiModel,
+          blueResponse.tokensUsed,
+        );
+
+        this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
+          aiMemberId: blueAgent.aiMemberId,
+          isTyping: false,
+        });
+        this.aiGroupGateway.emitToTopic(
+          topicId,
+          "message:new",
+          blueTopicMessage,
+        );
+      }
+
+      // 更新辩论状态为完成
+      await this.debateService.completeDebate(session.id);
 
       // 通知前端辩论结束
       this.aiGroupGateway.emitToTopic(topicId, "debate:completed", {
         sessionId: session.id,
       });
 
-      this.logger.log(`[Debate] Debate completed and synced to topic`);
+      this.logger.log(`[Debate] Debate completed`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

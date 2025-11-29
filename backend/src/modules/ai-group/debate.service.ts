@@ -450,6 +450,20 @@ export class DebateService {
   }
 
   /**
+   * 完成辩论会话
+   */
+  async completeDebate(sessionId: string) {
+    await this.prisma.debateSession.update({
+      where: { id: sessionId },
+      data: {
+        status: DebateStatus.COMPLETED,
+        completedAt: new Date(),
+      },
+    });
+    this.logger.log(`[Debate] Session ${sessionId} marked as completed`);
+  }
+
+  /**
    * 获取辩论会话详情
    */
   async getDebateSession(sessionId: string) {

@@ -1977,6 +1977,47 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
     return message;
   }
 
+  /**
+   * 创建AI消息（用于辩论系统等场景）
+   */
+  async createAIMessage(
+    topicId: string,
+    aiMemberId: string,
+    content: string,
+    modelUsed: string,
+    tokensUsed?: number,
+  ) {
+    const message = await this.prisma.topicMessage.create({
+      data: {
+        topicId,
+        aiMemberId,
+        content,
+        contentType: MessageContentType.TEXT,
+        modelUsed,
+        tokensUsed: tokensUsed || 0,
+      },
+      include: {
+        aiMember: {
+          select: {
+            id: true,
+            aiModel: true,
+            displayName: true,
+            avatar: true,
+            roleDescription: true,
+          },
+        },
+      },
+    });
+
+    // 更新Topic的updatedAt
+    await this.prisma.topic.update({
+      where: { id: topicId },
+      data: { updatedAt: new Date() },
+    });
+
+    return message;
+  }
+
   // ==================== Helper Methods ====================
 
   /**

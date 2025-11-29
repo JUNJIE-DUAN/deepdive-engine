@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { getAuthTokens } from '@/lib/auth';
 import {
   ArrowLeft,
   Plus,
@@ -124,9 +125,21 @@ interface Project {
 // ==================== API ====================
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
+function getAuthHeaders(): HeadersInit {
+  const tokens = getAuthTokens();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (tokens?.accessToken) {
+    (headers as Record<string, string>)['Authorization'] =
+      `Bearer ${tokens.accessToken}`;
+  }
+  return headers;
+}
+
 async function fetchProject(id: string): Promise<Project> {
   const res = await fetch(`${API_BASE}/api/v1/ai-studio/projects/${id}`, {
-    credentials: 'include',
+    headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('Failed to fetch project');
   return res.json();
@@ -140,8 +153,7 @@ async function addSource(
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/sources`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify(source),
     }
   );
@@ -157,7 +169,7 @@ async function removeSource(
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/sources/${sourceId}`,
     {
       method: 'DELETE',
-      credentials: 'include',
+      headers: getAuthHeaders(),
     }
   );
   if (!res.ok) throw new Error('Failed to remove source');
@@ -172,8 +184,7 @@ async function sendChatMessage(
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/chat/messages`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify({ message, selectedSourceIds }),
     }
   );
@@ -189,8 +200,7 @@ async function createNote(
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/notes`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify(note),
     }
   );
@@ -207,8 +217,7 @@ async function updateNote(
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/notes/${noteId}`,
     {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify(updates),
     }
   );
@@ -221,7 +230,7 @@ async function deleteNote(projectId: string, noteId: string): Promise<void> {
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/notes/${noteId}`,
     {
       method: 'DELETE',
-      credentials: 'include',
+      headers: getAuthHeaders(),
     }
   );
   if (!res.ok) throw new Error('Failed to delete note');
@@ -236,8 +245,7 @@ async function generateOutput(
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/outputs`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify({ type, selectedSourceIds }),
     }
   );
@@ -252,8 +260,7 @@ async function searchSources(
 ): Promise<any> {
   const res = await fetch(`${API_BASE}/api/v1/ai-studio/search`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    headers: getAuthHeaders(),
     body: JSON.stringify({ query, mode, includeInternet: true }),
   });
   if (!res.ok) throw new Error('Search failed');

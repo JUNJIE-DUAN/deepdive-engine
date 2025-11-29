@@ -403,13 +403,20 @@ export class AiGroupController {
       "辩论",
       "辩一下",
       "辩一辩",
+      "辩题",
       "思辨",
       "红蓝",
       "正方反方",
+      "讨论",
+      "discuss",
       "PK",
       "pk",
       "debate",
       "argue",
+      "对决",
+      "battle",
+      "vs",
+      "VS",
     ];
 
     const contentLower = content.toLowerCase();
@@ -424,8 +431,11 @@ export class AiGroupController {
     // 提取辩论主题（去掉@mentions和关键词后的内容）
     let debateTopic = content
       .replace(/@[\w\-()（）\s\u4e00-\u9fa5]+/g, "") // 移除@mentions（包括中文）
-      .replace(/辩论|辩一下|辩一辩|思辨|红蓝|正方反方|PK|debate|argue/gi, "")
-      .replace(/[：:]/g, "")
+      .replace(
+        /辩论|辩一下|辩一辩|辩题|思辨|红蓝|正方反方|讨论|discuss|PK|debate|argue|对决|battle|vs|新的/gi,
+        "",
+      )
+      .replace(/[：:请]/g, "")
       .trim();
 
     // 第一个 AI 是红方，第二个是蓝方（基于传入顺序）

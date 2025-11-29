@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CoordinatorAgent, ResourceAnalysisAgent } from '@/lib/ai-agents';
 import type { Resource } from '@/types/ai-office';
 
+// 服务器端使用内部域名进行服务间通信
 const AI_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5000';
+  process.env.AI_SERVICE_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_AI_URL ||
+  'http://localhost:5000';
 
 /**
  * AI Office Chat API with Multi-Agent Enhancement

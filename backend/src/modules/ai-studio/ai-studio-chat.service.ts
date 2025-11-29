@@ -135,16 +135,31 @@ export class AiStudioChatService {
 
     try {
       this.logger.log(
-        `Generating AI response for project ${projectId} with ${sourceContext.length} sources`,
+        `Generating AI response for project ${projectId} with ${sourceContext.length} sources, model: ${dto.model}`,
       );
 
-      // Call AI service
-      const aiResult = await this.aiChatService.generateChatCompletion({
-        model: dto.model || "gpt-4",
+      // Get model configuration from database
+      const modelConfig = await this.getModelConfig(dto.model);
+
+      if (!modelConfig) {
+        throw new Error(`Model "${dto.model}" not found or not enabled`);
+      }
+
+      this.logger.log(
+        `Using model: ${modelConfig.displayName} (${modelConfig.provider}/${modelConfig.modelId})`,
+      );
+
+      // Call AI service with database configuration
+      const aiResult = await this.aiChatService.generateChatCompletionWithKey({
+        provider: modelConfig.provider,
+        modelId: modelConfig.modelId,
+        apiKey: modelConfig.apiKey || "",
+        apiEndpoint: modelConfig.apiEndpoint || undefined,
         systemPrompt,
         messages: conversationHistory,
-        maxTokens: 2048,
-        temperature: 0.7,
+        maxTokens: modelConfig.maxTokens || 2048,
+        temperature: modelConfig.temperature || 0.7,
+        displayName: modelConfig.displayName,
       });
 
       // Create AI response message
@@ -238,6 +253,38 @@ export class AiStudioChatService {
     });
 
     return contextParts.join("\n\n---\n\n");
+  }
+
+  /**
+   * Get model configuration from database
+   */
+  private async getModelConfig(modelName?: string) {
+    // If model name is provided, find by name
+    if (modelName) {
+      const model = await this.prisma.aIModel.findFirst({
+        where: {
+          name: modelName,
+          isEnabled: true,
+        },
+      });
+      if (model) return model;
+    }
+
+    // Fallback to default model
+    const defaultModel = await this.prisma.aIModel.findFirst({
+      where: {
+        isEnabled: true,
+        isDefault: true,
+      },
+    });
+
+    if (defaultModel) return defaultModel;
+
+    // If no default, get any enabled model
+    return this.prisma.aIModel.findFirst({
+      where: { isEnabled: true },
+      orderBy: { createdAt: "asc" },
+    });
   }
 
   /**

@@ -985,6 +985,22 @@ interface AIModelOption {
   isDefault: boolean;
 }
 
+// Helper function to render model icon (emoji or image)
+function ModelIcon({
+  icon,
+  className = 'h-5 w-5',
+}: {
+  icon: string;
+  className?: string;
+}) {
+  // If icon starts with / or http, it's an image URL
+  if (icon?.startsWith('/') || icon?.startsWith('http')) {
+    return <img src={icon} alt="" className={className} />;
+  }
+  // Otherwise it's an emoji
+  return <span className="text-lg">{icon || '🤖'}</span>;
+}
+
 function ChatPanel({
   chat,
   selectedSourceIds,
@@ -1052,7 +1068,7 @@ function ChatPanel({
             onClick={() => setShowModelSelector(!showModelSelector)}
             className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
           >
-            <span>{currentModel?.icon || '🤖'}</span>
+            <ModelIcon icon={currentModel?.icon || '🤖'} className="h-5 w-5" />
             <span className="max-w-[120px] truncate text-gray-700">
               {currentModel?.name || 'Select Model'}
             </span>
@@ -1071,7 +1087,7 @@ function ChatPanel({
                     selectedModel === model.modelName ? 'bg-purple-50' : ''
                   }`}
                 >
-                  <span className="text-lg">{model.icon}</span>
+                  <ModelIcon icon={model.icon} className="h-5 w-5" />
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">
                       {model.name}

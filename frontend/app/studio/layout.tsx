@@ -1,12 +1,21 @@
+'use client';
+
 /**
  * AI Studio Layout
- * 独立的全屏布局，不使用全局 Sidebar
- * AI Studio 页面自身包含完整的导航结构
+ * 使用全局可折叠 Sidebar
  */
+
+import Sidebar from '@/components/layout/Sidebar';
+
 export default function StudioLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <div className="flex h-screen overflow-hidden bg-gray-100">
+      <Sidebar />
+      <main className="flex-1 overflow-hidden">{children}</main>
+    </div>
+  );
 }

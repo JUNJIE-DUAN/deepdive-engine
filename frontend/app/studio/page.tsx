@@ -376,73 +376,11 @@ const DEMO_RESEARCH_PLAN: ResearchPlanData = {
   estimatedTime: 180,
 };
 
-// ==================== 左侧导航组件 ====================
-function LeftNavigation({
-  activeCategory,
-  onCategoryChange,
-}: {
-  activeCategory: string;
-  onCategoryChange: (cat: string) => void;
-}) {
-  const categories = [
-    { id: 'all', label: '全部', icon: Sparkles, count: 344 },
-    { id: 'papers', label: 'Papers', icon: FileText, count: 156 },
-    { id: 'github', label: 'GitHub', icon: Github, count: 89 },
-    { id: 'news', label: 'News', icon: Newspaper, count: 67 },
-    { id: 'trends', label: 'Trends', icon: TrendingUp, count: 32 },
-  ];
-
-  return (
-    <div className="flex h-full w-56 flex-col border-r border-gray-200 bg-gray-50">
-      {/* Logo */}
-      <div className="flex items-center gap-2 border-b border-gray-200 p-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-blue-500">
-          <Sparkles className="h-4 w-4 text-white" />
-        </div>
-        <span className="font-semibold text-gray-900">AI Studio</span>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-3">
-        {categories.map((cat) => {
-          const Icon = cat.icon;
-          const isActive = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => onCategoryChange(cat.id)}
-              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
-                isActive
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                <span>{cat.label}</span>
-              </div>
-              <span
-                className={`text-xs ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
-              >
-                {cat.count}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Quick Actions */}
-      <div className="border-t border-gray-200 p-3">
-        <button className="flex w-full items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-sm text-white transition-colors hover:bg-purple-700">
-          <Plus className="h-4 w-4" />
-          添加资源
-        </button>
-      </div>
-    </div>
-  );
-}
+// LeftNavigation 已移至全局 Sidebar（通过 layout.tsx 引入）
 
 // ==================== 研究中枢组件 ====================
+type SearchSource = 'all' | 'local' | 'internet';
+
 function ResearchHub({
   resources,
   selectedIds,
@@ -450,6 +388,7 @@ function ResearchHub({
   searchQuery,
   onSearchChange,
   researchPlan,
+  onSearch,
 }: {
   resources: Resource[];
   selectedIds: Set<string>;
@@ -457,8 +396,11 @@ function ResearchHub({
   searchQuery: string;
   onSearchChange: (q: string) => void;
   researchPlan: ResearchPlanData | null;
+  onSearch?: (query: string, source: SearchSource) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [searchSource, setSearchSource] = useState<SearchSource>('all');
+  const [isSearching, setIsSearching] = useState(false);
 
   const getTypeIcon = (type: Resource['type']) => {
     switch (type) {
@@ -473,24 +415,91 @@ function ResearchHub({
     }
   };
 
+  const handleSearch = () => {
+    if (searchQuery.trim() && onSearch) {
+      setIsSearching(true);
+      onSearch(searchQuery.trim(), searchSource);
+      // 模拟搜索完成
+      setTimeout(() => setIsSearching(false), 2000);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <div className="border-b border-gray-200 bg-white">
-      {/* Search Bar */}
+      {/* Search Bar with Source Toggle */}
       <div className="border-b border-gray-100 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="输入研究问题，如：分析 LLM 推理优化趋势..."
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm focus:border-purple-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <kbd className="rounded border border-gray-300 bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
-              ⌘K
-            </kbd>
+        {/* Source Toggle */}
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-500">搜索范围:</span>
+          <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            {[
+              { id: 'all', label: '全部', icon: '🌐' },
+              { id: 'local', label: '本地数据库', icon: '💾' },
+              { id: 'internet', label: '互联网', icon: '🔍' },
+            ].map((source) => (
+              <button
+                key={source.id}
+                onClick={() => setSearchSource(source.id as SearchSource)}
+                className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  searchSource === source.id
+                    ? 'bg-white text-purple-700 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <span>{source.icon}</span>
+                <span>{source.label}</span>
+              </button>
+            ))}
           </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                searchSource === 'local'
+                  ? '搜索本地资源库...'
+                  : searchSource === 'internet'
+                    ? '搜索 arXiv, GitHub, 科技资讯...'
+                    : '搜索本地 + 互联网资源...'
+              }
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm focus:border-purple-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            disabled={!searchQuery.trim() || isSearching}
+            className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+          >
+            {isSearching ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
+            搜索
+          </button>
+        </div>
+
+        {/* Search Hints */}
+        <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+          <kbd className="rounded border border-gray-300 bg-gray-100 px-1.5 py-0.5 text-gray-500">
+            ⌘K
+          </kbd>
+          <span>打开命令面板</span>
+          <span className="mx-1">•</span>
+          <span>支持 arXiv, GitHub, HackerNews, 技术博客等数据源</span>
         </div>
       </div>
 
@@ -951,7 +960,7 @@ function InsightDetail({
 
 // ==================== 主页面组件 ====================
 export default function StudioPage() {
-  const [activeCategory, setActiveCategory] = useState('all');
+  // 全局 Sidebar 通过 layout.tsx 控制，无需本地状态
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(
     new Set(['1', '2'])
   );
@@ -1027,14 +1036,8 @@ export default function StudioPage() {
         />
       )}
 
-      {/* Main Layout */}
+      {/* Main Layout - Sidebar 通过 layout.tsx 引入 */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Navigation */}
-        <LeftNavigation
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-        />
-
         {/* Center: Research Hub + Deep Analysis */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Research Hub (Top) */}
@@ -1045,6 +1048,13 @@ export default function StudioPage() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             researchPlan={researchPlan}
+            onSearch={(query, source) => {
+              console.log(`Searching "${query}" in ${source}`);
+              // TODO: 实际调用后端 API
+              // source === 'local' -> 搜索本地数据库
+              // source === 'internet' -> 搜索 arXiv, GitHub 等
+              // source === 'all' -> 同时搜索
+            }}
           />
 
           {/* Deep Analysis (Bottom) */}

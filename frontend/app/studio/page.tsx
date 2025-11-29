@@ -20,6 +20,7 @@ import {
   FolderOpen,
   Sparkles,
 } from 'lucide-react';
+import { getAuthTokens } from '@/lib/auth';
 
 // ==================== 类型定义 ====================
 interface ResearchProject {
@@ -46,6 +47,18 @@ interface ResearchProject {
 // ==================== API ====================
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
+function getAuthHeaders(): HeadersInit {
+  const tokens = getAuthTokens();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (tokens?.accessToken) {
+    (headers as Record<string, string>)['Authorization'] =
+      `Bearer ${tokens.accessToken}`;
+  }
+  return headers;
+}
+
 async function fetchProjects(options?: {
   status?: string;
   search?: string;
@@ -55,10 +68,13 @@ async function fetchProjects(options?: {
   if (options?.search) params.set('search', options.search);
 
   const res = await fetch(`${API_BASE}/api/v1/ai-studio/projects?${params}`, {
-    credentials: 'include',
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('Please sign in to view projects');
+    }
     throw new Error('Failed to fetch projects');
   }
 
@@ -73,8 +89,7 @@ async function createProject(data: {
 }): Promise<ResearchProject> {
   const res = await fetch(`${API_BASE}/api/v1/ai-studio/projects`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
@@ -92,7 +107,7 @@ async function createProject(data: {
 async function deleteProject(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/ai-studio/projects/${id}`, {
     method: 'DELETE',
-    credentials: 'include',
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -105,7 +120,7 @@ async function archiveProject(id: string): Promise<void> {
     `${API_BASE}/api/v1/ai-studio/projects/${id}/archive`,
     {
       method: 'POST',
-      credentials: 'include',
+      headers: getAuthHeaders(),
     }
   );
 

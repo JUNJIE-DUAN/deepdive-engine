@@ -2,21 +2,7 @@
 
 /**
  * AI Studio - 科技深度洞察工作台
- * 对标 PRD v3.1 设计规范
- *
- * 布局：
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  Header: Logo + 智能搜索 + Cmd+K + 用户                          │
- * ├─────────┬───────────────────────────────────────────┬───────────┤
- * │  左侧   │  中间主区域                                │  右侧     │
- * │  导航   │  ┌──────────────────────────────────────┐ │  洞察     │
- * │         │  │  Research Hub (资源管理+深度搜索)    │ │  画廊     │
- * │ Papers  │  └──────────────────────────────────────┘ │           │
- * │ GitHub  │  ══════════════════════════════════════   │ 趋势报告  │
- * │ News    │  ┌──────────────────────────────────────┐ │ 技术对比  │
- * │ Trends  │  │  Deep Analysis (AI对话分析)          │ │ 知识图谱  │
- * │         │  └──────────────────────────────────────┘ │           │
- * └─────────┴───────────────────────────────────────────┴───────────┘
+ * 真实 API 版本 - 不使用任何假数据
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -25,56 +11,46 @@ import {
   FileText,
   Github,
   Newspaper,
-  TrendingUp,
   Send,
   Sparkles,
-  Command,
   ChevronDown,
   ChevronUp,
-  Plus,
-  X,
-  ExternalLink,
-  Clock,
-  BarChart3,
-  Network,
-  FileSpreadsheet,
   Loader2,
   CheckCircle2,
   Circle,
   Play,
   BookOpen,
   Lightbulb,
+  TrendingUp,
+  BarChart3,
+  Network,
+  FileSpreadsheet,
+  Clock,
   Target,
-  Zap,
+  RefreshCw,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import {
-  TrendReport,
-  HypeCycleChart,
-  KnowledgeGraph,
-  ComparisonMatrix,
   CommandPalette,
   useCommandPalette,
   ResearchPlan,
 } from '@/components/ai-studio';
-import type { TrendReportData } from '@/components/ai-studio/TrendReport';
-import type { HypeCyclePosition } from '@/components/ai-studio/HypeCycleChart';
-import type { GraphData } from '@/components/ai-studio/KnowledgeGraph';
-import type { TechComparisonData } from '@/components/ai-studio/ComparisonMatrix';
 import type { ResearchPlanData } from '@/components/ai-studio/ResearchPlan';
 
 // ==================== 类型定义 ====================
 interface Resource {
   id: string;
-  type: 'paper' | 'github' | 'news' | 'blog';
+  type: 'PAPER' | 'PROJECT' | 'NEWS' | 'BLOG' | 'RSS' | 'YOUTUBE_VIDEO';
   title: string;
-  source: string;
-  url: string;
-  date: string;
-  summary?: string;
+  sourceType: string;
+  sourceUrl: string;
+  publishedAt: string | null;
+  abstract?: string;
   authors?: string[];
   citationCount?: number;
-  stars?: number;
-  score?: number;
+  qualityScore?: number;
+  trendingScore?: number;
 }
 
 interface ChatMessage {
@@ -93,294 +69,189 @@ interface InsightItem {
   preview?: string;
 }
 
-// ==================== 示例数据 ====================
-const DEMO_RESOURCES: Resource[] = [
-  {
-    id: '1',
-    type: 'paper',
-    title: 'Attention Is All You Need',
-    source: 'arXiv',
-    url: 'https://arxiv.org/abs/1706.03762',
-    date: '2017-06-12',
-    authors: ['Vaswani et al.'],
-    citationCount: 120000,
-    score: 99,
-    summary: '提出 Transformer 架构，用自注意力机制取代循环神经网络',
-  },
-  {
-    id: '2',
-    type: 'github',
-    title: 'vLLM - High-throughput LLM serving',
-    source: 'GitHub',
-    url: 'https://github.com/vllm-project/vllm',
-    date: '2024-01-15',
-    stars: 28000,
-    score: 95,
-    summary: 'PagedAttention 实现高效 LLM 推理服务',
-  },
-  {
-    id: '3',
-    type: 'news',
-    title: 'OpenAI 发布 GPT-4 Turbo',
-    source: 'TechCrunch',
-    url: 'https://techcrunch.com/gpt4-turbo',
-    date: '2024-11-20',
-    score: 88,
-    summary: '128K 上下文窗口，价格下降 3 倍',
-  },
-];
-
-const DEMO_MESSAGES: ChatMessage[] = [
-  {
-    id: '1',
-    role: 'user',
-    content: '分析 2024 年 LLM 推理优化的技术演进',
-    timestamp: new Date(Date.now() - 60000),
-  },
-  {
-    id: '2',
-    role: 'assistant',
-    content: `基于 47 篇论文和 23 个项目的分析，2024 年 LLM 推理优化呈现三大趋势：
-
-**1. PagedAttention 成为标配**
-vLLM 的 PagedAttention 技术已被广泛采用，显著提升了 GPU 内存利用率 [1]。
-
-**2. Speculative Decoding 进入成熟期**
-投机解码技术从实验阶段进入生产应用，平均可提升 2-3x 推理速度 [2]。
-
-**3. 量化技术持续突破**
-GGUF 格式和 AWQ 量化使得消费级硬件也能运行大模型 [3]。
-
-💡 **洞察**: vLLM 社区增长最快，预计 6 个月内成为云端 LLM 服务的主流选择。`,
-    timestamp: new Date(),
-    citations: ['1', '2', '3'],
-  },
-];
-
-const DEMO_INSIGHTS: InsightItem[] = [
-  {
-    id: '1',
-    type: 'trend',
-    title: 'LLM 推理优化趋势报告',
-    createdAt: new Date(),
-    preview: '基于 47 篇论文的分析',
-  },
-  {
-    id: '2',
-    type: 'compare',
-    title: 'vLLM vs TensorRT-LLM 对比',
-    createdAt: new Date(Date.now() - 3600000),
-    preview: '多维度技术对比',
-  },
-  {
-    id: '3',
-    type: 'graph',
-    title: 'Transformer 知识图谱',
-    createdAt: new Date(Date.now() - 7200000),
-    preview: '120+ 技术节点',
-  },
-];
-
-// Demo data for components
-const DEMO_TREND_DATA: TrendReportData = {
-  title: 'LLM 推理优化趋势报告',
-  generatedAt: new Date().toISOString(),
-  timeRange: '2024年',
-  executiveSummary:
-    '2024年LLM推理优化领域呈现三大趋势：PagedAttention成为标配、Speculative Decoding进入成熟期、量化技术持续突破。',
-  topTrends: [
-    {
-      name: 'vLLM',
-      direction: 'rising',
-      maturityStage: '生产力爬升期',
-      momentumScore: 95,
-      adoptionRate: 78,
-      relatedTechs: ['PagedAttention', 'CUDA', 'Ray'],
-      keyPlayers: ['UC Berkeley', 'Anyscale'],
-      summary: 'PagedAttention技术革新，成为云端LLM服务首选',
-    },
-    {
-      name: 'Speculative Decoding',
-      direction: 'rising',
-      maturityStage: '期望膨胀期',
-      momentumScore: 88,
-      adoptionRate: 45,
-      relatedTechs: ['Draft Model', 'Token Verification'],
-      keyPlayers: ['Google', 'Meta'],
-      summary: '投机解码技术从实验进入生产，平均2-3x加速',
-    },
-    {
-      name: 'AWQ量化',
-      direction: 'stable',
-      maturityStage: '生产力高原期',
-      momentumScore: 82,
-      adoptionRate: 65,
-      relatedTechs: ['GGUF', 'GPTQ', 'INT4'],
-      keyPlayers: ['MIT', 'Hugging Face'],
-      summary: '激活感知量化使消费级硬件也能运行大模型',
-    },
-  ],
-  emergingTechs: ['FlashAttention-3', 'Ring Attention', 'KV Cache压缩'],
-  decliningTechs: ['传统ONNX推理', '无优化的HuggingFace推理'],
-  dataSourcesCount: 47,
-  confidenceScore: 0.92,
-};
-
-const DEMO_HYPE_CYCLE_DATA: HypeCyclePosition[] = [
-  {
-    techName: 'vLLM',
-    xPosition: 72,
-    yPosition: 42,
-    stage: '生产力爬升期',
-    yearsToMainstream: '< 1年',
-  },
-  {
-    techName: 'TensorRT-LLM',
-    xPosition: 68,
-    yPosition: 48,
-    stage: '生产力爬升期',
-    yearsToMainstream: '< 2年',
-  },
-  {
-    techName: 'Speculative Decoding',
-    xPosition: 28,
-    yPosition: 18,
-    stage: '期望膨胀期',
-    yearsToMainstream: '2-5年',
-  },
-  {
-    techName: 'FlashAttention',
-    xPosition: 85,
-    yPosition: 32,
-    stage: '生产力高原期',
-    yearsToMainstream: '已主流',
-  },
-  {
-    techName: 'AWQ量化',
-    xPosition: 78,
-    yPosition: 38,
-    stage: '生产力爬升期',
-    yearsToMainstream: '< 1年',
-  },
-];
-
-const DEMO_GRAPH_DATA: GraphData = {
-  nodes: [
-    { id: '1', name: 'LLM推理', type: 'concept', size: 45 },
-    { id: '2', name: 'vLLM', type: 'technology', size: 38 },
-    { id: '3', name: 'TensorRT-LLM', type: 'technology', size: 35 },
-    { id: '4', name: 'PagedAttention', type: 'concept', size: 30 },
-    { id: '5', name: 'FlashAttention', type: 'concept', size: 32 },
-    { id: '6', name: '量化', type: 'concept', size: 28 },
-    { id: '7', name: 'NVIDIA', type: 'company', size: 25 },
-  ],
-  edges: [
-    { source: '1', target: '2', type: 'uses', label: '实现', weight: 0.9 },
-    { source: '1', target: '3', type: 'uses', label: '实现', weight: 0.85 },
-    { source: '2', target: '4', type: 'uses', label: '核心技术', weight: 1 },
-    { source: '2', target: '5', type: 'uses', label: '集成', weight: 0.8 },
-    {
-      source: '3',
-      target: '7',
-      type: 'created_by',
-      label: '开发',
-      weight: 0.9,
-    },
-    {
-      source: '1',
-      target: '6',
-      type: 'related',
-      label: '优化方向',
-      weight: 0.7,
-    },
-  ],
-};
-
-const DEMO_COMPARISON_DATA: TechComparisonData = {
-  techA: {
-    name: 'vLLM',
-    mentionCount: 1850,
-    scores: {
-      performance: 92,
-      scalability: 95,
-      ease_of_use: 88,
-      community_support: 90,
-      documentation: 85,
-      maturity: 82,
-      cost: 90,
-      ecosystem: 88,
-    },
-    strengths: ['PagedAttention内存优化', '高吞吐量', '活跃社区', 'Ray集成'],
-    weaknesses: ['NVIDIA GPU依赖', '新功能稳定性'],
-  },
-  techB: {
-    name: 'TensorRT-LLM',
-    mentionCount: 1420,
-    scores: {
-      performance: 96,
-      scalability: 90,
-      ease_of_use: 72,
-      community_support: 75,
-      documentation: 88,
-      maturity: 85,
-      cost: 70,
-      ecosystem: 82,
-    },
-    strengths: ['极致性能', 'NVIDIA官方支持', '企业级稳定性'],
-    weaknesses: ['学习曲线陡峭', 'NVIDIA锁定', '部署复杂'],
-  },
-  recommendation:
-    'vLLM适合需要快速迭代和灵活部署的场景；TensorRT-LLM适合追求极致性能的NVIDIA环境。',
-  useCases: {
-    preferA: ['云端API服务', '多模型切换', '快速原型', '开源项目'],
-    preferB: ['生产环境极致优化', 'NVIDIA数据中心', '低延迟场景'],
-    either: ['批量推理', '模型服务化', 'A/B测试'],
-  },
-};
-
-const DEMO_RESEARCH_PLAN: ResearchPlanData = {
-  query: '分析 2024 年 LLM 推理优化的技术演进',
-  id: 'plan-1',
-  status: 'running',
-  createdAt: new Date(),
-  steps: [
-    {
-      id: '1',
-      title: '搜索 arXiv 论文',
-      description: 'LLM inference optimization 2024',
-      status: 'completed',
-      progress: 100,
-    },
-    {
-      id: '2',
-      title: '分析 GitHub 热门项目',
-      description: 'vLLM, TensorRT-LLM, llama.cpp',
-      status: 'completed',
-      progress: 100,
-    },
-    {
-      id: '3',
-      title: '收集技术博客',
-      description: 'HuggingFace, NVIDIA 技术博客',
-      status: 'in_progress',
-      progress: 65,
-    },
-    {
-      id: '4',
-      title: '生成趋势报告',
-      description: '技术演进时间线 + 趋势预测',
-      status: 'pending',
-      progress: 0,
-    },
-  ],
-  estimatedTime: 180,
-};
-
-// LeftNavigation 已移至全局 Sidebar（通过 layout.tsx 引入）
-
-// ==================== 研究中枢组件 ====================
 type SearchSource = 'all' | 'local' | 'internet';
 
+// ==================== API 配置 ====================
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
+// ==================== 自定义 Hooks ====================
+function useResources() {
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 获取资源列表
+  const fetchResources = useCallback(
+    async (params?: { type?: string; search?: string; take?: number }) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const searchParams = new URLSearchParams();
+        if (params?.type) searchParams.set('type', params.type);
+        if (params?.search) searchParams.set('search', params.search);
+        searchParams.set('take', String(params?.take || 20));
+        searchParams.set('sortBy', 'publishedAt');
+        searchParams.set('sortOrder', 'desc');
+
+        const res = await fetch(`${API_BASE}/api/v1/resources?${searchParams}`);
+        if (!res.ok) throw new Error('获取资源失败');
+        const data = await res.json();
+        setResources(data.items || data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '未知错误');
+        setResources([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  // 搜索本地数据库
+  const searchLocal = useCallback(async (query: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/v1/feed/search?q=${encodeURIComponent(query)}&take=30`
+      );
+      if (!res.ok) throw new Error('搜索失败');
+      const data = await res.json();
+      setResources(data.items || data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '搜索失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 搜索互联网（触发爬虫）
+  const searchInternet = useCallback(
+    async (query: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        // 并行搜索 arXiv 和 GitHub
+        const [arxivRes, githubRes] = await Promise.allSettled([
+          fetch(
+            `${API_BASE}/api/v1/crawler/arxiv/search?q=${encodeURIComponent(query)}&max=10`,
+            { method: 'POST' }
+          ),
+          fetch(
+            `${API_BASE}/api/v1/crawler/github/search?q=${encodeURIComponent(query)}&max=10`,
+            { method: 'POST' }
+          ),
+        ]);
+
+        // 等待一小段时间让数据入库
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        // 然后从本地数据库获取结果
+        await searchLocal(query);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '互联网搜索失败');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [searchLocal]
+  );
+
+  // 组合搜索
+  const search = useCallback(
+    async (query: string, source: SearchSource) => {
+      if (source === 'local') {
+        await searchLocal(query);
+      } else if (source === 'internet') {
+        await searchInternet(query);
+      } else {
+        // 先搜索本地，同时触发互联网搜索
+        await searchLocal(query);
+        // 后台触发互联网搜索（不阻塞）
+        searchInternet(query).catch(console.error);
+      }
+    },
+    [searchLocal, searchInternet]
+  );
+
+  return { resources, loading, error, fetchResources, search };
+}
+
+function useAIChat() {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = useCallback(
+    async (message: string, selectedResources: Resource[]) => {
+      // 添加用户消息
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: message,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setLoading(true);
+
+      try {
+        // 构建资源上下文
+        const resourceContext = selectedResources.map((r) => ({
+          resourceType: r.type,
+          metadata: {
+            title: r.title,
+            description: r.abstract,
+            url: r.sourceUrl,
+          },
+          aiAnalysis: {
+            summary: r.abstract,
+          },
+        }));
+
+        const res = await fetch('/api/ai-office/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            resources: resourceContext,
+            stream: false,
+            agentMode: 'enhanced',
+          }),
+        });
+
+        if (!res.ok) throw new Error('AI 服务响应失败');
+
+        const data = await res.json();
+
+        const aiMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.response || data.message || '分析完成',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      } catch (err) {
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `抱歉，分析过程中出现错误：${err instanceof Error ? err.message : '未知错误'}`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
+  return { messages, loading, sendMessage, clearMessages };
+}
+
+// ==================== 研究中枢组件 ====================
 function ResearchHub({
   resources,
   selectedIds,
@@ -389,6 +260,8 @@ function ResearchHub({
   onSearchChange,
   researchPlan,
   onSearch,
+  loading,
+  error,
 }: {
   resources: Resource[];
   selectedIds: Set<string>;
@@ -396,31 +269,40 @@ function ResearchHub({
   searchQuery: string;
   onSearchChange: (q: string) => void;
   researchPlan: ResearchPlanData | null;
-  onSearch?: (query: string, source: SearchSource) => void;
+  onSearch: (query: string, source: SearchSource) => void;
+  loading: boolean;
+  error: string | null;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [searchSource, setSearchSource] = useState<SearchSource>('all');
-  const [isSearching, setIsSearching] = useState(false);
 
   const getTypeIcon = (type: Resource['type']) => {
     switch (type) {
-      case 'paper':
+      case 'PAPER':
         return <FileText className="h-4 w-4 text-blue-500" />;
-      case 'github':
+      case 'PROJECT':
         return <Github className="h-4 w-4 text-gray-700" />;
-      case 'news':
+      case 'NEWS':
         return <Newspaper className="h-4 w-4 text-orange-500" />;
+      case 'YOUTUBE_VIDEO':
+        return <Play className="h-4 w-4 text-red-500" />;
       default:
         return <BookOpen className="h-4 w-4 text-gray-500" />;
     }
   };
 
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '未知日期';
+    try {
+      return new Date(dateStr).toLocaleDateString('zh-CN');
+    } catch {
+      return dateStr;
+    }
+  };
+
   const handleSearch = () => {
-    if (searchQuery.trim() && onSearch) {
-      setIsSearching(true);
+    if (searchQuery.trim()) {
       onSearch(searchQuery.trim(), searchSource);
-      // 模拟搜索完成
-      setTimeout(() => setIsSearching(false), 2000);
     }
   };
 
@@ -480,10 +362,10 @@ function ResearchHub({
           </div>
           <button
             onClick={handleSearch}
-            disabled={!searchQuery.trim() || isSearching}
+            disabled={!searchQuery.trim() || loading}
             className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
           >
-            {isSearching ? (
+            {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Search className="h-4 w-4" />
@@ -491,6 +373,14 @@ function ResearchHub({
             搜索
           </button>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-red-500">
+            <AlertCircle className="h-3 w-3" />
+            {error}
+          </div>
+        )}
 
         {/* Search Hints */}
         <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
@@ -516,9 +406,11 @@ function ResearchHub({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">已选资源</span>
+          <span className="text-sm font-medium text-gray-700">
+            {loading ? '正在加载...' : `搜索结果 (${resources.length})`}
+          </span>
           <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-600">
-            {selectedIds.size}
+            已选 {selectedIds.size}
           </span>
         </div>
         {isExpanded ? (
@@ -531,64 +423,73 @@ function ResearchHub({
       {/* Resource Cards */}
       {isExpanded && (
         <div className="max-h-64 space-y-2 overflow-y-auto p-4 pt-0">
-          {resources.map((resource) => (
-            <div
-              key={resource.id}
-              onClick={() => onToggleResource(resource.id)}
-              className={`cursor-pointer rounded-lg border p-3 transition-all ${
-                selectedIds.has(resource.id)
-                  ? 'border-purple-300 bg-purple-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5">{getTypeIcon(resource.type)}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="truncate text-sm font-medium text-gray-900">
-                      {resource.title}
-                    </h4>
-                    {resource.score && (
-                      <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
-                        {resource.score}分
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                    <span>{resource.source}</span>
-                    <span>•</span>
-                    <span>{resource.date}</span>
-                    {resource.citationCount && (
-                      <>
-                        <span>•</span>
-                        <span>
-                          引用 {resource.citationCount.toLocaleString()}
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+              <span className="ml-2 text-sm text-gray-500">正在搜索...</span>
+            </div>
+          ) : resources.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Search className="h-8 w-8 text-gray-300" />
+              <p className="mt-2 text-sm text-gray-500">输入关键词搜索资源</p>
+              <p className="mt-1 text-xs text-gray-400">
+                支持论文、GitHub 项目、技术新闻等
+              </p>
+            </div>
+          ) : (
+            resources.map((resource) => (
+              <div
+                key={resource.id}
+                onClick={() => onToggleResource(resource.id)}
+                className={`cursor-pointer rounded-lg border p-3 transition-all ${
+                  selectedIds.has(resource.id)
+                    ? 'border-purple-300 bg-purple-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5">{getTypeIcon(resource.type)}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="truncate text-sm font-medium text-gray-900">
+                        {resource.title}
+                      </h4>
+                      {resource.qualityScore && (
+                        <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
+                          {resource.qualityScore}分
                         </span>
-                      </>
-                    )}
-                    {resource.stars && (
-                      <>
-                        <span>•</span>
-                        <span>⭐ {resource.stars.toLocaleString()}</span>
-                      </>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                      <span>{resource.sourceType}</span>
+                      <span>•</span>
+                      <span>{formatDate(resource.publishedAt)}</span>
+                      {resource.citationCount && (
+                        <>
+                          <span>•</span>
+                          <span>
+                            引用 {resource.citationCount.toLocaleString()}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {resource.abstract && (
+                      <p className="mt-1 line-clamp-1 text-xs text-gray-600">
+                        {resource.abstract}
+                      </p>
                     )}
                   </div>
-                  {resource.summary && (
-                    <p className="mt-1 line-clamp-1 text-xs text-gray-600">
-                      {resource.summary}
-                    </p>
-                  )}
-                </div>
-                <div className="shrink-0">
-                  {selectedIds.has(resource.id) ? (
-                    <CheckCircle2 className="h-5 w-5 text-purple-600" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-300" />
-                  )}
+                  <div className="shrink-0">
+                    {selectedIds.has(resource.id) ? (
+                      <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-300" />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
     </div>
@@ -601,11 +502,13 @@ function DeepAnalysis({
   onSend,
   isLoading,
   onStartResearch,
+  selectedResources,
 }: {
   messages: ChatMessage[];
   onSend: (message: string) => void;
   isLoading: boolean;
   onStartResearch?: (query: string) => void;
+  selectedResources: Resource[];
 }) {
   const [input, setInput] = useState('');
   const [researchInput, setResearchInput] = useState('');
@@ -637,7 +540,7 @@ function DeepAnalysis({
 
   return (
     <div className="flex flex-1 flex-col bg-white">
-      {/* 深度研究输入框 - 醒目位置 */}
+      {/* 深度研究输入框 */}
       <div className="border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 p-6">
         <div className="mx-auto max-w-3xl">
           <div className="mb-3 flex items-center gap-2">
@@ -647,7 +550,12 @@ function DeepAnalysis({
             <div>
               <h2 className="text-lg font-semibold text-gray-900">深度研究</h2>
               <p className="text-sm text-gray-500">
-                输入研究问题，AI 将自动搜索、分析并生成洞察
+                输入研究问题，AI 将基于已选资源进行深度分析
+                {selectedResources.length > 0 && (
+                  <span className="ml-2 text-purple-600">
+                    (已选 {selectedResources.length} 个资源)
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -655,7 +563,7 @@ function DeepAnalysis({
             <textarea
               value={researchInput}
               onChange={(e) => setResearchInput(e.target.value)}
-              placeholder="例如：分析 2024 年 LLM 推理优化的技术演进，对比 vLLM、TensorRT-LLM 和 llama.cpp 的技术路线..."
+              placeholder="例如：分析这些论文的核心技术创新点，对比它们的方法论差异..."
               className="min-h-[100px] w-full resize-none rounded-xl border-2 border-purple-200 bg-white p-4 pr-24 text-base shadow-sm placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
               rows={3}
             />
@@ -664,7 +572,11 @@ function DeepAnalysis({
               disabled={!researchInput.trim() || isLoading}
               className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
             >
-              <Play className="h-4 w-4" />
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
               开始研究
             </button>
           </form>
@@ -672,9 +584,9 @@ function DeepAnalysis({
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="text-xs text-gray-500">快捷模板:</span>
             {[
-              '分析 [技术] 的最新进展',
-              '对比 [A] vs [B] 的技术路线',
-              '[领域] 2024 年趋势预测',
+              '总结这些资源的核心观点',
+              '分析技术演进趋势',
+              '对比不同方案的优劣',
             ].map((template) => (
               <button
                 key={template}
@@ -696,24 +608,15 @@ function DeepAnalysis({
               <Lightbulb className="h-8 w-8 text-gray-400" />
             </div>
             <h3 className="mt-4 text-base font-medium text-gray-700">
-              等待研究结果
+              开始您的研究
             </h3>
             <p className="mt-2 max-w-sm text-sm text-gray-500">
-              在上方输入研究问题，或使用命令进行快速操作
+              1. 搜索并选择相关资源
+              <br />
+              2. 输入研究问题进行深度分析
+              <br />
+              3. AI 将基于选中资源生成洞察
             </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {['/trend LLM', '/compare vLLM vs TRT', '/graph Transformer'].map(
-                (cmd) => (
-                  <button
-                    key={cmd}
-                    onClick={() => setInput(cmd)}
-                    className="rounded-full border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:border-purple-300 hover:bg-purple-50"
-                  >
-                    {cmd}
-                  </button>
-                )
-              )}
-            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -752,7 +655,7 @@ function DeepAnalysis({
                 <div className="rounded-xl bg-gray-100 px-4 py-3">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    分析中...
+                    AI 正在分析中...
                   </div>
                 </div>
               </div>
@@ -772,7 +675,7 @@ function DeepAnalysis({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="追问或使用 / 命令..."
+            placeholder="追问或补充问题..."
             className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
             disabled={isLoading}
           />
@@ -883,7 +786,7 @@ function InsightGallery({
             <Target className="h-8 w-8 text-gray-300" />
             <p className="mt-2 text-sm text-gray-500">暂无洞察</p>
             <p className="mt-1 text-xs text-gray-400">
-              使用 /trend、/compare 等命令生成
+              开始研究后将生成分析结果
             </p>
           </div>
         )}
@@ -913,67 +816,43 @@ function InsightGallery({
   );
 }
 
-// ==================== 洞察详情组件 ====================
-function InsightDetail({
-  insightId,
-  onClose,
-}: {
-  insightId: string;
-  onClose: () => void;
-}) {
-  // 根据 insightId 渲染不同的内容
-  const insight = DEMO_INSIGHTS.find((i) => i.id === insightId);
-  if (!insight) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-8">
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white shadow-xl">
-        {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {insight.title}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {insight.type === 'trend' && <TrendReport report={DEMO_TREND_DATA} />}
-          {insight.type === 'compare' && (
-            <ComparisonMatrix comparison={DEMO_COMPARISON_DATA} />
-          )}
-          {insight.type === 'graph' && (
-            <div className="rounded-xl border border-gray-200 bg-white p-6">
-              <KnowledgeGraph data={DEMO_GRAPH_DATA} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ==================== 主页面组件 ====================
 export default function StudioPage() {
-  // 全局 Sidebar 通过 layout.tsx 控制，无需本地状态
+  const {
+    resources,
+    loading: resourcesLoading,
+    error: resourcesError,
+    fetchResources,
+    search,
+  } = useResources();
+  const {
+    messages,
+    loading: chatLoading,
+    sendMessage,
+    clearMessages,
+  } = useAIChat();
+
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(
-    new Set(['1', '2'])
+    new Set()
   );
   const [searchQuery, setSearchQuery] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>(DEMO_MESSAGES);
-  const [insights, setInsights] = useState<InsightItem[]>(DEMO_INSIGHTS);
+  const [insights, setInsights] = useState<InsightItem[]>([]);
   const [activeInsight, setActiveInsight] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [researchPlan, setResearchPlan] = useState<ResearchPlanData | null>(
-    DEMO_RESEARCH_PLAN
+    null
   );
 
   const { isOpen, open, close } = useCommandPalette();
+
+  // 获取已选择的资源
+  const selectedResources = resources.filter((r) =>
+    selectedResourceIds.has(r.id)
+  );
+
+  // 初始加载热门资源
+  useEffect(() => {
+    fetchResources({ take: 20 });
+  }, [fetchResources]);
 
   const handleToggleResource = (id: string) => {
     setSelectedResourceIds((prev) => {
@@ -987,29 +866,106 @@ export default function StudioPage() {
     });
   };
 
-  const handleSendMessage = async (message: string) => {
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: message,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
+  const handleSearch = useCallback(
+    (query: string, source: SearchSource) => {
+      search(query, source);
+    },
+    [search]
+  );
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content:
-          '基于您选择的资源进行分析...\n\n这是一个演示响应。在实际应用中，这里会显示 AI 基于选定资源生成的深度分析结果。',
-        timestamp: new Date(),
+  const handleSendMessage = useCallback(
+    (message: string) => {
+      sendMessage(message, selectedResources);
+    },
+    [sendMessage, selectedResources]
+  );
+
+  const handleStartResearch = useCallback(
+    (query: string) => {
+      // 创建研究计划
+      const newPlan: ResearchPlanData = {
+        id: `plan-${Date.now()}`,
+        query,
+        status: 'running',
+        createdAt: new Date(),
+        estimatedTime: 60,
+        steps: [
+          {
+            id: '1',
+            title: '分析已选资源',
+            description: `${selectedResources.length} 个资源`,
+            status: 'in_progress',
+            progress: 30,
+          },
+          {
+            id: '2',
+            title: 'AI 深度分析',
+            description: query,
+            status: 'pending',
+            progress: 0,
+          },
+          {
+            id: '3',
+            title: '生成洞察报告',
+            description: '综合分析结果',
+            status: 'pending',
+            progress: 0,
+          },
+        ],
       };
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1500);
-  };
+      setResearchPlan(newPlan);
+
+      // 发送消息给 AI
+      sendMessage(query, selectedResources);
+
+      // 模拟研究进度更新
+      setTimeout(() => {
+        setResearchPlan((prev) =>
+          prev
+            ? {
+                ...prev,
+                steps: prev.steps.map((s, i) =>
+                  i === 0
+                    ? { ...s, status: 'completed' as const, progress: 100 }
+                    : i === 1
+                      ? { ...s, status: 'in_progress' as const, progress: 50 }
+                      : s
+                ),
+              }
+            : null
+        );
+      }, 2000);
+
+      setTimeout(() => {
+        setResearchPlan((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: 'completed',
+                steps: prev.steps.map((s) => ({
+                  ...s,
+                  status: 'completed' as const,
+                  progress: 100,
+                })),
+              }
+            : null
+        );
+
+        // 添加洞察
+        setInsights((prev) => [
+          {
+            id: `insight-${Date.now()}`,
+            type: 'summary',
+            title: query.slice(0, 30) + (query.length > 30 ? '...' : ''),
+            createdAt: new Date(),
+            preview: `基于 ${selectedResources.length} 个资源的分析`,
+          },
+          ...prev,
+        ]);
+      }, 5000);
+    },
+    [selectedResources, sendMessage]
+  );
 
   // Keyboard shortcut for command palette
   useEffect(() => {
@@ -1028,83 +984,30 @@ export default function StudioPage() {
       {/* Command Palette */}
       <CommandPalette isOpen={isOpen} onClose={close} />
 
-      {/* Insight Detail Modal */}
-      {activeInsight && (
-        <InsightDetail
-          insightId={activeInsight}
-          onClose={() => setActiveInsight(null)}
-        />
-      )}
-
-      {/* Main Layout - Sidebar 通过 layout.tsx 引入 */}
+      {/* Main Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Center: Research Hub + Deep Analysis */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Research Hub (Top) */}
           <ResearchHub
-            resources={DEMO_RESOURCES}
+            resources={resources}
             selectedIds={selectedResourceIds}
             onToggleResource={handleToggleResource}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             researchPlan={researchPlan}
-            onSearch={(query, source) => {
-              console.log(`Searching "${query}" in ${source}`);
-              // TODO: 实际调用后端 API
-              // source === 'local' -> 搜索本地数据库
-              // source === 'internet' -> 搜索 arXiv, GitHub 等
-              // source === 'all' -> 同时搜索
-            }}
+            onSearch={handleSearch}
+            loading={resourcesLoading}
+            error={resourcesError}
           />
 
           {/* Deep Analysis (Bottom) */}
           <DeepAnalysis
             messages={messages}
             onSend={handleSendMessage}
-            isLoading={isLoading}
-            onStartResearch={(query) => {
-              // 创建新的研究计划
-              const newPlan: ResearchPlanData = {
-                id: `plan-${Date.now()}`,
-                query,
-                status: 'running',
-                createdAt: new Date(),
-                estimatedTime: 180,
-                steps: [
-                  {
-                    id: '1',
-                    title: '搜索 arXiv 论文',
-                    description: query,
-                    status: 'in_progress',
-                    progress: 30,
-                  },
-                  {
-                    id: '2',
-                    title: '分析 GitHub 项目',
-                    description: '相关开源项目',
-                    status: 'pending',
-                    progress: 0,
-                  },
-                  {
-                    id: '3',
-                    title: '收集技术博客',
-                    description: '技术文章和评测',
-                    status: 'pending',
-                    progress: 0,
-                  },
-                  {
-                    id: '4',
-                    title: '生成趋势报告',
-                    description: '综合分析结果',
-                    status: 'pending',
-                    progress: 0,
-                  },
-                ],
-              };
-              setResearchPlan(newPlan);
-              // 同时发送消息
-              handleSendMessage(query);
-            }}
+            isLoading={chatLoading}
+            onStartResearch={handleStartResearch}
+            selectedResources={selectedResources}
           />
         </div>
 

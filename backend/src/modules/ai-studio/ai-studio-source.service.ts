@@ -355,6 +355,26 @@ export class AiStudioSourceService {
       );
     }
 
+    // News search - uses web search with news-focused query
+    if (sourcesToSearch.includes("news")) {
+      searchPromises.push(
+        this.searchNews(query, 10).catch((e) => {
+          errors.push(`news: ${e.message}`);
+          return [];
+        }),
+      );
+    }
+
+    // Scholar search - uses Semantic Scholar API
+    if (sourcesToSearch.includes("scholar")) {
+      searchPromises.push(
+        this.searchScholar(query, 10).catch((e) => {
+          errors.push(`scholar: ${e.message}`);
+          return [];
+        }),
+      );
+    }
+
     // Wait for all searches to complete
     const allResults = await Promise.all(searchPromises);
     allResults.forEach((r) => results.push(...r));
@@ -525,9 +545,83 @@ export class AiStudioSourceService {
       abstract: r.content,
       sourceUrl: r.url,
       source: "web",
-      sourceType: "news",
+      sourceType: "web",
       score: r.score,
     }));
+  }
+
+  /**
+   * Search news sources using web search with news-focused keywords
+   */
+  private async searchNews(query: string, limit: number): Promise<any[]> {
+    // Add news-related terms to improve news results
+    const newsQuery = `${query} news latest update announcement`;
+    const webResults = await this.searchService.search(newsQuery, limit);
+    if (!webResults.success || !webResults.results.length) {
+      return [];
+    }
+
+    this.logger.log(
+      `News search returned ${webResults.results.length} results`,
+    );
+    return webResults.results.map((r) => ({
+      id: null,
+      title: r.title,
+      abstract: r.content,
+      sourceUrl: r.url,
+      source: "news",
+      sourceType: "news",
+      score: r.score,
+      publishedDate: r.publishedDate,
+    }));
+  }
+
+  /**
+   * Search academic papers using Semantic Scholar API
+   */
+  private async searchScholar(query: string, limit: number): Promise<any[]> {
+    const axios = await import("axios");
+
+    try {
+      const response = await axios.default.get(
+        "https://api.semanticscholar.org/graph/v1/paper/search",
+        {
+          params: {
+            query,
+            limit,
+            fields:
+              "paperId,title,abstract,authors,year,citationCount,url,openAccessPdf",
+          },
+          headers: {
+            Accept: "application/json",
+          },
+          timeout: 15000,
+        },
+      );
+
+      const papers = response.data.data || [];
+      this.logger.log(`Scholar search returned ${papers.length} results`);
+
+      return papers.map((paper: any) => ({
+        id: null,
+        title: paper.title,
+        abstract: paper.abstract || "",
+        sourceUrl:
+          paper.openAccessPdf?.url ||
+          `https://www.semanticscholar.org/paper/${paper.paperId}`,
+        authors: paper.authors?.map((a: any) => a.name) || [],
+        publishedAt: paper.year ? `${paper.year}-01-01` : null,
+        source: "scholar",
+        sourceType: "paper",
+        metadata: {
+          citationCount: paper.citationCount,
+          paperId: paper.paperId,
+        },
+      }));
+    } catch (error: any) {
+      this.logger.warn(`Scholar search failed: ${error.message}`);
+      return [];
+    }
   }
 
   /**

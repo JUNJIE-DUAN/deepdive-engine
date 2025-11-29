@@ -150,7 +150,7 @@ export class AdvancedExtractorService {
 
         clearTimeout(timeoutHandle);
 
-        if (!article || !article.content) {
+        if (!article?.content) {
           reject(new Error("Readability returned no content"));
           return;
         }
@@ -241,7 +241,7 @@ export class AdvancedExtractorService {
     this.cleanDOM(contentNode);
 
     // 提取标题
-    let title = this.extractTitleFromDOM(doc);
+    const title = this.extractTitleFromDOM(doc);
 
     // 提取文本内容
     const textContent =
@@ -280,14 +280,14 @@ export class AdvancedExtractorService {
     url: string,
   ): Promise<ExtractionResult> {
     // 移除脚本、样式、注释
-    let cleaned = html
+    const cleaned = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
       .replace(/<!--[\s\S]*?-->/g, "")
       .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, "");
 
     // 提取标题
-    let title = this.extractTitleFromRegex(cleaned, html);
+    const title = this.extractTitleFromRegex(cleaned, html);
 
     // 提取最大的文本块（通常是主要内容）
     const paragraphs = cleaned.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
@@ -338,7 +338,7 @@ export class AdvancedExtractorService {
     url: string,
   ): Promise<ExtractionResult> {
     // 移除脚本和样式
-    let cleaned = html
+    const cleaned = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
 

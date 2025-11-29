@@ -42,7 +42,7 @@ async function testModelImageGeneration(modelId: string): Promise<{
   try {
     let url: string;
     let body: any;
-    let headers: any = {
+    const headers: any = {
       "Content-Type": "application/json",
     };
 

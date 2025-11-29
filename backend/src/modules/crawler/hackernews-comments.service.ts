@@ -36,7 +36,7 @@ export class HackernewsCommentsService {
     try {
       // 第一步：获取故事数据（包含所有评论ID）
       const storyData = await this.fetchItem(storyId);
-      if (!storyData || !storyData.kids || storyData.kids.length === 0) {
+      if (!storyData?.kids || storyData.kids.length === 0) {
         this.logger.log(`Story ${storyId} has no comments`);
         return [];
       }

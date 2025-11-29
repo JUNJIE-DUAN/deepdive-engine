@@ -1357,7 +1357,7 @@ Format the summary in a clear, structured manner using markdown.`;
 
       for (const msg of recentMessages) {
         // Clean the content - remove @mentions and image markdown
-        let cleanContent = msg.content
+        const cleanContent = msg.content
           .replace(/^@[\w\-()]+\s*/g, "") // Remove @mentions
           .replace(
             /!\[.*?\]\(data:image\/[^)]+\)/g,

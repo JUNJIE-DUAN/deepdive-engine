@@ -222,7 +222,7 @@ export class WorkspaceTaskService {
           where: { id: taskId },
         });
 
-        if (!task || !task.externalTaskId) {
+        if (!task?.externalTaskId) {
           return;
         }
 

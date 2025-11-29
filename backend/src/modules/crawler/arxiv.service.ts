@@ -59,7 +59,7 @@ export class ArxivService {
       const parser = new xml2js.Parser({ explicitArray: false });
       const result = await parser.parseStringPromise(xmlData);
 
-      if (!result.feed || !result.feed.entry) {
+      if (!result.feed?.entry) {
         this.logger.warn("No entries found in arXiv response");
         return 0;
       }
@@ -408,7 +408,7 @@ export class ArxivService {
       const parser = new xml2js.Parser({ explicitArray: false });
       const result = await parser.parseStringPromise(xmlData);
 
-      if (!result.feed || !result.feed.entry) {
+      if (!result.feed?.entry) {
         this.logger.warn("No entries found");
         return 0;
       }

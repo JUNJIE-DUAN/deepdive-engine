@@ -369,7 +369,7 @@ export class NotesService {
 
       // 构建上下文：优先使用传入的PDF内容，否则使用资源的标题和摘要
       let context = "";
-      if (pdfContext && pdfContext.trim()) {
+      if (pdfContext?.trim()) {
         // 使用传入的PDF内容，限制长度以避免超过token限制
         const maxContextLength = 10000;
         const trimmedContext =

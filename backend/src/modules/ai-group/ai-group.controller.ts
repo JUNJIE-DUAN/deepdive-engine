@@ -431,7 +431,7 @@ export class AiGroupController {
     }
 
     // 提取辩论主题（去掉@mentions和关键词后的内容）
-    let debateTopic = content
+    const debateTopic = content
       .replace(/@[\w\-()（）\s\u4e00-\u9fa5]+/g, "") // 移除@mentions（包括中文）
       .replace(
         /辩论|辩一下|辩一辩|辩题|思辨|红蓝|正方反方|讨论一下|讨论下|PK|pk|debate|对决/gi,

@@ -129,7 +129,7 @@ export class WebScraperService {
   ): any {
     try {
       // 提取标题 - 尝试多种选择器
-      let title =
+      const title =
         element.find("h1").first().text().trim() ||
         element.find("h2").first().text().trim() ||
         element.find("h3").first().text().trim() ||

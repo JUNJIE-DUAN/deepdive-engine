@@ -836,9 +836,21 @@ function SourcesPanel({
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="line-clamp-1 font-medium text-gray-900">
-                            {result.title}
-                          </h4>
+                          {result.sourceUrl ? (
+                            <a
+                              href={result.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="line-clamp-1 font-medium text-gray-900 hover:text-purple-600 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {result.title}
+                            </a>
+                          ) : (
+                            <h4 className="line-clamp-1 font-medium text-gray-900">
+                              {result.title}
+                            </h4>
+                          )}
                           <p className="mt-1 line-clamp-2 text-xs text-gray-500">
                             {result.abstract}
                           </p>
@@ -919,6 +931,18 @@ function SourcesPanel({
                             <Eye className="h-3 w-3" />
                             View
                           </button>
+                          {result.sourceUrl && (
+                            <a
+                              href={result.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Open
+                            </a>
+                          )}
                         </div>
                       </div>
                     ))}

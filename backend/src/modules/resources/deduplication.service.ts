@@ -238,7 +238,7 @@ export class DeduplicationService {
       contentCompleteness += 25;
     if (resource.content && resource.content.length > 2000)
       contentCompleteness += 15;
-    if (resource.authors && resource.authors.length) contentCompleteness += 15;
+    if (resource.authors?.length) contentCompleteness += 15;
     contentCompleteness = Math.min(contentCompleteness, 100);
 
     let freshnessScore = 50;

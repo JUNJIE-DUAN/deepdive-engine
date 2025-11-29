@@ -250,8 +250,8 @@ export class MetadataExtractorService {
             });
           } else if (typeof parsed.author === "string") {
             authors.add(parsed.author);
-          } else if ((parsed.author as any).name) {
-            authors.add((parsed.author as any).name);
+          } else if (parsed.author.name) {
+            authors.add(parsed.author.name);
           }
         }
       }

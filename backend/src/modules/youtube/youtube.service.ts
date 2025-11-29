@@ -71,17 +71,14 @@ export class YoutubeService {
       // Get transcript
       const transcriptData = await info.getTranscript();
 
-      if (!transcriptData || !transcriptData.transcript) {
+      if (!transcriptData?.transcript) {
         throw new NotFoundException(
           "Transcript not available for this video. The video may not have captions enabled.",
         );
       }
 
       // Transform transcript data
-      if (
-        !transcriptData.transcript.content ||
-        !transcriptData.transcript.content.body
-      ) {
+      if (!transcriptData.transcript.content?.body) {
         throw new NotFoundException("Invalid transcript data structure");
       }
 

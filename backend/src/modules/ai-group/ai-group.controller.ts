@@ -399,24 +399,24 @@ export class AiGroupController {
     blueAI: { id: string; displayName: string } | null;
     topic: string;
   } {
+    // 必须同时满足：1. @了至少2个AI  2. 包含辩论关键词
+    // 关键词要求严格，避免误触发
+    if (aiMembers.length < 2) {
+      return { isDebate: false, redAI: null, blueAI: null, topic: "" };
+    }
+
     const debateKeywords = [
       "辩论",
       "辩一下",
       "辩一辩",
       "辩题",
       "思辨",
-      "红蓝",
+      "红蓝对抗",
       "正方反方",
-      "讨论",
-      "discuss",
-      "PK",
-      "pk",
+      "PK一下",
+      "pk一下",
       "debate",
-      "argue",
       "对决",
-      "battle",
-      "vs",
-      "VS",
     ];
 
     const contentLower = content.toLowerCase();
@@ -424,7 +424,7 @@ export class AiGroupController {
       contentLower.includes(kw.toLowerCase()),
     );
 
-    if (!isDebateRequest || aiMembers.length < 2) {
+    if (!isDebateRequest) {
       return { isDebate: false, redAI: null, blueAI: null, topic: "" };
     }
 
@@ -432,7 +432,7 @@ export class AiGroupController {
     let debateTopic = content
       .replace(/@[\w\-()（）\s\u4e00-\u9fa5]+/g, "") // 移除@mentions（包括中文）
       .replace(
-        /辩论|辩一下|辩一辩|辩题|思辨|红蓝|正方反方|讨论|discuss|PK|debate|argue|对决|battle|vs|新的/gi,
+        /辩论|辩一下|辩一辩|辩题|思辨|红蓝对抗|正方反方|PK一下|pk一下|debate|对决/gi,
         "",
       )
       .replace(/[：:请]/g, "")

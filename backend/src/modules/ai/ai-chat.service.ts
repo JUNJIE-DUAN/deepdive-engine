@@ -1336,7 +1336,13 @@ Format the summary in a clear, structured manner using markdown.`;
     const isImageRequest = isImageRequestByContent && hasImageCapability;
 
     this.logger.log(
-      `[Gemini] Image detection: modelId=${modelId}, displayName=${displayName}, hasImageCapability=${hasImageCapability}, isImagenModel=${isImagenModel}, isGeminiImageModel=${isGeminiImageModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
+      `[Gemini] Image detection: modelId=${modelId}, displayName=${displayName}`,
+    );
+    this.logger.log(
+      `[Gemini] Image detection details: hasImageCapability=${hasImageCapability}, capabilities=${JSON.stringify(capabilities)}, isImageRequestByContent=${isImageRequestByContent}, userContent="${userContent.substring(0, 100)}"`,
+    );
+    this.logger.log(
+      `[Gemini] Image detection result: isImagenModel=${isImagenModel}, isGeminiImageModel=${isGeminiImageModel}, finalIsImageRequest=${isImageRequest}`,
     );
 
     // Build context-aware prompt for image generation

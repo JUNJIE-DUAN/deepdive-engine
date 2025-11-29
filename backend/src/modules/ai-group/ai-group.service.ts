@@ -2046,7 +2046,12 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
 
         // Infer capabilities from displayName if not explicitly set
         // This ensures AI members with "(Image)" in their name can generate images
-        let effectiveCapabilities = aiMember.capabilities || [];
+        let effectiveCapabilities: string[] = (aiMember.capabilities || []).map(
+          (c) => String(c),
+        );
+        this.logger.log(
+          `[AI Capabilities] Original: ${JSON.stringify(aiMember.capabilities)}, Effective: ${JSON.stringify(effectiveCapabilities)}`,
+        );
         if (
           aiMember.displayName.toLowerCase().includes("image") &&
           !effectiveCapabilities.includes("IMAGE_GENERATION")
@@ -2056,6 +2061,9 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
             `[AI Capabilities] Inferred IMAGE_GENERATION for ${aiMember.displayName}`,
           );
         }
+        this.logger.log(
+          `[AI Capabilities] Final capabilities for ${aiMember.displayName}: ${JSON.stringify(effectiveCapabilities)}`,
+        );
 
         result = await this.aiChatService.generateChatCompletionWithKey({
           provider,

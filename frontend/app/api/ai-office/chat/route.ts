@@ -8,6 +8,60 @@ const AI_SERVICE_URL =
   process.env.NEXT_PUBLIC_AI_URL ||
   'http://localhost:5000';
 
+const BACKEND_URL =
+  process.env.BACKEND_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:4000';
+
+// 缓存默认模型 ID（避免每次请求都查询）
+let cachedDefaultModel: string | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60000; // 1 分钟缓存
+
+/**
+ * 获取系统配置的默认 AI 模型
+ */
+async function getDefaultModel(): Promise<string> {
+  const now = Date.now();
+  if (cachedDefaultModel && now - cacheTimestamp < CACHE_TTL) {
+    return cachedDefaultModel;
+  }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/admin/ai-models`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (res.ok) {
+      const models = await res.json();
+      // 查找默认模型（isDefault: true）
+      const defaultModel = models.find(
+        (m: { isDefault?: boolean }) => m.isDefault
+      );
+      if (defaultModel?.name) {
+        cachedDefaultModel = defaultModel.name;
+        cacheTimestamp = now;
+        return defaultModel.name;
+      }
+      // 如果没有设置默认，使用第一个启用的模型
+      const enabledModel = models.find(
+        (m: { isEnabled?: boolean }) => m.isEnabled
+      );
+      if (enabledModel?.name) {
+        cachedDefaultModel = enabledModel.name;
+        cacheTimestamp = now;
+        return enabledModel.name;
+      }
+    }
+  } catch (err) {
+    console.warn('[AI Office] Failed to fetch default model:', err);
+  }
+
+  // 如果获取失败，回退到 grok（但这只是最后的保底）
+  return 'grok';
+}
+
 /**
  * AI Office Chat API with Multi-Agent Enhancement
  * Handles AI conversations with resource context for document generation
@@ -274,7 +328,7 @@ export async function POST(request: NextRequest) {
         context: systemPrompt
           ? `${systemPrompt}\n\n${finalContext}`
           : finalContext,
-        model: agentPlan?.model || model, // 🆕 使用Agent推荐的模型
+        model: agentPlan?.model || model || (await getDefaultModel()), // 从配置获取默认模型
         stream,
         resources, // Pass resources array to backend
         conversationHistory, // Pass conversation history for context

@@ -96,7 +96,10 @@ function useResources() {
         const res = await fetch(`${API_BASE}/api/v1/resources?${searchParams}`);
         if (!res.ok) throw new Error('获取资源失败');
         const data = await res.json();
-        setResources(data.items || data || []);
+        // API 返回 { data: Resource[], pagination: {...} }
+        setResources(
+          Array.isArray(data) ? data : data.data || data.items || []
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : '未知错误');
         setResources([]);
@@ -117,7 +120,8 @@ function useResources() {
       );
       if (!res.ok) throw new Error('搜索失败');
       const data = await res.json();
-      setResources(data.items || data || []);
+      // API 可能返回不同格式
+      setResources(Array.isArray(data) ? data : data.data || data.items || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : '搜索失败');
     } finally {

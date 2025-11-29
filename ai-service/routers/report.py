@@ -695,7 +695,7 @@ class ReportsChatRequest(BaseModel):
     """AI Office 报告对话请求"""
     message: str = Field(..., min_length=1)
     context: Optional[str] = None
-    model: str = Field(default="grok", pattern="^(grok|gpt-4)$")
+    model: Optional[str] = None  # 可选，由调用方从系统配置获取，为空时使用 AI Service 编排器默认
     stream: bool = Field(default=False)
     resources: Optional[List[Dict[str, Any]]] = None
     conversationHistory: Optional[List[Dict[str, str]]] = None  # 对话历史
@@ -741,8 +741,16 @@ async def reports_chat(request: ReportsChatRequest):
 
         logger.info(f"Total messages in context: {len(messages)}")
 
-        # 选择 AI 客户端
-        ai_client = openai_client if request.model == "gpt-4" else grok_client
+        # 选择 AI 客户端 - 基于传入的模型名称
+        # 支持: gpt-4, openai, grok 等
+        model_name = (request.model or "").lower()
+        if model_name in ("gpt-4", "openai", "gpt-3.5", "gpt-4o"):
+            ai_client = openai_client
+            logger.info(f"Using OpenAI client for model: {request.model}")
+        else:
+            # 默认使用 grok（包括 grok, gemini 等，因为 grok_client 实际是通用客户端）
+            ai_client = grok_client
+            logger.info(f"Using Grok client for model: {request.model}")
 
         if not ai_client or not ai_client.available:
             raise HTTPException(

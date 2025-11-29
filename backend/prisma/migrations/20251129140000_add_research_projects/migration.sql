@@ -1,20 +1,36 @@
 -- AI Studio - Research Projects Tables
 -- Migration for NotebookLM-style research project management
 
--- Create enum for research project status
-CREATE TYPE "ResearchProjectStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'DELETED');
+-- Create enum for research project status (if not exists)
+DO $$ BEGIN
+    CREATE TYPE "ResearchProjectStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'DELETED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Create enum for source analysis status
-CREATE TYPE "SourceAnalysisStatus" AS ENUM ('PENDING', 'ANALYZING', 'COMPLETED', 'FAILED');
+-- Create enum for source analysis status (if not exists)
+DO $$ BEGIN
+    CREATE TYPE "SourceAnalysisStatus" AS ENUM ('PENDING', 'ANALYZING', 'COMPLETED', 'FAILED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Create enum for output type
-CREATE TYPE "OutputType" AS ENUM ('STUDY_GUIDE', 'BRIEFING_DOC', 'FAQ', 'TIMELINE', 'AUDIO_OVERVIEW', 'TREND_REPORT', 'COMPARISON', 'KNOWLEDGE_GRAPH', 'CUSTOM');
+-- Create enum for output type (if not exists)
+DO $$ BEGIN
+    CREATE TYPE "OutputType" AS ENUM ('STUDY_GUIDE', 'BRIEFING_DOC', 'FAQ', 'TIMELINE', 'AUDIO_OVERVIEW', 'TREND_REPORT', 'COMPARISON', 'KNOWLEDGE_GRAPH', 'CUSTOM');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Create enum for output status
-CREATE TYPE "OutputStatus" AS ENUM ('PENDING', 'GENERATING', 'COMPLETED', 'FAILED');
+-- Create enum for output status (if not exists)
+DO $$ BEGIN
+    CREATE TYPE "OutputStatus" AS ENUM ('PENDING', 'GENERATING', 'COMPLETED', 'FAILED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Create research_projects table
-CREATE TABLE "research_projects" (
+CREATE TABLE IF NOT EXISTS "research_projects" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "name" VARCHAR(500) NOT NULL,
@@ -33,7 +49,7 @@ CREATE TABLE "research_projects" (
 );
 
 -- Create research_project_sources table
-CREATE TABLE "research_project_sources" (
+CREATE TABLE IF NOT EXISTS "research_project_sources" (
     "id" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
     "title" VARCHAR(1000) NOT NULL,
@@ -56,7 +72,7 @@ CREATE TABLE "research_project_sources" (
 );
 
 -- Create research_project_notes table
-CREATE TABLE "research_project_notes" (
+CREATE TABLE IF NOT EXISTS "research_project_notes" (
     "id" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
     "title" VARCHAR(500),
@@ -72,7 +88,7 @@ CREATE TABLE "research_project_notes" (
 );
 
 -- Create research_project_chats table
-CREATE TABLE "research_project_chats" (
+CREATE TABLE IF NOT EXISTS "research_project_chats" (
     "id" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
     "messages" JSONB NOT NULL DEFAULT '[]',
@@ -86,7 +102,7 @@ CREATE TABLE "research_project_chats" (
 );
 
 -- Create research_project_outputs table
-CREATE TABLE "research_project_outputs" (
+CREATE TABLE IF NOT EXISTS "research_project_outputs" (
     "id" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
     "type" "OutputType" NOT NULL,
@@ -105,36 +121,56 @@ CREATE TABLE "research_project_outputs" (
 );
 
 -- Create indexes for research_projects
-CREATE INDEX "research_projects_user_id_idx" ON "research_projects"("user_id");
-CREATE INDEX "research_projects_status_idx" ON "research_projects"("status");
-CREATE INDEX "research_projects_created_at_idx" ON "research_projects"("created_at" DESC);
-CREATE INDEX "research_projects_last_access_at_idx" ON "research_projects"("last_access_at" DESC);
+CREATE INDEX IF NOT EXISTS "research_projects_user_id_idx" ON "research_projects"("user_id");
+CREATE INDEX IF NOT EXISTS "research_projects_status_idx" ON "research_projects"("status");
+CREATE INDEX IF NOT EXISTS "research_projects_created_at_idx" ON "research_projects"("created_at" DESC);
+CREATE INDEX IF NOT EXISTS "research_projects_last_access_at_idx" ON "research_projects"("last_access_at" DESC);
 
 -- Create indexes for research_project_sources
-CREATE INDEX "research_project_sources_project_id_idx" ON "research_project_sources"("project_id");
-CREATE INDEX "research_project_sources_source_type_idx" ON "research_project_sources"("source_type");
-CREATE INDEX "research_project_sources_analysis_status_idx" ON "research_project_sources"("analysis_status");
+CREATE INDEX IF NOT EXISTS "research_project_sources_project_id_idx" ON "research_project_sources"("project_id");
+CREATE INDEX IF NOT EXISTS "research_project_sources_source_type_idx" ON "research_project_sources"("source_type");
+CREATE INDEX IF NOT EXISTS "research_project_sources_analysis_status_idx" ON "research_project_sources"("analysis_status");
 
 -- Create indexes for research_project_notes
-CREATE INDEX "research_project_notes_project_id_idx" ON "research_project_notes"("project_id");
-CREATE INDEX "research_project_notes_is_pinned_idx" ON "research_project_notes"("is_pinned");
+CREATE INDEX IF NOT EXISTS "research_project_notes_project_id_idx" ON "research_project_notes"("project_id");
+CREATE INDEX IF NOT EXISTS "research_project_notes_is_pinned_idx" ON "research_project_notes"("is_pinned");
 
 -- Create indexes for research_project_chats
-CREATE INDEX "research_project_chats_project_id_idx" ON "research_project_chats"("project_id");
-CREATE INDEX "research_project_chats_created_at_idx" ON "research_project_chats"("created_at" DESC);
+CREATE INDEX IF NOT EXISTS "research_project_chats_project_id_idx" ON "research_project_chats"("project_id");
+CREATE INDEX IF NOT EXISTS "research_project_chats_created_at_idx" ON "research_project_chats"("created_at" DESC);
 
 -- Create indexes for research_project_outputs
-CREATE INDEX "research_project_outputs_project_id_idx" ON "research_project_outputs"("project_id");
-CREATE INDEX "research_project_outputs_type_idx" ON "research_project_outputs"("type");
-CREATE INDEX "research_project_outputs_status_idx" ON "research_project_outputs"("status");
+CREATE INDEX IF NOT EXISTS "research_project_outputs_project_id_idx" ON "research_project_outputs"("project_id");
+CREATE INDEX IF NOT EXISTS "research_project_outputs_type_idx" ON "research_project_outputs"("type");
+CREATE INDEX IF NOT EXISTS "research_project_outputs_status_idx" ON "research_project_outputs"("status");
 
--- Add foreign key constraints
-ALTER TABLE "research_projects" ADD CONSTRAINT "research_projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Add foreign key constraints (if not exists)
+DO $$ BEGIN
+    ALTER TABLE "research_projects" ADD CONSTRAINT "research_projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-ALTER TABLE "research_project_sources" ADD CONSTRAINT "research_project_sources_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "research_project_sources" ADD CONSTRAINT "research_project_sources_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-ALTER TABLE "research_project_notes" ADD CONSTRAINT "research_project_notes_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "research_project_notes" ADD CONSTRAINT "research_project_notes_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-ALTER TABLE "research_project_chats" ADD CONSTRAINT "research_project_chats_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "research_project_chats" ADD CONSTRAINT "research_project_chats_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-ALTER TABLE "research_project_outputs" ADD CONSTRAINT "research_project_outputs_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "research_project_outputs" ADD CONSTRAINT "research_project_outputs_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "research_projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;

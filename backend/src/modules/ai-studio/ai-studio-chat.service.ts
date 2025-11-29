@@ -2,10 +2,12 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { InputJsonValue } from "@prisma/client/runtime/library";
 import { SendChatMessageDto, CreateNoteDto, UpdateNoteDto } from "./dto";
+import { AiChatService } from "../ai/ai-chat.service";
 
 export interface ChatMessage {
   id: string;
@@ -17,7 +19,12 @@ export interface ChatMessage {
 
 @Injectable()
 export class AiStudioChatService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(AiStudioChatService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiChatService: AiChatService,
+  ) {}
 
   /**
    * Get or create the current chat session for a project
@@ -62,8 +69,7 @@ export class AiStudioChatService {
   }
 
   /**
-   * Send a message in a chat session
-   * Returns the user message (AI response is handled separately by streaming)
+   * Send a message in a chat session and get AI response
    */
   async sendMessage(
     userId: string,
@@ -83,7 +89,7 @@ export class AiStudioChatService {
     const messages = (chat.messages as unknown as ChatMessage[]) || [];
     messages.push(userMessage);
 
-    // Update the chat with the new message
+    // Update the chat with user message
     await this.prisma.researchProjectChat.update({
       where: { id: chat.id },
       data: {
@@ -112,11 +118,150 @@ export class AiStudioChatService {
       sourceContext = sources;
     }
 
-    return {
-      chatId: chat.id,
-      message: userMessage,
-      sourceContext,
-    };
+    // Build context from sources
+    const sourceContextText = this.buildSourceContext(sourceContext);
+
+    // Build system prompt with source context
+    const systemPrompt = this.buildSystemPrompt(sourceContextText);
+
+    // Build conversation history for AI
+    const conversationHistory = messages
+      .filter((m) => m.role !== "system")
+      .slice(-10) // Keep last 10 messages for context
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    try {
+      this.logger.log(
+        `Generating AI response for project ${projectId} with ${sourceContext.length} sources`,
+      );
+
+      // Call AI service
+      const aiResult = await this.aiChatService.generateChatCompletion({
+        model: dto.model || "gpt-4",
+        systemPrompt,
+        messages: conversationHistory,
+        maxTokens: 2048,
+        temperature: 0.7,
+      });
+
+      // Create AI response message
+      const aiMessage: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        role: "assistant",
+        content: aiResult.content,
+        timestamp: new Date().toISOString(),
+        citations: sourceContext.map((s) => s.title),
+      };
+
+      // Add AI response to messages
+      messages.push(aiMessage);
+
+      // Update chat with AI response
+      await this.prisma.researchProjectChat.update({
+        where: { id: chat.id },
+        data: {
+          messages: messages as unknown as InputJsonValue,
+          tokensUsed: (chat.tokensUsed || 0) + aiResult.tokensUsed,
+        },
+      });
+
+      return {
+        chatId: chat.id,
+        userMessage,
+        aiMessage,
+        sourceContext,
+        tokensUsed: aiResult.tokensUsed,
+      };
+    } catch (error: any) {
+      this.logger.error(`AI chat failed: ${error.message}`);
+
+      // Return error message as AI response
+      const errorMessage: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        role: "assistant",
+        content: `抱歉，AI 回复生成失败：${error.message}。请稍后重试。`,
+        timestamp: new Date().toISOString(),
+      };
+
+      messages.push(errorMessage);
+      await this.prisma.researchProjectChat.update({
+        where: { id: chat.id },
+        data: {
+          messages: messages as unknown as InputJsonValue,
+        },
+      });
+
+      return {
+        chatId: chat.id,
+        userMessage,
+        aiMessage: errorMessage,
+        sourceContext,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Build context text from sources
+   */
+  private buildSourceContext(sources: any[]): string {
+    if (sources.length === 0) {
+      return "";
+    }
+
+    const contextParts = sources.map((source, index) => {
+      const parts = [`[资料 ${index + 1}] ${source.title}`];
+      parts.push(`类型: ${source.sourceType}`);
+
+      if (source.abstract) {
+        parts.push(`摘要: ${source.abstract}`);
+      }
+
+      if (source.content) {
+        // Limit content to avoid token overflow
+        const maxContentLength = 2000;
+        const content =
+          source.content.length > maxContentLength
+            ? source.content.substring(0, maxContentLength) + "..."
+            : source.content;
+        parts.push(`内容: ${content}`);
+      }
+
+      if (source.aiSummary) {
+        parts.push(`AI 总结: ${source.aiSummary}`);
+      }
+
+      return parts.join("\n");
+    });
+
+    return contextParts.join("\n\n---\n\n");
+  }
+
+  /**
+   * Build system prompt with source context
+   */
+  private buildSystemPrompt(sourceContext: string): string {
+    const basePrompt = `你是一个专业的研究助手，帮助用户分析和理解研究资料。你的回答应该：
+1. 基于提供的资料内容进行分析和回答
+2. 引用具体的资料来源支持你的观点
+3. 如果资料中没有相关信息，请明确说明
+4. 保持客观、准确、专业的态度
+5. 使用清晰的结构组织回答`;
+
+    if (sourceContext) {
+      return `${basePrompt}
+
+以下是用户选择的研究资料，请基于这些资料回答用户的问题：
+
+${sourceContext}`;
+    }
+
+    return `${basePrompt}
+
+注意：用户没有选择任何研究资料。如果用户的问题需要基于特定资料回答，请提醒他们先选择相关资料。`;
   }
 
   /**

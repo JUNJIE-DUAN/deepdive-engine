@@ -1501,21 +1501,21 @@ export default function ProjectDetailPage() {
         };
       });
 
-      // Send to API
+      // Send to API and get AI response
       const result = await sendChatMessage(
         projectId,
         message,
         Array.from(selectedSourceIds)
       );
 
-      // TODO: Handle streaming response / AI reply
-      // For now, simulate AI response
-      setTimeout(() => {
+      // Add AI response from backend
+      if (result.aiMessage) {
         const aiResponse: ChatMessage = {
-          id: `ai-${Date.now()}`,
+          id: result.aiMessage.id,
           role: 'assistant',
-          content: `I've analyzed your question about "${message.slice(0, 50)}...". Based on the ${selectedSourceIds.size || 'available'} sources, here are my findings:\n\n1. Key insight from the research...\n2. Another important point...\n3. Recommendations based on the analysis...`,
-          timestamp: new Date().toISOString(),
+          content: result.aiMessage.content,
+          timestamp: result.aiMessage.timestamp,
+          citations: result.aiMessage.citations,
         };
 
         setProject((prev) => {
@@ -1532,10 +1532,31 @@ export default function ProjectDetailPage() {
             ],
           };
         });
-        setChatLoading(false);
-      }, 2000);
+      }
+      setChatLoading(false);
     } catch (err) {
       console.error('Failed to send message:', err);
+      // Show error message
+      const errorResponse: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: '抱歉，消息发送失败。请稍后重试。',
+        timestamp: new Date().toISOString(),
+      };
+      setProject((prev) => {
+        if (!prev) return null;
+        const chat = prev.chats[0];
+        if (!chat) return prev;
+        return {
+          ...prev,
+          chats: [
+            {
+              ...chat,
+              messages: [...chat.messages, errorResponse],
+            },
+          ],
+        };
+      });
       setChatLoading(false);
     }
   };

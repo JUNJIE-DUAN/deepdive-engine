@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAuthTokens } from '@/lib/auth';
+import { useAIModels } from '@/hooks/useAIModels';
 import {
   ArrowLeft,
   Plus,
@@ -178,14 +179,15 @@ async function removeSource(
 async function sendChatMessage(
   projectId: string,
   message: string,
-  selectedSourceIds?: string[]
+  selectedSourceIds?: string[],
+  model?: string
 ): Promise<any> {
   const res = await fetch(
     `${API_BASE}/api/v1/ai-studio/projects/${projectId}/chat/messages`,
     {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ message, selectedSourceIds }),
+      body: JSON.stringify({ message, selectedSourceIds, model }),
     }
   );
   if (!res.ok) throw new Error('Failed to send message');
@@ -975,24 +977,41 @@ function SourcesPanel({
 }
 
 // ==================== Chat Panel ====================
+interface AIModelOption {
+  id: string;
+  name: string;
+  modelName: string;
+  icon: string;
+  isDefault: boolean;
+}
+
 function ChatPanel({
   chat,
   selectedSourceIds,
   onSendMessage,
   onSaveAsNote,
   isLoading,
+  models,
+  selectedModel,
+  onModelChange,
 }: {
   chat: Chat | null;
   selectedSourceIds: Set<string>;
   onSendMessage: (message: string) => void;
   onSaveAsNote: (content: string) => void;
   isLoading: boolean;
+  models: AIModelOption[];
+  selectedModel: string;
+  onModelChange: (model: string) => void;
 }) {
   const [input, setInput] = useState('');
+  const [showModelSelector, setShowModelSelector] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const messages = chat?.messages || [];
+  const currentModel =
+    models.find((m) => m.modelName === selectedModel) || models[0];
 
   const scrollToBottom = useCallback(() => {
     if (messagesContainerRef.current) {
@@ -1027,9 +1046,48 @@ function ChatPanel({
             </span>
           )}
         </div>
-        <button className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100">
-          <Settings className="h-4 w-4" />
-        </button>
+        {/* Model Selector */}
+        <div className="relative">
+          <button
+            onClick={() => setShowModelSelector(!showModelSelector)}
+            className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            <span>{currentModel?.icon || '🤖'}</span>
+            <span className="max-w-[120px] truncate text-gray-700">
+              {currentModel?.name || 'Select Model'}
+            </span>
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </button>
+          {showModelSelector && (
+            <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+              {models.map((model) => (
+                <button
+                  key={model.id}
+                  onClick={() => {
+                    onModelChange(model.modelName);
+                    setShowModelSelector(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 ${
+                    selectedModel === model.modelName ? 'bg-purple-50' : ''
+                  }`}
+                >
+                  <span className="text-lg">{model.icon}</span>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">
+                      {model.name}
+                    </div>
+                    {model.isDefault && (
+                      <span className="text-xs text-purple-600">默认</span>
+                    )}
+                  </div>
+                  {selectedModel === model.modelName && (
+                    <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -1397,6 +1455,18 @@ export default function ProjectDetailPage() {
   );
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+
+  // Load AI models
+  const { models: aiModels, loading: modelsLoading } = useAIModels();
+
+  // Set default model when models are loaded
+  useEffect(() => {
+    if (aiModels.length > 0 && !selectedModel) {
+      const defaultModel = aiModels.find((m) => m.isDefault) || aiModels[0];
+      setSelectedModel(defaultModel.modelName);
+    }
+  }, [aiModels, selectedModel]);
 
   // Load project
   useEffect(() => {
@@ -1505,7 +1575,8 @@ export default function ProjectDetailPage() {
       const result = await sendChatMessage(
         projectId,
         message,
-        Array.from(selectedSourceIds)
+        Array.from(selectedSourceIds),
+        selectedModel
       );
 
       // Add AI response from backend
@@ -1728,6 +1799,15 @@ export default function ProjectDetailPage() {
           onSendMessage={handleSendMessage}
           onSaveAsNote={handleSaveAsNote}
           isLoading={chatLoading}
+          models={aiModels.map((m) => ({
+            id: m.id,
+            name: m.name,
+            modelName: m.modelName,
+            icon: m.icon,
+            isDefault: m.isDefault,
+          }))}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
         />
 
         {/* Right: Studio */}

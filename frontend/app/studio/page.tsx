@@ -517,13 +517,21 @@ function DeepAnalysis({
   const [input, setInput] = useState('');
   const [researchInput, setResearchInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // 只在消息区域内部滚动，不影响整个页面
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    // 只有当有消息时才滚动到底部
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
   }, [messages, scrollToBottom]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -605,7 +613,7 @@ function DeepAnalysis({
       </div>
 
       {/* Messages / 对话区域 */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <div className="rounded-full bg-gray-100 p-4">

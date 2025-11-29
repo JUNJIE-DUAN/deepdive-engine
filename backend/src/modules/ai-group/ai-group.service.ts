@@ -1325,10 +1325,27 @@ ${messagesForSummary
     });
 
     // 3. 按分数排序，取top N，然后按时间重新排序
-    const topMessages = scoredMessages
+    // CRITICAL: Always include the latest user message (it contains the current request!)
+    const latestUserMessage = recentMessages.find((m) => m.senderId);
+
+    let topMessages = scoredMessages
       .sort((a, b) => b.score - a.score)
       .slice(0, maxMessages)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    // Ensure the latest user message is always included
+    if (
+      latestUserMessage &&
+      !topMessages.find((m) => m.id === latestUserMessage.id)
+    ) {
+      this.logger.log(
+        `[SmartContext] Force-adding latest user message: "${latestUserMessage.content.substring(0, 50)}..."`,
+      );
+      // Add it and re-sort by time
+      topMessages = [...topMessages, { ...latestUserMessage, score: 100 }].sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+      );
+    }
 
     // 4. 如果消息被截断太多，生成早期消息的摘要
     let summary: string | null = null;

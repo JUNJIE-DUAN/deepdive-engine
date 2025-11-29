@@ -72,6 +72,9 @@ model User {
   topicSummaries      TopicSummary[]          @relation("TopicSummaryCreator")
   topicMentions       TopicMessageMention[]   @relation("TopicMentionUser")
 
+  // AI Studio 研究项目
+  researchProjects    ResearchProject[]
+
   @@map("users")
 }
 
@@ -1579,6 +1582,193 @@ model TopicMessageBookmark {
   @@index([userId])
   @@index([category])
   @@map("topic_message_bookmarks")
+}
+
+// ============ AI Studio - 研究项目 ============
+
+enum ResearchProjectStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+model ResearchProject {
+  id          String                @id @default(uuid())
+  userId      String                @map("user_id")
+  name        String                @db.VarChar(500)
+  description String?               @db.Text
+  icon        String?               @db.VarChar(10) // Emoji icon
+  color       String?               @db.VarChar(20) // Hex color code
+  status      ResearchProjectStatus @default(ACTIVE)
+
+  // 项目统计
+  sourceCount Int @default(0) @map("source_count")
+  noteCount   Int @default(0) @map("note_count")
+  chatCount   Int @default(0) @map("chat_count")
+
+  // 时间戳
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  lastAccessAt DateTime? @map("last_access_at")
+
+  // 关系
+  user    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources ResearchProjectSource[]
+  notes   ResearchProjectNote[]
+  chats   ResearchProjectChat[]
+  outputs ResearchProjectOutput[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@index([lastAccessAt(sort: Desc)])
+  @@map("research_projects")
+}
+
+// 项目资料来源
+enum SourceAnalysisStatus {
+  PENDING
+  ANALYZING
+  COMPLETED
+  FAILED
+}
+
+model ResearchProjectSource {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+
+  // 资料信息
+  title        String  @db.VarChar(1000)
+  sourceType   String  @map("source_type") @db.VarChar(50) // paper, github, news, blog, video, file
+  sourceUrl    String? @map("source_url") @db.Text
+  thumbnailUrl String? @map("thumbnail_url") @db.Text
+
+  // 资料内容
+  abstract String? @db.Text
+  content  String? @db.Text
+
+  // 元数据
+  authors     Json? // 作者列表
+  publishedAt DateTime? @map("published_at")
+  metadata    Json? // 其他元数据
+
+  // AI 分析
+  analysisStatus SourceAnalysisStatus @default(PENDING) @map("analysis_status")
+  aiSummary      String?              @map("ai_summary") @db.Text
+  keyInsights    Json?                @map("key_insights")
+
+  // 关联的资源库资源（可选）
+  resourceId String? @map("resource_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([sourceType])
+  @@index([analysisStatus])
+  @@map("research_project_sources")
+}
+
+// 项目笔记
+model ResearchProjectNote {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+
+  title   String? @db.VarChar(500)
+  content String  @db.Text
+
+  // 来源（可能来自对话或手动创建）
+  sourceType String? @map("source_type") @db.VarChar(50) // manual, ai-chat, generated
+  chatId     String? @map("chat_id") // 关联的对话ID
+
+  // 标签
+  tags Json? @default("[]")
+
+  // 是否固定
+  isPinned Boolean @default(false) @map("is_pinned")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([isPinned])
+  @@map("research_project_notes")
+}
+
+// 项目对话
+model ResearchProjectChat {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+
+  // 对话消息 (JSON array)
+  messages Json @default("[]")
+
+  // 对话元数据
+  title      String? @db.VarChar(500) // 对话标题（可自动生成）
+  modelUsed  String? @map("model_used") @db.VarChar(50)
+  tokensUsed Int?    @map("tokens_used")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([createdAt(sort: Desc)])
+  @@map("research_project_chats")
+}
+
+// 项目生成产出
+enum OutputType {
+  STUDY_GUIDE      // 学习指南
+  BRIEFING_DOC     // 简报文档
+  FAQ              // 常见问题
+  TIMELINE         // 时间线
+  AUDIO_OVERVIEW   // 音频概述
+  TREND_REPORT     // 趋势报告
+  COMPARISON       // 对比分析
+  KNOWLEDGE_GRAPH  // 知识图谱
+  CUSTOM           // 自定义
+}
+
+enum OutputStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+model ResearchProjectOutput {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+
+  type   OutputType
+  title  String     @db.VarChar(500)
+  status OutputStatus @default(PENDING)
+
+  // 产出内容
+  content  String? @db.Text
+  metadata Json? // 额外元数据
+
+  // 生成信息
+  modelUsed  String? @map("model_used") @db.VarChar(50)
+  tokensUsed Int?    @map("tokens_used")
+  error      String? @db.Text
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  completedAt DateTime? @map("completed_at")
+
+  project ResearchProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([type])
+  @@index([status])
+  @@map("research_project_outputs")
 }
 
 // ============ 系统设置 ============

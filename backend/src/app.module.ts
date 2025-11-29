@@ -32,6 +32,7 @@ import { DataCollectionModule } from "./modules/data-collection/data-collection.
 import { AdminModule } from "./modules/admin/admin.module";
 import { AiGroupModule } from "./modules/ai-group/ai-group.module";
 import { WechatWorkModule } from "./modules/wechat-work/wechat-work.module";
+import { AiStudioModule } from "./modules/ai-studio/ai-studio.module";
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import { WechatWorkModule } from "./modules/wechat-work/wechat-work.module";
     AdminModule,
     AiGroupModule,
     WechatWorkModule,
+    AiStudioModule,
   ],
   controllers: [AppController],
   providers: [

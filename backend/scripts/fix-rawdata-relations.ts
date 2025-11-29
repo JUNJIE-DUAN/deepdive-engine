@@ -285,9 +285,7 @@ async function fixRawDataRelations(dryRun: boolean = false): Promise<FixStats> {
               title: resourceInfo.title,
               abstract: resourceInfo.abstract,
               sourceUrl: resourceInfo.sourceUrl,
-              authors: resourceInfo.authors
-                ? JSON.stringify(resourceInfo.authors)
-                : null,
+              authors: resourceInfo.authors ? resourceInfo.authors : undefined,
               publishedAt: resourceInfo.publishedAt,
               sourceType: rawData.source,
               externalId: rawData.externalId,

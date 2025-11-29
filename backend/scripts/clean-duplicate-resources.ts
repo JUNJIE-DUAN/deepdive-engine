@@ -90,16 +90,6 @@ function computeFingerprint(content: string): string {
   return createHash("sha256").update(normalized).digest("hex").slice(0, 32);
 }
 
-// 计算标题指纹
-function computeTitleFingerprint(title: string): string {
-  if (!title || title.length < 5) return "";
-  const normalized = title
-    .toLowerCase()
-    .replace(/[^\w\s\u4e00-\u9fa5]/g, "")
-    .trim();
-  return createHash("sha256").update(normalized).digest("hex").slice(0, 16);
-}
-
 // Jaccard 相似度
 function calculateJaccardSimilarity(str1: string, str2: string): number {
   if (!str1 || !str2) return 0;
@@ -166,7 +156,7 @@ async function findDuplicates(): Promise<DuplicateGroup[]> {
       title: true,
       abstract: true,
       content: true,
-      source: true,
+      sourceType: true,
       publishedAt: true,
       citationCount: true,
       authors: true,
@@ -189,7 +179,7 @@ async function findDuplicates(): Promise<DuplicateGroup[]> {
     urlMap.get(normalized)!.push(resource);
   }
 
-  for (const [url, group] of urlMap) {
+  for (const [_url, group] of urlMap) {
     if (group.length > 1) {
       // 选择质量最高的作为规范版本
       const sorted = group.sort((a, b) => assessQuality(b) - assessQuality(a));
@@ -262,7 +252,7 @@ async function findDuplicates(): Promise<DuplicateGroup[]> {
     fingerprintMap.get(fingerprint)!.push(resource);
   }
 
-  for (const [fp, group] of fingerprintMap) {
+  for (const [_fp, group] of fingerprintMap) {
     if (group.length > 1) {
       const sorted = group.sort((a, b) => assessQuality(b) - assessQuality(a));
       const canonical = sorted[0];
@@ -374,19 +364,11 @@ async function mergeDuplicates(
       });
       report.deletedResources += group.duplicateIds.length;
 
-      // 记录去重决策
-      await prisma.deduplicationRecord.create({
-        data: {
-          resourceId: group.canonicalId,
-          duplicateOfId: group.duplicateIds[0],
-          method: group.reason,
-          similarity: group.similarity,
-          decision: "MERGED",
-          urlHash: "",
-          originalData: { mergedIds: group.duplicateIds },
-          processedBy: "clean-duplicate-resources.ts",
-        },
-      });
+      // 记录去重决策（跳过，避免 taskId 约束问题）
+      // 清洗脚本的执行记录通过日志输出即可
+      console.log(
+        `  ✓ 已合并 ${group.duplicateIds.length} 个重复到 ${group.canonicalId}`,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       report.errors.push(`处理 ${group.canonicalId} 时出错: ${message}`);

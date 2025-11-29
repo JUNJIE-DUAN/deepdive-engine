@@ -220,6 +220,9 @@ model Resource {
   @@index([sourceType, createdAt(sort: Desc)])
   @@index([externalId])
   @@index([collectionTaskId])
+  @@index([normalizedUrl])
+  @@index([contentFingerprint])
+  @@index([titleFingerprint])
   @@map("resources")
 }
 

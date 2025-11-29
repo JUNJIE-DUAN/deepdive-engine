@@ -79,7 +79,11 @@ async function createProject(data: {
   });
 
   if (!res.ok) {
-    throw new Error('Failed to create project');
+    if (res.status === 401) {
+      throw new Error('Please sign in to create a project');
+    }
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to create project');
   }
 
   return res.json();

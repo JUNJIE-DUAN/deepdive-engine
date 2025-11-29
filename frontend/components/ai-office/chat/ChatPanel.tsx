@@ -28,6 +28,12 @@ import DocumentGenerationWizard, {
 import GenerationProgress from '../document/GenerationProgress';
 import MessageRenderer from './MessageRenderer';
 import { calculateSlideCount } from '@/lib/utils/ppt-utils';
+import SlashCommandMenu, {
+  SLASH_COMMANDS,
+  parseSlashCommand,
+  buildCommandPrompt,
+  type SlashCommand,
+} from './SlashCommandMenu';
 
 export default function ChatPanel() {
   const [input, setInput] = useState('');
@@ -37,6 +43,12 @@ export default function ChatPanel() {
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+
+  // 斜杠命令状态
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashSearch, setSlashSearch] = useState('');
+  const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 });
+  const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
 
   const {
     isStreaming,
@@ -83,15 +95,40 @@ export default function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
 
-  // 检测 @ 提及
+  // 检测 @ 提及和 / 斜杠命令
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     const cursorPos = e.target.selectionStart;
     setInput(value);
     setCursorPosition(cursorPos);
 
-    // 查找当前光标位置的 @ 符号
     const textBeforeCursor = value.slice(0, cursorPos);
+
+    // 检测斜杠命令（只在行首触发）
+    const lastNewlineIndex = textBeforeCursor.lastIndexOf('\n');
+    const currentLine = textBeforeCursor.slice(lastNewlineIndex + 1);
+
+    if (currentLine.startsWith('/') && !currentLine.includes(' ')) {
+      const searchQuery = currentLine.slice(1).toLowerCase();
+      setSlashSearch(searchQuery);
+      setShowSlashMenu(true);
+      setSelectedSlashIndex(0);
+      setShowMentionMenu(false);
+
+      // 计算斜杠命令菜单位置
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setSlashPosition({
+          top: rect.top,
+          left: rect.left + 20,
+        });
+      }
+      return;
+    } else {
+      setShowSlashMenu(false);
+    }
+
+    // 查找当前光标位置的 @ 符号
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
 
     if (lastAtIndex !== -1) {
@@ -117,6 +154,30 @@ export default function ChatPanel() {
       setShowMentionMenu(false);
     }
   };
+
+  // 选择斜杠命令
+  const selectSlashCommand = (command: SlashCommand) => {
+    // 替换当前输入为命令 + 空格
+    setInput(command.command + ' ');
+    setShowSlashMenu(false);
+
+    // 聚焦回输入框
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const newCursorPos = command.command.length + 1;
+      inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  // 获取过滤后的斜杠命令
+  const filteredSlashCommands = SLASH_COMMANDS.filter((cmd) => {
+    if (!slashSearch) return true;
+    return (
+      cmd.command.toLowerCase().includes('/' + slashSearch) ||
+      cmd.title.toLowerCase().includes(slashSearch) ||
+      cmd.description.toLowerCase().includes(slashSearch)
+    );
+  });
 
   // 过滤资源列表
   const filteredResources = resources.filter((r) => {
@@ -178,8 +239,24 @@ export default function ChatPanel() {
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return;
 
-    const userInput = input;
+    let userInput = input;
     setInput('');
+
+    // 解析斜杠命令
+    const { command: slashCommand, args: slashArgs } =
+      parseSlashCommand(userInput);
+    if (slashCommand) {
+      // 构建增强的 prompt
+      userInput = buildCommandPrompt(slashCommand, slashArgs, {
+        selectedResourceCount: selectedResourceIds.length,
+      });
+      console.log(
+        '[ChatPanel] Slash command detected:',
+        slashCommand.id,
+        'args:',
+        slashArgs
+      );
+    }
 
     // 任务管理：创建或更新任务
     const currentTaskId = useTaskStore.getState().currentTaskId;
@@ -1519,6 +1596,27 @@ ${userInput || ''}
 
       {/* 输入框 - 固定 */}
       <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
+        {/* 斜杠命令菜单 */}
+        <SlashCommandMenu
+          isOpen={showSlashMenu}
+          searchQuery={slashSearch}
+          position={slashPosition}
+          selectedIndex={selectedSlashIndex}
+          onSelect={selectSlashCommand}
+          onClose={() => setShowSlashMenu(false)}
+          onNavigate={(direction) => {
+            if (direction === 'up') {
+              setSelectedSlashIndex((prev) =>
+                prev > 0 ? prev - 1 : filteredSlashCommands.length - 1
+              );
+            } else {
+              setSelectedSlashIndex((prev) =>
+                prev < filteredSlashCommands.length - 1 ? prev + 1 : 0
+              );
+            }
+          }}
+        />
+
         {/* @ 提及菜单 */}
         {showMentionMenu && (
           <div
@@ -1574,7 +1672,39 @@ ${userInput || ''}
             value={input}
             onChange={handleInputChange}
             onKeyDown={(e) => {
-              if (showMentionMenu) {
+              // 斜杠命令菜单键盘导航
+              if (showSlashMenu) {
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedSlashIndex((prev) =>
+                    prev > 0 ? prev - 1 : filteredSlashCommands.length - 1
+                  );
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedSlashIndex((prev) =>
+                    prev < filteredSlashCommands.length - 1 ? prev + 1 : 0
+                  );
+                } else if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (filteredSlashCommands[selectedSlashIndex]) {
+                    selectSlashCommand(
+                      filteredSlashCommands[selectedSlashIndex]
+                    );
+                  }
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setShowSlashMenu(false);
+                } else if (e.key === 'Tab') {
+                  e.preventDefault();
+                  if (filteredSlashCommands[selectedSlashIndex]) {
+                    selectSlashCommand(
+                      filteredSlashCommands[selectedSlashIndex]
+                    );
+                  }
+                }
+              }
+              // @ 提及菜单键盘导航
+              else if (showMentionMenu) {
                 const mentionOptions = [
                   'all',
                   ...filteredResources.map((r) => r._id),
@@ -1609,7 +1739,7 @@ ${userInput || ''}
                 handleSend();
               }
             }}
-            placeholder="输入 @ 引用资源 (@all 选择全部)，或直接输入消息... (Enter 发送, Shift+Enter 换行)"
+            placeholder="输入 / 使用命令，@ 引用资源，或直接输入消息... (Enter 发送)"
             className="w-full resize-none rounded-xl border-2 border-gray-200 px-4 py-3 pb-12 pr-28 transition-colors placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-0"
             rows={3}
             disabled={isStreaming}

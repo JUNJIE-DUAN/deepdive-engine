@@ -168,6 +168,21 @@ model Resource {
   // 元数据
   metadata Json? @default("{}")
 
+  // 去重相关字段
+  normalizedUrl      String? @map("normalized_url") @db.Text
+  contentFingerprint String? @map("content_fingerprint") @db.VarChar(64)
+  titleFingerprint   String? @map("title_fingerprint") @db.VarChar(32)
+
+  // 质量评估字段
+  sourceCredibility   Int? @map("source_credibility")
+  contentCompleteness Int? @map("content_completeness")
+  freshnessScore      Int? @map("freshness_score")
+
+  // 技术洞察字段
+  citationCount  Int?    @map("citation_count")
+  influenceScore Int?    @map("influence_score")
+  maturityStage  String? @map("maturity_stage") @db.VarChar(50)
+
   // MongoDB 原始数据引用（关键！）
   rawDataId String? @map("raw_data_id")
 
@@ -1770,6 +1785,11 @@ model RawData {
   resourceId String?   @map("resource_id")
   resource   Resource? @relation(fields: [resourceId], references: [id], onDelete: SetNull)
 
+  // Processing status
+  processedAt     DateTime? @map("processed_at")
+  processingError String?   @map("processing_error") @db.Text
+  isProcessed     Boolean   @default(false) @map("is_processed")
+
   // Metadata
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1779,6 +1799,7 @@ model RawData {
   @@index([externalId])
   @@index([resourceId])
   @@index([createdAt])
+  @@index([isProcessed])
   // GIN index for JSONB data (created via raw SQL migration)
   @@map("raw_data")
 }

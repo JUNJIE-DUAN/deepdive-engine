@@ -14,6 +14,9 @@ import { ListTodo } from 'lucide-react';
 import MiddlePanel from './MiddlePanel';
 import RightPanel from './RightPanel';
 import TaskList from '../task/TaskList';
+import CommandPalette, {
+  useCommandPalette,
+} from '@/components/ai-studio/CommandPalette';
 
 interface WorkspaceLayoutProps {
   children?: React.ReactNode;
@@ -23,6 +26,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { middlePanelWidth, setMiddlePanelWidth } = useUIStore();
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const commandPalette = useCommandPalette();
 
   // 处理拖拽调整中间栏宽度
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -107,6 +111,15 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
       {/* 任务列表侧边栏 */}
       <TaskList />
+
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette
+        isOpen={commandPalette.isOpen}
+        onClose={commandPalette.close}
+        onExecuteCommand={(cmd) => {
+          console.log('Execute command:', cmd.id);
+        }}
+      />
     </div>
   );
 }

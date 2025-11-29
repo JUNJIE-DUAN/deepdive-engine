@@ -591,12 +591,15 @@ function DeepAnalysis({
   messages,
   onSend,
   isLoading,
+  onStartResearch,
 }: {
   messages: ChatMessage[];
   onSend: (message: string) => void;
   isLoading: boolean;
+  onStartResearch?: (query: string) => void;
 }) {
   const [input, setInput] = useState('');
+  const [researchInput, setResearchInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -615,20 +618,79 @@ function DeepAnalysis({
     }
   };
 
+  const handleStartResearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (researchInput.trim() && onStartResearch) {
+      onStartResearch(researchInput.trim());
+      setResearchInput('');
+    }
+  };
+
   return (
     <div className="flex flex-1 flex-col bg-white">
-      {/* Messages */}
+      {/* 深度研究输入框 - 醒目位置 */}
+      <div className="border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 p-6">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="rounded-lg bg-purple-600 p-2">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">深度研究</h2>
+              <p className="text-sm text-gray-500">
+                输入研究问题，AI 将自动搜索、分析并生成洞察
+              </p>
+            </div>
+          </div>
+          <form onSubmit={handleStartResearch} className="relative">
+            <textarea
+              value={researchInput}
+              onChange={(e) => setResearchInput(e.target.value)}
+              placeholder="例如：分析 2024 年 LLM 推理优化的技术演进，对比 vLLM、TensorRT-LLM 和 llama.cpp 的技术路线..."
+              className="min-h-[100px] w-full resize-none rounded-xl border-2 border-purple-200 bg-white p-4 pr-24 text-base shadow-sm placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              rows={3}
+            />
+            <button
+              type="submit"
+              disabled={!researchInput.trim() || isLoading}
+              className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+            >
+              <Play className="h-4 w-4" />
+              开始研究
+            </button>
+          </form>
+          {/* 快捷模板 */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="text-xs text-gray-500">快捷模板:</span>
+            {[
+              '分析 [技术] 的最新进展',
+              '对比 [A] vs [B] 的技术路线',
+              '[领域] 2024 年趋势预测',
+            ].map((template) => (
+              <button
+                key={template}
+                onClick={() => setResearchInput(template)}
+                className="rounded-full border border-purple-200 bg-white px-3 py-1 text-xs text-purple-600 transition-colors hover:bg-purple-50"
+              >
+                {template}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Messages / 对话区域 */}
       <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="rounded-full bg-purple-100 p-4">
-              <Lightbulb className="h-8 w-8 text-purple-600" />
+            <div className="rounded-full bg-gray-100 p-4">
+              <Lightbulb className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">
-              开始深度分析
+            <h3 className="mt-4 text-base font-medium text-gray-700">
+              等待研究结果
             </h3>
             <p className="mt-2 max-w-sm text-sm text-gray-500">
-              选择左侧资源，输入研究问题，AI 将基于资源生成深度洞察
+              在上方输入研究问题，或使用命令进行快速操作
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {['/trend LLM', '/compare vLLM vs TRT', '/graph Transformer'].map(
@@ -691,21 +753,24 @@ function DeepAnalysis({
         )}
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4">
+      {/* 底部快速对话输入 */}
+      <form
+        onSubmit={handleSubmit}
+        className="border-t border-gray-200 bg-gray-50 p-3"
+      >
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="输入问题或使用 / 命令..."
-            className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            placeholder="追问或使用 / 命令..."
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="rounded-lg bg-purple-600 p-2.5 text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+            className="rounded-lg bg-purple-600 p-2 text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -987,6 +1052,49 @@ export default function StudioPage() {
             messages={messages}
             onSend={handleSendMessage}
             isLoading={isLoading}
+            onStartResearch={(query) => {
+              // 创建新的研究计划
+              const newPlan: ResearchPlanData = {
+                id: `plan-${Date.now()}`,
+                query,
+                status: 'running',
+                createdAt: new Date(),
+                estimatedTime: 180,
+                steps: [
+                  {
+                    id: '1',
+                    title: '搜索 arXiv 论文',
+                    description: query,
+                    status: 'in_progress',
+                    progress: 30,
+                  },
+                  {
+                    id: '2',
+                    title: '分析 GitHub 项目',
+                    description: '相关开源项目',
+                    status: 'pending',
+                    progress: 0,
+                  },
+                  {
+                    id: '3',
+                    title: '收集技术博客',
+                    description: '技术文章和评测',
+                    status: 'pending',
+                    progress: 0,
+                  },
+                  {
+                    id: '4',
+                    title: '生成趋势报告',
+                    description: '综合分析结果',
+                    status: 'pending',
+                    progress: 0,
+                  },
+                ],
+              };
+              setResearchPlan(newPlan);
+              // 同时发送消息
+              handleSendMessage(query);
+            }}
           />
         </div>
 

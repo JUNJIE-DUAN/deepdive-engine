@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAuthTokens } from '@/lib/auth';
 import { useAIModels } from '@/hooks/useAIModels';
+import MessageRenderer from '@/components/ai-office/chat/MessageRenderer';
 import {
   ArrowLeft,
   Plus,
@@ -672,134 +673,217 @@ function SourcesPanel({
             )}
 
             {/* Search Results */}
-            <div className="mt-4 max-h-72 overflow-y-auto">
-              {searchResults.length > 0 ? (
-                <div className="space-y-2">
-                  {searchResults.map((result, idx) => (
-                    <div
-                      key={result.id || `result-${idx}`}
-                      className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 hover:border-gray-300"
+            <div className="mt-4">
+              {searchResults.length > 0 && (
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm text-gray-600">
+                    {searchResults.length} results
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        // Import top 10 results
+                        const toImport = searchResults
+                          .slice(0, 10)
+                          .filter(
+                            (r) =>
+                              !addedIds.has(
+                                r.id || `result-${searchResults.indexOf(r)}`
+                              )
+                          );
+                        for (const result of toImport) {
+                          const resultId =
+                            result.id ||
+                            `result-${searchResults.indexOf(result)}`;
+                          try {
+                            await onAddSource({
+                              title: result.title,
+                              sourceType: result.sourceType || result.source,
+                              sourceUrl: result.sourceUrl,
+                              abstract: result.abstract,
+                              authors: result.authors,
+                              publishedAt: result.publishedAt,
+                              resourceId: result.id,
+                              metadata: result.metadata,
+                            });
+                            setAddedIds((prev) => new Set(prev).add(resultId));
+                          } catch (err) {
+                            console.error('Failed to import:', err);
+                          }
+                        }
+                      }}
+                      className="rounded-lg border border-purple-200 px-3 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50"
                     >
-                      <div className="mt-0.5 flex-shrink-0">
-                        {result.source === 'arxiv' ? (
-                          <FileText className="h-4 w-4 text-blue-500" />
-                        ) : result.source === 'github' ? (
-                          <Github className="h-4 w-4 text-gray-700" />
-                        ) : result.source === 'web' ? (
-                          <Globe className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Database className="h-4 w-4 text-purple-500" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="line-clamp-1 font-medium text-gray-900">
-                          {result.title}
-                        </h4>
-                        <p className="mt-1 line-clamp-2 text-xs text-gray-500">
-                          {result.abstract}
-                        </p>
-                        <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
-                          <span className="rounded bg-gray-100 px-1.5 py-0.5">
-                            {result.source || result.sourceType}
-                          </span>
-                          {result.authors && result.authors.length > 0 && (
-                            <span className="max-w-[150px] truncate">
-                              {result.authors.slice(0, 2).join(', ')}
-                              {result.authors.length > 2 && ' et al.'}
-                            </span>
-                          )}
-                          {result.publishedAt && (
-                            <span>
-                              {new Date(
-                                result.publishedAt
-                              ).toLocaleDateString()}
-                            </span>
-                          )}
-                          {result.metadata?.stars && (
-                            <span className="flex items-center gap-0.5">
-                              <Sparkles className="h-3 w-3" />
-                              {result.metadata.stars.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {addedIds.has(result.id || `result-${idx}`) ? (
-                          <div className="flex items-center gap-1 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Added
-                          </div>
-                        ) : (
-                          <button
-                            onClick={async () => {
-                              const resultId = result.id || `result-${idx}`;
-                              setAddingId(resultId);
-                              try {
-                                await onAddSource({
-                                  title: result.title,
-                                  sourceType:
-                                    result.sourceType || result.source,
-                                  sourceUrl: result.sourceUrl,
-                                  abstract: result.abstract,
-                                  authors: result.authors,
-                                  publishedAt: result.publishedAt,
-                                  resourceId: result.id,
-                                  metadata: result.metadata,
-                                });
-                                setAddedIds((prev) =>
-                                  new Set(prev).add(resultId)
-                                );
-                              } catch (err) {
-                                console.error('Failed to add source:', err);
-                              } finally {
-                                setAddingId(null);
-                              }
-                            }}
-                            disabled={
-                              addingId === (result.id || `result-${idx}`)
-                            }
-                            className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-50"
-                          >
-                            {addingId === (result.id || `result-${idx}`) ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Plus className="h-3 w-3" />
-                            )}
-                            Add
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setViewingSource(result)}
-                          className="flex items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-                        >
-                          <Eye className="h-3 w-3" />
-                          View
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : searching ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-                  <p className="mt-3 text-sm text-gray-500">
-                    {searchMode === 'deep'
-                      ? 'Running deep research across multiple rounds...'
-                      : 'Searching across sources...'}
-                  </p>
-                </div>
-              ) : (
-                <div className="py-12 text-center">
-                  <Search className="mx-auto h-10 w-10 text-gray-300" />
-                  <p className="mt-3 text-sm text-gray-500">
-                    Search for papers, code, and articles to add to your
-                    research
-                  </p>
-                  <p className="mt-1 text-xs text-gray-400">
-                    Try: "LLM inference optimization", "transformer attention"
-                  </p>
+                      Import TOP 10
+                    </button>
+                    <button
+                      onClick={async () => {
+                        // Import top 20 results
+                        const toImport = searchResults
+                          .slice(0, 20)
+                          .filter(
+                            (r) =>
+                              !addedIds.has(
+                                r.id || `result-${searchResults.indexOf(r)}`
+                              )
+                          );
+                        for (const result of toImport) {
+                          const resultId =
+                            result.id ||
+                            `result-${searchResults.indexOf(result)}`;
+                          try {
+                            await onAddSource({
+                              title: result.title,
+                              sourceType: result.sourceType || result.source,
+                              sourceUrl: result.sourceUrl,
+                              abstract: result.abstract,
+                              authors: result.authors,
+                              publishedAt: result.publishedAt,
+                              resourceId: result.id,
+                              metadata: result.metadata,
+                            });
+                            setAddedIds((prev) => new Set(prev).add(resultId));
+                          } catch (err) {
+                            console.error('Failed to import:', err);
+                          }
+                        }
+                      }}
+                      className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700"
+                    >
+                      Import TOP 20
+                    </button>
+                  </div>
                 </div>
               )}
+              <div className="max-h-72 overflow-y-auto">
+                {searchResults.length > 0 ? (
+                  <div className="space-y-2">
+                    {searchResults.map((result, idx) => (
+                      <div
+                        key={result.id || `result-${idx}`}
+                        className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 hover:border-gray-300"
+                      >
+                        <div className="mt-0.5 flex-shrink-0">
+                          {result.source === 'arxiv' ? (
+                            <FileText className="h-4 w-4 text-blue-500" />
+                          ) : result.source === 'github' ? (
+                            <Github className="h-4 w-4 text-gray-700" />
+                          ) : result.source === 'web' ? (
+                            <Globe className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Database className="h-4 w-4 text-purple-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="line-clamp-1 font-medium text-gray-900">
+                            {result.title}
+                          </h4>
+                          <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                            {result.abstract}
+                          </p>
+                          <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
+                            <span className="rounded bg-gray-100 px-1.5 py-0.5">
+                              {result.source || result.sourceType}
+                            </span>
+                            {result.authors && result.authors.length > 0 && (
+                              <span className="max-w-[150px] truncate">
+                                {result.authors.slice(0, 2).join(', ')}
+                                {result.authors.length > 2 && ' et al.'}
+                              </span>
+                            )}
+                            {result.publishedAt && (
+                              <span>
+                                {new Date(
+                                  result.publishedAt
+                                ).toLocaleDateString()}
+                              </span>
+                            )}
+                            {result.metadata?.stars && (
+                              <span className="flex items-center gap-0.5">
+                                <Sparkles className="h-3 w-3" />
+                                {result.metadata.stars.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {addedIds.has(result.id || `result-${idx}`) ? (
+                            <div className="flex items-center gap-1 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Added
+                            </div>
+                          ) : (
+                            <button
+                              onClick={async () => {
+                                const resultId = result.id || `result-${idx}`;
+                                setAddingId(resultId);
+                                try {
+                                  await onAddSource({
+                                    title: result.title,
+                                    sourceType:
+                                      result.sourceType || result.source,
+                                    sourceUrl: result.sourceUrl,
+                                    abstract: result.abstract,
+                                    authors: result.authors,
+                                    publishedAt: result.publishedAt,
+                                    resourceId: result.id,
+                                    metadata: result.metadata,
+                                  });
+                                  setAddedIds((prev) =>
+                                    new Set(prev).add(resultId)
+                                  );
+                                } catch (err) {
+                                  console.error('Failed to add source:', err);
+                                } finally {
+                                  setAddingId(null);
+                                }
+                              }}
+                              disabled={
+                                addingId === (result.id || `result-${idx}`)
+                              }
+                              className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                            >
+                              {addingId === (result.id || `result-${idx}`) ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Plus className="h-3 w-3" />
+                              )}
+                              Add
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setViewingSource(result)}
+                            className="flex items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : searching ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                    <p className="mt-3 text-sm text-gray-500">
+                      {searchMode === 'deep'
+                        ? 'Running deep research across multiple rounds...'
+                        : 'Searching across sources...'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <Search className="mx-auto h-10 w-10 text-gray-300" />
+                    <p className="mt-3 text-sm text-gray-500">
+                      Search for papers, code, and articles to add to your
+                      research
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Try: "LLM inference optimization", "transformer attention"
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* View Source Detail Dialog */}
@@ -1147,9 +1231,15 @@ function ChatPanel({
                       : 'bg-gray-100 text-gray-900'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap text-sm">
-                    {msg.content}
-                  </div>
+                  {msg.role === 'assistant' ? (
+                    <div className="text-sm">
+                      <MessageRenderer content={msg.content} role="assistant" />
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap text-sm">
+                      {msg.content}
+                    </div>
+                  )}
                   {msg.citations && msg.citations.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {msg.citations.map((c, i) => (

@@ -314,6 +314,9 @@ function SourcesPanel({
     'arxiv',
     'github',
   ]);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [viewingSource, setViewingSource] = useState<any | null>(null);
 
   const getSourceIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -719,35 +722,57 @@ function SourcesPanel({
                         </div>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <button
-                          onClick={() => {
-                            onAddSource({
-                              title: result.title,
-                              sourceType: result.sourceType || result.source,
-                              sourceUrl: result.sourceUrl,
-                              abstract: result.abstract,
-                              authors: result.authors,
-                              publishedAt: result.publishedAt,
-                              resourceId: result.id,
-                              metadata: result.metadata,
-                            });
-                          }}
-                          className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700"
-                        >
-                          <Plus className="h-3 w-3" />
-                          Add
-                        </button>
-                        {result.sourceUrl && (
-                          <a
-                            href={result.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                        {addedIds.has(result.id || `result-${idx}`) ? (
+                          <div className="flex items-center gap-1 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Added
+                          </div>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              const resultId = result.id || `result-${idx}`;
+                              setAddingId(resultId);
+                              try {
+                                await onAddSource({
+                                  title: result.title,
+                                  sourceType:
+                                    result.sourceType || result.source,
+                                  sourceUrl: result.sourceUrl,
+                                  abstract: result.abstract,
+                                  authors: result.authors,
+                                  publishedAt: result.publishedAt,
+                                  resourceId: result.id,
+                                  metadata: result.metadata,
+                                });
+                                setAddedIds((prev) =>
+                                  new Set(prev).add(resultId)
+                                );
+                              } catch (err) {
+                                console.error('Failed to add source:', err);
+                              } finally {
+                                setAddingId(null);
+                              }
+                            }}
+                            disabled={
+                              addingId === (result.id || `result-${idx}`)
+                            }
+                            className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-50"
                           >
-                            <ExternalLink className="h-3 w-3" />
-                            View
-                          </a>
+                            {addingId === (result.id || `result-${idx}`) ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Plus className="h-3 w-3" />
+                            )}
+                            Add
+                          </button>
                         )}
+                        <button
+                          onClick={() => setViewingSource(result)}
+                          className="flex items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                        >
+                          <Eye className="h-3 w-3" />
+                          View
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -774,6 +799,174 @@ function SourcesPanel({
                 </div>
               )}
             </div>
+
+            {/* View Source Detail Dialog */}
+            {viewingSource && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+                <div className="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-xl">
+                  <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      {viewingSource.source === 'arxiv' ? (
+                        <FileText className="h-5 w-5 text-blue-500" />
+                      ) : viewingSource.source === 'github' ? (
+                        <Github className="h-5 w-5 text-gray-700" />
+                      ) : viewingSource.source === 'web' ? (
+                        <Globe className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Database className="h-5 w-5 text-purple-500" />
+                      )}
+                      <h3 className="font-semibold text-gray-900">
+                        Source Details
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setViewingSource(null)}
+                      className="rounded-lg p-1 hover:bg-gray-100"
+                    >
+                      <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="max-h-[60vh] overflow-y-auto p-6">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {viewingSource.title}
+                    </h2>
+
+                    {/* Metadata */}
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                      <span className="rounded bg-gray-100 px-2 py-0.5">
+                        {viewingSource.source || viewingSource.sourceType}
+                      </span>
+                      {viewingSource.authors &&
+                        viewingSource.authors.length > 0 && (
+                          <span>
+                            {viewingSource.authors.slice(0, 3).join(', ')}
+                            {viewingSource.authors.length > 3 && ' et al.'}
+                          </span>
+                        )}
+                      {viewingSource.publishedAt && (
+                        <span>
+                          {new Date(
+                            viewingSource.publishedAt
+                          ).toLocaleDateString()}
+                        </span>
+                      )}
+                      {viewingSource.metadata?.stars && (
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {viewingSource.metadata.stars.toLocaleString()} stars
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Abstract / Content */}
+                    {viewingSource.abstract && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700">
+                          Abstract
+                        </h4>
+                        <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                          {viewingSource.abstract}
+                        </p>
+                      </div>
+                    )}
+
+                    {viewingSource.content && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700">
+                          Content
+                        </h4>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                          {viewingSource.content.length > 2000
+                            ? viewingSource.content.slice(0, 2000) + '...'
+                            : viewingSource.content}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Additional Metadata */}
+                    {viewingSource.metadata &&
+                      Object.keys(viewingSource.metadata).length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium text-gray-700">
+                            Additional Info
+                          </h4>
+                          <div className="mt-2 rounded-lg bg-gray-50 p-3">
+                            <pre className="overflow-x-auto text-xs text-gray-600">
+                              {JSON.stringify(viewingSource.metadata, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+                    {viewingSource.sourceUrl ? (
+                      <a
+                        href={viewingSource.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-purple-600 hover:underline"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Open Original
+                      </a>
+                    ) : (
+                      <span className="text-sm text-gray-400">
+                        No source URL
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setViewingSource(null)}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                      >
+                        Close
+                      </button>
+                      {!addedIds.has(viewingSource.id) && (
+                        <button
+                          onClick={async () => {
+                            const resultId = viewingSource.id;
+                            setAddingId(resultId);
+                            try {
+                              await onAddSource({
+                                title: viewingSource.title,
+                                sourceType:
+                                  viewingSource.sourceType ||
+                                  viewingSource.source,
+                                sourceUrl: viewingSource.sourceUrl,
+                                abstract: viewingSource.abstract,
+                                authors: viewingSource.authors,
+                                publishedAt: viewingSource.publishedAt,
+                                resourceId: viewingSource.id,
+                                metadata: viewingSource.metadata,
+                              });
+                              setAddedIds((prev) =>
+                                new Set(prev).add(resultId)
+                              );
+                              setViewingSource(null);
+                            } catch (err) {
+                              console.error('Failed to add source:', err);
+                            } finally {
+                              setAddingId(null);
+                            }
+                          }}
+                          disabled={addingId === viewingSource.id}
+                          className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                        >
+                          {addingId === viewingSource.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="h-4 w-4" />
+                          )}
+                          Add to Sources
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

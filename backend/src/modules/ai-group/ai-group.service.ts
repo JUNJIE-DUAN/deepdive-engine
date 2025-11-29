@@ -1685,32 +1685,79 @@ ${topic?.description ? `Group description: ${topic.description}` : ""}${contextS
 
 Respond naturally and helpfully to the discussion. When relevant, reference the shared materials, fetched web content, and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
 
+    // 【关键修复】过滤掉历史中的辩论内容，避免干扰普通对话
+    // 检测辩论特征：包含"辩论主题"、"我方立场"、"正方观点"、"反方观点"等
+    const debatePatterns = [
+      /辩论主题[：:]/,
+      /我方立场[：:]/,
+      /正方观点/,
+      /反方观点/,
+      /核心论点[：:]/,
+      /向对方提问/,
+      /@[\w\-]+\s*请回应/,
+      /@[\w\-]+\s*请继续/,
+    ];
+
+    const isDebateMessage = (content: string): boolean => {
+      return debatePatterns.some((pattern) => pattern.test(content));
+    };
+
+    // 如果不是辩论模式，过滤掉看起来像辩论的消息
+    let filteredContextMessages = contextMessages;
+    if (!debateRole) {
+      filteredContextMessages = contextMessages.filter((msg) => {
+        // 保留用户消息
+        if (msg.senderId) return true;
+        // 过滤掉看起来像辩论的AI消息
+        if (msg.aiMemberId && isDebateMessage(msg.content)) {
+          this.logger.log(
+            `[Context Filter] Removing debate-like message from ${msg.aiMember?.displayName || "AI"}`,
+          );
+          return false;
+        }
+        return true;
+      });
+
+      // 只保留最近的消息，进一步减少旧内容干扰
+      const MAX_NORMAL_CONTEXT = 8;
+      if (filteredContextMessages.length > MAX_NORMAL_CONTEXT) {
+        filteredContextMessages =
+          filteredContextMessages.slice(-MAX_NORMAL_CONTEXT);
+      }
+
+      this.logger.log(
+        `[Context Filter] Normal mode: ${contextMessages.length} -> ${filteredContextMessages.length} messages`,
+      );
+    }
+
     // Build chat messages for AI service
     // CRITICAL FIX: Truncate message content to prevent context overflow
     const MAX_MESSAGE_LENGTH = 4000; // Max chars per message (~1000 tokens)
-    const chatMessages: ChatMessage[] = contextMessages.reverse().map((m) => {
-      const senderName = m.sender
-        ? m.sender.fullName || m.sender.username || "User"
-        : m.aiMember?.displayName || "AI";
-      const isAI = !!m.aiMemberId;
+    const chatMessages: ChatMessage[] = filteredContextMessages
+      .reverse()
+      .map((m) => {
+        const senderName = m.sender
+          ? m.sender.fullName || m.sender.username || "User"
+          : m.aiMember?.displayName || "AI";
+        const isAI = !!m.aiMemberId;
 
-      // Truncate content if too long
-      let content = m.content;
-      if (content.length > MAX_MESSAGE_LENGTH) {
-        content =
-          content.substring(0, MAX_MESSAGE_LENGTH) +
-          "\n\n[Message truncated due to length...]";
-        this.logger.warn(
-          `Message ${m.id} truncated from ${m.content.length} to ${MAX_MESSAGE_LENGTH} chars`,
-        );
-      }
+        // Truncate content if too long
+        let content = m.content;
+        if (content.length > MAX_MESSAGE_LENGTH) {
+          content =
+            content.substring(0, MAX_MESSAGE_LENGTH) +
+            "\n\n[Message truncated due to length...]";
+          this.logger.warn(
+            `Message ${m.id} truncated from ${m.content.length} to ${MAX_MESSAGE_LENGTH} chars`,
+          );
+        }
 
-      return {
-        role: isAI ? "assistant" : "user",
-        content,
-        name: senderName,
-      } as ChatMessage;
-    });
+        return {
+          role: isAI ? "assistant" : "user",
+          content,
+          name: senderName,
+        } as ChatMessage;
+      });
 
     // Get AI model configuration from database
     // 重要：aiMember.aiModel 现在存储的是 modelId（唯一），而不是 name（非唯一）

@@ -404,6 +404,40 @@ function SourcesPanel({
     );
   }
 
+  // Deduplicate sources by title (case-insensitive)
+  const uniqueSources = sources.reduce((acc: Source[], source) => {
+    const exists = acc.some(
+      (s) => s.title.toLowerCase() === source.title.toLowerCase()
+    );
+    if (!exists) {
+      acc.push(source);
+    }
+    return acc;
+  }, []);
+
+  const allSelected =
+    uniqueSources.length > 0 &&
+    uniqueSources.every((s) => selectedIds.has(s.id));
+  const someSelected = uniqueSources.some((s) => selectedIds.has(s.id));
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // Deselect all
+      uniqueSources.forEach((s) => {
+        if (selectedIds.has(s.id)) {
+          onToggleSelect(s.id);
+        }
+      });
+    } else {
+      // Select all
+      uniqueSources.forEach((s) => {
+        if (!selectedIds.has(s.id)) {
+          onToggleSelect(s.id);
+        }
+      });
+    }
+  };
+
   return (
     <div className="flex w-72 flex-col border-r border-gray-200 bg-white">
       {/* Header */}
@@ -411,10 +445,25 @@ function SourcesPanel({
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-gray-900">Sources</h3>
           <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
-            {sources.length}
+            {uniqueSources.length}
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {uniqueSources.length > 0 && (
+            <button
+              onClick={handleSelectAll}
+              className={`rounded-lg px-2 py-1 text-xs font-medium ${
+                allSelected
+                  ? 'bg-purple-100 text-purple-700'
+                  : someSelected
+                    ? 'bg-gray-100 text-gray-600'
+                    : 'text-gray-500 hover:bg-gray-100'
+              }`}
+              title={allSelected ? 'Deselect all' : 'Select all'}
+            >
+              {allSelected ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
           <button
             onClick={() => setShowAddDialog(true)}
             className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
@@ -433,7 +482,7 @@ function SourcesPanel({
 
       {/* Source List */}
       <div className="flex-1 overflow-y-auto p-2">
-        {sources.length === 0 ? (
+        {uniqueSources.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <BookOpen className="h-8 w-8 text-gray-300" />
             <p className="mt-2 text-sm text-gray-500">No sources yet</p>
@@ -447,7 +496,7 @@ function SourcesPanel({
           </div>
         ) : (
           <div className="space-y-1">
-            {sources.map((source) => (
+            {uniqueSources.map((source) => (
               <div
                 key={source.id}
                 className={`group relative rounded-lg border p-2.5 transition-all ${
@@ -521,7 +570,7 @@ function SourcesPanel({
             </span>
             <button
               onClick={() => {
-                sources.forEach((s) => {
+                uniqueSources.forEach((s) => {
                   if (selectedIds.has(s.id)) onToggleSelect(s.id);
                 });
               }}

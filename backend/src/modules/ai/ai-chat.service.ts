@@ -1319,7 +1319,15 @@ Format the summary in a clear, structured manner using markdown.`;
     const hasImageCapability = capabilities.includes("IMAGE_GENERATION");
 
     // Check if the configured model is Imagen (dedicated image generation model)
-    const isImagenModel = modelId.toLowerCase().includes("imagen");
+    // Only true Imagen models (imagen-xxx) should use the Imagen API
+    // Gemini models with "image" in name (like gemini-3-pro-image-preview) use native Gemini image generation
+    const modelIdLower = modelId.toLowerCase();
+    const isImagenModel = modelIdLower.startsWith("imagen");
+
+    // Check if this is a Gemini model with native image generation support
+    const isGeminiImageModel =
+      modelIdLower.includes("gemini") &&
+      (modelIdLower.includes("image") || modelIdLower.includes("2.0"));
 
     // Only generate images if:
     // 1. User explicitly requested an image (via keywords), AND
@@ -1328,7 +1336,7 @@ Format the summary in a clear, structured manner using markdown.`;
     const isImageRequest = isImageRequestByContent && hasImageCapability;
 
     this.logger.log(
-      `[Gemini] Image detection: modelId=${modelId}, displayName=${displayName}, hasImageCapability=${hasImageCapability}, isImagenModel=${isImagenModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
+      `[Gemini] Image detection: modelId=${modelId}, displayName=${displayName}, hasImageCapability=${hasImageCapability}, isImagenModel=${isImagenModel}, isGeminiImageModel=${isGeminiImageModel}, isImageRequestByContent=${isImageRequestByContent}, finalIsImageRequest=${isImageRequest}`,
     );
 
     // Build context-aware prompt for image generation
@@ -1398,34 +1406,32 @@ Generate an image that fulfills the current request while maintaining consistenc
       return await this.callImagenApi(apiKey, modelId, imagePrompt);
     }
 
-    // Check if this is a dedicated image model
+    // Check if this is a dedicated image model (not suitable for text conversations)
     const isImageOnlyModel =
-      modelId.toLowerCase().includes("image") ||
-      modelId.toLowerCase().includes("imagen");
+      modelIdLower.includes("image") || modelIdLower.startsWith("imagen");
 
-    // For image-only models, fall back to a general text model when not requesting images
-    // These models don't support regular text conversations
+    // Determine the effective model to use
     let effectiveModelId = modelId;
+
     if (isImageOnlyModel && !isImageRequest) {
-      effectiveModelId = "gemini-2.0-flash-exp"; // Fall back to a capable text model
+      // Image-only models can't do text conversations - fall back to text model
+      effectiveModelId = "gemini-2.0-flash-exp";
       this.logger.log(
         `[Gemini] Image-only model ${modelId} used for non-image request, falling back to ${effectiveModelId}`,
       );
-    } else if (isImageRequest && !isImageOnlyModel && !isImagenModel) {
-      // If image generation is requested but model is not an image model,
-      // use gemini-2.0-flash-exp which supports native image generation
-      // Note: Some models like gemini-1.5-pro do NOT support image generation
+    } else if (isImageRequest && isGeminiImageModel) {
+      // User requested image AND model is Gemini with image capability - use as configured
+      this.logger.log(
+        `[Gemini] Using configured Gemini image model: ${modelId}`,
+      );
+      // Keep the configured model (e.g., gemini-3-pro-image-preview)
+    } else if (isImageRequest && !isGeminiImageModel && !isImagenModel) {
+      // User requested image but model doesn't support it - switch to capable model
       const imageCapableModel = "gemini-2.0-flash-exp";
-      if (!modelId.includes("2.0")) {
-        this.logger.log(
-          `[Gemini] Image request with non-image-capable model ${modelId}, switching to ${imageCapableModel}`,
-        );
-        effectiveModelId = imageCapableModel;
-      } else {
-        this.logger.log(
-          `[Gemini] Image request with model: ${effectiveModelId} (supports native image generation)`,
-        );
-      }
+      this.logger.log(
+        `[Gemini] Image request with non-image model ${modelId}, switching to ${imageCapableModel}`,
+      );
+      effectiveModelId = imageCapableModel;
     } else {
       this.logger.log(
         `[Gemini] Using configured model: ${effectiveModelId}, isImageRequest: ${isImageRequest}`,

@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Genspark风格的富文本消息渲染器
- * 提供优雅的Markdown渲染，超越Genspark的视觉体验
+ * 富文本消息渲染器
+ * 提供优雅的Markdown渲染，支持结构化内容（时间线、事件列表等）
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -15,10 +15,33 @@ interface MessageRendererProps {
   role: 'user' | 'assistant';
 }
 
+/**
+ * 预处理内容，将结构化格式转换为更好的Markdown
+ */
+function preprocessContent(content: string): string {
+  // 处理带标签的列表项（如 "• 事：xxx" 或 "• 时间：xxx"）
+  // 将其转换为更清晰的格式
+  let processed = content;
+
+  // 将 "• 事件：" / "• 时间：" / "• 备注：" 格式转换为加粗标签
+  processed = processed.replace(
+    /•\s*(事件?|时间|备注|说明|详情|原因|结果|影响)\s*[：:]\s*/g,
+    '\n  - **$1**: '
+  );
+
+  // 清理多余空行
+  processed = processed.replace(/\n{3,}/g, '\n\n');
+
+  return processed;
+}
+
 export default function MessageRenderer({
   content,
   role,
 }: MessageRendererProps) {
+  // 预处理内容
+  const processedContent = useMemo(() => preprocessContent(content), [content]);
+
   return (
     <div
       className={`message-renderer prose prose-slate max-w-none ${role === 'assistant' ? 'ai-message' : 'user-message'}`}
@@ -56,24 +79,33 @@ export default function MessageRenderer({
             <p className="my-3 leading-relaxed text-gray-700" {...props} />
           ),
 
-          // 列表 - Genspark风格的色块标记
+          // 列表 - 清晰的列表样式
           ul: ({ node, ...props }) => (
-            <ul className="my-4 space-y-2 pl-6" {...props} />
+            <ul className="my-3 space-y-2 pl-0" {...props} />
           ),
           ol: ({ node, ...props }) => (
-            <ol className="my-4 list-decimal space-y-2 pl-6" {...props} />
+            <ol className="my-3 list-decimal space-y-2 pl-5" {...props} />
           ),
-          li: ({ node, ...props }: any) => {
+          li: ({ node, children, ...props }: any) => {
             const isOrdered = node?.ordered || false;
+            // 检查是否是包含标签的结构化内容（如 "事件："、"时间："）
+            const childText = String(children || '');
+            const hasLabel =
+              /^[•●]\s*(事|时间|备注|件|项)/.test(childText) ||
+              /^(事件?|时间|备注|说明|详情)\s*[：:]/i.test(childText);
+
             return (
               <li
                 className={`
-                  ${isOrdered ? 'list-decimal' : 'list-none'}
-                  ${!isOrdered ? 'flex items-start gap-3 before:mt-2 before:h-2 before:w-2 before:flex-shrink-0 before:rounded-full before:bg-gradient-to-br before:from-blue-500 before:to-blue-600 before:content-[""]' : ''}
-                  text-gray-700
+                  ${isOrdered ? 'ml-4 list-decimal' : 'list-none'}
+                  ${!isOrdered && !hasLabel ? 'relative pl-5 before:absolute before:left-0 before:top-2.5 before:h-1.5 before:w-1.5 before:rounded-full before:bg-blue-500' : ''}
+                  ${hasLabel ? 'flex flex-col gap-1 pl-0' : ''}
+                  leading-relaxed text-gray-700
                 `}
                 {...props}
-              />
+              >
+                {children}
+              </li>
             );
           },
 
@@ -180,7 +212,7 @@ export default function MessageRenderer({
           ),
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
 
       <style jsx global>{`
@@ -209,7 +241,21 @@ export default function MessageRenderer({
         .prose ol ul,
         .prose ul ol,
         .prose ol ol {
-          @apply my-2;
+          @apply my-1 ml-4;
+        }
+
+        /* 结构化内容样式（事件、时间、备注等） */
+        .prose li strong {
+          @apply font-semibold text-blue-700;
+        }
+
+        /* 改善列表项间距 */
+        .prose ul > li {
+          @apply my-1;
+        }
+
+        .prose ul > li > ul {
+          @apply mb-2 mt-1 border-l-2 border-blue-100 pl-3;
         }
 
         /* 代码块滚动条样式 */

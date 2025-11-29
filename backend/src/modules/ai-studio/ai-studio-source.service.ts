@@ -19,7 +19,7 @@ export class AiStudioSourceService {
   ) {}
 
   /**
-   * Add a source to a project
+   * Add a source to a project (with deduplication)
    */
   async addSource(userId: string, projectId: string, dto: AddSourceDto) {
     // Verify project ownership
@@ -33,6 +33,22 @@ export class AiStudioSourceService {
 
     if (project.userId !== userId) {
       throw new ForbiddenException("Access denied");
+    }
+
+    // Check for duplicates by title or sourceUrl
+    const existingSource = await this.findDuplicateSource(
+      projectId,
+      dto.title,
+      dto.sourceUrl,
+      dto.resourceId,
+    );
+
+    if (existingSource) {
+      this.logger.log(
+        `Source already exists in project: ${existingSource.title}`,
+      );
+      // Return existing source instead of creating duplicate
+      return existingSource;
     }
 
     const source = await this.prisma.researchProjectSource.create({
@@ -63,7 +79,47 @@ export class AiStudioSourceService {
   }
 
   /**
-   * Add multiple sources to a project
+   * Find duplicate source in project by title, URL, or resourceId
+   */
+  private async findDuplicateSource(
+    projectId: string,
+    title: string,
+    sourceUrl?: string | null,
+    resourceId?: string | null,
+  ) {
+    const conditions: any[] = [];
+
+    // Check by exact title match (case-insensitive)
+    if (title) {
+      conditions.push({ title: { equals: title, mode: "insensitive" } });
+    }
+
+    // Check by sourceUrl if provided
+    if (sourceUrl) {
+      conditions.push({
+        sourceUrl: { equals: sourceUrl, mode: "insensitive" },
+      });
+    }
+
+    // Check by resourceId if provided
+    if (resourceId) {
+      conditions.push({ resourceId: resourceId });
+    }
+
+    if (conditions.length === 0) {
+      return null;
+    }
+
+    return this.prisma.researchProjectSource.findFirst({
+      where: {
+        projectId,
+        OR: conditions,
+      },
+    });
+  }
+
+  /**
+   * Add multiple sources to a project (with deduplication)
    */
   async addSources(userId: string, projectId: string, sources: AddSourceDto[]) {
     // Verify project ownership
@@ -79,8 +135,40 @@ export class AiStudioSourceService {
       throw new ForbiddenException("Access denied");
     }
 
+    // Filter out duplicates
+    const uniqueSources: AddSourceDto[] = [];
+    for (const dto of sources) {
+      const existingSource = await this.findDuplicateSource(
+        projectId,
+        dto.title,
+        dto.sourceUrl,
+        dto.resourceId,
+      );
+      if (!existingSource) {
+        // Also check for duplicates within the batch
+        const isDuplicateInBatch = uniqueSources.some(
+          (s) =>
+            s.title.toLowerCase() === dto.title.toLowerCase() ||
+            (s.sourceUrl && s.sourceUrl === dto.sourceUrl) ||
+            (s.resourceId && s.resourceId === dto.resourceId),
+        );
+        if (!isDuplicateInBatch) {
+          uniqueSources.push(dto);
+        }
+      }
+    }
+
+    if (uniqueSources.length === 0) {
+      this.logger.log("All sources already exist in project, skipping");
+      return [];
+    }
+
+    this.logger.log(
+      `Adding ${uniqueSources.length} unique sources (${sources.length - uniqueSources.length} duplicates skipped)`,
+    );
+
     const createdSources = await this.prisma.$transaction(
-      sources.map((dto) =>
+      uniqueSources.map((dto) =>
         this.prisma.researchProjectSource.create({
           data: {
             projectId,
@@ -103,7 +191,7 @@ export class AiStudioSourceService {
     await this.prisma.researchProject.update({
       where: { id: projectId },
       data: {
-        sourceCount: { increment: sources.length },
+        sourceCount: { increment: uniqueSources.length },
       },
     });
 

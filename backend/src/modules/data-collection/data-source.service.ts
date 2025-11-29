@@ -47,10 +47,27 @@ export class DataSourceService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * 创建数据源
+   * 创建数据源 (with deduplication check)
    */
   async create(dto: CreateDataSourceDto): Promise<DataSource> {
     this.logger.log(`Creating data source: ${dto.name}`);
+
+    // Check for duplicate by name + category or baseUrl
+    const existing = await this.prisma.dataSource.findFirst({
+      where: {
+        OR: [
+          { name: dto.name, category: dto.category as any },
+          ...(dto.baseUrl ? [{ baseUrl: dto.baseUrl }] : []),
+        ],
+      },
+    });
+
+    if (existing) {
+      this.logger.log(
+        `Data source already exists: ${existing.name} (${existing.id}), returning existing`,
+      );
+      return existing;
+    }
 
     const dataSource = await this.prisma.dataSource.create({
       data: {

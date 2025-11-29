@@ -1613,6 +1613,145 @@ model AIModel {
   @@map("ai_models")
 }
 
+// ============================================================================
+// Debate System - 基于业界最佳实践的多AI辩论系统
+// 参考: AutoGen (Microsoft), MAD (Multi-Agents-Debate), DebateLLM
+// ============================================================================
+
+enum DebateStatus {
+  PENDING     // 等待开始
+  ACTIVE      // 进行中
+  PAUSED      // 暂停
+  COMPLETED   // 已完成
+  CANCELLED   // 已取消
+}
+
+enum DebateRole {
+  RED         // 红方/正方
+  BLUE        // 蓝方/反方
+  JUDGE       // 裁判
+  OBSERVER    // 观察者
+}
+
+// 辩论会话 - 每次辩论是独立的Session，与Topic消息历史隔离
+model DebateSession {
+  id String @id @default(uuid())
+
+  // 关联Topic（辩论发生在哪个Topic）
+  topicId String @map("topic_id")
+
+  // 辩论主题
+  topic       String @db.VarChar(500)
+  description String? @db.Text
+
+  // 辩论状态
+  status DebateStatus @default(PENDING)
+
+  // 辩论配置
+  maxRounds     Int @default(3) @map("max_rounds")     // 最大轮次
+  currentRound  Int @default(0) @map("current_round")  // 当前轮次
+  roundTimeoutMs Int @default(120000) @map("round_timeout_ms") // 每轮超时
+
+  // 发起者
+  initiatedById String   @map("initiated_by_id")
+  initiatedAt   DateTime @default(now()) @map("initiated_at")
+
+  // 结束信息
+  completedAt DateTime? @map("completed_at")
+  conclusion  String?   @db.Text // 辩论结论（可由Judge生成）
+  winnerId    String?   @map("winner_id") // 获胜方Agent ID
+
+  // 元数据
+  metadata Json? // 扩展配置
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  agents   DebateAgent[]
+  messages DebateMessage[]
+
+  @@index([topicId])
+  @@index([status])
+  @@index([initiatedById])
+  @@index([createdAt(sort: Desc)])
+  @@map("debate_sessions")
+}
+
+// 辩论参与者 - 每个AI在辩论中的角色和独立历史
+model DebateAgent {
+  id String @id @default(uuid())
+
+  // 关联辩论会话
+  sessionId String        @map("session_id")
+  session   DebateSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // 关联AI成员
+  aiMemberId  String @map("ai_member_id")
+  displayName String @map("display_name") @db.VarChar(100)
+  aiModel     String @map("ai_model") @db.VarChar(50)
+
+  // 辩论角色
+  role DebateRole
+
+  // 立场描述（系统生成或用户指定）
+  stance      String? @db.VarChar(200) // 如 "支持先有鸡"
+  stancePrompt String? @map("stance_prompt") @db.Text // 完整的角色prompt
+
+  // 独立的对话历史（核心！不与Topic历史共享）
+  // 每个Agent只看到自己的历史，防止角色混乱
+  conversationHistory Json @default("[]") @map("conversation_history")
+
+  // 统计
+  messageCount Int @default(0) @map("message_count")
+  totalTokens  Int @default(0) @map("total_tokens")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  messages DebateMessage[]
+
+  @@unique([sessionId, aiMemberId])
+  @@index([sessionId])
+  @@index([role])
+  @@map("debate_agents")
+}
+
+// 辩论消息 - 独立于Topic消息的辩论专用消息
+model DebateMessage {
+  id String @id @default(uuid())
+
+  // 关联辩论会话
+  sessionId String        @map("session_id")
+  session   DebateSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // 发送者Agent
+  agentId String      @map("agent_id")
+  agent   DebateAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // 消息内容
+  content String @db.Text
+
+  // 轮次信息
+  round Int // 第几轮
+
+  // AI生成元数据
+  modelUsed  String? @map("model_used") @db.VarChar(50)
+  tokensUsed Int?    @map("tokens_used")
+  latencyMs  Int?    @map("latency_ms") // 响应延迟
+
+  // 同步到Topic的消息ID（可选，用于在Topic中显示）
+  topicMessageId String? @map("topic_message_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId, round])
+  @@index([agentId])
+  @@index([createdAt])
+  @@map("debate_messages")
+}
+
 // ============ Raw Data Collection (replaces MongoDB) ============
 
 model RawData {

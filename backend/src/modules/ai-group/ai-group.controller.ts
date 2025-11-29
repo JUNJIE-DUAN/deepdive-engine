@@ -14,6 +14,7 @@ import {
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { AiGroupService } from "./ai-group.service";
 import { AiGroupGateway } from "./ai-group.gateway";
+import { DebateService } from "./debate.service";
 import {
   CreateTopicDto,
   UpdateTopicDto,
@@ -38,6 +39,7 @@ export class AiGroupController {
   constructor(
     private readonly aiGroupService: AiGroupService,
     private readonly aiGroupGateway: AiGroupGateway,
+    private readonly debateService: DebateService,
   ) {}
 
   // ==================== Topic CRUD ====================
@@ -329,31 +331,20 @@ export class AiGroupController {
       const debateInfo = this.detectDebateMode(dto.content, aiMembersToRespond);
 
       if (debateInfo.isDebate && debateInfo.redAI && debateInfo.blueAI) {
-        // 辩论模式：红方先发言，通过@触发蓝方回应
-        // 关键改进：不再同时触发两个AI，而是让红方先发言，然后通过AI-AI协作机制自动触发蓝方
+        // 【新架构】使用独立的DebateService处理辩论
+        // 参考业界最佳实践：AutoGen, MAD, DebateLLM
         this.logger.log(
-          `[Debate Mode] Detected! Red: ${debateInfo.redAI.displayName}, Blue: ${debateInfo.blueAI.displayName}, Topic: ${debateInfo.topic}`,
-        );
-        this.logger.log(
-          `[Debate Mode] Only triggering RED first. Blue will be triggered by RED's @mention.`,
+          `[Debate] Creating new debate session: Red=${debateInfo.redAI.displayName}, Blue=${debateInfo.blueAI.displayName}, Topic=${debateInfo.topic}`,
         );
 
-        // 只触发红方，蓝方会通过红方回复中的@mention自动触发
-        this.aiGroupGateway.emitToTopic(topicId, "ai:typing", {
-          topicId,
-          aiMemberId: debateInfo.redAI.id,
-        });
-        this.generateAIResponseInBackground(
+        // 异步启动辩论（不阻塞消息返回）
+        this.runDebateInBackground(
           topicId,
           req.user.id,
+          debateInfo.topic,
           debateInfo.redAI.id,
-          0,
-          { role: "red", opponent: debateInfo.blueAI, topic: debateInfo.topic },
+          debateInfo.blueAI.id,
         );
-
-        // 注意：不再在这里触发蓝方！
-        // 蓝方会通过 generateAIResponseInBackground 中的 AI-AI 协作机制
-        // 在红方回复后自动触发（因为红方会@蓝方）
 
         // 其他 AI 作为观察者（如果有）
         for (const ai of aiMembersToRespond) {
@@ -589,6 +580,77 @@ export class AiGroupController {
         error: errorMessage,
       });
     }
+  }
+
+  /**
+   * 【新架构】在后台运行辩论
+   * 使用独立的DebateService，完全隔离于Topic消息历史
+   */
+  private async runDebateInBackground(
+    topicId: string,
+    userId: string,
+    debateTopic: string,
+    redAiMemberId: string,
+    blueAiMemberId: string,
+  ) {
+    try {
+      this.logger.log(`[Debate] Starting new debate session...`);
+
+      // 创建辩论会话
+      const session = await this.debateService.createDebateSession({
+        topicId,
+        userId,
+        debateTopic,
+        redAiMemberId,
+        blueAiMemberId,
+        config: {
+          maxRounds: 3,
+          roundTimeoutMs: 120000,
+        },
+      });
+
+      this.logger.log(`[Debate] Session created: ${session.id}`);
+
+      // 通知前端辩论开始
+      this.aiGroupGateway.emitToTopic(topicId, "debate:started", {
+        sessionId: session.id,
+        topic: debateTopic,
+        redAgent: session.agents.find((a) => a.role === "RED"),
+        blueAgent: session.agents.find((a) => a.role === "BLUE"),
+      });
+
+      // 运行辩论
+      await this.debateService.runDebate(session.id);
+
+      // 将辩论消息同步到Topic（让用户在聊天界面看到）
+      await this.debateService.syncDebateToTopic(session.id, topicId, userId);
+
+      // 通知前端辩论结束
+      this.aiGroupGateway.emitToTopic(topicId, "debate:completed", {
+        sessionId: session.id,
+      });
+
+      this.logger.log(`[Debate] Debate completed and synced to topic`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`[Debate] Error: ${errorMessage}`);
+      this.aiGroupGateway.emitToTopic(topicId, "debate:error", {
+        error: errorMessage,
+      });
+    }
+  }
+
+  // ==================== Debate API Endpoints ====================
+
+  @Get(":topicId/debates")
+  async getDebates(@Param("topicId") topicId: string) {
+    return this.debateService.getDebatesByTopic(topicId);
+  }
+
+  @Get(":topicId/debates/:debateId")
+  async getDebate(@Param("debateId") debateId: string) {
+    return this.debateService.getDebateSession(debateId);
   }
 
   @Delete(":topicId/messages/:messageId")

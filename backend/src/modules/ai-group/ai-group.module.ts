@@ -7,13 +7,19 @@ import {
 import { AiGroupService } from "./ai-group.service";
 import { AiGroupGateway } from "./ai-group.gateway";
 import { DebateService } from "./debate.service";
+import { ContextRouterService } from "./context-router.service";
 import { PrismaModule } from "../../common/prisma/prisma.module";
 import { AiModule } from "../ai/ai.module";
 
 @Module({
   imports: [PrismaModule, AiModule],
   controllers: [AiGroupController, UsersController, BookmarksController],
-  providers: [AiGroupService, AiGroupGateway, DebateService],
-  exports: [AiGroupService, DebateService],
+  providers: [
+    AiGroupService,
+    AiGroupGateway,
+    DebateService,
+    ContextRouterService,
+  ],
+  exports: [AiGroupService, DebateService, ContextRouterService],
 })
 export class AiGroupModule {}

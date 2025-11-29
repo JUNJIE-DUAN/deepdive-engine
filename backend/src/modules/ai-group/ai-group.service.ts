@@ -28,6 +28,10 @@ import {
 } from "./dto";
 import { AiChatService, ChatMessage } from "../ai/ai-chat.service";
 import { SearchService } from "../ai/search.service";
+import {
+  ContextRouterService,
+  ContextStrategy,
+} from "./context-router.service";
 
 @Injectable()
 export class AiGroupService {
@@ -37,6 +41,7 @@ export class AiGroupService {
     private prisma: PrismaService,
     private aiChatService: AiChatService,
     private searchService: SearchService,
+    private contextRouter: ContextRouterService,
   ) {}
 
   // ==================== Topic CRUD ====================
@@ -1685,49 +1690,126 @@ ${topic?.description ? `Group description: ${topic.description}` : ""}${contextS
 
 Respond naturally and helpfully to the discussion. When relevant, reference the shared materials, fetched web content, and search results to provide accurate, up-to-date information. Keep your responses concise but informative.`;
 
-    // 【关键修复】过滤掉历史中的辩论内容，避免干扰普通对话
-    // 检测辩论特征：包含"辩论主题"、"我方立场"、"正方观点"、"反方观点"等
-    const debatePatterns = [
-      /辩论主题[：:]/,
-      /我方立场[：:]/,
-      /正方观点/,
-      /反方观点/,
-      /核心论点[：:]/,
-      /向对方提问/,
-      /@[\w\-]+\s*请回应/,
-      /@[\w\-]+\s*请继续/,
-    ];
+    // 【业界最佳实践】使用 ContextRouter 智能路由上下文
+    // 参考：LangChain Intent Detection, AutoGen Session Isolation
+    const lastUserMsg = contextMessages.find((m) => m.senderId);
+    const userMessageContent = lastUserMsg?.content || "";
 
-    const isDebateMessage = (content: string): boolean => {
-      return debatePatterns.some((pattern) => pattern.test(content));
-    };
+    // 检测用户意图
+    const routeResult = await this.contextRouter.routeContext(
+      topicId,
+      userMessageContent,
+      [], // 非辩论模式，mentionedAiIds 为空
+    );
 
-    // 如果不是辩论模式，过滤掉看起来像辩论的消息
+    this.logger.log(
+      `[ContextRouter] Intent: ${routeResult.intent}, Strategy: ${routeResult.strategy}`,
+    );
+
+    // 根据意图处理上下文
     let filteredContextMessages = contextMessages;
-    if (!debateRole) {
-      filteredContextMessages = contextMessages.filter((msg) => {
-        // 保留用户消息
-        if (msg.senderId) return true;
-        // 过滤掉看起来像辩论的AI消息
-        if (msg.aiMemberId && isDebateMessage(msg.content)) {
-          this.logger.log(
-            `[Context Filter] Removing debate-like message from ${msg.aiMember?.displayName || "AI"}`,
-          );
-          return false;
-        }
-        return true;
-      });
+    let intentSystemPrompt = "";
 
-      // 只保留最近的消息，进一步减少旧内容干扰
-      const MAX_NORMAL_CONTEXT = 8;
-      if (filteredContextMessages.length > MAX_NORMAL_CONTEXT) {
-        filteredContextMessages =
-          filteredContextMessages.slice(-MAX_NORMAL_CONTEXT);
+    if (!debateRole) {
+      // 辩论特征检测
+      const debatePatterns = [
+        /辩论主题[：:]/,
+        /我方立场[：:]/,
+        /正方观点/,
+        /反方观点/,
+        /核心论点[：:]/,
+        /向对方提问/,
+        /@[\w\u4e00-\u9fa5\-]+\s*请回应/,
+        /@[\w\u4e00-\u9fa5\-]+\s*请继续/,
+      ];
+
+      const isDebateMessage = (content: string): boolean => {
+        return debatePatterns.some((pattern) => pattern.test(content));
+      };
+
+      // 提取辩论消息的核心观点（用于总结/图片生成等场景）
+      const extractDebateSummary = (
+        content: string,
+        senderName: string,
+      ): string => {
+        const corePointsMatch = content.match(
+          /核心论点[：:]([\s\S]*?)(?=\n\n|\*\*|$)/,
+        );
+        const stanceMatch = content.match(/我方立场[：:]\s*([^\n]+)/);
+
+        let summary = `【${senderName}的观点】`;
+        if (stanceMatch) {
+          summary += `立场：${stanceMatch[1].trim()}。`;
+        }
+        if (corePointsMatch) {
+          const points = corePointsMatch[1]
+            .replace(/^\d+\.\s*/gm, "")
+            .replace(/\*\*/g, "")
+            .trim()
+            .split("\n")
+            .filter((p) => p.trim())
+            .slice(0, 3)
+            .join("；");
+          summary += `论点：${points}`;
+        }
+        return summary || content.substring(0, 200) + "...";
+      };
+
+      switch (routeResult.strategy) {
+        case ContextStrategy.REFERENCE_RECENT:
+          // 总结/生成图片/分析：保留辩论内容但简化为观点摘要
+          this.logger.log(`[ContextRouter] Using REFERENCE_RECENT strategy`);
+          filteredContextMessages = contextMessages.map((msg) => {
+            if (msg.aiMemberId && isDebateMessage(msg.content)) {
+              // 将辩论消息转换为简洁的观点摘要
+              const senderName = msg.aiMember?.displayName || "AI";
+              return {
+                ...msg,
+                content: extractDebateSummary(msg.content, senderName),
+              };
+            }
+            return msg;
+          });
+          // 保留更多上下文用于参考
+          const MAX_REF_CONTEXT = 12;
+          if (filteredContextMessages.length > MAX_REF_CONTEXT) {
+            filteredContextMessages =
+              filteredContextMessages.slice(-MAX_REF_CONTEXT);
+          }
+          intentSystemPrompt = routeResult.systemPromptAddition || "";
+          break;
+
+        case ContextStrategy.STANDARD:
+        default:
+          // 普通对话：过滤掉辩论格式的消息
+          this.logger.log(`[ContextRouter] Using STANDARD strategy`);
+          filteredContextMessages = contextMessages.filter((msg) => {
+            if (msg.senderId) return true;
+            if (msg.aiMemberId && isDebateMessage(msg.content)) {
+              this.logger.log(
+                `[Context Filter] Removing debate message from ${msg.aiMember?.displayName || "AI"}`,
+              );
+              return false;
+            }
+            return true;
+          });
+          const MAX_NORMAL_CONTEXT = 8;
+          if (filteredContextMessages.length > MAX_NORMAL_CONTEXT) {
+            filteredContextMessages =
+              filteredContextMessages.slice(-MAX_NORMAL_CONTEXT);
+          }
+          break;
       }
 
       this.logger.log(
-        `[Context Filter] Normal mode: ${contextMessages.length} -> ${filteredContextMessages.length} messages`,
+        `[ContextRouter] Context: ${contextMessages.length} -> ${filteredContextMessages.length} messages`,
       );
+    }
+
+    // 将意图相关的系统提示添加到 systemPrompt
+    let finalSystemPrompt = systemPrompt;
+    if (intentSystemPrompt) {
+      finalSystemPrompt = systemPrompt + "\n\n" + intentSystemPrompt;
     }
 
     // Build chat messages for AI service
@@ -1943,7 +2025,7 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
           modelId,
           apiKey,
           apiEndpoint,
-          systemPrompt,
+          systemPrompt: finalSystemPrompt,
           messages: chatMessages,
           maxTokens: effectiveMaxTokens,
           temperature: aiModelConfig?.temperature || 0.7,
@@ -1957,7 +2039,7 @@ Respond naturally and helpfully to the discussion. When relevant, reference the 
         );
         result = await this.aiChatService.generateChatCompletion({
           model: aiMember.aiModel,
-          systemPrompt,
+          systemPrompt: finalSystemPrompt,
           messages: chatMessages,
           maxTokens: 1024,
           temperature: 0.7,

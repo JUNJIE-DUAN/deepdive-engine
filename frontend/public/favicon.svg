@@ -1,0 +1,18 @@
+<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Clean rounded square background -->
+  <rect x="2" y="2" width="32" height="32" rx="8" fill="url(#logoGradient)" />
+
+  <!-- Minimalist diving arrow -->
+  <path d="M18 8 L18 22" stroke="white" stroke-width="3" stroke-linecap="round" />
+  <path d="M12 16 L18 22 L24 16" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+  <!-- Depth indicator dot -->
+  <circle cx="18" cy="27" r="1.5" fill="white" fill-opacity="0.6" />
+</svg>

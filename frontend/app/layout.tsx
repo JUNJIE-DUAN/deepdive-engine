@@ -8,6 +8,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'DeepDive Engine - AI驱动的知识发现引擎',
   description: '从信息到洞察，AI重构你的知识探索之旅',
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

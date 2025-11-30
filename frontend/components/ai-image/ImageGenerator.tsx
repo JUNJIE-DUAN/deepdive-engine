@@ -2,16 +2,23 @@
 
 /**
  * AI Image Generator Component
- * 参考 Google ImageFX 的简洁设计风格
- * - 支持多种输入：提示词、URL、文本内容、文件上传
- * - 双模型选择：文本模型（优化提示词）+ 图片模型（生成图片）
- * - 自动从配置加载可用模型
- * - 支持拖放文件上传
+ * - 支持多种输入：提示词、YouTube/视频URL、普通URL、文本内容、文件上传
+ * - 使用系统默认文本模型优化提示词
+ * - 显示完整的处理过程（可折叠）
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { config } from '@/lib/config';
 import { getAuthHeader } from '@/lib/auth';
+
+// 处理步骤类型
+interface ProcessingStep {
+  step: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  title: string;
+  content?: string;
+  timestamp?: string;
+}
 
 interface GeneratedImage {
   id: string;
@@ -21,6 +28,10 @@ interface GeneratedImage {
   createdAt: string;
   width: number;
   height: number;
+  processingSteps?: ProcessingStep[];
+  extractedContent?: string;
+  textModelUsed?: string;
+  imageModelUsed?: string;
 }
 
 interface AIModel {
@@ -43,12 +54,13 @@ interface UploadedFile {
   preview?: string;
 }
 
-type InputMode = 'prompt' | 'url' | 'content' | 'files';
+type InputMode = 'prompt' | 'youtube' | 'url' | 'content' | 'files';
 
 export default function ImageGenerator() {
   // 输入状态
   const [inputMode, setInputMode] = useState<InputMode>('prompt');
   const [prompt, setPrompt] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [urls, setUrls] = useState<string[]>(['']);
   const [content, setContent] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -62,15 +74,17 @@ export default function ImageGenerator() {
   );
   const [error, setError] = useState<string | null>(null);
 
-  // 模型状态
+  // 模型状态 - 只保留图片模型选择
   const [models, setModels] = useState<ModelsResponse>({
     textModels: [],
     imageModels: [],
   });
-  const [selectedTextModelId, setSelectedTextModelId] = useState<string>('');
   const [selectedImageModelId, setSelectedImageModelId] = useState<string>('');
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [skipEnhancement, setSkipEnhancement] = useState(false);
+
+  // 思考过程展示
+  const [showProcessing, setShowProcessing] = useState(true);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -89,13 +103,9 @@ export default function ImageGenerator() {
         const data: ModelsResponse = await response.json();
         setModels(data);
 
-        // 设置默认模型
-        const defaultTextModel =
-          data.textModels.find((m) => m.isDefault) || data.textModels[0];
+        // 只设置默认图片模型
         const defaultImageModel =
           data.imageModels.find((m) => m.isDefault) || data.imageModels[0];
-
-        if (defaultTextModel) setSelectedTextModelId(defaultTextModel.id);
         if (defaultImageModel) setSelectedImageModelId(defaultImageModel.id);
       }
     } catch (err) {
@@ -109,31 +119,11 @@ export default function ImageGenerator() {
     fetchModels();
   }, [fetchModels]);
 
-  // Expressive chips
-  const expressiveChips = [
-    { label: 'cinematic lighting', category: 'lighting' },
-    { label: 'golden hour', category: 'lighting' },
-    { label: 'studio lighting', category: 'lighting' },
-    { label: 'dramatic shadows', category: 'lighting' },
-    { label: 'macro shot', category: 'angle' },
-    { label: 'aerial view', category: 'angle' },
-    { label: 'close-up portrait', category: 'angle' },
-    { label: 'wide angle', category: 'angle' },
-  ];
-
-  // 添加URL输入
-  const addUrlInput = () => {
-    setUrls([...urls, '']);
-  };
-
-  // 移除URL输入
+  // URL 相关函数
+  const addUrlInput = () => setUrls([...urls, '']);
   const removeUrlInput = (index: number) => {
-    if (urls.length > 1) {
-      setUrls(urls.filter((_, i) => i !== index));
-    }
+    if (urls.length > 1) setUrls(urls.filter((_, i) => i !== index));
   };
-
-  // 更新URL
   const updateUrl = (index: number, value: string) => {
     const newUrls = [...urls];
     newUrls[index] = value;
@@ -146,7 +136,6 @@ export default function ImageGenerator() {
 
     const newFiles: UploadedFile[] = [];
     Array.from(files).forEach((file) => {
-      // 支持的文件类型
       const supportedTypes = [
         'text/plain',
         'text/markdown',
@@ -180,12 +169,9 @@ export default function ImageGenerator() {
           file,
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         };
-
-        // 为图片创建预览
         if (file.type.startsWith('image/')) {
           uploadedFile.preview = URL.createObjectURL(file);
         }
-
         newFiles.push(uploadedFile);
       }
     });
@@ -196,9 +182,7 @@ export default function ImageGenerator() {
   const removeFile = (id: string) => {
     setUploadedFiles((prev) => {
       const file = prev.find((f) => f.id === id);
-      if (file?.preview) {
-        URL.revokeObjectURL(file.preview);
-      }
+      if (file?.preview) URL.revokeObjectURL(file.preview);
       return prev.filter((f) => f.id !== id);
     });
   };
@@ -208,12 +192,10 @@ export default function ImageGenerator() {
     e.preventDefault();
     setIsDragging(true);
   };
-
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -222,29 +204,11 @@ export default function ImageGenerator() {
 
   // 获取文件图标
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith('image/'))
       return 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z';
-    }
-    if (file.type === 'application/pdf') {
+    if (file.type === 'application/pdf')
       return 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z';
-    }
     return 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
-  };
-
-  // 获取当前输入内容
-  const getCurrentInput = () => {
-    switch (inputMode) {
-      case 'prompt':
-        return prompt.trim();
-      case 'url':
-        return urls.filter((u) => u.trim()).join('\n');
-      case 'content':
-        return content.trim();
-      case 'files':
-        return uploadedFiles.map((f) => f.file.name).join(', ');
-      default:
-        return '';
-    }
   };
 
   // 检查是否有有效输入
@@ -252,6 +216,8 @@ export default function ImageGenerator() {
     switch (inputMode) {
       case 'prompt':
         return prompt.trim().length > 0;
+      case 'youtube':
+        return youtubeUrl.trim().length > 0;
       case 'url':
         return urls.some((u) => u.trim().length > 0);
       case 'content':
@@ -274,30 +240,14 @@ export default function ImageGenerator() {
       // 如果是文件上传模式，使用 FormData
       if (inputMode === 'files' && uploadedFiles.length > 0) {
         const formData = new FormData();
-
-        // 添加文件
-        uploadedFiles.forEach((uf) => {
-          formData.append('files', uf.file);
-        });
-
-        // 添加其他参数
-        if (!skipEnhancement && selectedTextModelId) {
-          formData.append('textModelId', selectedTextModelId);
-        }
-        if (selectedImageModelId) {
+        uploadedFiles.forEach((uf) => formData.append('files', uf.file));
+        if (selectedImageModelId)
           formData.append('imageModelId', selectedImageModelId);
-        }
         formData.append('skipEnhancement', String(skipEnhancement));
 
         const response = await fetch(
           `${config.apiBaseUrl}/api/v1/ai-image/generate-with-files`,
-          {
-            method: 'POST',
-            headers: {
-              ...getAuthHeader(),
-            },
-            body: formData,
-          }
+          { method: 'POST', headers: { ...getAuthHeader() }, body: formData }
         );
 
         if (!response.ok) {
@@ -307,15 +257,9 @@ export default function ImageGenerator() {
 
         const data = await response.json();
         const newImage: GeneratedImage = {
-          id: data.id || Date.now().toString(),
-          prompt: data.prompt || getCurrentInput(),
-          enhancedPrompt: data.enhancedPrompt,
-          imageUrl: data.imageUrl,
+          ...data,
           createdAt: new Date().toISOString(),
-          width: data.width || 1024,
-          height: data.height || 1024,
         };
-
         setGeneratedImages((prev) => [newImage, ...prev]);
         setSelectedImage(newImage);
         return;
@@ -323,18 +267,18 @@ export default function ImageGenerator() {
 
       // 其他模式使用 JSON
       const requestBody: Record<string, unknown> = {
-        textModelId: skipEnhancement ? undefined : selectedTextModelId,
         imageModelId: selectedImageModelId,
         skipEnhancement,
       };
 
-      // 根据输入模式设置请求体
       switch (inputMode) {
         case 'prompt':
           requestBody.prompt = prompt.trim();
           break;
+        case 'youtube':
+          requestBody.urls = [youtubeUrl.trim()];
+          break;
         case 'url':
-          // 支持多个URL
           requestBody.urls = urls.filter((u) => u.trim());
           break;
         case 'content':
@@ -346,10 +290,7 @@ export default function ImageGenerator() {
         `${config.apiBaseUrl}/api/v1/ai-image/generate`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeader(),
-          },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify(requestBody),
         }
       );
@@ -361,15 +302,9 @@ export default function ImageGenerator() {
 
       const data = await response.json();
       const newImage: GeneratedImage = {
-        id: data.id || Date.now().toString(),
-        prompt: data.prompt || getCurrentInput(),
-        enhancedPrompt: data.enhancedPrompt,
-        imageUrl: data.imageUrl,
+        ...data,
         createdAt: new Date().toISOString(),
-        width: data.width || 1024,
-        height: data.height || 1024,
       };
-
       setGeneratedImages((prev) => [newImage, ...prev]);
       setSelectedImage(newImage);
     } catch (err) {
@@ -385,19 +320,6 @@ export default function ImageGenerator() {
       e.preventDefault();
       handleGenerate();
     }
-  };
-
-  const addChipToPrompt = (chip: string) => {
-    const currentPrompt = prompt.trim();
-    if (
-      currentPrompt &&
-      !currentPrompt.toLowerCase().includes(chip.toLowerCase())
-    ) {
-      setPrompt(`${currentPrompt}, ${chip}`);
-    } else if (!currentPrompt) {
-      setPrompt(chip);
-    }
-    inputRef.current?.focus();
   };
 
   const handleDownload = async (image: GeneratedImage) => {
@@ -417,47 +339,96 @@ export default function ImageGenerator() {
     }
   };
 
-  const getSelectedTextModel = () =>
-    models.textModels.find((m) => m.id === selectedTextModelId);
-  const getSelectedImageModel = () =>
-    models.imageModels.find((m) => m.id === selectedImageModelId);
+  // 渲染处理步骤
+  const renderProcessingSteps = (steps: ProcessingStep[]) => (
+    <div className="space-y-2">
+      {steps.map((step, index) => (
+        <div key={index} className="flex items-start gap-2 text-xs">
+          <div
+            className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
+              step.status === 'completed'
+                ? 'text-green-500'
+                : step.status === 'processing'
+                  ? 'animate-pulse text-blue-500'
+                  : step.status === 'error'
+                    ? 'text-red-500'
+                    : 'text-gray-400'
+            }`}
+          >
+            {step.status === 'completed' && (
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            )}
+            {step.status === 'processing' && (
+              <svg
+                className="animate-spin"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+            )}
+            {step.status === 'error' && (
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            )}
+            {step.status === 'pending' && (
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  strokeWidth="2"
+                  className="opacity-30"
+                />
+              </svg>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-gray-300">{step.title}</p>
+            {step.content && (
+              <p className="mt-0.5 line-clamp-2 break-all text-gray-500">
+                {step.content}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="flex h-full flex-col bg-[#1a1a2e]">
-      {/* Model Selectors - Top Bar */}
+      {/* Top Bar - Only Image Model Selector */}
       <div className="flex flex-wrap items-center gap-4 border-b border-white/10 px-6 py-3">
-        {/* Text Model Selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Text Model:</span>
-          {isLoadingModels ? (
-            <div className="h-7 w-36 animate-pulse rounded bg-white/10"></div>
-          ) : models.textModels.length > 0 ? (
-            <select
-              value={selectedTextModelId}
-              onChange={(e) => setSelectedTextModelId(e.target.value)}
-              className="rounded bg-white/10 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-              disabled={isGenerating || skipEnhancement}
-            >
-              {models.textModels.map((model) => (
-                <option
-                  key={model.id}
-                  value={model.id}
-                  className="bg-[#1a1a2e]"
-                >
-                  {model.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-xs text-yellow-400">No text models</span>
-          )}
-        </div>
-
-        {/* Image Model Selector */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Image Model:</span>
           {isLoadingModels ? (
-            <div className="h-7 w-36 animate-pulse rounded bg-white/10"></div>
+            <div className="h-7 w-36 animate-pulse rounded bg-white/10" />
           ) : models.imageModels.length > 0 ? (
             <select
               value={selectedImageModelId}
@@ -480,7 +451,6 @@ export default function ImageGenerator() {
           )}
         </div>
 
-        {/* Skip Enhancement Toggle */}
         <label className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
@@ -489,10 +459,11 @@ export default function ImageGenerator() {
             className="h-3.5 w-3.5 rounded border-gray-600 bg-transparent text-purple-500 focus:ring-purple-500/50"
             disabled={isGenerating}
           />
-          <span className="text-xs text-gray-400">Skip prompt enhancement</span>
+          <span className="text-xs text-gray-400">
+            Skip AI prompt enhancement
+          </span>
         </label>
 
-        {/* Refresh Button */}
         <button
           onClick={fetchModels}
           disabled={isLoadingModels}
@@ -516,31 +487,94 @@ export default function ImageGenerator() {
       </div>
 
       {/* Main Image Display Area */}
-      <div className="flex flex-1 items-center justify-center overflow-auto p-6">
-        {selectedImage ? (
-          <div className="relative max-h-full max-w-full">
-            <img
-              src={selectedImage.imageUrl}
-              alt={selectedImage.prompt}
-              className="max-h-[50vh] rounded-2xl object-contain shadow-2xl"
-            />
-            {/* Enhanced Prompt Display */}
-            {selectedImage.enhancedPrompt && (
-              <div className="absolute left-4 top-4 max-w-[300px] rounded-lg bg-black/70 p-3 backdrop-blur-sm">
-                <p className="text-xs text-gray-400">Enhanced prompt:</p>
-                <p className="mt-1 line-clamp-3 text-xs text-white">
-                  {selectedImage.enhancedPrompt}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Image Display */}
+        <div className="flex flex-1 items-center justify-center overflow-auto p-6">
+          {selectedImage ? (
+            <div className="relative max-h-full max-w-full">
+              <img
+                src={selectedImage.imageUrl}
+                alt={selectedImage.prompt}
+                className="max-h-[50vh] rounded-2xl object-contain shadow-2xl"
+              />
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <button
+                  onClick={() => handleDownload(selectedImage)}
+                  className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white backdrop-blur-md transition hover:bg-white/20"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Download
+                </button>
+              </div>
+            </div>
+          ) : isGenerating ? (
+            <div className="flex flex-col items-center gap-6">
+              <div className="relative h-24 w-24">
+                <div className="absolute inset-0 animate-spin rounded-full border-4 border-purple-500/30 border-t-purple-500" />
+                <div
+                  className="absolute inset-3 animate-spin rounded-full border-4 border-blue-500/30 border-t-blue-500"
+                  style={{
+                    animationDirection: 'reverse',
+                    animationDuration: '1.5s',
+                  }}
+                />
+              </div>
+              <p className="text-lg text-gray-400">Creating your image...</p>
+            </div>
+          ) : (
+            <div className="flex max-w-xl flex-col items-center gap-6 text-center">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20">
+                <svg
+                  className="h-12 w-12 text-purple-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2 className="mb-2 text-2xl font-semibold text-white">
+                  Create with AI
+                </h2>
+                <p className="text-gray-400">
+                  Describe, paste URLs, upload files, or add YouTube videos
                 </p>
               </div>
-            )}
-            {/* Image Actions */}
-            <div className="absolute bottom-4 right-4 flex gap-2">
+            </div>
+          )}
+        </div>
+
+        {/* Processing Steps Panel (Right Side) */}
+        {selectedImage?.processingSteps &&
+          selectedImage.processingSteps.length > 0 && (
+            <div
+              className={`border-l border-white/10 bg-[#12121f] transition-all duration-300 ${showProcessing ? 'w-80' : 'w-10'}`}
+            >
               <button
-                onClick={() => handleDownload(selectedImage)}
-                className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white backdrop-blur-md transition hover:bg-white/20"
+                onClick={() => setShowProcessing(!showProcessing)}
+                className="flex w-full items-center justify-between border-b border-white/10 px-3 py-2 text-xs text-gray-400 hover:text-white"
               >
+                {showProcessing && <span>Processing Details</span>}
                 <svg
-                  className="h-4 w-4"
+                  className={`h-4 w-4 transition-transform ${showProcessing ? '' : 'rotate-180'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -549,66 +583,49 @@ export default function ImageGenerator() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    d="M9 5l7 7-7 7"
                   />
                 </svg>
-                Download
               </button>
-            </div>
-          </div>
-        ) : isGenerating ? (
-          <div className="flex flex-col items-center gap-6">
-            <div className="relative h-24 w-24">
-              <div className="absolute inset-0 animate-spin rounded-full border-4 border-purple-500/30 border-t-purple-500"></div>
-              <div
-                className="absolute inset-3 animate-spin rounded-full border-4 border-blue-500/30 border-t-blue-500"
-                style={{
-                  animationDirection: 'reverse',
-                  animationDuration: '1.5s',
-                }}
-              ></div>
-            </div>
-            <div className="text-center">
-              <p className="text-lg text-gray-400">Creating your image...</p>
-              {!skipEnhancement && getSelectedTextModel() && (
-                <p className="mt-1 text-sm text-gray-500">
-                  Enhancing prompt with {getSelectedTextModel()?.name}
-                </p>
+              {showProcessing && (
+                <div className="max-h-[calc(100vh-200px)] overflow-y-auto p-4">
+                  {/* Models Used */}
+                  {(selectedImage.textModelUsed ||
+                    selectedImage.imageModelUsed) && (
+                    <div className="mb-4 space-y-1 border-b border-white/10 pb-3">
+                      {selectedImage.textModelUsed && (
+                        <p className="text-xs text-gray-500">
+                          <span className="text-gray-400">Text Model:</span>{' '}
+                          {selectedImage.textModelUsed}
+                        </p>
+                      )}
+                      {selectedImage.imageModelUsed && (
+                        <p className="text-xs text-gray-500">
+                          <span className="text-gray-400">Image Model:</span>{' '}
+                          {selectedImage.imageModelUsed}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Steps */}
+                  {renderProcessingSteps(selectedImage.processingSteps)}
+
+                  {/* Enhanced Prompt */}
+                  {selectedImage.enhancedPrompt && (
+                    <div className="mt-4 border-t border-white/10 pt-4">
+                      <p className="mb-2 text-xs font-medium text-gray-400">
+                        Final Image Prompt:
+                      </p>
+                      <p className="text-xs leading-relaxed text-gray-300">
+                        {selectedImage.enhancedPrompt}
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
-              {getSelectedImageModel() && (
-                <p className="mt-1 text-sm text-gray-500">
-                  Generating with {getSelectedImageModel()?.name}
-                </p>
-              )}
             </div>
-          </div>
-        ) : (
-          <div className="flex max-w-xl flex-col items-center gap-6 text-center">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20">
-              <svg
-                className="h-12 w-12 text-purple-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h2 className="mb-2 text-2xl font-semibold text-white">
-                Create with AI
-              </h2>
-              <p className="text-gray-400">
-                Describe, paste URLs, or add content to generate images
-              </p>
-            </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Generated Images Gallery */}
@@ -644,6 +661,11 @@ export default function ImageGenerator() {
               mode: 'prompt' as InputMode,
               label: 'Prompt',
               icon: 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+            },
+            {
+              mode: 'youtube' as InputMode,
+              label: 'YouTube',
+              icon: 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
             },
             {
               mode: 'url' as InputMode,
@@ -689,27 +711,6 @@ export default function ImageGenerator() {
         </div>
       </div>
 
-      {/* Expressive Chips (only for prompt mode) */}
-      {inputMode === 'prompt' && (
-        <div className="border-t border-white/10 px-6 py-2">
-          <div className="flex flex-wrap gap-1.5">
-            {expressiveChips.map((chip) => (
-              <button
-                key={chip.label}
-                onClick={() => addChipToPrompt(chip.label)}
-                className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                  prompt.toLowerCase().includes(chip.label.toLowerCase())
-                    ? 'bg-purple-500 text-white'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Input Area */}
       <div className="border-t border-white/10 p-4">
         <div className="mx-auto max-w-3xl">
@@ -742,7 +743,7 @@ export default function ImageGenerator() {
                 className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white transition hover:from-purple-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isGenerating ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
                   <svg
                     className="h-4 w-4"
@@ -759,6 +760,63 @@ export default function ImageGenerator() {
                   </svg>
                 )}
               </button>
+            </div>
+          )}
+
+          {/* YouTube Input */}
+          {inputMode === 'youtube' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 ring-1 ring-white/10 focus-within:ring-red-500/50">
+                <svg
+                  className="h-5 w-5 text-red-500"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+                <input
+                  type="url"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  placeholder="Paste YouTube video URL..."
+                  className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none"
+                  disabled={isGenerating}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                The system will extract video subtitles and generate an image
+                based on the content
+              </p>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleGenerate}
+                  disabled={
+                    !hasValidInput() ||
+                    isGenerating ||
+                    models.imageModels.length === 0
+                  }
+                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-pink-600 px-4 py-2 text-sm text-white transition hover:from-red-700 hover:to-pink-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isGenerating ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                      />
+                    </svg>
+                  )}
+                  Generate from Video
+                </button>
+              </div>
             </div>
           )}
 
@@ -832,7 +890,7 @@ export default function ImageGenerator() {
                   </svg>
                   Add URL
                 </button>
-                <div className="flex-1"></div>
+                <div className="flex-1" />
                 <button
                   onClick={handleGenerate}
                   disabled={
@@ -843,7 +901,7 @@ export default function ImageGenerator() {
                   className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-sm text-white transition hover:from-purple-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isGenerating ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
                     <svg
                       className="h-4 w-4"
@@ -889,7 +947,7 @@ export default function ImageGenerator() {
                   className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-sm text-white transition hover:from-purple-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isGenerating ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
                     <svg
                       className="h-4 w-4"
@@ -914,7 +972,6 @@ export default function ImageGenerator() {
           {/* Files Input */}
           {inputMode === 'files' && (
             <div className="space-y-3">
-              {/* Hidden file input */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -923,8 +980,6 @@ export default function ImageGenerator() {
                 onChange={(e) => handleFileSelect(e.target.files)}
                 className="hidden"
               />
-
-              {/* Drop zone */}
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -959,7 +1014,6 @@ export default function ImageGenerator() {
                 </p>
               </div>
 
-              {/* Uploaded files list */}
               {uploadedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {uploadedFiles.map((uf) => (
@@ -1017,7 +1071,6 @@ export default function ImageGenerator() {
                 </div>
               )}
 
-              {/* Generate button */}
               <div className="flex justify-end">
                 <button
                   onClick={handleGenerate}
@@ -1029,7 +1082,7 @@ export default function ImageGenerator() {
                   className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-sm text-white transition hover:from-purple-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isGenerating ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
                     <svg
                       className="h-4 w-4"
@@ -1052,7 +1105,10 @@ export default function ImageGenerator() {
           )}
 
           <p className="mt-2 text-center text-xs text-gray-500">
-            {inputMode === 'prompt' && 'Press Enter to generate'}
+            {inputMode === 'prompt' &&
+              'Press Enter to generate • AI will enhance your prompt automatically'}
+            {inputMode === 'youtube' &&
+              'Extract subtitles from YouTube videos to generate relevant images'}
             {inputMode === 'url' &&
               'Add article URLs to generate relevant images'}
             {inputMode === 'content' && 'Paste text content for AI analysis'}

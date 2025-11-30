@@ -4,6 +4,15 @@ import { HttpService } from "@nestjs/axios";
 import { firstValueFrom } from "rxjs";
 import { ContentExtractorService } from "./content-extractor.service";
 
+// 处理步骤类型
+export interface ProcessingStep {
+  step: string;
+  status: "pending" | "processing" | "completed" | "error";
+  title: string;
+  content?: string;
+  timestamp?: string;
+}
+
 export interface GeneratedImageResult {
   id: string;
   imageUrl: string;
@@ -12,6 +21,11 @@ export interface GeneratedImageResult {
   width: number;
   height: number;
   createdAt: string;
+  // 新增：处理步骤详情
+  processingSteps?: ProcessingStep[];
+  extractedContent?: string;
+  textModelUsed?: string;
+  imageModelUsed?: string;
 }
 
 export interface GenerateImageOptions {
@@ -138,6 +152,7 @@ export class AiImageService {
    * 1. 收集输入内容 (prompt/urls/content/files/imageBase64)
    * 2. 用文本模型分析并生成专业提示词
    * 3. 用图片模型生成图片
+   * 返回完整的处理步骤以供前端展示
    */
   async generateImage(
     options: GenerateImageOptions,
@@ -148,7 +163,6 @@ export class AiImageService {
       content,
       imageBase64,
       files,
-      textModelId,
       imageModelId,
       style,
       aspectRatio,
@@ -156,6 +170,23 @@ export class AiImageService {
       skipEnhancement,
       userId,
     } = options;
+
+    // 处理步骤记录
+    const processingSteps: ProcessingStep[] = [];
+    const addStep = (
+      step: string,
+      title: string,
+      status: ProcessingStep["status"],
+      content?: string,
+    ) => {
+      processingSteps.push({
+        step,
+        title,
+        status,
+        content,
+        timestamp: new Date().toISOString(),
+      });
+    };
 
     // 验证输入
     const hasUrls = urls && urls.length > 0 && urls.some((u) => u.trim());
@@ -167,11 +198,13 @@ export class AiImageService {
     }
 
     // 步骤1: 收集和处理输入内容
+    addStep("input", "Analyzing Input", "processing");
     const contentParts: string[] = [];
 
     // 1.1 直接输入的提示词
     if (prompt) {
       contentParts.push(`User prompt: ${prompt}`);
+      addStep("prompt", "User Prompt", "completed", prompt);
     }
 
     // 1.2 处理 URLs（支持网页、YouTube、Bilibili 等）
@@ -179,10 +212,37 @@ export class AiImageService {
       this.logger.log(`Extracting content from ${urls!.length} URLs...`);
       for (const url of urls!) {
         if (url.trim()) {
-          const urlContent = await this.contentExtractor.extractFromUrl(
-            url.trim(),
+          const trimmedUrl = url.trim();
+          const isYouTube =
+            trimmedUrl.includes("youtube.com") ||
+            trimmedUrl.includes("youtu.be");
+          const isBilibili = trimmedUrl.includes("bilibili.com");
+
+          addStep(
+            "url_extract",
+            isYouTube
+              ? "Extracting YouTube Subtitles"
+              : isBilibili
+                ? "Extracting Bilibili Content"
+                : "Extracting Web Content",
+            "processing",
+            trimmedUrl,
           );
-          contentParts.push(`Content from ${url}:\n${urlContent}`);
+
+          const urlContent =
+            await this.contentExtractor.extractFromUrl(trimmedUrl);
+          contentParts.push(`Content from ${trimmedUrl}:\n${urlContent}`);
+
+          addStep(
+            "url_content",
+            isYouTube
+              ? "YouTube Content Extracted"
+              : isBilibili
+                ? "Bilibili Content Extracted"
+                : "Web Content Extracted",
+            "completed",
+            urlContent.slice(0, 500) + (urlContent.length > 500 ? "..." : ""),
+          );
         }
       }
     }
@@ -190,12 +250,19 @@ export class AiImageService {
     // 1.3 直接粘贴的文本内容
     if (content) {
       contentParts.push(`Text content:\n${content}`);
+      addStep(
+        "text_content",
+        "Text Content",
+        "completed",
+        content.slice(0, 300) + (content.length > 300 ? "..." : ""),
+      );
     }
 
     // 1.4 处理上传的文件
     if (hasFiles) {
       this.logger.log(`Processing ${files!.length} uploaded files...`);
       for (const file of files!) {
+        addStep("file_extract", `Processing ${file.filename}`, "processing");
         const fileContent = await this.contentExtractor.extractFromFile(
           file.buffer,
           file.mimeType,
@@ -204,14 +271,19 @@ export class AiImageService {
         contentParts.push(
           `Content from file "${file.filename}":\n${fileContent}`,
         );
+        addStep(
+          "file_content",
+          `Extracted from ${file.filename}`,
+          "completed",
+          fileContent.slice(0, 300) + (fileContent.length > 300 ? "..." : ""),
+        );
       }
     }
 
     // 1.5 处理图片（使用 AI 进行图片理解）
     if (imageBase64) {
-      const textModel = textModelId
-        ? await this.getModelById(textModelId)
-        : await this.getDefaultTextModel();
+      addStep("image_analyze", "Analyzing Reference Image", "processing");
+      const textModel = await this.getDefaultTextModel();
 
       if (textModel?.apiKey) {
         const imageDescription = await this.contentExtractor.extractFromImage(
@@ -219,24 +291,52 @@ export class AiImageService {
           textModel.apiKey,
         );
         contentParts.push(`Image description:\n${imageDescription}`);
+        addStep(
+          "image_description",
+          "Image Analysis Complete",
+          "completed",
+          imageDescription,
+        );
       }
     }
 
     const inputContent = contentParts.join("\n\n---\n\n");
     this.logger.log(`Total input content length: ${inputContent.length} chars`);
+    addStep("input", "Input Analysis Complete", "completed");
 
-    // 步骤2: 使用文本模型生成专业提示词
+    // 步骤2: 使用系统默认文本模型生成专业提示词
     let enhancedPrompt: string;
+    let textModelUsed: string | undefined;
 
     if (skipEnhancement) {
       // 跳过优化，直接使用原始输入
       enhancedPrompt = this.addStyleToPrompt(inputContent, style);
+      addStep(
+        "prompt_direct",
+        "Using Direct Input (No Enhancement)",
+        "completed",
+        enhancedPrompt,
+      );
     } else {
-      // 使用文本模型优化提示词
+      // 使用系统默认文本模型优化提示词
+      addStep(
+        "prompt_enhance",
+        "Generating Image Prompt with AI",
+        "processing",
+      );
+      const textModel = await this.getDefaultTextModel();
+      textModelUsed = textModel?.displayName || textModel?.name;
+
       enhancedPrompt = await this.enhancePromptWithTextModel(
         inputContent,
-        textModelId,
+        undefined, // 使用默认模型
         style,
+      );
+      addStep(
+        "prompt_enhanced",
+        `AI Prompt Generated (${textModelUsed || "Default Model"})`,
+        "completed",
+        enhancedPrompt,
       );
     }
 
@@ -248,16 +348,27 @@ export class AiImageService {
       ? await this.getModelById(imageModelId)
       : await this.getDefaultImageModel();
 
+    const imageModelUsed =
+      imageModelConfig?.displayName || imageModelConfig?.name;
+
     if (!imageModelConfig || !imageModelConfig.apiKey) {
       this.logger.warn(
         "No image generation model configured, using placeholder",
       );
+      addStep("image_generate", "No Image Model Available", "error");
       return this.generatePlaceholder(
         inputContent,
         enhancedPrompt,
         aspectRatio,
+        processingSteps,
       );
     }
+
+    addStep(
+      "image_generate",
+      `Generating Image with ${imageModelUsed}`,
+      "processing",
+    );
 
     try {
       const generatedImageUrl = await this.callImageGenerationAPI(
@@ -266,6 +377,8 @@ export class AiImageService {
         dimensions,
         negativePrompt,
       );
+
+      addStep("image_complete", "Image Generated Successfully", "completed");
 
       // 保存到数据库
       const image = await this.prisma.generatedImage.create({
@@ -292,13 +405,24 @@ export class AiImageService {
         width: image.width,
         height: image.height,
         createdAt: image.createdAt.toISOString(),
+        processingSteps,
+        extractedContent: inputContent.slice(0, 2000),
+        textModelUsed,
+        imageModelUsed,
       };
     } catch (error) {
       this.logger.error("Image generation failed:", error);
+      addStep(
+        "image_error",
+        "Image Generation Failed",
+        "error",
+        error instanceof Error ? error.message : "Unknown error",
+      );
       return this.generatePlaceholder(
         inputContent,
         enhancedPrompt,
         aspectRatio,
+        processingSteps,
       );
     }
   }
@@ -618,6 +742,7 @@ export class AiImageService {
     originalPrompt: string,
     enhancedPrompt: string,
     aspectRatio?: string,
+    processingSteps?: ProcessingStep[],
   ): GeneratedImageResult {
     const dimensions = this.getDimensions(aspectRatio || "1:1");
     const seed = encodeURIComponent(enhancedPrompt.slice(0, 50));
@@ -630,6 +755,8 @@ export class AiImageService {
       width: dimensions.width,
       height: dimensions.height,
       createdAt: new Date().toISOString(),
+      processingSteps,
+      extractedContent: originalPrompt.slice(0, 2000),
     };
   }
 

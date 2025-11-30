@@ -18,7 +18,7 @@ interface GenerateImageDto {
   negativePrompt?: string;
 }
 
-@Controller("api/v1/ai-image")
+@Controller("ai-image")
 export class AiImageController {
   private readonly logger = new Logger(AiImageController.name);
 

@@ -10,24 +10,70 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
+interface SourceReference {
+  title: string;
+  sourceUrl: string | null;
+}
+
 interface MessageRendererProps {
   content: string;
   role: 'user' | 'assistant';
+  sources?: SourceReference[];
 }
 
 /**
  * 预处理内容，将结构化格式转换为更好的Markdown
  */
-function preprocessContent(content: string): string {
-  // 处理带标签的列表项（如 "• 事：xxx" 或 "• 时间：xxx"）
-  // 将其转换为更清晰的格式
+function preprocessContent(
+  content: string,
+  sources?: SourceReference[]
+): string {
   let processed = content;
 
-  // 将 "• 事件：" / "• 时间：" / "• 备注：" 格式转换为加粗标签
+  // 处理带标签的列表项（如 "• 事：xxx" 或 "• 时间：xxx"）
   processed = processed.replace(
     /•\s*(事件?|时间|备注|说明|详情|原因|结果|影响)\s*[：:]\s*/g,
     '\n  - **$1**: '
   );
+
+  // 将方括号引用 [标题] 转换成可点击链接
+  if (sources && sources.length > 0) {
+    // 创建标题到URL的映射
+    const titleToUrl = new Map<string, string>();
+    sources.forEach((s) => {
+      if (s.sourceUrl) {
+        titleToUrl.set(s.title.toLowerCase(), s.sourceUrl);
+        // 也存储部分标题匹配
+        const shortTitle = s.title.slice(0, 30).toLowerCase();
+        titleToUrl.set(shortTitle, s.sourceUrl);
+      }
+    });
+
+    // 匹配所有 [xxx] 格式的引用
+    processed = processed.replace(/\[([^\]]+)\]/g, (match, title) => {
+      const titleLower = title.toLowerCase();
+      // 尝试精确匹配
+      let url = titleToUrl.get(titleLower);
+      // 尝试部分匹配
+      if (!url) {
+        for (const [key, value] of titleToUrl) {
+          if (
+            titleLower.includes(key) ||
+            key.includes(titleLower.slice(0, 20))
+          ) {
+            url = value;
+            break;
+          }
+        }
+      }
+      // 如果找到URL，转换成链接
+      if (url) {
+        return `[${title}](${url})`;
+      }
+      // 否则保持原样但加上样式标记
+      return `**[${title}]**`;
+    });
+  }
 
   // 清理多余空行
   processed = processed.replace(/\n{3,}/g, '\n\n');
@@ -38,9 +84,13 @@ function preprocessContent(content: string): string {
 export default function MessageRenderer({
   content,
   role,
+  sources,
 }: MessageRendererProps) {
   // 预处理内容
-  const processedContent = useMemo(() => preprocessContent(content), [content]);
+  const processedContent = useMemo(
+    () => preprocessContent(content, sources),
+    [content, sources]
+  );
 
   return (
     <div

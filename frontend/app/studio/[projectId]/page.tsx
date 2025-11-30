@@ -1165,6 +1165,7 @@ function ModelIcon({
 
 function ChatPanel({
   chat,
+  sources,
   selectedSourceIds,
   onSendMessage,
   onSaveAsNote,
@@ -1174,6 +1175,7 @@ function ChatPanel({
   onModelChange,
 }: {
   chat: Chat | null;
+  sources: Source[];
   selectedSourceIds: Set<string>;
   onSendMessage: (message: string) => void;
   onSaveAsNote: (content: string) => void;
@@ -1311,7 +1313,14 @@ function ChatPanel({
                 >
                   {msg.role === 'assistant' ? (
                     <div className="text-sm">
-                      <MessageRenderer content={msg.content} role="assistant" />
+                      <MessageRenderer
+                        content={msg.content}
+                        role="assistant"
+                        sources={sources.map((s) => ({
+                          title: s.title,
+                          sourceUrl: s.sourceUrl,
+                        }))}
+                      />
                     </div>
                   ) : (
                     <div className="whitespace-pre-wrap text-sm">
@@ -1979,6 +1988,7 @@ export default function ProjectDetailPage() {
         {/* Center: Chat */}
         <ChatPanel
           chat={project.chats[0] || null}
+          sources={project.sources}
           selectedSourceIds={selectedSourceIds}
           onSendMessage={handleSendMessage}
           onSaveAsNote={handleSaveAsNote}

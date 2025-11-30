@@ -75,6 +75,9 @@ model User {
   // AI Studio 研究项目
   researchProjects    ResearchProject[]
 
+  // AI Image 生成
+  generatedImages     GeneratedImage[]
+
   @@map("users")
 }
 
@@ -1995,4 +1998,36 @@ model RawData {
   @@index([isProcessed])
   // GIN index for JSONB data (created via raw SQL migration)
   @@map("raw_data")
+}
+
+// ============ AI Generated Images ============
+
+model GeneratedImage {
+  id String @id @default(uuid())
+
+  // User who generated the image
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Generation parameters
+  prompt         String  @db.Text
+  enhancedPrompt String? @map("enhanced_prompt") @db.Text
+  style          String  @default("realistic") @db.VarChar(50)
+  aspectRatio    String  @default("1:1") @map("aspect_ratio") @db.VarChar(10)
+  negativePrompt String? @map("negative_prompt") @db.Text
+
+  // Generated image
+  imageUrl String @map("image_url") @db.Text
+  width    Int    @default(1024)
+  height   Int    @default(1024)
+
+  // Provider info
+  provider String @default("stability") @db.VarChar(50)
+
+  // Metadata
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("generated_images")
 }

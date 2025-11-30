@@ -38,40 +38,74 @@ function preprocessContent(
 
   // 将方括号引用 [标题] 转换成可点击链接
   if (sources && sources.length > 0) {
-    // 创建标题到URL的映射
-    const titleToUrl = new Map<string, string>();
-    sources.forEach((s) => {
-      if (s.sourceUrl) {
-        titleToUrl.set(s.title.toLowerCase(), s.sourceUrl);
-        // 也存储部分标题匹配
-        const shortTitle = s.title.slice(0, 30).toLowerCase();
-        titleToUrl.set(shortTitle, s.sourceUrl);
-      }
-    });
+    // 创建源数据列表，用于模糊匹配
+    const sourcesList = sources
+      .filter((s) => s.sourceUrl)
+      .map((s) => ({
+        title: s.title,
+        titleLower: s.title.toLowerCase(),
+        url: s.sourceUrl!,
+      }));
 
-    // 匹配所有 [xxx] 格式的引用
-    processed = processed.replace(/\[([^\]]+)\]/g, (match, title) => {
-      const titleLower = title.toLowerCase();
-      // 尝试精确匹配
-      let url = titleToUrl.get(titleLower);
-      // 尝试部分匹配
-      if (!url) {
-        for (const [key, value] of titleToUrl) {
-          if (
-            titleLower.includes(key) ||
-            key.includes(titleLower.slice(0, 20))
-          ) {
-            url = value;
-            break;
-          }
+    // 匹配所有 [xxx] 格式的引用（包括带省略号的）
+    processed = processed.replace(/\[([^\]]+)\]/g, (match, citationText) => {
+      // 移除末尾省略号以便匹配
+      const cleanCitation = citationText
+        .replace(/\.{2,}$/, '')
+        .replace(/…$/, '')
+        .trim()
+        .toLowerCase();
+
+      // 如果引用文本太短（可能是 Markdown 链接语法），跳过
+      if (cleanCitation.length < 5) {
+        return match;
+      }
+
+      // 查找最佳匹配
+      let bestMatch: { url: string; score: number } | null = null;
+
+      for (const source of sourcesList) {
+        let score = 0;
+
+        // 精确匹配（最高分）
+        if (source.titleLower === cleanCitation) {
+          score = 100;
+        }
+        // 源标题包含引用文本
+        else if (source.titleLower.includes(cleanCitation)) {
+          score = 80;
+        }
+        // 引用文本包含源标题
+        else if (cleanCitation.includes(source.titleLower)) {
+          score = 70;
+        }
+        // 源标题以引用文本开头
+        else if (source.titleLower.startsWith(cleanCitation.slice(0, 15))) {
+          score = 60;
+        }
+        // 引用文本以源标题开头
+        else if (cleanCitation.startsWith(source.titleLower.slice(0, 15))) {
+          score = 50;
+        }
+        // 前10个字符匹配
+        else if (
+          source.titleLower.slice(0, 10) === cleanCitation.slice(0, 10)
+        ) {
+          score = 40;
+        }
+
+        if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+          bestMatch = { url: source.url, score };
         }
       }
-      // 如果找到URL，转换成链接
-      if (url) {
-        return `[${title}](${url})`;
+
+      // 如果找到匹配且分数够高，转换成链接
+      if (bestMatch && bestMatch.score >= 40) {
+        return `[${citationText}](${bestMatch.url})`;
       }
-      // 否则保持原样但加上样式标记
-      return `**[${title}]**`;
+
+      // 否则保持原样但加上样式标记，表明这是一个引用
+      return `**[${citationText}]**`;
     });
   }
 

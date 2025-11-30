@@ -5,11 +5,7 @@ import Link from 'next/link';
 import { config } from '@/lib/config';
 import NotesList from '@/components/features/NotesList';
 import Sidebar from '@/components/layout/Sidebar';
-import CollectionNav, {
-  Collection as NavCollection,
-  Tag,
-  UserStats,
-} from '@/components/library/CollectionNav';
+import { Tag, UserStats } from '@/components/library/CollectionNav';
 import CollectionModal from '@/components/library/CollectionModal';
 import BatchActionBar from '@/components/library/BatchActionBar';
 import ReadStatusBadge from '@/components/library/ReadStatusBadge';
@@ -97,7 +93,6 @@ export default function LibraryPage() {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(
     null
   );
-  const [navCollapsed, setNavCollapsed] = useState(false);
 
   // Infinite scroll ref
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -260,7 +255,7 @@ export default function LibraryPage() {
     setCollectionModalOpen(true);
   };
 
-  const handleEditCollection = (collection: NavCollection) => {
+  const handleEditCollection = (collection: Collection) => {
     const fullCollection = collections.find((c) => c.id === collection.id);
     if (fullCollection) {
       setCollectionModalMode('edit');
@@ -269,7 +264,7 @@ export default function LibraryPage() {
     }
   };
 
-  const handleDeleteCollection = async (collection: NavCollection) => {
+  const handleDeleteCollection = async (collection: Collection) => {
     if (
       !confirm(
         `Are you sure you want to delete "${collection.name}"? All bookmarks in this collection will be removed.`
@@ -400,19 +395,6 @@ export default function LibraryPage() {
       console.error('Failed to update tags:', err);
     }
   };
-
-  // Convert collections to nav format
-  const navCollections: NavCollection[] = collections.map((c) => ({
-    id: c.id,
-    name: c.name,
-    description: c.description,
-    icon: c.icon,
-    color: c.color,
-    isDefault: c.name === '我的收藏',
-    isPublic: c.isPublic,
-    itemCount: c.itemCount || c.items?.length || 0,
-    createdAt: c.createdAt,
-  }));
 
   const loadVideos = async () => {
     try {
@@ -915,20 +897,6 @@ export default function LibraryPage() {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
-
-      {/* Collection Navigation - Sub sidebar */}
-      <CollectionNav
-        collections={navCollections}
-        activeCollectionId={activeCollectionId}
-        onSelectCollection={setActiveCollectionId}
-        onCreateCollection={handleCreateCollection}
-        onEditCollection={handleEditCollection}
-        onDeleteCollection={handleDeleteCollection}
-        isCollapsed={navCollapsed}
-        onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
-        tags={tags}
-        stats={stats || undefined}
-      />
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-gray-50">

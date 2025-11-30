@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { HttpService } from "@nestjs/axios";
 import { firstValueFrom } from "rxjs";
+import { ContentExtractorService } from "./content-extractor.service";
 
 export interface GeneratedImageResult {
   id: string;
@@ -15,9 +16,10 @@ export interface GeneratedImageResult {
 
 export interface GenerateImageOptions {
   prompt?: string;
-  url?: string;
+  urls?: string[]; // 支持多个URL
   content?: string;
-  imageUrl?: string;
+  imageBase64?: string; // 图片 Base64
+  files?: Array<{ buffer: Buffer; mimeType: string; filename: string }>; // 上传的文件
   textModelId?: string;
   imageModelId?: string;
   style?: string;
@@ -48,6 +50,7 @@ export class AiImageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
+    private readonly contentExtractor: ContentExtractorService,
   ) {}
 
   /**
@@ -132,7 +135,7 @@ export class AiImageService {
 
   /**
    * 主方法：生成图片
-   * 1. 收集输入内容 (prompt/url/content/imageUrl)
+   * 1. 收集输入内容 (prompt/urls/content/files/imageBase64)
    * 2. 用文本模型分析并生成专业提示词
    * 3. 用图片模型生成图片
    */
@@ -141,9 +144,10 @@ export class AiImageService {
   ): Promise<GeneratedImageResult> {
     const {
       prompt,
-      url,
+      urls,
       content,
-      imageUrl,
+      imageBase64,
+      files,
       textModelId,
       imageModelId,
       style,
@@ -154,33 +158,72 @@ export class AiImageService {
     } = options;
 
     // 验证输入
-    if (!prompt && !url && !content && !imageUrl) {
+    const hasUrls = urls && urls.length > 0 && urls.some((u) => u.trim());
+    const hasFiles = files && files.length > 0;
+    if (!prompt && !hasUrls && !content && !imageBase64 && !hasFiles) {
       throw new BadRequestException(
-        "At least one input is required: prompt, url, content, or imageUrl",
+        "At least one input is required: prompt, urls, content, files, or imageBase64",
       );
     }
 
     // 步骤1: 收集和处理输入内容
-    let inputContent = "";
+    const contentParts: string[] = [];
 
+    // 1.1 直接输入的提示词
     if (prompt) {
-      inputContent += prompt;
+      contentParts.push(`User prompt: ${prompt}`);
     }
 
-    if (url) {
-      const urlContent = await this.fetchUrlContent(url);
-      inputContent += inputContent
-        ? `\n\nContent from URL:\n${urlContent}`
-        : urlContent;
+    // 1.2 处理 URLs（支持网页、YouTube、Bilibili 等）
+    if (hasUrls) {
+      this.logger.log(`Extracting content from ${urls!.length} URLs...`);
+      for (const url of urls!) {
+        if (url.trim()) {
+          const urlContent = await this.contentExtractor.extractFromUrl(
+            url.trim(),
+          );
+          contentParts.push(`Content from ${url}:\n${urlContent}`);
+        }
+      }
     }
 
+    // 1.3 直接粘贴的文本内容
     if (content) {
-      inputContent += inputContent
-        ? `\n\nAdditional content:\n${content}`
-        : content;
+      contentParts.push(`Text content:\n${content}`);
     }
 
-    this.logger.log(`Input content length: ${inputContent.length} chars`);
+    // 1.4 处理上传的文件
+    if (hasFiles) {
+      this.logger.log(`Processing ${files!.length} uploaded files...`);
+      for (const file of files!) {
+        const fileContent = await this.contentExtractor.extractFromFile(
+          file.buffer,
+          file.mimeType,
+          file.filename,
+        );
+        contentParts.push(
+          `Content from file "${file.filename}":\n${fileContent}`,
+        );
+      }
+    }
+
+    // 1.5 处理图片（使用 AI 进行图片理解）
+    if (imageBase64) {
+      const textModel = textModelId
+        ? await this.getModelById(textModelId)
+        : await this.getDefaultTextModel();
+
+      if (textModel?.apiKey) {
+        const imageDescription = await this.contentExtractor.extractFromImage(
+          imageBase64,
+          textModel.apiKey,
+        );
+        contentParts.push(`Image description:\n${imageDescription}`);
+      }
+    }
+
+    const inputContent = contentParts.join("\n\n---\n\n");
+    this.logger.log(`Total input content length: ${inputContent.length} chars`);
 
     // 步骤2: 使用文本模型生成专业提示词
     let enhancedPrompt: string;
@@ -257,42 +300,6 @@ export class AiImageService {
         enhancedPrompt,
         aspectRatio,
       );
-    }
-  }
-
-  /**
-   * 从 URL 获取内容
-   */
-  private async fetchUrlContent(url: string): Promise<string> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(url, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; DeepDive/1.0)",
-          },
-          timeout: 10000,
-        }),
-      );
-
-      // 简单提取文本内容
-      let content = response.data;
-      if (typeof content === "string") {
-        // 移除 HTML 标签
-        content = content
-          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-      } else {
-        content = JSON.stringify(content);
-      }
-
-      // 截断过长内容
-      return content.slice(0, 5000);
-    } catch (error) {
-      this.logger.warn(`Failed to fetch URL content: ${url}`, error);
-      return `[Content from: ${url}]`;
     }
   }
 

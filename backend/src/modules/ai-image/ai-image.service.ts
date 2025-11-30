@@ -7,10 +7,39 @@ export interface GeneratedImageResult {
   id: string;
   imageUrl: string;
   prompt: string;
+  enhancedPrompt?: string;
   width: number;
   height: number;
   createdAt: string;
 }
+
+export interface GenerateImageOptions {
+  prompt?: string;
+  url?: string;
+  content?: string;
+  imageUrl?: string;
+  textModelId?: string;
+  imageModelId?: string;
+  style?: string;
+  aspectRatio?: "1:1" | "16:9" | "9:16" | "4:3";
+  negativePrompt?: string;
+  skipEnhancement?: boolean;
+  userId?: string;
+}
+
+// 提示词优化系统提示
+const PROMPT_ENHANCEMENT_SYSTEM = `You are an expert AI image prompt engineer. Your task is to analyze the given content and create a highly detailed, professional image generation prompt that captures the essence of the content.
+
+Guidelines:
+1. Analyze the content (text, article summary, or description) to identify the core theme, mood, and key visual elements
+2. Create a vivid, detailed image prompt that represents the content
+3. Add specific visual details: lighting, composition, perspective, color palette, atmosphere
+4. Include technical quality terms: 8K, photorealistic, detailed, sharp focus (when appropriate)
+5. Keep the enhanced prompt concise but comprehensive (max 150 words)
+6. Output ONLY the enhanced prompt in English, no explanations or prefixes
+
+Example input: "An article about climate change and melting glaciers"
+Example output: "A dramatic aerial view of a massive glacier with deep blue crevasses, chunks of ice calving into dark arctic waters, misty atmosphere, golden hour lighting breaking through storm clouds, environmental documentary style, ultra-detailed, 8K resolution, melancholic mood, stark contrast between pristine ice and rising waters"`;
 
 @Injectable()
 export class AiImageService {
@@ -22,171 +51,190 @@ export class AiImageService {
   ) {}
 
   /**
-   * 获取支持图片生成的 AI 模型
-   * 优先获取 provider 包含 image/flux/stable/dall/gemini 的模型
+   * 获取所有可用模型（文本模型 + 图片模型）
    */
-  private async getImageModel() {
-    // 查找图片生成模型 - 优先 Gemini image 模型
-    const imageModel = await this.prisma.aIModel.findFirst({
+  async getAvailableModels() {
+    // 获取文本模型
+    const textModels = await this.prisma.aIModel.findMany({
       where: {
         isEnabled: true,
         OR: [
-          // Gemini image models (highest priority)
+          { modelId: { contains: "gpt", mode: "insensitive" } },
+          { modelId: { contains: "claude", mode: "insensitive" } },
           { modelId: { contains: "gemini", mode: "insensitive" } },
+          { provider: { contains: "openai", mode: "insensitive" } },
+          { provider: { contains: "anthropic", mode: "insensitive" } },
+          { provider: { contains: "google", mode: "insensitive" } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        provider: true,
+        modelId: true,
+        icon: true,
+        isDefault: true,
+      },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    });
+
+    // 获取图片模型
+    const imageModels = await this.prisma.aIModel.findMany({
+      where: {
+        isEnabled: true,
+        OR: [
           { provider: { contains: "gemini", mode: "insensitive" } },
           { provider: { contains: "google", mode: "insensitive" } },
-          // Other image models
-          { provider: { contains: "flux", mode: "insensitive" } },
-          { provider: { contains: "stable", mode: "insensitive" } },
-          { provider: { contains: "image", mode: "insensitive" } },
-          { provider: { contains: "dall", mode: "insensitive" } },
-          { modelId: { contains: "flux", mode: "insensitive" } },
-          { modelId: { contains: "stable", mode: "insensitive" } },
-          { modelId: { contains: "dall", mode: "insensitive" } },
+          { modelId: { contains: "gemini", mode: "insensitive" } },
           { modelId: { contains: "imagen", mode: "insensitive" } },
-        ],
-      },
-      orderBy: { isDefault: "desc" },
-    });
-
-    if (imageModel) {
-      return imageModel;
-    }
-
-    // 如果没有专门的图片模型，尝试使用 OpenAI 模型（支持 DALL-E）
-    const openaiModel = await this.prisma.aIModel.findFirst({
-      where: {
-        isEnabled: true,
-        OR: [
           { provider: { contains: "openai", mode: "insensitive" } },
-          { apiEndpoint: { contains: "openai", mode: "insensitive" } },
+          { modelId: { contains: "dall", mode: "insensitive" } },
+          { provider: { contains: "stability", mode: "insensitive" } },
+          { modelId: { contains: "stable", mode: "insensitive" } },
+          { provider: { contains: "flux", mode: "insensitive" } },
+          { modelId: { contains: "flux", mode: "insensitive" } },
+          { provider: { contains: "replicate", mode: "insensitive" } },
+          { provider: { contains: "together", mode: "insensitive" } },
         ],
       },
-      orderBy: { isDefault: "desc" },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        provider: true,
+        modelId: true,
+        icon: true,
+        isDefault: true,
+      },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
     });
 
-    return openaiModel;
+    return {
+      textModels: textModels.map((m) => ({
+        id: m.id,
+        name: m.displayName || m.name,
+        provider: m.provider,
+        modelId: m.modelId,
+        icon: m.icon,
+        isDefault: m.isDefault,
+      })),
+      imageModels: imageModels.map((m) => ({
+        id: m.id,
+        name: m.displayName || m.name,
+        provider: m.provider,
+        modelId: m.modelId,
+        icon: m.icon,
+        isDefault: m.isDefault,
+      })),
+    };
   }
 
   /**
-   * 生成图片 - 使用系统配置的 AI 模型
+   * 主方法：生成图片
+   * 1. 收集输入内容 (prompt/url/content/imageUrl)
+   * 2. 用文本模型分析并生成专业提示词
+   * 3. 用图片模型生成图片
    */
   async generateImage(
-    prompt: string,
-    style?: string,
-    aspectRatio?: "1:1" | "16:9" | "9:16" | "4:3",
-    negativePrompt?: string,
-    userId?: string,
+    options: GenerateImageOptions,
   ): Promise<GeneratedImageResult> {
-    if (!prompt || prompt.trim().length === 0) {
-      throw new BadRequestException("Prompt is required");
+    const {
+      prompt,
+      url,
+      content,
+      imageUrl,
+      textModelId,
+      imageModelId,
+      style,
+      aspectRatio,
+      negativePrompt,
+      skipEnhancement,
+      userId,
+    } = options;
+
+    // 验证输入
+    if (!prompt && !url && !content && !imageUrl) {
+      throw new BadRequestException(
+        "At least one input is required: prompt, url, content, or imageUrl",
+      );
     }
 
-    // 获取图片生成模型配置
-    const modelConfig = await this.getImageModel();
+    // 步骤1: 收集和处理输入内容
+    let inputContent = "";
 
-    if (!modelConfig || !modelConfig.apiKey) {
+    if (prompt) {
+      inputContent += prompt;
+    }
+
+    if (url) {
+      const urlContent = await this.fetchUrlContent(url);
+      inputContent += inputContent
+        ? `\n\nContent from URL:\n${urlContent}`
+        : urlContent;
+    }
+
+    if (content) {
+      inputContent += inputContent
+        ? `\n\nAdditional content:\n${content}`
+        : content;
+    }
+
+    this.logger.log(`Input content length: ${inputContent.length} chars`);
+
+    // 步骤2: 使用文本模型生成专业提示词
+    let enhancedPrompt: string;
+
+    if (skipEnhancement) {
+      // 跳过优化，直接使用原始输入
+      enhancedPrompt = this.addStyleToPrompt(inputContent, style);
+    } else {
+      // 使用文本模型优化提示词
+      enhancedPrompt = await this.enhancePromptWithTextModel(
+        inputContent,
+        textModelId,
+        style,
+      );
+    }
+
+    this.logger.log(`Enhanced prompt: ${enhancedPrompt.slice(0, 100)}...`);
+
+    // 步骤3: 使用图片模型生成图片
+    const dimensions = this.getDimensions(aspectRatio || "1:1");
+    const imageModelConfig = imageModelId
+      ? await this.getModelById(imageModelId)
+      : await this.getDefaultImageModel();
+
+    if (!imageModelConfig || !imageModelConfig.apiKey) {
       this.logger.warn(
         "No image generation model configured, using placeholder",
       );
-      return this.generatePlaceholder(prompt, aspectRatio);
+      return this.generatePlaceholder(
+        inputContent,
+        enhancedPrompt,
+        aspectRatio,
+      );
     }
 
-    // 增强提示词
-    const enhancedPrompt = this.enhancePrompt(prompt, style);
-    const dimensions = this.getDimensions(aspectRatio || "1:1");
-
-    this.logger.log(
-      `Generating image with ${modelConfig.provider}/${modelConfig.modelId}: "${enhancedPrompt.slice(0, 50)}..."`,
-    );
-
     try {
-      let imageUrl: string;
-
-      // 根据 provider 或 apiEndpoint 判断使用哪个 API
-      const provider = modelConfig.provider.toLowerCase();
-      const endpoint = modelConfig.apiEndpoint?.toLowerCase() || "";
-      const modelId = modelConfig.modelId.toLowerCase();
-
-      if (
-        provider.includes("openai") ||
-        endpoint.includes("openai") ||
-        modelId.includes("dall")
-      ) {
-        imageUrl = await this.generateWithOpenAI(
-          modelConfig.apiKey,
-          modelConfig.apiEndpoint,
-          enhancedPrompt,
-          dimensions,
-        );
-      } else if (
-        provider.includes("stability") ||
-        endpoint.includes("stability") ||
-        modelId.includes("stable")
-      ) {
-        imageUrl = await this.generateWithStability(
-          modelConfig.apiKey,
-          modelConfig.apiEndpoint,
-          enhancedPrompt,
-          dimensions,
-          negativePrompt,
-        );
-      } else if (
-        provider.includes("replicate") ||
-        endpoint.includes("replicate") ||
-        modelId.includes("flux")
-      ) {
-        imageUrl = await this.generateWithReplicate(
-          modelConfig.apiKey,
-          modelConfig.modelId,
-          enhancedPrompt,
-          dimensions,
-          negativePrompt,
-        );
-      } else if (
-        provider.includes("together") ||
-        endpoint.includes("together")
-      ) {
-        imageUrl = await this.generateWithTogether(
-          modelConfig.apiKey,
-          modelConfig.modelId,
-          enhancedPrompt,
-          dimensions,
-        );
-      } else if (
-        provider.includes("google") ||
-        provider.includes("gemini") ||
-        modelId.includes("gemini") ||
-        modelId.includes("imagen")
-      ) {
-        imageUrl = await this.generateWithGemini(
-          modelConfig.apiKey,
-          modelConfig.modelId,
-          enhancedPrompt,
-          dimensions,
-        );
-      } else {
-        // 默认尝试 OpenAI 兼容 API
-        imageUrl = await this.generateWithOpenAICompatible(
-          modelConfig.apiKey,
-          modelConfig.apiEndpoint,
-          modelConfig.modelId,
-          enhancedPrompt,
-          dimensions,
-        );
-      }
+      const generatedImageUrl = await this.callImageGenerationAPI(
+        imageModelConfig,
+        enhancedPrompt,
+        dimensions,
+        negativePrompt,
+      );
 
       // 保存到数据库
       const image = await this.prisma.generatedImage.create({
         data: {
-          prompt: prompt.trim(),
+          prompt: inputContent.slice(0, 1000), // 截断原始输入
           enhancedPrompt,
           style: style || "realistic",
           aspectRatio: aspectRatio || "1:1",
-          imageUrl,
+          imageUrl: generatedImageUrl,
           width: dimensions.width,
           height: dimensions.height,
-          provider: modelConfig.provider,
+          provider: imageModelConfig.provider,
           userId,
         },
       });
@@ -197,15 +245,440 @@ export class AiImageService {
         id: image.id,
         imageUrl: image.imageUrl,
         prompt: image.prompt,
+        enhancedPrompt: image.enhancedPrompt || undefined,
         width: image.width,
         height: image.height,
         createdAt: image.createdAt.toISOString(),
       };
     } catch (error) {
       this.logger.error("Image generation failed:", error);
-      // 返回占位图
-      return this.generatePlaceholder(prompt, aspectRatio);
+      return this.generatePlaceholder(
+        inputContent,
+        enhancedPrompt,
+        aspectRatio,
+      );
     }
+  }
+
+  /**
+   * 从 URL 获取内容
+   */
+  private async fetchUrlContent(url: string): Promise<string> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; DeepDive/1.0)",
+          },
+          timeout: 10000,
+        }),
+      );
+
+      // 简单提取文本内容
+      let content = response.data;
+      if (typeof content === "string") {
+        // 移除 HTML 标签
+        content = content
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      } else {
+        content = JSON.stringify(content);
+      }
+
+      // 截断过长内容
+      return content.slice(0, 5000);
+    } catch (error) {
+      this.logger.warn(`Failed to fetch URL content: ${url}`, error);
+      return `[Content from: ${url}]`;
+    }
+  }
+
+  /**
+   * 使用文本模型优化提示词
+   */
+  private async enhancePromptWithTextModel(
+    content: string,
+    textModelId?: string,
+    style?: string,
+  ): Promise<string> {
+    const textModel = textModelId
+      ? await this.getModelById(textModelId)
+      : await this.getDefaultTextModel();
+
+    if (!textModel || !textModel.apiKey) {
+      this.logger.warn("No text model available, using basic enhancement");
+      return this.addStyleToPrompt(content, style);
+    }
+
+    try {
+      const provider = textModel.provider.toLowerCase();
+      const endpoint = textModel.apiEndpoint?.toLowerCase() || "";
+      const modelId = textModel.modelId.toLowerCase();
+
+      let enhancedPrompt: string;
+
+      if (
+        provider.includes("google") ||
+        provider.includes("gemini") ||
+        modelId.includes("gemini")
+      ) {
+        enhancedPrompt = await this.callGeminiTextAPI(
+          textModel.apiKey,
+          textModel.modelId,
+          content,
+        );
+      } else if (
+        provider.includes("openai") ||
+        endpoint.includes("openai") ||
+        modelId.includes("gpt")
+      ) {
+        enhancedPrompt = await this.callOpenAITextAPI(
+          textModel.apiKey,
+          textModel.apiEndpoint,
+          textModel.modelId,
+          content,
+        );
+      } else {
+        // 默认使用 OpenAI 兼容 API
+        enhancedPrompt = await this.callOpenAITextAPI(
+          textModel.apiKey,
+          textModel.apiEndpoint,
+          textModel.modelId,
+          content,
+        );
+      }
+
+      return this.addStyleToPrompt(enhancedPrompt, style);
+    } catch (error) {
+      this.logger.error("Prompt enhancement failed:", error);
+      return this.addStyleToPrompt(content, style);
+    }
+  }
+
+  /**
+   * 调用 Gemini 文本 API
+   */
+  private async callGeminiTextAPI(
+    apiKey: string,
+    modelId: string,
+    content: string,
+  ): Promise<string> {
+    const model = modelId.includes("gemini") ? modelId : "gemini-1.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const response = await firstValueFrom(
+      this.httpService.post(
+        url,
+        {
+          contents: [
+            {
+              parts: [
+                { text: PROMPT_ENHANCEMENT_SYSTEM },
+                { text: `\n\nContent to analyze:\n${content}` },
+              ],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: 300,
+            temperature: 0.7,
+          },
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+          timeout: 30000,
+        },
+      ),
+    );
+
+    const candidates = response.data.candidates;
+    if (candidates?.[0]?.content?.parts?.[0]?.text) {
+      return candidates[0].content.parts[0].text.trim();
+    }
+
+    throw new Error("No text in Gemini response");
+  }
+
+  /**
+   * 调用 OpenAI 文本 API
+   */
+  private async callOpenAITextAPI(
+    apiKey: string,
+    apiEndpoint: string | null,
+    modelId: string,
+    content: string,
+  ): Promise<string> {
+    const baseUrl = apiEndpoint || "https://api.openai.com/v1";
+    const url = `${baseUrl}/chat/completions`;
+
+    const response = await firstValueFrom(
+      this.httpService.post(
+        url,
+        {
+          model: modelId || "gpt-4o-mini",
+          messages: [
+            { role: "system", content: PROMPT_ENHANCEMENT_SYSTEM },
+            { role: "user", content: `Content to analyze:\n${content}` },
+          ],
+          max_tokens: 300,
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          timeout: 30000,
+        },
+      ),
+    );
+
+    const message = response.data.choices?.[0]?.message?.content;
+    if (message) {
+      return message.trim();
+    }
+
+    throw new Error("No text in OpenAI response");
+  }
+
+  /**
+   * 调用图片生成 API
+   */
+  private async callImageGenerationAPI(
+    modelConfig: any,
+    prompt: string,
+    dimensions: { width: number; height: number },
+    negativePrompt?: string,
+  ): Promise<string> {
+    const provider = modelConfig.provider.toLowerCase();
+    const endpoint = modelConfig.apiEndpoint?.toLowerCase() || "";
+    const modelId = modelConfig.modelId.toLowerCase();
+
+    if (
+      provider.includes("openai") ||
+      endpoint.includes("openai") ||
+      modelId.includes("dall")
+    ) {
+      return this.generateWithOpenAI(
+        modelConfig.apiKey,
+        modelConfig.apiEndpoint,
+        prompt,
+        dimensions,
+      );
+    } else if (
+      provider.includes("stability") ||
+      endpoint.includes("stability") ||
+      modelId.includes("stable")
+    ) {
+      return this.generateWithStability(
+        modelConfig.apiKey,
+        modelConfig.apiEndpoint,
+        prompt,
+        dimensions,
+        negativePrompt,
+      );
+    } else if (
+      provider.includes("replicate") ||
+      endpoint.includes("replicate") ||
+      modelId.includes("flux")
+    ) {
+      return this.generateWithReplicate(
+        modelConfig.apiKey,
+        modelConfig.modelId,
+        prompt,
+        dimensions,
+        negativePrompt,
+      );
+    } else if (provider.includes("together") || endpoint.includes("together")) {
+      return this.generateWithTogether(
+        modelConfig.apiKey,
+        modelConfig.modelId,
+        prompt,
+        dimensions,
+      );
+    } else if (
+      provider.includes("google") ||
+      provider.includes("gemini") ||
+      modelId.includes("gemini") ||
+      modelId.includes("imagen")
+    ) {
+      return this.generateWithGemini(
+        modelConfig.apiKey,
+        modelConfig.modelId,
+        prompt,
+        dimensions,
+      );
+    } else {
+      // 默认尝试 OpenAI 兼容 API
+      return this.generateWithOpenAICompatible(
+        modelConfig.apiKey,
+        modelConfig.apiEndpoint,
+        modelConfig.modelId,
+        prompt,
+        dimensions,
+      );
+    }
+  }
+
+  /**
+   * 获取默认文本模型
+   */
+  private async getDefaultTextModel() {
+    return this.prisma.aIModel.findFirst({
+      where: {
+        isEnabled: true,
+        OR: [
+          { modelId: { contains: "gemini", mode: "insensitive" } },
+          { modelId: { contains: "gpt", mode: "insensitive" } },
+          { provider: { contains: "google", mode: "insensitive" } },
+          { provider: { contains: "openai", mode: "insensitive" } },
+        ],
+      },
+      orderBy: { isDefault: "desc" },
+    });
+  }
+
+  /**
+   * 获取默认图片模型
+   */
+  private async getDefaultImageModel() {
+    return this.prisma.aIModel.findFirst({
+      where: {
+        isEnabled: true,
+        OR: [
+          { modelId: { contains: "gemini", mode: "insensitive" } },
+          { provider: { contains: "gemini", mode: "insensitive" } },
+          { provider: { contains: "google", mode: "insensitive" } },
+          { modelId: { contains: "imagen", mode: "insensitive" } },
+          { provider: { contains: "openai", mode: "insensitive" } },
+          { modelId: { contains: "dall", mode: "insensitive" } },
+          { provider: { contains: "stability", mode: "insensitive" } },
+          { provider: { contains: "together", mode: "insensitive" } },
+        ],
+      },
+      orderBy: { isDefault: "desc" },
+    });
+  }
+
+  /**
+   * 根据ID获取模型
+   */
+  private async getModelById(id: string) {
+    return this.prisma.aIModel.findFirst({
+      where: { id, isEnabled: true },
+    });
+  }
+
+  /**
+   * 添加样式到提示词
+   */
+  private addStyleToPrompt(prompt: string, style?: string): string {
+    const styleEnhancements: Record<string, string> = {
+      realistic: "photorealistic, 8k uhd, high quality, detailed",
+      artistic: "artistic, painterly, vibrant colors, expressive",
+      anime: "anime style, detailed, vibrant, studio quality",
+      "3d": "3D render, octane render, unreal engine, highly detailed",
+      sketch: "pencil sketch, detailed line art, artistic",
+      watercolor: "watercolor painting, soft colors, artistic",
+    };
+
+    const enhancement = style ? styleEnhancements[style] : "";
+    return enhancement ? `${prompt}, ${enhancement}` : prompt;
+  }
+
+  /**
+   * 获取尺寸
+   */
+  private getDimensions(aspectRatio: string): {
+    width: number;
+    height: number;
+  } {
+    const dimensions: Record<string, { width: number; height: number }> = {
+      "1:1": { width: 1024, height: 1024 },
+      "16:9": { width: 1344, height: 768 },
+      "9:16": { width: 768, height: 1344 },
+      "4:3": { width: 1152, height: 896 },
+    };
+    return dimensions[aspectRatio] || dimensions["1:1"];
+  }
+
+  /**
+   * 生成占位图
+   */
+  private generatePlaceholder(
+    originalPrompt: string,
+    enhancedPrompt: string,
+    aspectRatio?: string,
+  ): GeneratedImageResult {
+    const dimensions = this.getDimensions(aspectRatio || "1:1");
+    const seed = encodeURIComponent(enhancedPrompt.slice(0, 50));
+
+    return {
+      id: `placeholder-${Date.now()}`,
+      imageUrl: `https://picsum.photos/seed/${seed}/${dimensions.width}/${dimensions.height}`,
+      prompt: originalPrompt.slice(0, 500),
+      enhancedPrompt,
+      width: dimensions.width,
+      height: dimensions.height,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  // ============ 图片生成 API 实现 ============
+
+  /**
+   * 使用 Gemini Image Generation API
+   */
+  private async generateWithGemini(
+    apiKey: string,
+    modelId: string,
+    prompt: string,
+    _dimensions: { width: number; height: number },
+  ): Promise<string> {
+    const model = modelId.includes("gemini")
+      ? modelId
+      : "gemini-2.0-flash-exp-image-generation";
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    this.logger.log(`Calling Gemini image API with model: ${model}`);
+
+    const response = await firstValueFrom(
+      this.httpService.post(
+        url,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
+          },
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+          timeout: 120000,
+        },
+      ),
+    );
+
+    const candidates = response.data.candidates;
+    if (!candidates || candidates.length === 0) {
+      throw new Error("No candidates in Gemini response");
+    }
+
+    const parts = candidates[0].content?.parts;
+    if (!parts || parts.length === 0) {
+      throw new Error("No parts in Gemini response");
+    }
+
+    for (const part of parts) {
+      if (part.inlineData && part.inlineData.data) {
+        const mimeType = part.inlineData.mimeType || "image/png";
+        return `data:${mimeType};base64,${part.inlineData.data}`;
+      }
+    }
+
+    throw new Error("No image data in Gemini response");
   }
 
   /**
@@ -220,7 +693,6 @@ export class AiImageService {
     const baseUrl = apiEndpoint || "https://api.openai.com/v1";
     const url = `${baseUrl}/images/generations`;
 
-    // DALL-E 3 支持的尺寸
     const size =
       dimensions.width === dimensions.height
         ? "1024x1024"
@@ -294,7 +766,7 @@ export class AiImageService {
   }
 
   /**
-   * 使用 Replicate API (Flux, SDXL)
+   * 使用 Replicate API
    */
   private async generateWithReplicate(
     apiKey: string,
@@ -303,7 +775,6 @@ export class AiImageService {
     dimensions: { width: number; height: number },
     negativePrompt?: string,
   ): Promise<string> {
-    // 创建预测
     const createResponse = await firstValueFrom(
       this.httpService.post(
         "https://api.replicate.com/v1/predictions",
@@ -328,11 +799,10 @@ export class AiImageService {
       ),
     );
 
-    // 轮询等待结果
     const predictionId = createResponse.data.id;
     let result = createResponse.data;
     let attempts = 0;
-    const maxAttempts = 60; // 最多等待60秒
+    const maxAttempts = 60;
 
     while (
       result.status !== "succeeded" &&
@@ -344,9 +814,7 @@ export class AiImageService {
         this.httpService.get(
           `https://api.replicate.com/v1/predictions/${predictionId}`,
           {
-            headers: {
-              Authorization: `Token ${apiKey}`,
-            },
+            headers: { Authorization: `Token ${apiKey}` },
           },
         ),
       );
@@ -395,68 +863,6 @@ export class AiImageService {
   }
 
   /**
-   * 使用 Gemini Image Generation API (gemini-2.0-flash-exp 或 gemini-2.5-flash-image)
-   */
-  private async generateWithGemini(
-    apiKey: string,
-    modelId: string,
-    prompt: string,
-    _dimensions: { width: number; height: number },
-  ): Promise<string> {
-    // 使用 Gemini image 模型，默认为 gemini-2.0-flash-exp-image-generation
-    const model = modelId.includes("gemini")
-      ? modelId
-      : "gemini-2.0-flash-exp-image-generation";
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-    this.logger.log(`Calling Gemini image API with model: ${model}`);
-
-    const response = await firstValueFrom(
-      this.httpService.post(
-        url,
-        {
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-          },
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          timeout: 120000, // 2 minutes timeout for image generation
-        },
-      ),
-    );
-
-    // 从响应中提取图片
-    const candidates = response.data.candidates;
-    if (!candidates || candidates.length === 0) {
-      throw new Error("No candidates in Gemini response");
-    }
-
-    const parts = candidates[0].content?.parts;
-    if (!parts || parts.length === 0) {
-      throw new Error("No parts in Gemini response");
-    }
-
-    // 查找 inlineData (base64 图片)
-    for (const part of parts) {
-      if (part.inlineData && part.inlineData.data) {
-        const mimeType = part.inlineData.mimeType || "image/png";
-        return `data:${mimeType};base64,${part.inlineData.data}`;
-      }
-    }
-
-    throw new Error("No image data in Gemini response");
-  }
-
-  /**
    * OpenAI 兼容 API
    */
   private async generateWithOpenAICompatible(
@@ -495,59 +901,7 @@ export class AiImageService {
     );
   }
 
-  /**
-   * 生成占位图
-   */
-  private generatePlaceholder(
-    prompt: string,
-    aspectRatio?: string,
-  ): GeneratedImageResult {
-    const dimensions = this.getDimensions(aspectRatio || "1:1");
-    const seed = encodeURIComponent(prompt.slice(0, 50));
-
-    return {
-      id: `placeholder-${Date.now()}`,
-      imageUrl: `https://picsum.photos/seed/${seed}/${dimensions.width}/${dimensions.height}`,
-      prompt: prompt.trim(),
-      width: dimensions.width,
-      height: dimensions.height,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * 增强提示词
-   */
-  private enhancePrompt(prompt: string, style?: string): string {
-    const styleEnhancements: Record<string, string> = {
-      realistic: "photorealistic, 8k uhd, high quality, detailed",
-      artistic: "artistic, painterly, vibrant colors, expressive",
-      anime: "anime style, detailed, vibrant, studio quality",
-      "3d": "3D render, octane render, unreal engine, highly detailed",
-      sketch: "pencil sketch, detailed line art, artistic",
-      watercolor: "watercolor painting, soft colors, artistic",
-    };
-
-    const enhancement =
-      styleEnhancements[style || "realistic"] || styleEnhancements.realistic;
-    return `${prompt}, ${enhancement}`;
-  }
-
-  /**
-   * 获取尺寸
-   */
-  private getDimensions(aspectRatio: string): {
-    width: number;
-    height: number;
-  } {
-    const dimensions: Record<string, { width: number; height: number }> = {
-      "1:1": { width: 1024, height: 1024 },
-      "16:9": { width: 1344, height: 768 },
-      "9:16": { width: 768, height: 1344 },
-      "4:3": { width: 1152, height: 896 },
-    };
-    return dimensions[aspectRatio] || dimensions["1:1"];
-  }
+  // ============ 历史记录 ============
 
   /**
    * 获取用户生成历史
@@ -563,6 +917,7 @@ export class AiImageService {
       id: img.id,
       imageUrl: img.imageUrl,
       prompt: img.prompt,
+      enhancedPrompt: img.enhancedPrompt || undefined,
       width: img.width,
       height: img.height,
       createdAt: img.createdAt.toISOString(),
@@ -583,45 +938,10 @@ export class AiImageService {
       id: image.id,
       imageUrl: image.imageUrl,
       prompt: image.prompt,
+      enhancedPrompt: image.enhancedPrompt || undefined,
       width: image.width,
       height: image.height,
       createdAt: image.createdAt.toISOString(),
     };
-  }
-
-  /**
-   * 获取可用的图片生成模型信息
-   */
-  async getAvailableModels() {
-    const models = await this.prisma.aIModel.findMany({
-      where: {
-        isEnabled: true,
-        OR: [
-          { provider: { contains: "flux", mode: "insensitive" } },
-          { provider: { contains: "stable", mode: "insensitive" } },
-          { provider: { contains: "image", mode: "insensitive" } },
-          { provider: { contains: "dall", mode: "insensitive" } },
-          { provider: { contains: "openai", mode: "insensitive" } },
-          { provider: { contains: "together", mode: "insensitive" } },
-          { provider: { contains: "replicate", mode: "insensitive" } },
-          { provider: { contains: "google", mode: "insensitive" } },
-          { modelId: { contains: "flux", mode: "insensitive" } },
-          { modelId: { contains: "stable", mode: "insensitive" } },
-          { modelId: { contains: "dall", mode: "insensitive" } },
-          { modelId: { contains: "imagen", mode: "insensitive" } },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        displayName: true,
-        provider: true,
-        modelId: true,
-        icon: true,
-      },
-      orderBy: { isDefault: "desc" },
-    });
-
-    return models;
   }
 }

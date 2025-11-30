@@ -23,14 +23,19 @@ export class AiImageService {
 
   /**
    * 获取支持图片生成的 AI 模型
-   * 优先获取 provider 包含 image/flux/stable/dall 的模型
+   * 优先获取 provider 包含 image/flux/stable/dall/gemini 的模型
    */
   private async getImageModel() {
-    // 查找图片生成模型
+    // 查找图片生成模型 - 优先 Gemini image 模型
     const imageModel = await this.prisma.aIModel.findFirst({
       where: {
         isEnabled: true,
         OR: [
+          // Gemini image models (highest priority)
+          { modelId: { contains: "gemini", mode: "insensitive" } },
+          { provider: { contains: "gemini", mode: "insensitive" } },
+          { provider: { contains: "google", mode: "insensitive" } },
+          // Other image models
           { provider: { contains: "flux", mode: "insensitive" } },
           { provider: { contains: "stable", mode: "insensitive" } },
           { provider: { contains: "image", mode: "insensitive" } },
@@ -148,9 +153,15 @@ export class AiImageService {
           enhancedPrompt,
           dimensions,
         );
-      } else if (provider.includes("google") || modelId.includes("imagen")) {
-        imageUrl = await this.generateWithGoogle(
+      } else if (
+        provider.includes("google") ||
+        provider.includes("gemini") ||
+        modelId.includes("gemini") ||
+        modelId.includes("imagen")
+      ) {
+        imageUrl = await this.generateWithGemini(
           modelConfig.apiKey,
+          modelConfig.modelId,
           enhancedPrompt,
           dimensions,
         );
@@ -384,38 +395,65 @@ export class AiImageService {
   }
 
   /**
-   * 使用 Google Imagen API
+   * 使用 Gemini Image Generation API (gemini-2.0-flash-exp 或 gemini-2.5-flash-image)
    */
-  private async generateWithGoogle(
+  private async generateWithGemini(
     apiKey: string,
+    modelId: string,
     prompt: string,
-    dimensions: { width: number; height: number },
+    _dimensions: { width: number; height: number },
   ): Promise<string> {
+    // 使用 Gemini image 模型，默认为 gemini-2.0-flash-exp-image-generation
+    const model = modelId.includes("gemini")
+      ? modelId
+      : "gemini-2.0-flash-exp-image-generation";
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    this.logger.log(`Calling Gemini image API with model: ${model}`);
+
     const response = await firstValueFrom(
       this.httpService.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`,
+        url,
         {
-          instances: [{ prompt }],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio:
-              dimensions.width === dimensions.height
-                ? "1:1"
-                : dimensions.width > dimensions.height
-                  ? "16:9"
-                  : "9:16",
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
           },
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
+          timeout: 120000, // 2 minutes timeout for image generation
         },
       ),
     );
 
-    const base64Image = response.data.predictions[0].bytesBase64Encoded;
-    return `data:image/png;base64,${base64Image}`;
+    // 从响应中提取图片
+    const candidates = response.data.candidates;
+    if (!candidates || candidates.length === 0) {
+      throw new Error("No candidates in Gemini response");
+    }
+
+    const parts = candidates[0].content?.parts;
+    if (!parts || parts.length === 0) {
+      throw new Error("No parts in Gemini response");
+    }
+
+    // 查找 inlineData (base64 图片)
+    for (const part of parts) {
+      if (part.inlineData && part.inlineData.data) {
+        const mimeType = part.inlineData.mimeType || "image/png";
+        return `data:${mimeType};base64,${part.inlineData.data}`;
+      }
+    }
+
+    throw new Error("No image data in Gemini response");
   }
 
   /**

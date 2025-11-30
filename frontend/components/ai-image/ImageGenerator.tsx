@@ -2,7 +2,10 @@
 
 /**
  * AI Image Generator Component
- * 类似 Google ImageFX / Ideogram 的交互式图片生成
+ * 参考 Google ImageFX 的简洁设计风格
+ * - 大面积图片展示区
+ * - 底部简洁的输入框
+ * - Expressive chips 快速修改提示词
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -18,13 +21,7 @@ interface GeneratedImage {
   height: number;
 }
 
-interface ImageGeneratorProps {
-  onImageGenerated?: (image: GeneratedImage) => void;
-}
-
-export default function ImageGenerator({
-  onImageGenerated,
-}: ImageGeneratorProps) {
+export default function ImageGenerator() {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
@@ -32,38 +29,31 @@ export default function ImageGenerator({
     null
   );
   const [error, setError] = useState<string | null>(null);
-  const [aspectRatio, setAspectRatio] = useState<
-    '1:1' | '16:9' | '9:16' | '4:3'
-  >('1:1');
-  const [style, setStyle] = useState<string>('realistic');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Expressive chips - 快速修改提示词的关键词
+  const expressiveChips = [
+    { label: 'cinematic lighting', category: 'lighting' },
+    { label: 'golden hour', category: 'lighting' },
+    { label: 'studio lighting', category: 'lighting' },
+    { label: 'dramatic shadows', category: 'lighting' },
+    { label: 'macro shot', category: 'angle' },
+    { label: 'aerial view', category: 'angle' },
+    { label: 'close-up portrait', category: 'angle' },
+    { label: 'wide angle', category: 'angle' },
+    { label: 'vibrant colors', category: 'style' },
+    { label: 'minimalist', category: 'style' },
+    { label: 'surreal', category: 'style' },
+    { label: 'photorealistic', category: 'style' },
+  ];
 
   // 示例提示词
   const examplePrompts = [
-    'A serene Japanese garden with cherry blossoms, koi pond, and traditional wooden bridge at sunset',
-    'Futuristic cityscape with flying cars and neon lights, cyberpunk style',
-    'Cozy coffee shop interior with warm lighting, plants, and vintage furniture',
-    'Majestic mountain landscape with aurora borealis in the night sky',
-    'Abstract digital art with flowing gradients of blue and purple',
+    'A cozy reading nook with warm sunlight streaming through large windows',
+    'Futuristic city skyline at sunset with flying vehicles',
+    'A mystical forest with bioluminescent plants and magical creatures',
+    'Professional food photography of artisan coffee and pastries',
   ];
-
-  // 风格选项
-  const styleOptions = [
-    { id: 'realistic', name: 'Realistic', icon: '📷' },
-    { id: 'artistic', name: 'Artistic', icon: '🎨' },
-    { id: 'anime', name: 'Anime', icon: '🎌' },
-    { id: '3d', name: '3D Render', icon: '🎮' },
-    { id: 'sketch', name: 'Sketch', icon: '✏️' },
-    { id: 'watercolor', name: 'Watercolor', icon: '🖌️' },
-  ];
-
-  // 自动调整 textarea 高度
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
-    }
-  }, [prompt]);
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -82,8 +72,6 @@ export default function ImageGenerator({
           },
           body: JSON.stringify({
             prompt: prompt.trim(),
-            style,
-            aspectRatio,
           }),
         }
       );
@@ -105,7 +93,6 @@ export default function ImageGenerator({
 
       setGeneratedImages((prev) => [newImage, ...prev]);
       setSelectedImage(newImage);
-      onImageGenerated?.(newImage);
     } catch (err) {
       console.error('Image generation failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate image');
@@ -115,10 +102,23 @@ export default function ImageGenerator({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter') {
       e.preventDefault();
       handleGenerate();
     }
+  };
+
+  const addChipToPrompt = (chip: string) => {
+    const currentPrompt = prompt.trim();
+    if (
+      currentPrompt &&
+      !currentPrompt.toLowerCase().includes(chip.toLowerCase())
+    ) {
+      setPrompt(`${currentPrompt}, ${chip}`);
+    } else if (!currentPrompt) {
+      setPrompt(chip);
+    }
+    inputRef.current?.focus();
   };
 
   const handleDownload = async (image: GeneratedImage) => {
@@ -139,215 +139,58 @@ export default function ImageGenerator({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Main content area */}
-      <div className="flex flex-1 gap-6 overflow-hidden">
-        {/* Left side - Generated image display */}
-        <div className="flex flex-1 flex-col">
-          {/* Image display area */}
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200">
-            {selectedImage ? (
-              <div className="relative h-full w-full">
-                <img
-                  src={selectedImage.imageUrl}
-                  alt={selectedImage.prompt}
-                  className="h-full w-full object-contain"
-                />
-                {/* Image actions overlay */}
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                  <button
-                    onClick={() => handleDownload(selectedImage)}
-                    className="rounded-lg bg-white/90 px-4 py-2 text-sm font-medium text-gray-700 shadow-lg backdrop-blur transition-all hover:bg-white"
-                  >
-                    <span className="flex items-center gap-2">
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Download
-                    </span>
-                  </button>
-                </div>
-              </div>
-            ) : isGenerating ? (
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl">✨</span>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500">
-                  Creating your masterpiece...
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-4 p-8 text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-blue-100">
-                  <svg
-                    className="h-10 w-10 text-purple-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Create with AI
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Describe your vision and watch it come to life
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Generated images gallery */}
-          {generatedImages.length > 0 && (
-            <div className="mt-4">
-              <h4 className="mb-2 text-sm font-medium text-gray-700">
-                Recent Creations
-              </h4>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {generatedImages.map((img) => (
-                  <button
-                    key={img.id}
-                    onClick={() => setSelectedImage(img)}
-                    className={`relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg transition-all ${
-                      selectedImage?.id === img.id
-                        ? 'ring-2 ring-blue-500 ring-offset-2'
-                        : 'hover:opacity-80'
-                    }`}
-                  >
-                    <img
-                      src={img.imageUrl}
-                      alt={img.prompt}
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right side - Controls */}
-        <div className="w-80 flex-shrink-0 space-y-4">
-          {/* Style selector */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Style
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {styleOptions.map((opt) => (
-                <button
-                  key={opt.id}
-                  onClick={() => setStyle(opt.id)}
-                  className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2 text-xs transition-all ${
-                    style === opt.id
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-lg">{opt.icon}</span>
-                  <span>{opt.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Aspect ratio selector */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Aspect Ratio
-            </label>
-            <div className="flex gap-2">
-              {(['1:1', '16:9', '9:16', '4:3'] as const).map((ratio) => (
-                <button
-                  key={ratio}
-                  onClick={() => setAspectRatio(ratio)}
-                  className={`flex-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-all ${
-                    aspectRatio === ratio
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  {ratio}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Example prompts */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Try these
-            </label>
-            <div className="space-y-2">
-              {examplePrompts.slice(0, 3).map((example, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setPrompt(example)}
-                  className="w-full rounded-lg bg-gray-50 px-3 py-2 text-left text-xs text-gray-600 transition-all hover:bg-gray-100"
-                >
-                  {example.length > 60 ? example.slice(0, 60) + '...' : example}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom input area */}
-      <div className="mt-4 rounded-2xl bg-white p-4 shadow-lg ring-1 ring-gray-200">
-        {error && (
-          <div className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-        <div className="flex items-end gap-3">
-          <div className="relative flex-1">
-            <textarea
-              ref={textareaRef}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Describe the image you want to create..."
-              className="w-full resize-none rounded-xl border-0 bg-gray-50 px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={1}
-              disabled={isGenerating}
+    <div className="flex h-full flex-col bg-[#1a1a2e]">
+      {/* Main Image Display Area */}
+      <div className="flex flex-1 items-center justify-center p-8">
+        {selectedImage ? (
+          <div className="relative max-h-full max-w-full">
+            <img
+              src={selectedImage.imageUrl}
+              alt={selectedImage.prompt}
+              className="max-h-[60vh] rounded-2xl object-contain shadow-2xl"
             />
-            <div className="absolute bottom-2 right-2 text-xs text-gray-400">
-              {prompt.length}/1000
+            {/* Image Actions */}
+            <div className="absolute bottom-4 right-4 flex gap-2">
+              <button
+                onClick={() => handleDownload(selectedImage)}
+                className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white backdrop-blur-md transition hover:bg-white/20"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                Download
+              </button>
             </div>
           </div>
-          <button
-            onClick={handleGenerate}
-            disabled={!prompt.trim() || isGenerating}
-            className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transition-all hover:from-purple-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-            ) : (
+        ) : isGenerating ? (
+          <div className="flex flex-col items-center gap-6">
+            <div className="relative h-24 w-24">
+              <div className="absolute inset-0 animate-spin rounded-full border-4 border-purple-500/30 border-t-purple-500"></div>
+              <div
+                className="absolute inset-3 animate-spin rounded-full border-4 border-blue-500/30 border-t-blue-500"
+                style={{
+                  animationDirection: 'reverse',
+                  animationDuration: '1.5s',
+                }}
+              ></div>
+            </div>
+            <p className="text-lg text-gray-400">Creating your image...</p>
+          </div>
+        ) : (
+          <div className="flex max-w-xl flex-col items-center gap-6 text-center">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20">
               <svg
-                className="h-5 w-5"
+                className="h-12 w-12 text-purple-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -355,16 +198,126 @@ export default function ImageGenerator({
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  strokeWidth={1.5}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-            )}
-          </button>
+            </div>
+            <div>
+              <h2 className="mb-2 text-2xl font-semibold text-white">
+                Create with AI
+              </h2>
+              <p className="text-gray-400">
+                Describe what you want to see and watch it come to life
+              </p>
+            </div>
+            {/* Example Prompts */}
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {examplePrompts.slice(0, 2).map((example, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setPrompt(example)}
+                  className="rounded-full bg-white/5 px-4 py-2 text-sm text-gray-300 transition hover:bg-white/10"
+                >
+                  {example.length > 40 ? example.slice(0, 40) + '...' : example}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Generated Images Gallery */}
+      {generatedImages.length > 0 && (
+        <div className="border-t border-white/10 px-8 py-4">
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {generatedImages.map((img) => (
+              <button
+                key={img.id}
+                onClick={() => setSelectedImage(img)}
+                className={`relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg transition ${
+                  selectedImage?.id === img.id
+                    ? 'ring-2 ring-purple-500 ring-offset-2 ring-offset-[#1a1a2e]'
+                    : 'opacity-60 hover:opacity-100'
+                }`}
+              >
+                <img
+                  src={img.imageUrl}
+                  alt={img.prompt}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="mt-2 text-center text-xs text-gray-400">
-          Press Enter to generate • Shift+Enter for new line
-        </p>
+      )}
+
+      {/* Expressive Chips */}
+      <div className="border-t border-white/10 px-8 py-3">
+        <div className="flex flex-wrap gap-2">
+          {expressiveChips.slice(0, 8).map((chip) => (
+            <button
+              key={chip.label}
+              onClick={() => addChipToPrompt(chip.label)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                prompt.toLowerCase().includes(chip.label.toLowerCase())
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t border-white/10 p-6">
+        <div className="mx-auto max-w-3xl">
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+          <div className="flex items-center gap-4 rounded-2xl bg-white/5 p-2 ring-1 ring-white/10 focus-within:ring-purple-500/50">
+            <input
+              ref={inputRef}
+              type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe what you want to create..."
+              className="flex-1 bg-transparent px-4 py-3 text-white placeholder-gray-500 focus:outline-none"
+              disabled={isGenerating}
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={!prompt.trim() || isGenerating}
+              className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white transition hover:from-purple-700 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+              ) : (
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
+          <p className="mt-3 text-center text-xs text-gray-500">
+            Press Enter to generate
+          </p>
+        </div>
       </div>
     </div>
   );
